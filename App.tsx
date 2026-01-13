@@ -1,20 +1,29 @@
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StyleSheet } from 'react-native';
+import { Provider as PaperProvider } from 'react-native-paper';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { HouseholdProvider } from './src/contexts/HouseholdContext';
+import { RootNavigator } from './src/navigation/RootNavigator';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <GestureHandlerRootView style={styles.container}>
+      <PaperProvider>
+        <AuthProvider>
+          <HouseholdProvider>
+            <StatusBar style="auto" />
+            <RootNavigator />
+          </HouseholdProvider>
+        </AuthProvider>
+      </PaperProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
