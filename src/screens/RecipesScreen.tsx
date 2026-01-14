@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography, shadows, pastelColors } from '../theme';
 import { FloatingActionButton } from '../components/common/FloatingActionButton';
 import { RecipeCard } from '../components/recipes';
+import { AddRecipeModal, NewRecipeData } from '../components/modals/AddRecipeModal';
+import { mockGroceriesDB } from '../data/groceryDatabase';
 
 const { width } = Dimensions.get('window');
 const cardWidth = ((width - spacing.lg * 3) / 2) * 0.85;
@@ -40,16 +42,28 @@ const categories = ['All', 'Breakfast', 'Lunch', 'Dinner'];
 export function RecipesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
+  const [recipes, setRecipes] = useState<Recipe[]>(mockRecipes);
 
-  const filteredRecipes = mockRecipes.filter(recipe => {
+  const filteredRecipes = recipes.filter(recipe => {
     const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
     const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const handleAddRecipe = () => {
-    // TODO: Implement add recipe modal
-    console.log('Add new recipe');
+    setShowAddRecipeModal(true);
+  };
+
+  const handleSaveRecipe = (data: NewRecipeData) => {
+    const newRecipe: Recipe = {
+      id: String(Date.now()),
+      name: data.title,
+      cookTime: data.prepTime || 'N/A',
+      category: data.category || 'Dinner',
+    };
+    setRecipes([newRecipe, ...recipes]);
+    setShowAddRecipeModal(false);
   };
 
   return (
@@ -111,9 +125,18 @@ export function RecipesScreen() {
       </ScrollView>
 
       {/* Add New Recipe Button */}
-      <FloatingActionButton 
+      <FloatingActionButton
         label="Add New Recipe"
         onPress={handleAddRecipe}
+      />
+
+      {/* Add Recipe Modal */}
+      <AddRecipeModal
+        visible={showAddRecipeModal}
+        onClose={() => setShowAddRecipeModal(false)}
+        onSave={handleSaveRecipe}
+        categories={categories.filter((c) => c !== 'All')}
+        groceryItems={mockGroceriesDB}
       />
     </SafeAreaView>
   );
@@ -171,8 +194,8 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   filterChipActive: {
-    backgroundColor: colors.chores,
-    borderColor: colors.chores,
+    backgroundColor: colors.recipes,
+    borderColor: colors.recipes,
   },
   filterChipText: {
     fontSize: 14,
