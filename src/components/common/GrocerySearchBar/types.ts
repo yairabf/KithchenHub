@@ -19,6 +19,7 @@ export interface GrocerySearchBarProps {
   variant?: 'surface' | 'background';  // white vs cream background
   showShadow?: boolean;
   maxResults?: number;                 // default: 8
+  allowCustomItems?: boolean;          // default: false - allow adding items not in database
 
   // Optional Controlled State (for advanced use cases)
   value?: string;

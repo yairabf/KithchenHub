@@ -1,6 +1,11 @@
 import { StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius, shadows } from '../../../theme';
 
+// Search bar dimension constants for consistent styling
+const SEARCH_BAR_INPUT_HEIGHT = 30;
+const SEARCH_BAR_TOTAL_HEIGHT = 52;
+const SEARCH_BAR_VERTICAL_PADDING = (SEARCH_BAR_TOTAL_HEIGHT - SEARCH_BAR_INPUT_HEIGHT) / 2;
+
 export const styles = StyleSheet.create({
   container: {
     position: 'relative',
@@ -11,8 +16,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
-    // 11px vertical padding (spacing.sm + 3) to achieve 52px total height with 30px input
-    paddingVertical: spacing.sm + 3,
+    paddingVertical: SEARCH_BAR_VERTICAL_PADDING,
     gap: spacing.sm,
   },
   searchBarSurface: {
@@ -28,11 +32,11 @@ export const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: colors.textPrimary,
-    height: 30,
+    height: SEARCH_BAR_INPUT_HEIGHT,
   },
   searchDropdown: {
     position: 'absolute',
-    top: 52,
+    top: SEARCH_BAR_TOTAL_HEIGHT,
     left: 0,
     right: 0,
     backgroundColor: colors.surface,
@@ -42,6 +46,7 @@ export const styles = StyleSheet.create({
     maxHeight: 300,
     overflow: 'hidden',
     ...shadows.xl,
+    pointerEvents: 'auto',
   },
   searchDropdownScroll: {
     maxHeight: 300,
@@ -81,5 +86,22 @@ export const styles = StyleSheet.create({
   },
   addIconButton: {
     padding: spacing.xs,
+  },
+  customItemRow: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.shopping,
+    borderStyle: 'dashed',
+    borderRadius: borderRadius.md,
+    marginHorizontal: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  customItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.shopping + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
