@@ -11,22 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { colors, spacing, borderRadius, typography } from '../theme';
+import { colors, spacing, borderRadius, typography, shadows } from '../theme';
 import { ManageHouseholdModal } from '../components/modals/ManageHouseholdModal';
-
-// Screen-specific colors matching ShoppingListsScreen theme
-const screenColors = {
-  background: '#F5F5F0',
-  surface: '#FFFFFF',
-  tabActive: '#4A5D4A',
-  textPrimary: '#2D3139',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  addButton: '#F5DEB3',
-  quantityBg: '#F3F4F6',
-  border: '#E5E7EB',
-  accent: '#10B981',
-};
 
 export function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -55,7 +41,7 @@ export function SettingsScreen() {
                 <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={32} color={screenColors.textSecondary} />
+                  <Ionicons name="person" size={32} color={colors.textSecondary} />
                 </View>
               )}
             </View>
@@ -74,7 +60,7 @@ export function SettingsScreen() {
             <TouchableOpacity style={styles.signInPrompt}>
               <Ionicons name="logo-google" size={20} color={colors.google} />
               <Text style={styles.signInPromptText}>Sign in to sync your data</Text>
-              <Ionicons name="chevron-forward" size={20} color={screenColors.textSecondary} />
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
 
@@ -89,26 +75,26 @@ export function SettingsScreen() {
           <Text style={styles.sectionTitle}>Notifications</Text>
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="notifications-outline" size={22} color={screenColors.textPrimary} />
+              <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Push notifications</Text>
             </View>
             <Switch
               value={pushNotifications}
               onValueChange={setPushNotifications}
-              trackColor={{ false: screenColors.border, true: screenColors.tabActive }}
-              thumbColor={screenColors.surface}
+              trackColor={{ false: colors.border, true: colors.chores }}
+              thumbColor={colors.surface}
             />
           </View>
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="mail-outline" size={22} color={screenColors.textPrimary} />
+              <Ionicons name="mail-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Daily summary email</Text>
             </View>
             <Switch
               value={dailySummary}
               onValueChange={setDailySummary}
-              trackColor={{ false: screenColors.border, true: screenColors.tabActive }}
-              thumbColor={screenColors.surface}
+              trackColor={{ false: colors.border, true: colors.chores }}
+              thumbColor={colors.surface}
             />
           </View>
         </View>
@@ -121,10 +107,10 @@ export function SettingsScreen() {
             onPress={() => setShowManageHousehold(true)}
           >
             <View style={styles.settingInfo}>
-              <Ionicons name="people-outline" size={22} color={screenColors.textPrimary} />
+              <Ionicons name="people-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Manage household members</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={screenColors.textSecondary} />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -133,30 +119,30 @@ export function SettingsScreen() {
           <Text style={styles.sectionTitle}>Data</Text>
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="cloud-outline" size={22} color={screenColors.textPrimary} />
+              <Ionicons name="cloud-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Sync to cloud</Text>
             </View>
             <Switch
               value={cloudSync}
               onValueChange={setCloudSync}
-              trackColor={{ false: screenColors.border, true: screenColors.tabActive }}
-              thumbColor={screenColors.surface}
+              trackColor={{ false: colors.border, true: colors.chores }}
+              thumbColor={colors.surface}
               disabled={user?.isGuest}
             />
           </View>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="download-outline" size={22} color={screenColors.textPrimary} />
+              <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Export my data</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={screenColors.textSecondary} />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <Ionicons name="trash-outline" size={22} color={colors.error} />
               <Text style={[styles.settingLabel, { color: colors.error }]}>Delete account</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={screenColors.textSecondary} />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -165,21 +151,21 @@ export function SettingsScreen() {
           <Text style={styles.sectionTitle}>About</Text>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="document-text-outline" size={22} color={screenColors.textPrimary} />
+              <Ionicons name="document-text-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Terms of Service</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={screenColors.textSecondary} />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="shield-checkmark-outline" size={22} color={screenColors.textPrimary} />
+              <Ionicons name="shield-checkmark-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Privacy Policy</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={screenColors.textSecondary} />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="information-circle-outline" size={22} color={screenColors.textPrimary} />
+              <Ionicons name="information-circle-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>App Version</Text>
             </View>
             <Text style={styles.versionText}>1.0.0</Text>
@@ -198,21 +184,20 @@ export function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    backgroundColor: screenColors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: screenColors.border,
+    borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 28,
+    ...typography.h2,
     fontWeight: '800',
-    color: screenColors.textPrimary,
     letterSpacing: -0.5,
     flex: 1,
   },
@@ -220,24 +205,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 24,
+    padding: spacing.lg,
     paddingBottom: 120, // Space for bottom pill nav
   },
   section: {
     marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '700',
-    color: screenColors.textPrimary,
     marginBottom: spacing.sm,
     paddingLeft: spacing.sm,
   },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: screenColors.surface,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
@@ -253,7 +237,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: screenColors.quantityBg,
+    backgroundColor: colors.quantityBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -261,31 +245,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: screenColors.textPrimary,
+    ...typography.h4,
     marginBottom: spacing.xs,
   },
   profileEmail: {
-    fontSize: 14,
-    color: screenColors.textSecondary,
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
   profileProvider: {
-    fontSize: 11,
-    color: screenColors.textMuted,
+    ...typography.tinyMuted,
     marginTop: spacing.xs,
   },
   signInPrompt: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: screenColors.surface,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
   signInPromptText: {
-    fontSize: 16,
-    color: screenColors.textPrimary,
+    ...typography.body,
     flex: 1,
     marginLeft: spacing.md,
   },
@@ -293,15 +273,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: screenColors.surface,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.error,
   },
   signOutText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.button,
     color: colors.error,
     marginLeft: spacing.sm,
   },
@@ -309,8 +288,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: screenColors.surface,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.xs,
   },
@@ -320,12 +299,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingLabel: {
-    fontSize: 16,
-    color: screenColors.textPrimary,
+    ...typography.body,
     marginLeft: spacing.md,
   },
   versionText: {
-    fontSize: 16,
-    color: screenColors.textSecondary,
+    ...typography.body,
+    color: colors.textSecondary,
   },
 });

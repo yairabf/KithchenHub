@@ -11,24 +11,12 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, typography } from '../theme';
+import { colors, spacing, borderRadius, typography, shadows, pastelColors } from '../theme';
+import { FloatingActionButton } from '../components/common/FloatingActionButton';
+import { RecipeCard } from '../components/recipes';
 
 const { width } = Dimensions.get('window');
-const cardWidth = (width - spacing.lg * 3) / 2;
-
-// Screen-specific colors matching ShoppingListsScreen theme
-const screenColors = {
-  background: '#F5F5F0',
-  surface: '#FFFFFF',
-  tabActive: '#4A5D4A',
-  textPrimary: '#2D3139',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  addButton: '#F5DEB3',
-  quantityBg: '#F3F4F6',
-  border: '#E5E7EB',
-  accent: '#10B981',
-};
+const cardWidth = ((width - spacing.lg * 3) / 2) * 0.85;
 
 interface Recipe {
   id: string;
@@ -59,21 +47,23 @@ export function RecipesScreen() {
     return matchesCategory && matchesSearch;
   });
 
+  const handleAddRecipe = () => {
+    // TODO: Implement add recipe modal
+    console.log('Add new recipe');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Recipes</Text>
-        <TouchableOpacity style={styles.addButton}>
-          <Ionicons name="add" size={24} color={screenColors.textPrimary} />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={screenColors.textMuted} />
+        <Ionicons name="search" size={20} color={colors.textMuted} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search recipes..."
-          placeholderTextColor={screenColors.textMuted}
+          placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -108,24 +98,23 @@ export function RecipesScreen() {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.grid}>
-          {filteredRecipes.map((recipe) => (
-            <TouchableOpacity key={recipe.id} style={styles.recipeCard} activeOpacity={0.8}>
-              <View style={styles.recipeImageContainer}>
-                <View style={styles.recipeImagePlaceholder}>
-                  <Ionicons name="restaurant-outline" size={40} color={screenColors.textSecondary} />
-                </View>
-              </View>
-              <View style={styles.recipeInfo}>
-                <Text style={styles.recipeName} numberOfLines={1}>{recipe.name}</Text>
-                <View style={styles.recipeMetaRow}>
-                  <Ionicons name="time-outline" size={14} color={screenColors.textSecondary} />
-                  <Text style={styles.recipeMeta}>{recipe.cookTime}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+          {filteredRecipes.map((recipe, index) => (
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              backgroundColor={pastelColors[index % pastelColors.length]}
+              onPress={() => console.log('Recipe pressed:', recipe.name)}
+              width={cardWidth}
+            />
           ))}
         </View>
       </ScrollView>
+
+      {/* Add New Recipe Button */}
+      <FloatingActionButton 
+        label="Add New Recipe"
+        onPress={handleAddRecipe}
+      />
     </SafeAreaView>
   );
 }
@@ -133,48 +122,39 @@ export function RecipesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 16,
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: screenColors.border,
+    borderBottomColor: colors.border,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: -0.5,
     flex: 1,
-  },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: screenColors.addButton,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     margin: 24,
     paddingHorizontal: 16,
     paddingVertical: 11,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: screenColors.border,
+    ...shadows.sm,
   },
   searchInput: {
     flex: 1,
     marginLeft: spacing.sm,
     fontSize: 16,
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
   },
   filterContainer: {
     maxHeight: 50,
@@ -186,19 +166,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     marginRight: spacing.sm,
-    borderWidth: 1,
-    borderColor: screenColors.border,
+    ...shadows.sm,
   },
   filterChipActive: {
-    backgroundColor: screenColors.tabActive,
-    borderColor: screenColors.tabActive,
+    backgroundColor: colors.chores,
+    borderColor: colors.chores,
   },
   filterChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: screenColors.textSecondary,
+    color: colors.textSecondary,
   },
   filterChipTextActive: {
     color: colors.textLight,
@@ -214,45 +193,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-  },
-  recipeCard: {
-    width: cardWidth,
-    backgroundColor: screenColors.surface,
-    borderRadius: 12,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  recipeImageContainer: {
-    height: 100,
-    backgroundColor: screenColors.quantityBg,
-  },
-  recipeImagePlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  recipeInfo: {
-    padding: spacing.sm,
-  },
-  recipeName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: screenColors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  recipeMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  recipeMeta: {
-    fontSize: 11,
-    color: screenColors.textMuted,
-    marginLeft: spacing.xs,
   },
 });

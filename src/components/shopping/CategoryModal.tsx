@@ -12,19 +12,9 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, borderRadius, shadows } from '../../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Screen-specific colors matching ShoppingListsScreen
-const screenColors = {
-  background: '#F5F5F0',
-  surface: '#FFFFFF',
-  textPrimary: '#2D3139',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  border: '#E5E7EB',
-  accent: '#10B981',
-};
 
 interface GroceryItem {
   id: string;
@@ -71,7 +61,7 @@ export function CategoryModal({
               <Text style={styles.headerSubtitle}>{items.length} items</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={28} color={screenColors.textPrimary} />
+              <Ionicons name="close" size={28} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -83,7 +73,7 @@ export function CategoryModal({
           >
             {items.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="cube-outline" size={48} color={screenColors.textMuted} />
+                <Ionicons name="cube-outline" size={48} color={colors.textMuted} />
                 <Text style={styles.emptyText}>No items in this category</Text>
               </View>
             ) : (
@@ -100,7 +90,7 @@ export function CategoryModal({
                     <Text style={styles.itemCategory}>{item.category}</Text>
                   </View>
                   <View style={styles.addButton}>
-                    <Ionicons name="add-circle" size={32} color={screenColors.accent} />
+                    <Ionicons name="add-circle" size={32} color={colors.shopping} />
                   </View>
                 </TouchableOpacity>
               ))
@@ -124,12 +114,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.backdrop,
   },
   sidePanel: {
     width: SCREEN_WIDTH * 0.75,
     maxWidth: 500,
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     shadowColor: '#000',
     shadowOffset: { width: -4, height: 0 },
     shadowOpacity: 0.25,
@@ -143,8 +133,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: screenColors.border,
-    backgroundColor: screenColors.surface,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   headerContent: {
     flex: 1,
@@ -152,12 +142,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: screenColors.textSecondary,
+    color: colors.textSecondary,
   },
   closeButton: {
     padding: 4,
@@ -165,7 +155,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
@@ -178,13 +168,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
     marginTop: 12,
   },
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -198,7 +188,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
   },
   itemDetails: {
     flex: 1,
@@ -207,12 +197,12 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   itemCategory: {
     fontSize: 13,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
   },
   addButton: {
     padding: 4,

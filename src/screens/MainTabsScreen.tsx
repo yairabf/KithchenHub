@@ -1,7 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -16,11 +14,8 @@ import { SettingsScreen } from './SettingsScreen';
 import { BottomPillNav, TabKey } from '../components/navigation';
 import { ShoppingQuickActionModal } from '../components/modals/ShoppingQuickActionModal';
 import { ChoresQuickActionModal } from '../components/modals/ChoresQuickActionModal';
-import { MainStackParamList } from '../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-type NavigationProp = NativeStackNavigationProp<MainStackParamList, 'MainTabs'>;
 
 // Tab order for determining swipe direction
 const TAB_ORDER: TabKey[] = ['Dashboard', 'Shopping', 'Chores', 'Recipes', 'Settings'];
@@ -28,7 +23,6 @@ const TAB_ORDER: TabKey[] = ['Dashboard', 'Shopping', 'Chores', 'Recipes', 'Sett
 const getTabIndex = (tab: TabKey): number => TAB_ORDER.indexOf(tab);
 
 export function MainTabsScreen() {
-  const navigation = useNavigation<NavigationProp>();
   const [activeTab, setActiveTab] = useState<TabKey>('Dashboard');
   const [shoppingModalVisible, setShoppingModalVisible] = useState(false);
   const [choresModalVisible, setChoresModalVisible] = useState(false);
@@ -81,10 +75,6 @@ export function MainTabsScreen() {
     setChoresModalVisible(false);
   }, []);
 
-  const handleNavigateToSingleList = useCallback((listId: string, listName: string) => {
-    navigation.navigate('SingleList', { listId, listName });
-  }, [navigation]);
-
   const handleAddChore = useCallback((newChore: {
     name: string;
     icon: string;
@@ -118,11 +108,7 @@ export function MainTabsScreen() {
           />
         );
       case 'Shopping':
-        return (
-          <ShoppingListsScreen
-            onNavigateToSingleList={handleNavigateToSingleList}
-          />
-        );
+        return <ShoppingListsScreen />;
       case 'Recipes':
         return <RecipesScreen />;
       case 'Chores':

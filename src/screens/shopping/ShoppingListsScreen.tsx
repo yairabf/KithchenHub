@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,31 +10,17 @@ import {
   ImageBackground,
   TextInput,
   Dimensions,
-  Modal,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryModal } from '../../components/shopping/CategoryModal';
 import { AllItemsModal } from '../../components/shopping/AllItemsModal';
+import { SwipeableShoppingItem } from '../../components/shopping/SwipeableShoppingItem';
 import { CenteredModal } from '../../components/common/CenteredModal';
+import { FloatingActionButton } from '../../components/common/FloatingActionButton';
+import { GrocerySearchBar, GroceryItem } from '../../components/common/GrocerySearchBar';
+import { colors, spacing, borderRadius, typography, shadows, componentSize } from '../../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Screen-specific colors matching reference design
-const screenColors = {
-  background: '#F5F5F0',
-  surface: '#FFFFFF',
-  tabActive: '#4A5D4A',
-  tabInactive: '#F5F5F0',
-  textPrimary: '#2D3139',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  priceText: '#374151',
-  addButton: '#F5DEB3',
-  quantityBg: '#F3F4F6',
-  border: '#E5E7EB',
-  accent: '#10B981',
-};
 
 // Types
 interface ShoppingItem {
@@ -60,14 +46,6 @@ interface ShoppingList {
   itemCount: number;
   icon: string;
   color: string;
-}
-
-interface GroceryItem {
-  id: string;
-  name: string;
-  image: string;
-  category: string;
-  defaultQuantity: number;
 }
 
 // Mock Groceries Database - Available items to search and add
@@ -267,17 +245,10 @@ const mockShoppingLists: ShoppingList[] = [
   { id: '5', name: 'Healthy Snacks', itemCount: getListItemCount('5'), icon: 'nutrition-outline', color: '#06B6D4' },
 ];
 
-interface ShoppingListsScreenProps {
-  onNavigateToSingleList?: (listId: string, listName: string) => void;
-}
-
-export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScreenProps) {
+export function ShoppingListsScreen() {
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(mockShoppingLists);
   const [selectedList, setSelectedList] = useState<ShoppingList>(mockShoppingLists[0]);
   const [allItems, setAllItems] = useState<ShoppingItem[]>(mockItems);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [selectedGroceryItem, setSelectedGroceryItem] = useState<GroceryItem | null>(null);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [quantityInput, setQuantityInput] = useState('1');
@@ -288,37 +259,9 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showAllItemsModal, setShowAllItemsModal] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter items based on selected list
   const filteredItems = allItems.filter(item => item.listId === selectedList.id);
-
-  // Search functionality with debounce
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (searchQuery.trim().length > 0) {
-      searchTimeoutRef.current = setTimeout(() => {
-        const query = searchQuery.toLowerCase().trim();
-        const results = mockGroceriesDB.filter(item =>
-          item.name.toLowerCase().startsWith(query)
-        );
-        setSearchResults(results);
-        setShowSearchDropdown(results.length > 0);
-      }, 300);
-    } else {
-      setSearchResults([]);
-      setShowSearchDropdown(false);
-    }
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
 
   const handleQuantityChange = (itemId: string, delta: number) => {
     setAllItems(prev => prev.map(item =>
@@ -328,11 +271,46 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
     ));
   };
 
+  const handleDeleteItem = (itemId: string) => {
+    setAllItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
   const handleSelectGroceryItem = (groceryItem: GroceryItem) => {
     setSelectedGroceryItem(groceryItem);
     setQuantityInput(groceryItem.defaultQuantity.toString());
     setShowQuantityModal(true);
-    setShowSearchDropdown(false);
+    // Keep dropdown open so user can continue adding items after modal closes
+  };
+
+  const handleQuickAddItem = (groceryItem: GroceryItem) => {
+    const quantity = groceryItem.defaultQuantity;
+
+    // Check if item already exists in the selected list
+    const existingItemIndex = allItems.findIndex(
+      item => item.name === groceryItem.name && item.listId === selectedList.id
+    );
+
+    if (existingItemIndex !== -1) {
+      // Update existing item quantity
+      setAllItems(prev => prev.map((item, index) =>
+        index === existingItemIndex
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      ));
+    } else {
+      // Add new item to list
+      const newItem: ShoppingItem = {
+        id: `item-${Date.now()}`,
+        name: groceryItem.name,
+        image: groceryItem.image,
+        quantity: quantity,
+        category: groceryItem.category,
+        listId: selectedList.id,
+      };
+      setAllItems(prev => [...prev, newItem]);
+    }
+
+    // Keep dropdown open and search query intact for rapid multi-item addition
   };
 
   const handleAddToList = () => {
@@ -370,7 +348,6 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
     setShowQuantityModal(false);
     setSelectedGroceryItem(null);
     setQuantityInput('1');
-    setSearchQuery('');
   };
 
   const handleCancelQuantityModal = () => {
@@ -451,19 +428,28 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
     handleSelectGroceryItem(groceryItem);
   };
 
+  const handleQuickAddItemFromAllItems = (groceryItem: GroceryItem) => {
+    // Don't close modal - keep it open for rapid adding
+    handleQuickAddItem(groceryItem);
+  };
+
   const totalItems = filteredItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>{selectedList.name}</Text>
-          <Text style={styles.headerSubtitle}>{totalItems} items total</Text>
-        </View>
-      </View>
+  const handleQuickAdd = () => {
+    handleOpenAllItemsModal();
+  };
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+  return (
+      <SafeAreaView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>{selectedList.name}</Text>
+            <Text style={styles.headerSubtitle}>{totalItems} items total</Text>
+          </View>
+        </View>
+
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.mainGrid}>
           {/* Left Column - Shopping List */}
           <View style={styles.leftColumn}>
@@ -474,7 +460,7 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
                 style={styles.listHeaderButton}
                 onPress={handleOpenCreateListModal}
               >
-                <Ionicons name="add" size={20} color={screenColors.textPrimary} />
+                <Ionicons name="add" size={20} color={colors.textLight} />
               </TouchableOpacity>
             </View>
 
@@ -512,95 +498,54 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
                   </TouchableOpacity>
                 ))}
                 <TouchableOpacity style={styles.addListCard}>
-                  <Ionicons name="add-circle-outline" size={24} color={screenColors.textMuted} />
+                  <Ionicons name="add-circle-outline" size={24} color={colors.textMuted} />
                   <Text style={styles.addListText}>New List</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
 
             {/* Search Bar */}
-            <View style={styles.searchBarContainer}>
-              <View style={styles.searchBar}>
-                <Ionicons name="search-outline" size={18} color={screenColors.textMuted} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search groceries to add..."
-                  placeholderTextColor={screenColors.textMuted}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => {
-                    setSearchQuery('');
-                    setShowSearchDropdown(false);
-                  }}>
-                    <Ionicons name="close-circle" size={18} color={screenColors.textMuted} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* Search Results Dropdown */}
-              {showSearchDropdown && searchResults.length > 0 && (
-                <View style={styles.searchDropdown}>
-                  <ScrollView 
-                    style={styles.searchDropdownScroll}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {searchResults.map((item) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={styles.searchResultItem}
-                        onPress={() => handleSelectGroceryItem(item)}
-                      >
-                        <Image source={{ uri: item.image }} style={styles.searchResultImage} />
-                        <View style={styles.searchResultDetails}>
-                          <Text style={styles.searchResultName}>{item.name}</Text>
-                          <Text style={styles.searchResultCategory}>{item.category}</Text>
-                        </View>
-                        <Ionicons name="add-circle-outline" size={24} color={screenColors.accent} />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
+            <GrocerySearchBar
+              items={mockGroceriesDB}
+              onSelectItem={handleSelectGroceryItem}
+              onQuickAddItem={handleQuickAddItem}
+              variant="surface"
+              showShadow={true}
+              containerStyle={styles.searchBarContainer}
+            />
 
             {/* Shopping Items */}
             <View style={styles.itemsList}>
               {filteredItems.map((item) => (
-                <View key={item.id} style={styles.itemRow}>
-                  <Image source={{ uri: item.image }} style={styles.itemImage} />
-                  <View style={styles.itemDetails}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemCategory}>{item.category}</Text>
+                <SwipeableShoppingItem
+                  key={item.id}
+                  onDelete={() => handleDeleteItem(item.id)}
+                  backgroundColor={colors.surface}
+                >
+                  <View style={styles.itemRow}>
+                    <Image source={{ uri: item.image }} style={styles.itemImage} />
+                    <View style={styles.itemDetails}>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      <Text style={styles.itemCategory}>{item.category}</Text>
+                    </View>
+                    <View style={styles.quantityControls}>
+                      <TouchableOpacity
+                        style={styles.quantityBtn}
+                        onPress={() => handleQuantityChange(item.id, -1)}
+                      >
+                        <Text style={styles.quantityBtnText}>-</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.quantity}>{item.quantity}</Text>
+                      <TouchableOpacity
+                        style={styles.quantityBtn}
+                        onPress={() => handleQuantityChange(item.id, 1)}
+                      >
+                        <Text style={styles.quantityBtnText}>+</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <View style={styles.quantityControls}>
-                    <TouchableOpacity
-                      style={styles.quantityBtn}
-                      onPress={() => handleQuantityChange(item.id, -1)}
-                    >
-                      <Text style={styles.quantityBtnText}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.quantity}>{item.quantity}</Text>
-                    <TouchableOpacity
-                      style={styles.quantityBtn}
-                      onPress={() => handleQuantityChange(item.id, 1)}
-                    >
-                      <Text style={styles.quantityBtnText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                </SwipeableShoppingItem>
               ))}
-            </View>
-
-            {/* Recently Searched */}
-            <View style={styles.recentSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recently Searched Items</Text>
-                <TouchableOpacity onPress={handleOpenAllItemsModal}>
-                  <Text style={styles.seeAll}>See all →</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
 
@@ -669,7 +614,7 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
                   style={styles.modalQuantityBtn}
                   onPress={() => handleQuantityInputChange(-1)}
                 >
-                  <Ionicons name="remove" size={24} color={screenColors.textPrimary} />
+                  <Ionicons name="remove" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <TextInput
                   style={styles.modalQuantityInput}
@@ -682,7 +627,7 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
                   style={styles.modalQuantityBtn}
                   onPress={() => handleQuantityInputChange(1)}
                 >
-                  <Ionicons name="add" size={24} color={screenColors.textPrimary} />
+                  <Ionicons name="add" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -697,7 +642,7 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
         title="Create New List"
         confirmText="Create"
         onConfirm={handleCreateList}
-        confirmColor={screenColors.tabActive}
+        confirmColor={colors.chores}
         confirmDisabled={!newListName.trim()}
       >
         <View style={styles.createListInputSection}>
@@ -705,7 +650,7 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
                   <TextInput
                     style={styles.createListInput}
                     placeholder="Enter list name..."
-                    placeholderTextColor={screenColors.textMuted}
+                    placeholderTextColor={colors.textMuted}
                     value={newListName}
                     onChangeText={setNewListName}
                     autoFocus
@@ -728,7 +673,7 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
                         ]}
                         onPress={() => setNewListIcon(icon)}
                       >
-                        <Ionicons name={icon as any} size={24} color={newListIcon === icon ? screenColors.tabActive : screenColors.textSecondary} />
+                        <Ionicons name={icon as any} size={24} color={newListIcon === icon ? colors.chores : colors.textSecondary} />
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -775,15 +720,22 @@ export function ShoppingListsScreen({ onNavigateToSingleList }: ShoppingListsScr
         items={mockGroceriesDB}
         onClose={handleCloseAllItemsModal}
         onSelectItem={handleSelectItemFromAllItems}
+        onQuickAddItem={handleQuickAddItemFromAllItems}
       />
-    </SafeAreaView>
+
+        {/* Quick Add Button */}
+        <FloatingActionButton
+          label="Quick Add"
+          onPress={handleQuickAdd}
+        />
+      </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -798,19 +750,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: screenColors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   addButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: screenColors.addButton,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -840,13 +792,13 @@ const styles = StyleSheet.create({
   listLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
   },
   listHeaderButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: screenColors.addButton,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -860,16 +812,17 @@ const styles = StyleSheet.create({
   listCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
     gap: 12,
     minWidth: 180,
     borderWidth: 2,
     borderColor: 'transparent',
+    ...shadows.lg,
   },
   listCardActive: {
-    borderColor: screenColors.tabActive,
+    borderColor: colors.chores,
     backgroundColor: '#FAFAFA',
   },
   listIconContainer: {
@@ -885,14 +838,14 @@ const styles = StyleSheet.create({
   listCardName: {
     fontSize: 14,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
   },
   listCardNameActive: {
-    color: screenColors.tabActive,
+    color: colors.chores,
   },
   listCardCount: {
     fontSize: 11,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
   listCardIndicator: {
@@ -906,19 +859,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
     gap: 8,
     minWidth: 140,
     borderWidth: 2,
-    borderColor: screenColors.border,
+    borderColor: colors.border,
     borderStyle: 'dashed',
   },
   addListText: {
     fontSize: 14,
     fontWeight: '600',
-    color: screenColors.textMuted,
+    color: colors.textMuted,
   },
   itemsList: {
     gap: 8,
@@ -926,8 +879,6 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: screenColors.surface,
-    borderRadius: 12,
     padding: 12,
     gap: 12,
   },
@@ -935,7 +886,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: screenColors.quantityBg,
+    backgroundColor: colors.quantityBg,
   },
   itemDetails: {
     flex: 1,
@@ -944,11 +895,11 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
   },
   itemCategory: {
     fontSize: 11,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
   quantityControls: {
@@ -960,89 +911,24 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: screenColors.quantityBg,
+    backgroundColor: colors.quantityBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityBtnText: {
     fontSize: 16,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
   },
   quantity: {
     fontSize: 14,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     minWidth: 20,
     textAlign: 'center',
   },
   searchBarContainer: {
-    position: 'relative',
-    zIndex: 1000,
     marginBottom: 12,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: screenColors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: screenColors.textPrimary,
-    height: 30,
-  },
-  searchDropdown: {
-    position: 'absolute',
-    top: 52,
-    left: 0,
-    right: 0,
-    backgroundColor: screenColors.surface,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    maxHeight: 300,
-    overflow: 'hidden',
-  },
-  searchDropdownScroll: {
-    maxHeight: 300,
-  },
-  searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: screenColors.border,
-  },
-  searchResultImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: screenColors.quantityBg,
-  },
-  searchResultDetails: {
-    flex: 1,
-  },
-  searchResultName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: screenColors.textPrimary,
-  },
-  searchResultCategory: {
-    fontSize: 11,
-    color: screenColors.textMuted,
-    marginTop: 2,
-  },
-  recentSection: {
-    marginTop: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1053,11 +939,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
   },
   seeAll: {
     fontSize: 13,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
   },
   categoriesSection: {
     flex: 1,
@@ -1073,6 +959,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 16,
     overflow: 'hidden',
+    ...shadows.md,
   },
   categoryBg: {
     flex: 1,
@@ -1090,12 +977,12 @@ const styles = StyleSheet.create({
   categoryCount: {
     fontSize: 20,
     fontWeight: '800',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
   },
   categoryName: {
     fontSize: 11,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
   },
   // Modal Styles
   modalItemDisplay: {
@@ -1103,7 +990,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     padding: 16,
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     marginBottom: 24,
   },
@@ -1111,7 +998,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: screenColors.quantityBg,
+    backgroundColor: colors.quantityBg,
   },
   modalItemInfo: {
     flex: 1,
@@ -1119,12 +1006,12 @@ const styles = StyleSheet.create({
   modalItemName: {
     fontSize: 18,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   modalItemCategory: {
     fontSize: 13,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
   },
   modalQuantitySection: {
     marginBottom: 0,
@@ -1132,7 +1019,7 @@ const styles = StyleSheet.create({
   modalQuantityLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: screenColors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   modalQuantityControls: {
@@ -1145,18 +1032,18 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: screenColors.quantityBg,
+    backgroundColor: colors.quantityBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalQuantityInput: {
     width: 80,
     height: 48,
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     fontSize: 20,
     fontWeight: '700',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   createListInputSection: {
@@ -1165,18 +1052,18 @@ const styles = StyleSheet.create({
   createListLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: screenColors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   createListInput: {
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     borderWidth: 2,
-    borderColor: screenColors.border,
+    borderColor: colors.border,
   },
   createListIconSection: {
     marginBottom: 24,
@@ -1189,15 +1076,15 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: screenColors.quantityBg,
+    backgroundColor: colors.quantityBg,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   iconOptionActive: {
-    borderColor: screenColors.tabActive,
-    backgroundColor: screenColors.tabActive + '10',
+    borderColor: colors.chores,
+    backgroundColor: colors.chores + '10',
   },
   createListColorSection: {
     marginBottom: 24,
@@ -1216,6 +1103,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   colorOptionActive: {
-    borderColor: screenColors.textPrimary,
+    borderColor: colors.textPrimary,
   },
 });

@@ -9,9 +9,10 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, typography } from '../theme';
+import { colors, spacing, borderRadius, typography, shadows, pastelColors, componentSize } from '../theme';
 import { ProgressRing, SwipeableChoreCard } from '../components/chores';
 import { ChoreDetailsModal } from '../components/modals/ChoreDetailsModal';
+import { FloatingActionButton } from '../components/common/FloatingActionButton';
 
 interface Chore {
   id: string;
@@ -37,15 +38,6 @@ const mockChores: Chore[] = [
   { id: '8', name: 'Mop Kitchen Floor', assignee: 'Dad', dueDate: 'Wednesday', dueTime: '9:00 AM', completed: false, section: 'thisWeek', icon: '🧽' },
 ];
 
-// Pastel color palette inspired by reference
-const choreColors = [
-  '#B8E6E1', // Cyan/turquoise
-  '#C5E8B7', // Light green
-  '#FFD4A3', // Peach/orange
-  '#FFB5A7', // Coral/salmon
-  '#D4C5F9', // Lavender
-  '#FFE5B4', // Light yellow
-];
 
 interface ChoresScreenProps {
   onOpenChoresModal?: () => void;
@@ -143,7 +135,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   }, [todayChores]);
 
   const renderChoreCard = (chore: Chore, index: number) => {
-    const bgColor = choreColors[index % choreColors.length];
+    const bgColor = pastelColors[index % pastelColors.length];
     
     const handleEditPress = (e: any) => {
       e.stopPropagation();
@@ -284,17 +276,11 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
         )}
       </ScrollView>
 
-      {/* Add New Chore Pill Button */}
-      <TouchableOpacity 
-        style={styles.addChorePill}
+      {/* Add New Chore Button */}
+      <FloatingActionButton 
+        label="Add New Chore"
         onPress={onOpenChoresModal}
-        activeOpacity={0.8}
-      >
-        <View style={styles.addChoreIconContainer}>
-          <Ionicons name="add" size={24} color={colors.warning} />
-        </View>
-        <Text style={styles.addChoreText}>Add New Chore</Text>
-      </TouchableOpacity>
+      />
 
       {/* Chore Details Modal */}
       <ChoreDetailsModal
@@ -339,10 +325,7 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
+    ...typography.h3,
   },
   content: {
     flex: 1,
@@ -375,11 +358,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...shadows.lg,
   },
   
   // Sections
@@ -387,10 +366,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
+    ...typography.sectionTitle,
     marginBottom: spacing.md,
   },
   
@@ -410,114 +386,66 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
   choreCardEditButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    width: componentSize.button.sm,
+    height: componentSize.button.sm,
+    borderRadius: componentSize.button.sm / 2,
+    backgroundColor: colors.transparent.white70,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadows.sm,
   },
   choreCardContent: {
     flex: 1,
     marginRight: spacing.sm,
   },
   choreCardName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 3,
+    ...typography.labelBold,
+    marginBottom: spacing.xxs,
   },
   choreCardTime: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    ...typography.tinyMuted,
   },
   choreCardCheck: {
-    width: 26,
-    height: 26,
+    width: componentSize.checkbox + spacing.xxs,
+    height: componentSize.checkbox + spacing.xxs,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   // Checkmarks
   checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: componentSize.checkbox,
+    height: componentSize.checkbox,
+    borderRadius: componentSize.checkbox / 2,
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    ...shadows.sm,
   },
   uncheckmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    width: componentSize.checkbox,
+    height: componentSize.checkbox,
+    borderRadius: componentSize.checkbox / 2,
+    backgroundColor: colors.transparent.white50,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: colors.transparent.white80,
   },
   choreCompleted: {
     textDecorationLine: 'line-through',
     opacity: 0.6,
   },
   choreCardAssignee: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: colors.transparent.white60,
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.xs,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
     marginRight: spacing.sm,
     maxWidth: 80,
   },
   choreCardAssigneeText: {
-    fontSize: 10,
-    fontWeight: '600',
+    ...typography.tiny,
     color: colors.textPrimary,
     textAlign: 'center',
-  },
-  
-  // Add New Chore Pill
-  addChorePill: {
-    position: 'absolute',
-    bottom: 100, // Above bottom pill nav
-    left: '50%',
-    transform: [{ translateX: -100 }], // Center the 200px wide button
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.pill,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    gap: spacing.sm,
-  },
-  addChoreIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.addButton,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addChoreText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
 });

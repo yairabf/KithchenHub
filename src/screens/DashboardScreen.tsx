@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { TabKey } from '../components/navigation';
-import { colors, spacing, borderRadius } from '../theme';
+import { colors, spacing, borderRadius, typography, shadows, componentSize } from '../theme';
 
 interface DashboardScreenProps {
   onOpenShoppingModal: (buttonPosition?: { x: number; y: number; width: number; height: number }) => void;
@@ -44,7 +44,7 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.logoContainer}>
-            <Ionicons name="grid" size={20} color="#FFFFFF" />
+            <Ionicons name="grid" size={20} color={colors.textLight} />
           </View>
           <Text style={styles.logoText}>Kitchen Hub</Text>
         </View>
@@ -148,9 +148,9 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
                 activeOpacity={0.8}
               >
                 <View style={styles.widgetIconContainer}>
-                  <Ionicons name="basket-outline" size={48} color={colors.textSecondary} />
+                  <Ionicons name="basket-outline" size={34} color={colors.textSecondary} />
                 </View>
-                <Text style={styles.widgetLabel}>Shopping</Text>
+                <Text style={styles.widgetLabel} numberOfLines={3}>Add to Shopping List</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -159,9 +159,9 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
                 activeOpacity={0.8}
               >
                 <View style={styles.widgetIconContainer}>
-                  <Ionicons name="clipboard-outline" size={48} color={colors.textSecondary} />
+                  <Ionicons name="clipboard-outline" size={34} color={colors.textSecondary} />
                 </View>
-                <Text style={styles.widgetLabel}>Chores</Text>
+                <Text style={styles.widgetLabel} numberOfLines={3}>Add New Chore</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -188,24 +188,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
-    width: 40,
-    height: 40,
+    width: componentSize.button.md,
+    height: componentSize.button.md,
     backgroundColor: colors.textPrimary,
     borderRadius: borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadows.lg,
   },
   logoText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.textPrimary,
+    ...typography.h3,
     marginLeft: spacing.md,
-    letterSpacing: -0.5,
   },
   searchBar: {
     flex: 1,
@@ -214,15 +207,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.widgetBackground,
     borderRadius: borderRadius.xxl,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: spacing.sm + spacing.xxs,
     marginHorizontal: spacing.md,
   },
   searchInput: {
     flex: 1,
     marginLeft: spacing.sm,
-    fontSize: 14,
+    ...typography.bodySmall,
     fontWeight: '500',
-    color: colors.textPrimary,
   },
   headerRight: {
     flexDirection: 'row',
@@ -253,30 +245,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   profileRole: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 1,
-    marginBottom: 2,
+    ...typography.tiny,
+    marginBottom: spacing.xxs,
   },
   profileName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    ...typography.labelBold,
   },
   avatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: componentSize.avatar.md,
+    height: componentSize.avatar.md,
+    borderRadius: componentSize.avatar.md / 2,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.surface,
     overflow: 'hidden',
-    backgroundColor: '#EEF2FF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: colors.avatarBackground,
+    ...shadows.md,
   },
   avatar: {
     width: '100%',
@@ -300,15 +283,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: colors.textPrimary,
-    letterSpacing: -2,
+    ...typography.display,
     marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 18,
-    fontWeight: '500',
+    ...typography.bodyLarge,
     color: colors.textSecondary,
   },
   mainGrid: {
@@ -324,6 +303,7 @@ const styles = StyleSheet.create({
   widgetsRow: {
     flexDirection: 'row',
     gap: spacing.md,
+    alignItems: 'flex-start',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -333,14 +313,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   sectionTitle: {
-    fontSize: 18,
+    ...typography.h4,
     fontWeight: '900',
-    color: colors.textPrimary,
     letterSpacing: -0.3,
   },
   editButton: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.labelBold,
     color: colors.primary,
   },
   overviewCards: {
@@ -350,17 +328,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1,
-    borderColor: colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xxxl,
     paddingVertical: spacing.md,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
+    paddingHorizontal: spacing.lg - spacing.xs,
+    ...shadows.lg,
   },
   overviewCardContent: {
     flexDirection: 'row',
@@ -368,32 +340,22 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   overviewIconContainer: {
-    width: 56,
-    height: 56,
-    backgroundColor: colors.surface,
+    width: componentSize.icon.container.md,
+    height: componentSize.icon.container.md,
+    backgroundColor: colors.background,
     borderRadius: borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   overviewTextContainer: {
     gap: spacing.xs,
   },
   overviewTitle: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   overviewSub: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    ...typography.sectionTitleMuted,
   },
   addWidgetButton: {
     flexDirection: 'row',
@@ -403,41 +365,38 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#CBD5E1',
+    borderColor: colors.borderDashed,
     borderRadius: borderRadius.pill,
   },
   addWidgetText: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...typography.labelBold,
     color: colors.textMuted,
   },
   widgetCard: {
     flex: 1,
     aspectRatio: 1,
-    backgroundColor: colors.widgetBackground,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.pill,
-    padding: 20,
+    padding: spacing.md,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
+    maxWidth: 217,
+    maxHeight: 217,
+    minHeight: 217,
+    ...shadows.lg,
   },
   widgetIconContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: colors.surfaceGlass,
-    borderRadius: 28,
+    width: componentSize.icon.container.md,
+    height: componentSize.icon.container.md,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   widgetLabel: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
+    ...typography.widgetTitle,
+    textAlign: 'center',
+    minHeight: 84, // Fixed height for 3 lines of text (numberOfLines applied as prop)
   },
 });

@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius } from '../../theme';
+import { colors, spacing, borderRadius, shadows } from '../../theme';
 
 interface FloatingActionButtonProps {
   label: string;
-  onPress: () => void;
+  onPress?: () => void;
   iconName?: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
   bottomOffset?: number;
@@ -15,16 +15,17 @@ export function FloatingActionButton({
   label,
   onPress,
   iconName = 'add',
-  iconColor = colors.warning,
+  iconColor = colors.textLight,
   bottomOffset = 100,
 }: FloatingActionButtonProps) {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.container, { bottom: bottomOffset }]}
       onPress={onPress}
       activeOpacity={0.8}
+      disabled={!onPress}
     >
-      <View style={[styles.iconContainer, { backgroundColor: colors.addButton }]}>
+      <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
         <Ionicons name={iconName} size={24} color={iconColor} />
       </View>
       <Text style={styles.label}>{label}</Text>
@@ -45,11 +46,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    ...shadows.float,
     gap: spacing.sm,
   },
   iconContainer: {

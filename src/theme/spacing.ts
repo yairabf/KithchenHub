@@ -1,4 +1,5 @@
 export const spacing = {
+  xxs: 2,
   xs: 4,
   sm: 8,
   md: 16,
@@ -8,6 +9,7 @@ export const spacing = {
 };
 
 export const borderRadius = {
+  xs: 2,
   sm: 4,
   md: 8,
   lg: 12,
@@ -19,8 +21,31 @@ export const borderRadius = {
 };
 
 export const iconSize = {
+  xs: 12,
   sm: 16,
   md: 24,
   lg: 32,
   xl: 48,
+};
+
+// Common component sizes
+export const componentSize = {
+  avatar: {
+    sm: 32,
+    md: 44,
+    lg: 56,
+  },
+  button: {
+    sm: 28,
+    md: 40,
+    lg: 56,
+  },
+  icon: {
+    container: {
+      sm: 32,
+      md: 56,
+      lg: 80,
+    },
+  },
+  checkbox: 24,
 };

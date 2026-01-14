@@ -2,6 +2,15 @@ import { StyleSheet } from 'react-native';
 import { colors } from './colors';
 
 export const typography = StyleSheet.create({
+  // Display - hero/greeting text
+  display: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: colors.textPrimary,
+    letterSpacing: -2,
+    lineHeight: 52,
+  },
+
   // Headings
   h1: {
     fontSize: 32,
@@ -30,6 +39,12 @@ export const typography = StyleSheet.create({
   },
 
   // Body text
+  bodyLarge: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: colors.textPrimary,
+    lineHeight: 26,
+  },
   body: {
     fontSize: 16,
     fontWeight: '400',
@@ -62,6 +77,46 @@ export const typography = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 16,
   },
+  captionBold: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+    lineHeight: 16,
+  },
+
+  // Tiny text (for roles, tags)
+  tiny: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 1,
+    lineHeight: 14,
+  },
+  tinyMuted: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    lineHeight: 14,
+  },
+
+  // Section titles (uppercase)
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    lineHeight: 16,
+  },
+  sectionTitleMuted: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    lineHeight: 14,
+  },
 
   // Button text
   button: {
@@ -73,5 +128,14 @@ export const typography = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
+  },
+
+  // Widget/card titles
+  widgetTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+    lineHeight: 28,
   },
 });

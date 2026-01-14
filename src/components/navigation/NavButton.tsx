@@ -7,12 +7,9 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing } from '../../theme';
+import { colors, spacing, withOpacity } from '../../theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-// Indigo background color for active state (matching reference)
-const ACTIVE_BG_COLOR = '#6366F1';
 
 interface NavButtonProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -38,7 +35,7 @@ export function NavButton({
       backgroundColor: interpolateColor(
         isActive ? 1 : pressed.value,
         [0, 1],
-        ['transparent', isActive ? ACTIVE_BG_COLOR : 'rgba(99, 102, 241, 0.1)']
+        ['transparent', isActive ? colors.primary : withOpacity(colors.primary, 0.1)]
       ),
     };
   });
@@ -92,7 +89,7 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   buttonActive: {
-    shadowColor: '#6366F1',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

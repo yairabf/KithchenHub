@@ -17,17 +17,17 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const DELETE_THRESHOLD = SCREEN_WIDTH * 0.3; // 30% of screen width
 const DELETE_VELOCITY_THRESHOLD = 1000; // Increased for more deliberate swipes
 
-interface SwipeableChoreCardProps {
+interface SwipeableShoppingItemProps {
   children: React.ReactNode;
   onDelete: () => void;
-  backgroundColor: string;
+  backgroundColor?: string;
 }
 
-export function SwipeableChoreCard({
+export function SwipeableShoppingItem({
   children,
   onDelete,
-  backgroundColor,
-}: SwipeableChoreCardProps) {
+  backgroundColor = colors.surface,
+}: SwipeableShoppingItemProps) {
   const translateX = useSharedValue(0);
   const itemHeight = useSharedValue(0);
   const swipeDirection = useSharedValue<number>(0); // 1 for right, -1 for left, 0 for none
@@ -36,7 +36,7 @@ export function SwipeableChoreCard({
     try {
       onDelete();
     } catch (error) {
-      console.error('SwipeableChoreCard: Failed to delete item:', error);
+      console.error('SwipeableShoppingItem: Failed to delete item:', error);
     }
   };
 
@@ -202,6 +202,6 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: borderRadius.lg,
-    ...shadows.lg,
+    ...shadows.md,
   },
 });

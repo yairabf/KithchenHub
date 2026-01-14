@@ -13,20 +13,9 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, borderRadius, shadows } from '../../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// Screen-specific colors matching ShoppingListsScreen
-const screenColors = {
-  background: '#F5F5F0',
-  surface: '#FFFFFF',
-  textPrimary: '#2D3139',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  border: '#E5E7EB',
-  accent: '#10B981',
-  quantityBg: '#F3F4F6',
-};
 
 interface GroceryItem {
   id: string;
@@ -41,6 +30,7 @@ interface AllItemsModalProps {
   items: GroceryItem[];
   onClose: () => void;
   onSelectItem: (item: GroceryItem) => void;
+  onQuickAddItem?: (item: GroceryItem) => void;
 }
 
 export function AllItemsModal({
@@ -48,6 +38,7 @@ export function AllItemsModal({
   items,
   onClose,
   onSelectItem,
+  onQuickAddItem,
 }: AllItemsModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -120,24 +111,24 @@ export function AllItemsModal({
               <Text style={styles.headerSubtitle}>{filteredItems.length} items</Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={28} color={screenColors.textPrimary} />
+              <Ionicons name="close" size={28} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-              <Ionicons name="search-outline" size={18} color={screenColors.textMuted} />
+              <Ionicons name="search-outline" size={18} color={colors.textMuted} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search items..."
-                placeholderTextColor={screenColors.textMuted}
+                placeholderTextColor={colors.textMuted}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={18} color={screenColors.textMuted} />
+                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
@@ -151,7 +142,7 @@ export function AllItemsModal({
           >
             {categories.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="search-outline" size={48} color={screenColors.textMuted} />
+                <Ionicons name="search-outline" size={48} color={colors.textMuted} />
                 <Text style={styles.emptyText}>No items found</Text>
                 <Text style={styles.emptySubtext}>Try a different search term</Text>
               </View>
@@ -177,7 +168,7 @@ export function AllItemsModal({
                       <Ionicons
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
                         size={20}
-                        color={screenColors.textSecondary}
+                        color={colors.textSecondary}
                       />
                     </TouchableOpacity>
 
@@ -185,24 +176,39 @@ export function AllItemsModal({
                     {isExpanded && (
                       <View style={styles.categoryItems}>
                         {categoryItems.map((item) => (
-                          <TouchableOpacity
+                          <View
                             key={item.id}
                             style={styles.itemCard}
-                            onPress={() => {
-                              onSelectItem(item);
-                              handleClose();
-                            }}
-                            activeOpacity={0.7}
                           >
-                            <Image source={{ uri: item.image }} style={styles.itemImage} />
-                            <View style={styles.itemDetails}>
-                              <Text style={styles.itemName}>{item.name}</Text>
-                              <Text style={styles.itemCategory}>{item.category}</Text>
-                            </View>
-                            <View style={styles.addButton}>
-                              <Ionicons name="add-circle" size={32} color={screenColors.accent} />
-                            </View>
-                          </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.itemContent}
+                              onPress={() => {
+                                onSelectItem(item);
+                                handleClose();
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Image source={{ uri: item.image }} style={styles.itemImage} />
+                              <View style={styles.itemDetails}>
+                                <Text style={styles.itemName}>{item.name}</Text>
+                                <Text style={styles.itemCategory}>{item.category}</Text>
+                              </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.addButton}
+                              onPress={() => {
+                                if (onQuickAddItem) {
+                                  onQuickAddItem(item);
+                                } else {
+                                  onSelectItem(item);
+                                  handleClose();
+                                }
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="add-circle" size={28} color={colors.primary} />
+                            </TouchableOpacity>
+                          </View>
                         ))}
                       </View>
                     )}
@@ -229,12 +235,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: colors.backdrop,
   },
   sidePanel: {
     width: SCREEN_WIDTH * 0.75,
     maxWidth: 500,
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     shadowColor: '#000',
     shadowOffset: { width: -4, height: 0 },
     shadowOpacity: 0.25,
@@ -248,8 +254,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: screenColors.border,
-    backgroundColor: screenColors.surface,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   headerContent: {
     flex: 1,
@@ -257,12 +263,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: screenColors.textSecondary,
+    color: colors.textSecondary,
   },
   closeButton: {
     padding: 4,
@@ -271,14 +277,14 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: screenColors.border,
+    borderBottomColor: colors.border,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 11,
@@ -287,12 +293,12 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     height: 30,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: screenColors.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
@@ -306,12 +312,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '600',
-    color: screenColors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 12,
   },
   emptySubtext: {
     fontSize: 14,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
     marginTop: 4,
   },
   categorySection: {
@@ -321,7 +327,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
@@ -337,12 +343,12 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 16,
     fontWeight: '700',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   categoryCount: {
     fontSize: 12,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
   },
   categoryItems: {
     gap: 8,
@@ -351,7 +357,7 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: screenColors.surface,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
     shadowColor: '#000',
@@ -360,11 +366,16 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
+  itemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   itemImage: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: screenColors.quantityBg,
+    backgroundColor: colors.quantityBg,
   },
   itemDetails: {
     flex: 1,
@@ -373,12 +384,12 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: screenColors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   itemCategory: {
     fontSize: 11,
-    color: screenColors.textMuted,
+    color: colors.textMuted,
   },
   addButton: {
     padding: 4,
