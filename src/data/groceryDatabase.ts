@@ -1,4 +1,4 @@
-import { GroceryItem } from '../components/common/GrocerySearchBar';
+import { GroceryItem } from '../features/shopping/components/GrocerySearchBar';
 
 // Mock Groceries Database - Available items to search and add
 // Organized for easy manual testing with various search scenarios
