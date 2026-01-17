@@ -49,3 +49,12 @@ export const componentSize = {
   },
   checkbox: 24,
 };
+
+// Z-index layers for consistent stacking
+export const zIndex = {
+  base: 0,
+  dropdown: 1000,
+  modal: 2000,
+  tooltip: 3000,
+  overlay: 4000,
+};
