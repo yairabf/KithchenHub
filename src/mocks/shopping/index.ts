@@ -12,3 +12,5 @@ export {
   mockQuickActionLists,
   type QuickActionShoppingList,
 } from './quickActionLists';
+
+export { mockFrequentlyAddedItems } from './frequentlyAddedItems';

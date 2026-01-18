@@ -14,6 +14,7 @@ import { CategoryModal } from '../components/CategoryModal';
 import { AllItemsModal } from '../components/AllItemsModal';
 import { ShoppingListPanel } from '../components/ShoppingListPanel';
 import { CategoriesGrid } from '../components/CategoriesGrid';
+import { FrequentlyAddedGrid } from '../components/FrequentlyAddedGrid';
 import { CenteredModal } from '../../../common/components/CenteredModal';
 import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
 import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
@@ -25,6 +26,7 @@ import {
   mockItems,
   mockCategories,
   mockShoppingLists,
+  mockFrequentlyAddedItems,
   type ShoppingItem,
   type ShoppingList,
 } from '../../../mocks/shopping';
@@ -252,6 +254,10 @@ export function ShoppingListsScreen() {
 
           {/* Right Column - Discovery */}
           <View style={[styles.rightColumn, !isTablet && styles.rightColumnPhone]}>
+            <FrequentlyAddedGrid
+              items={mockFrequentlyAddedItems}
+              onItemPress={handleQuickAddItem}
+            />
             <CategoriesGrid
               categories={mockCategories}
               onCategoryPress={handleCategoryClick}
