@@ -95,6 +95,14 @@ export const styles = StyleSheet.create({
   ingredientCardWrapper: {
     width: IS_TABLET ? (SCREEN_WIDTH - 300 - spacing.lg * 3 - spacing.md) / 2 : '100%',
   },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   instructionsList: {
     gap: spacing.md,
   },

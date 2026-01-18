@@ -9,7 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, pastelColors } from '../../../theme/colors';
 import { RecipeSidebar } from '../components/RecipeSidebar';
-import { IngredientCard } from '../components/IngredientCard';
+import { GroceryCard, GroceryCardContent, IngredientInfo } from '../../../common/components/GroceryCard';
 import { InstructionStep } from '../components/InstructionStep';
 import { Toast } from '../../../common/components/Toast';
 import type { Ingredient } from '../../../mocks/recipes';
@@ -114,13 +114,34 @@ export function RecipeDetailScreen({
               <View style={styles.ingredientsGrid}>
                 {recipe.ingredients.map((ingredient, index) => (
                   <View key={ingredient.id} style={styles.ingredientCardWrapper}>
-                    <IngredientCard
-                      ingredient={ingredient}
-                      backgroundColor={
-                        pastelColors[index % pastelColors.length]
-                      }
-                      onAddToList={() => handleAddIngredient(ingredient)}
-                    />
+                    <GroceryCard
+                      backgroundColor={pastelColors[index % pastelColors.length]}
+                    >
+                      <GroceryCardContent
+                        image={ingredient.image}
+                        title={ingredient.name}
+                        subtitle={
+                          <IngredientInfo
+                            quantity={ingredient.quantity}
+                            unit={ingredient.unit}
+                          />
+                        }
+                        rightElement={
+                          <TouchableOpacity
+                            style={styles.addButton}
+                            onPress={() => handleAddIngredient(ingredient)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons
+                              name="cart-outline"
+                              size={20}
+                              color={colors.textMuted}
+                            />
+                          </TouchableOpacity>
+                        }
+                        imagePosition={ingredient.image ? "left" : "none"}
+                      />
+                    </GroceryCard>
                   </View>
                 ))}
               </View>

@@ -4,10 +4,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SwipeableShoppingItem } from '../SwipeableShoppingItem';
+import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
+import { GroceryCard, GroceryCardContent, QuantityControls } from '../../../../common/components/GroceryCard';
 import { GrocerySearchBar } from '../GrocerySearchBar';
 import { colors } from '../../../../theme';
 import { mockGroceriesDB } from '../../../../data/groceryDatabase';
@@ -92,34 +92,27 @@ export function ShoppingListPanel({
       {/* Shopping Items */}
       <View style={styles.itemsList}>
         {filteredItems.map((item) => (
-          <SwipeableShoppingItem
+          <SwipeableWrapper
             key={item.id}
-            onDelete={() => onDeleteItem(item.id)}
+            onSwipeDelete={() => onDeleteItem(item.id)}
             backgroundColor={colors.surface}
           >
-            <View style={styles.itemRow}>
-              <Image source={{ uri: item.image }} style={styles.itemImage} />
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemCategory}>{item.category}</Text>
-              </View>
-              <View style={styles.quantityControls}>
-                <TouchableOpacity
-                  style={styles.quantityBtn}
-                  onPress={() => onQuantityChange(item.id, -1)}
-                >
-                  <Text style={styles.quantityBtnText}>-</Text>
-                </TouchableOpacity>
-                <Text style={styles.quantity}>{item.quantity}</Text>
-                <TouchableOpacity
-                  style={styles.quantityBtn}
-                  onPress={() => onQuantityChange(item.id, 1)}
-                >
-                  <Text style={styles.quantityBtnText}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </SwipeableShoppingItem>
+            <GroceryCard backgroundColor={colors.surface}>
+              <GroceryCardContent
+                image={item.image}
+                title={item.name}
+                subtitle={item.category}
+                rightElement={
+                  <QuantityControls
+                    quantity={item.quantity}
+                    onIncrement={() => onQuantityChange(item.id, 1)}
+                    onDecrement={() => onQuantityChange(item.id, -1)}
+                    minQuantity={1}
+                  />
+                }
+              />
+            </GroceryCard>
+          </SwipeableWrapper>
         ))}
       </View>
     </View>
