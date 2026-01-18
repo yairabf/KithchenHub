@@ -229,4 +229,49 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     minHeight: 84, // Fixed height for 3 lines of text (numberOfLines applied as prop)
   },
+  // Phone-specific styles
+  headerPhone: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  searchBarPhone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.widgetBackground,
+    borderRadius: borderRadius.xxl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + spacing.xxs,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  mainGridPhone: {
+    flexDirection: 'column',
+    gap: spacing.lg,
+  },
+  fullWidthColumn: {
+    flex: undefined,
+    width: '100%',
+  },
+  widgetsColumnPhone: {
+    flexDirection: 'column',
+    gap: spacing.md,
+  },
+  widgetCardPhone: {
+    flex: undefined,
+    width: '100%',
+    aspectRatio: undefined,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    maxWidth: undefined,
+    maxHeight: undefined,
+    minHeight: undefined,
+    gap: spacing.md,
+  },
+  widgetLabelPhone: {
+    minHeight: undefined,
+    textAlign: 'left',
+  },
 });

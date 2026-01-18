@@ -2,13 +2,21 @@ import { StyleSheet } from 'react-native';
 import { colors, spacing } from '../../../theme';
 
 export const styles = StyleSheet.create({
+  // Default (tablet/desktop) styles
   button: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 32,
+    minWidth: 80,
+  },
+  // Phone-specific overrides
+  buttonPhone: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: 35,
-    minWidth: 60,
+    borderRadius: 26,
+    minWidth: 56,
   },
   buttonActive: {
     shadowColor: colors.primary,
@@ -18,12 +26,11 @@ export const styles = StyleSheet.create({
     elevation: 4,
   },
   icon: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   label: {
-    fontSize: 9,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     textAlign: 'center',
   },
 });

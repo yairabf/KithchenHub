@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { spacing } from '../../../theme';
 
 export const styles = StyleSheet.create({
+  // Default (tablet/desktop) styles
   container: {
     position: 'absolute',
     bottom: 0,
@@ -9,16 +10,22 @@ export const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.xl,
   },
+  // Phone-specific container
+  containerPhone: {
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  // Default (tablet/desktop) pill
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: 48,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 40,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -26,6 +33,14 @@ export const styles = StyleSheet.create({
     elevation: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.5)',
-    gap: 4,
+    gap: spacing.sm,
+  },
+  // Phone-specific pill
+  pillPhone: {
+    borderRadius: 32,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    justifyContent: 'space-evenly',
+    gap: spacing.xs,
   },
 });

@@ -1,10 +1,7 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { colors, withOpacity } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
 import { shadows } from '../../../theme/shadows';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const IS_TABLET = SCREEN_WIDTH >= 768;
 
 export const styles = StyleSheet.create({
   container: {
@@ -47,17 +44,27 @@ export const styles = StyleSheet.create({
     paddingBottom: spacing.xxl * 2,
   },
   contentRow: {
-    flexDirection: IS_TABLET ? 'row' : 'column',
+    flexDirection: 'row',
     gap: spacing.xl,
   },
   sidebar: {
-    flex: IS_TABLET ? 35 : undefined,
-    width: IS_TABLET ? undefined : '100%',
+    flex: 35,
     flexShrink: 0,
   },
   mainContent: {
-    flex: IS_TABLET ? 65 : 1,
+    flex: 65,
     gap: spacing.xl,
+  },
+  // Phone-specific styles (applied dynamically via useResponsive hook)
+  contentRowPhone: {
+    flexDirection: 'column',
+  },
+  sidebarPhone: {
+    flex: undefined,
+    width: '100%',
+  },
+  mainContentPhone: {
+    flex: 1,
   },
   section: {
     gap: spacing.md,

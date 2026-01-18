@@ -5,5 +5,6 @@ export interface NavButtonProps {
   iconActive: keyof typeof Ionicons.glyphMap;
   label: string;
   isActive: boolean;
+  isPhone?: boolean;
   onPress: () => void;
 }

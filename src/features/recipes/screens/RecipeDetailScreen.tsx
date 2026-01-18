@@ -11,6 +11,7 @@ import { colors } from '../../../theme/colors';
 import { RecipeSidebar } from '../components/RecipeSidebar';
 import { InstructionStep } from '../components/InstructionStep';
 import { Toast } from '../../../common/components/Toast';
+import { useResponsive } from '../../../common/hooks';
 import type { Ingredient } from '../../../mocks/recipes';
 import { styles } from './RecipeDetailScreen.styles';
 import type { RecipeDetailScreenProps } from './RecipeDetailScreen.types';
@@ -20,6 +21,7 @@ export function RecipeDetailScreen({
   onBack,
   onAddToShoppingList,
 }: RecipeDetailScreenProps) {
+  const { isTablet } = useResponsive();
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -82,9 +84,9 @@ export function RecipeDetailScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.contentRow}>
+        <View style={[styles.contentRow, !isTablet && styles.contentRowPhone]}>
           {/* Sidebar */}
-          <View style={styles.sidebar}>
+          <View style={[styles.sidebar, !isTablet && styles.sidebarPhone]}>
             <RecipeSidebar
               recipe={recipe}
               onAddIngredient={handleAddIngredient}
@@ -93,7 +95,7 @@ export function RecipeDetailScreen({
           </View>
 
           {/* Main Content */}
-          <View style={styles.mainContent}>
+          <View style={[styles.mainContent, !isTablet && styles.mainContentPhone]}>
             {/* Instructions Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>

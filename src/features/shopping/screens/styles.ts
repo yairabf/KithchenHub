@@ -191,4 +191,13 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
+  // Phone-specific styles
+  mainGridPhone: {
+    flexDirection: 'column',
+    gap: 24,
+  },
+  rightColumnPhone: {
+    flex: undefined,
+    width: '100%',
+  },
 });

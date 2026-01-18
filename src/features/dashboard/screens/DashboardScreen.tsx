@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useResponsive } from '../../../common/hooks';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import type { DashboardScreenProps } from './types';
@@ -17,6 +18,7 @@ import type { TabKey } from '../../../common/components/BottomPillNav';
 
 export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavigateToTab }: DashboardScreenProps) {
   const { user } = useAuth();
+  const { isTablet } = useResponsive();
   const [searchQuery, setSearchQuery] = useState('');
   const shoppingButtonRef = useRef<View>(null);
 
@@ -36,25 +38,27 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, !isTablet && styles.headerPhone]}>
         <View style={styles.headerLeft}>
           <View style={styles.logoContainer}>
             <Ionicons name="grid" size={20} color={colors.textLight} />
           </View>
-          <Text style={styles.logoText}>Kitchen Hub</Text>
+          {isTablet && <Text style={styles.logoText}>Kitchen Hub</Text>}
         </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={18} color={colors.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search recipes..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        {/* Search Bar - Only show inline on tablet */}
+        {isTablet && (
+          <View style={styles.searchBar}>
+            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search recipes..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        )}
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.notificationButton}>
@@ -63,10 +67,12 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
           </TouchableOpacity>
 
           <View style={styles.profileSection}>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileRole}>KITCHEN LEAD</Text>
-              <Text style={styles.profileName}>{user?.name || 'Jessica J.'}</Text>
-            </View>
+            {isTablet && (
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileRole}>KITCHEN LEAD</Text>
+                <Text style={styles.profileName}>{user?.name || 'Jessica J.'}</Text>
+              </View>
+            )}
             <View style={styles.avatarContainer}>
               {user?.photoUrl ? (
                 <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
@@ -81,6 +87,20 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
         </View>
       </View>
 
+      {/* Phone-only search bar below header */}
+      {!isTablet && (
+        <View style={styles.searchBarPhone}>
+          <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search recipes..."
+            placeholderTextColor={colors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      )}
+
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Greeting Section */}
         <View style={styles.greetingSection}>
@@ -91,9 +111,9 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
         </View>
 
         {/* Main Content Grid */}
-        <View style={styles.mainGrid}>
+        <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
           {/* Left Column - Overview Section */}
-          <View style={styles.leftColumn}>
+          <View style={[styles.leftColumn, !isTablet && styles.fullWidthColumn]}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Overview</Text>
               <TouchableOpacity>
@@ -130,11 +150,11 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
           </View>
 
           {/* Right Column - Widgets Grid */}
-          <View style={styles.rightColumn}>
-            <View style={styles.widgetsRow}>
+          <View style={[styles.rightColumn, !isTablet && styles.fullWidthColumn]}>
+            <View style={[styles.widgetsRow, !isTablet && styles.widgetsColumnPhone]}>
               <TouchableOpacity
                 ref={shoppingButtonRef}
-                style={styles.widgetCard}
+                style={[styles.widgetCard, !isTablet && styles.widgetCardPhone]}
                 onPress={() => {
                   shoppingButtonRef.current?.measureInWindow((x, y, width, height) => {
                     onOpenShoppingModal({ x, y, width, height });
@@ -145,18 +165,18 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
                 <View style={styles.widgetIconContainer}>
                   <Ionicons name="basket-outline" size={34} color={colors.textSecondary} />
                 </View>
-                <Text style={styles.widgetLabel} numberOfLines={3}>Add to Shopping List</Text>
+                <Text style={[styles.widgetLabel, !isTablet && styles.widgetLabelPhone]} numberOfLines={3}>Add to Shopping List</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.widgetCard}
+                style={[styles.widgetCard, !isTablet && styles.widgetCardPhone]}
                 onPress={onOpenChoresModal}
                 activeOpacity={0.8}
               >
                 <View style={styles.widgetIconContainer}>
                   <Ionicons name="clipboard-outline" size={34} color={colors.textSecondary} />
                 </View>
-                <Text style={styles.widgetLabel} numberOfLines={3}>Add New Chore</Text>
+                <Text style={[styles.widgetLabel, !isTablet && styles.widgetLabelPhone]} numberOfLines={3}>Add New Chore</Text>
               </TouchableOpacity>
             </View>
           </View>
