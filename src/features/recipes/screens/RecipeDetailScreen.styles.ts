@@ -51,11 +51,12 @@ export const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   sidebar: {
-    width: IS_TABLET ? 300 : '100%',
+    flex: IS_TABLET ? 35 : undefined,
+    width: IS_TABLET ? undefined : '100%',
     flexShrink: 0,
   },
   mainContent: {
-    flex: 1,
+    flex: IS_TABLET ? 65 : 1,
     gap: spacing.xl,
   },
   section: {
