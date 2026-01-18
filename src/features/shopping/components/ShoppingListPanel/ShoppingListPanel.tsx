@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
 import { GroceryCard, GroceryCardContent, QuantityControls } from '../../../../common/components/GroceryCard';
 import { GrocerySearchBar } from '../GrocerySearchBar';
-import { colors } from '../../../../theme';
+import { colors, borderRadius, pastelColors } from '../../../../theme';
 import { mockGroceriesDB } from '../../../../data/groceryDatabase';
 import { styles } from './styles';
 import { ShoppingListPanelProps } from './types';
@@ -25,6 +25,36 @@ export function ShoppingListPanel({
   onQuantityChange,
   onDeleteItem,
 }: ShoppingListPanelProps) {
+  // Memoize the render function to prevent unnecessary re-renders
+  const renderShoppingItem = useCallback((item: typeof filteredItems[0], index: number) => {
+    const bgColor = pastelColors[index % pastelColors.length];
+
+    return (
+      <SwipeableWrapper
+        key={item.id}
+        onSwipeDelete={() => onDeleteItem(item.id)}
+        backgroundColor={bgColor}
+        borderRadius={borderRadius.xxl}
+      >
+        <GroceryCard backgroundColor={bgColor}>
+          <GroceryCardContent
+            image={item.image}
+            title={item.name}
+            subtitle={item.category}
+            rightElement={
+              <QuantityControls
+                quantity={item.quantity}
+                onIncrement={() => onQuantityChange(item.id, 1)}
+                onDecrement={() => onQuantityChange(item.id, -1)}
+                minQuantity={1}
+              />
+            }
+          />
+        </GroceryCard>
+      </SwipeableWrapper>
+    );
+  }, [onDeleteItem, onQuantityChange]);
+
   return (
     <View style={styles.leftColumn}>
       {/* List Header with Shopping Lists Drawer */}
@@ -91,29 +121,7 @@ export function ShoppingListPanel({
 
       {/* Shopping Items */}
       <View style={styles.itemsList}>
-        {filteredItems.map((item) => (
-          <SwipeableWrapper
-            key={item.id}
-            onSwipeDelete={() => onDeleteItem(item.id)}
-            backgroundColor={colors.surface}
-          >
-            <GroceryCard backgroundColor={colors.surface}>
-              <GroceryCardContent
-                image={item.image}
-                title={item.name}
-                subtitle={item.category}
-                rightElement={
-                  <QuantityControls
-                    quantity={item.quantity}
-                    onIncrement={() => onQuantityChange(item.id, 1)}
-                    onDecrement={() => onQuantityChange(item.id, -1)}
-                    minQuantity={1}
-                  />
-                }
-              />
-            </GroceryCard>
-          </SwipeableWrapper>
-        ))}
+        {filteredItems.map(renderShoppingItem)}
       </View>
     </View>
   );

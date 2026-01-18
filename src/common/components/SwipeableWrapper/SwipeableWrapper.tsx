@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Dimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -11,7 +11,7 @@ import Animated, {
   Extrapolate,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme';
+import { colors, borderRadius } from '../../../theme';
 import { styles, DELETE_THRESHOLD } from './styles';
 import { SwipeableWrapperProps } from './types';
 
@@ -27,6 +27,7 @@ export function SwipeableWrapper({
   onSwipeDelete,
   disabled = false,
   backgroundColor = colors.surface,
+  borderRadius: customBorderRadius,
 }: SwipeableWrapperProps) {
   const translateX = useSharedValue(0);
   const swipeDirection = useSharedValue<number>(0); // 1 for right, -1 for left, 0 for none
@@ -152,21 +153,48 @@ export function SwipeableWrapper({
     };
   });
 
+  const effectiveBorderRadius = customBorderRadius ?? borderRadius.lg;
+
+  // Memoize style objects to prevent recreation on every render/animation frame
+  const borderRadiusStyle = useMemo(
+    () => ({ borderRadius: effectiveBorderRadius }),
+    [effectiveBorderRadius]
+  );
+
+  const cardStyle = useMemo(
+    () => ({ backgroundColor, borderRadius: effectiveBorderRadius }),
+    [backgroundColor, effectiveBorderRadius]
+  );
+
   return (
     <View style={styles.container}>
       {/* Left delete background (swipe right) */}
-      <Animated.View style={[styles.deleteBackground, styles.leftBackground, leftBackgroundStyle]}>
+      <Animated.View style={[
+        styles.deleteBackground,
+        styles.leftBackground,
+        borderRadiusStyle,
+        leftBackgroundStyle
+      ]}>
         <Ionicons name="trash-outline" size={24} color={colors.textLight} />
       </Animated.View>
 
       {/* Right delete background (swipe left) */}
-      <Animated.View style={[styles.deleteBackground, styles.rightBackground, rightBackgroundStyle]}>
+      <Animated.View style={[
+        styles.deleteBackground,
+        styles.rightBackground,
+        borderRadiusStyle,
+        rightBackgroundStyle
+      ]}>
         <Ionicons name="trash-outline" size={24} color={colors.textLight} />
       </Animated.View>
 
       {/* Swipeable card */}
       <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.card, { backgroundColor }, cardAnimatedStyle]}>
+        <Animated.View style={[
+          styles.card,
+          cardStyle,
+          cardAnimatedStyle
+        ]}>
           {children}
         </Animated.View>
       </GestureDetector>
