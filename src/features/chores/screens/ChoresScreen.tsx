@@ -171,6 +171,9 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           </TouchableOpacity>
           <Text style={styles.headerTitle}>HOME CHORES</Text>
         </View>
+        <FloatingActionButton
+          onPress={onOpenChoresModal}
+        />
       </View>
 
       <ScrollView 
@@ -241,12 +244,6 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           </View>
         )}
       </ScrollView>
-
-      {/* Add New Chore Button */}
-      <FloatingActionButton 
-        label="Add New Chore"
-        onPress={onOpenChoresModal}
-      />
 
       {/* Chore Details Modal */}
       <ChoreDetailsModal

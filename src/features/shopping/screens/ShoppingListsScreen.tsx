@@ -17,6 +17,7 @@ import { CategoriesGrid } from '../components/CategoriesGrid';
 import { CenteredModal } from '../../../common/components/CenteredModal';
 import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
 import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
+import { useResponsive } from '../../../common/hooks';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
@@ -31,6 +32,7 @@ import {
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export function ShoppingListsScreen() {
+  const { isTablet } = useResponsive();
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(mockShoppingLists);
   const [selectedList, setSelectedList] = useState<ShoppingList>(mockShoppingLists[0]);
   const [allItems, setAllItems] = useState<ShoppingItem[]>(mockItems);
@@ -220,10 +222,6 @@ export function ShoppingListsScreen() {
 
   const totalItems = filteredItems.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleQuickAdd = () => {
-    setShowQuickAddModal(true);
-  };
-
   return (
       <SafeAreaView style={styles.container}>
         {/* Header */}
@@ -232,10 +230,13 @@ export function ShoppingListsScreen() {
             <Text style={styles.headerTitle}>{selectedList.name}</Text>
             <Text style={styles.headerSubtitle}>{totalItems} items total</Text>
           </View>
+          <FloatingActionButton
+            onPress={() => setShowQuickAddModal(true)}
+          />
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.mainGrid}>
+        <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
           {/* Left Column - Shopping List */}
           <ShoppingListPanel
             shoppingLists={shoppingLists}
@@ -250,7 +251,7 @@ export function ShoppingListsScreen() {
           />
 
           {/* Right Column - Discovery */}
-          <View style={styles.rightColumn}>
+          <View style={[styles.rightColumn, !isTablet && styles.rightColumnPhone]}>
             <CategoriesGrid
               categories={mockCategories}
               onCategoryPress={handleCategoryClick}
@@ -449,11 +450,6 @@ export function ShoppingListsScreen() {
         </View>
       </CenteredModal>
 
-        {/* Quick Add Button */}
-        <FloatingActionButton
-          label="Quick Add"
-          onPress={handleQuickAdd}
-        />
       </SafeAreaView>
   );
 }

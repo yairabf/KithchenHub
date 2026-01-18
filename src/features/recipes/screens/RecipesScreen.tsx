@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, pastelColors } from '../../../theme';
@@ -16,17 +15,32 @@ import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
 import { mockRecipes, recipeCategories, type Recipe } from '../../../mocks/recipes';
+import { useResponsive } from '../../../common/hooks';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
 
-const { width } = Dimensions.get('window');
-const cardWidth = ((width - spacing.lg * 3) / 2) * 0.85;
-
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
+  const { width, isTablet } = useResponsive();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>(mockRecipes);
+
+  // Calculate card width dynamically based on screen size
+  // Account for container padding (24px each side) and gap between cards
+  const cardWidth = useMemo(() => {
+    const containerPadding = 24 * 2; // contentContainer padding
+    const cardGap = spacing.md; // gap between 2 cards
+    const availableWidth = width - containerPadding - cardGap;
+
+    if (isTablet) {
+      // 2 columns on tablet, slightly smaller cards
+      return (availableWidth / 2) * 0.9;
+    } else {
+      // 2 columns on phone, use full available width
+      return availableWidth / 2;
+    }
+  }, [width, isTablet]);
 
   const filteredRecipes = recipes.filter(recipe => {
     const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
@@ -56,6 +70,9 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Recipes</Text>
+        <FloatingActionButton
+          onPress={handleAddRecipe}
+        />
       </View>
 
       <View style={styles.searchContainer}>
@@ -109,12 +126,6 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
           ))}
         </View>
       </ScrollView>
-
-      {/* Add New Recipe Button */}
-      <FloatingActionButton
-        label="Add New Recipe"
-        onPress={handleAddRecipe}
-      />
 
       {/* Add Recipe Modal */}
       <AddRecipeModal
