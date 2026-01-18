@@ -7,9 +7,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, pastelColors } from '../../../theme/colors';
+import { colors } from '../../../theme/colors';
 import { RecipeSidebar } from '../components/RecipeSidebar';
-import { GroceryCard, GroceryCardContent, IngredientInfo } from '../../../common/components/GroceryCard';
 import { InstructionStep } from '../components/InstructionStep';
 import { Toast } from '../../../common/components/Toast';
 import type { Ingredient } from '../../../mocks/recipes';
@@ -86,67 +85,15 @@ export function RecipeDetailScreen({
         <View style={styles.contentRow}>
           {/* Sidebar */}
           <View style={styles.sidebar}>
-            <RecipeSidebar recipe={recipe} />
+            <RecipeSidebar
+              recipe={recipe}
+              onAddIngredient={handleAddIngredient}
+              onAddAllIngredients={handleAddAllIngredients}
+            />
           </View>
 
           {/* Main Content */}
           <View style={styles.mainContent}>
-            {/* Ingredients Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Ingredients</Text>
-                <TouchableOpacity
-                  style={styles.addAllButton}
-                  onPress={handleAddAllIngredients}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="add-circle"
-                    size={16}
-                    color={colors.recipes}
-                  />
-                  <Text style={styles.addAllButtonText}>
-                    Add All to Shopping List
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.ingredientsGrid}>
-                {recipe.ingredients.map((ingredient, index) => (
-                  <View key={ingredient.id} style={styles.ingredientCardWrapper}>
-                    <GroceryCard
-                      backgroundColor={pastelColors[index % pastelColors.length]}
-                    >
-                      <GroceryCardContent
-                        image={ingredient.image}
-                        title={ingredient.name}
-                        subtitle={
-                          <IngredientInfo
-                            quantity={ingredient.quantity}
-                            unit={ingredient.unit}
-                          />
-                        }
-                        rightElement={
-                          <TouchableOpacity
-                            style={styles.addButton}
-                            onPress={() => handleAddIngredient(ingredient)}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons
-                              name="cart-outline"
-                              size={20}
-                              color={colors.textMuted}
-                            />
-                          </TouchableOpacity>
-                        }
-                        imagePosition={ingredient.image ? "left" : "none"}
-                      />
-                    </GroceryCard>
-                  </View>
-                ))}
-              </View>
-            </View>
-
             {/* Instructions Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>

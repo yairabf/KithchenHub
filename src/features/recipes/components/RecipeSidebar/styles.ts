@@ -82,4 +82,49 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
+  // Ingredients section
+  ingredientsSection: {
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  ingredientsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xs,
+  },
+  ingredientsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  ingredientsList: {
+    gap: spacing.md,
+  },
+  ingredientCardWrapper: {
+    width: '100%',
+  },
+  addAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: withOpacity(colors.recipes, 0.1),
+    borderRadius: borderRadius.full,
+  },
+  addAllButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.recipes,
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import { colors, withOpacity } from '../../../theme/colors';
-import { spacing, borderRadius } from '../../../theme/spacing';
+import { spacing } from '../../../theme/spacing';
 import { shadows } from '../../../theme/shadows';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -73,39 +73,7 @@ export const styles = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
-  addAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md + spacing.xs,
-    paddingVertical: spacing.sm + spacing.xs,
-    backgroundColor: withOpacity(colors.recipes, 0.1),
-    borderRadius: borderRadius.full,
-  },
-  addAllButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.recipes,
-  },
-  ingredientsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  ingredientCardWrapper: {
-    width: IS_TABLET ? (SCREEN_WIDTH - 300 - spacing.lg * 3 - spacing.md) / 2 : '100%',
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   instructionsList: {
     gap: spacing.md,
   },
 });
-
-export { IS_TABLET, SCREEN_WIDTH };
