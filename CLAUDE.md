@@ -28,16 +28,74 @@ The app uses React Navigation with a conditional auth flow:
 - User data persisted to AsyncStorage under `@kitchen_hub_user`
 - Supports Google sign-in and guest mode
 
-### Project Structure
+### Project Structure (Feature-Based Architecture)
+
+**IMPORTANT: Follow this structure for all new code.**
+
 ```
 src/
-├── contexts/       # React contexts (AuthContext)
-├── navigation/     # Navigator components and route types
-├── screens/        # Screen components organized by feature
-├── components/     # Reusable components (common/)
-├── services/       # External service integrations (auth)
-└── theme/          # Design tokens (colors, spacing, typography)
+├── features/           # Feature modules (MAIN CODE LIVES HERE)
+│   ├── shopping/
+│   │   ├── components/ # Feature-specific components
+│   │   ├── screens/    # Feature screens
+│   │   ├── styles/     # Feature styles
+│   │   ├── hooks/      # Feature-specific hooks
+│   │   └── index.ts    # Barrel export
+│   ├── recipes/
+│   ├── chores/
+│   ├── auth/
+│   ├── dashboard/
+│   └── settings/
+├── common/             # Shared/reusable code
+│   ├── components/     # Shared components (FloatingActionButton, CenteredModal, etc.)
+│   ├── hooks/          # Shared hooks
+│   ├── styles/         # Shared styles
+│   └── index.ts        # Barrel export
+├── navigation/         # Navigator components and route types
+├── contexts/           # React contexts (AuthContext, HouseholdContext)
+├── services/           # External service integrations (auth)
+├── theme/              # Design tokens (colors, spacing, typography)
+├── data/               # Static data (groceryDatabase)
+└── mocks/              # Mock data for development
 ```
+
+### Feature Structure Rules
+
+When adding new code, follow these rules:
+
+1. **New feature?** Create a new folder under `src/features/` with this structure:
+   ```
+   features/[feature-name]/
+   ├── components/    # Feature-specific components
+   ├── screens/       # Feature screens
+   ├── styles/        # Feature styles
+   ├── hooks/         # Feature-specific hooks
+   └── index.ts       # Barrel export
+   ```
+
+2. **New component?** Ask yourself:
+   - Is it feature-specific? → `features/[feature]/components/`
+   - Is it reusable across features? → `common/components/`
+
+3. **New screen?** → Always goes in `features/[feature]/screens/`
+
+4. **New hook?**
+   - Feature-specific? → `features/[feature]/hooks/`
+   - Shared? → `common/hooks/`
+
+5. **Import paths:** Use relative imports from within features:
+   ```typescript
+   // From a feature screen, import feature components:
+   import { MyComponent } from '../components/MyComponent';
+
+   // Import shared components:
+   import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
+
+   // Import theme:
+   import { colors, spacing } from '../../../theme';
+   ```
+
+6. **Barrel exports:** Each feature should have an `index.ts` that exports its public API
 
 ### Type Definitions
 Navigation param lists are defined in their respective navigator files:

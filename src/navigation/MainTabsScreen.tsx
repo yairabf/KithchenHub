@@ -14,6 +14,8 @@ import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
 import { BottomPillNav, TabKey } from '../common/components/BottomPillNav';
 import { ShoppingQuickActionModal } from '../features/shopping/components/ShoppingQuickActionModal';
 import { ChoresQuickActionModal } from '../features/chores/components/ChoresQuickActionModal';
+import { RecipeDetailScreen } from '../features/recipes/screens/RecipeDetailScreen';
+import type { Recipe } from '../mocks/recipes';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -27,7 +29,8 @@ export function MainTabsScreen() {
   const [shoppingModalVisible, setShoppingModalVisible] = useState(false);
   const [choresModalVisible, setChoresModalVisible] = useState(false);
   const [shoppingButtonPosition, setShoppingButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | undefined>(undefined);
-  
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+
   // Store reference to ChoresScreen's handleAddChore
   const choreHandlerRef = useRef<((newChore: any) => void) | null>(null);
 
@@ -44,6 +47,11 @@ export function MainTabsScreen() {
 
     // Store previous tab for rendering during animation
     previousTabRef.current = activeTab;
+
+    // Clear selected recipe when leaving Recipes tab
+    if (activeTab === 'Recipes') {
+      setSelectedRecipe(null);
+    }
 
     // Update active tab immediately
     setActiveTab(tabKey);
@@ -110,7 +118,15 @@ export function MainTabsScreen() {
       case 'Shopping':
         return <ShoppingListsScreen />;
       case 'Recipes':
-        return <RecipesScreen />;
+        if (selectedRecipe) {
+          return (
+            <RecipeDetailScreen
+              recipe={selectedRecipe}
+              onBack={() => setSelectedRecipe(null)}
+            />
+          );
+        }
+        return <RecipesScreen onSelectRecipe={setSelectedRecipe} />;
       case 'Chores':
         return (
           <ChoresScreen

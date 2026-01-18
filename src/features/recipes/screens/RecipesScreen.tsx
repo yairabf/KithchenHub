@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
@@ -10,17 +9,20 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, shadows, pastelColors } from '../../../theme';
+import { spacing, pastelColors } from '../../../theme';
+import { colors } from '../../../theme/colors';
 import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
 import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
 import { mockRecipes, recipeCategories, type Recipe } from '../../../mocks/recipes';
+import { styles } from './styles';
+import type { RecipesScreenProps } from './types';
 
 const { width } = Dimensions.get('window');
 const cardWidth = ((width - spacing.lg * 3) / 2) * 0.85;
 
-export function RecipesScreen() {
+export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
@@ -42,6 +44,9 @@ export function RecipesScreen() {
       name: data.title,
       cookTime: data.prepTime || 'N/A',
       category: data.category || 'Dinner',
+      description: data.description,
+      ingredients: data.ingredients,
+      instructions: data.instructions,
     };
     setRecipes([newRecipe, ...recipes]);
     setShowAddRecipeModal(false);
@@ -98,7 +103,7 @@ export function RecipesScreen() {
               key={recipe.id}
               recipe={recipe}
               backgroundColor={pastelColors[index % pastelColors.length]}
-              onPress={() => console.log('Recipe pressed:', recipe.name)}
+              onPress={() => onSelectRecipe?.(recipe)}
               width={cardWidth}
             />
           ))}
@@ -122,80 +127,3 @@ export function RecipesScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-    flex: 1,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    margin: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 12,
-    ...shadows.sm,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: spacing.sm,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  filterContainer: {
-    maxHeight: 50,
-  },
-  filterContent: {
-    paddingHorizontal: spacing.md,
-  },
-  filterChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
-    marginRight: spacing.sm,
-    ...shadows.sm,
-  },
-  filterChipActive: {
-    backgroundColor: colors.recipes,
-    borderColor: colors.recipes,
-  },
-  filterChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  filterChipTextActive: {
-    color: colors.textLight,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 24,
-    paddingBottom: 120, // Space for bottom pill nav
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-});
