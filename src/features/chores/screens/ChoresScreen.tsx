@@ -12,7 +12,9 @@ import { colors, pastelColors } from '../../../theme';
 import { ProgressRing } from '../components/ProgressRing';
 import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
-import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
+import { HeaderActions } from '../../../common/components/HeaderActions';
+import { ShareModal } from '../../../common/components/ShareModal';
+import { formatChoresText } from '../../../common/utils/shareUtils';
 import { mockChores, type Chore } from '../../../mocks/chores';
 import { styles } from './styles';
 import type { ChoresScreenProps } from './types';
@@ -21,6 +23,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   const [chores, setChores] = useState(mockChores);
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const { width } = useWindowDimensions();
   
   // Responsive breakpoint: tablet/landscape at 768px+
@@ -83,6 +86,12 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   const todayChores = chores.filter(c => c.section === 'today');
   const upcomingChores = chores.filter(c => c.section === 'thisWeek' || c.section === 'recurring');
+
+  // Format chores for sharing using centralized formatter
+  const shareText = useMemo(
+    () => formatChoresText(todayChores, upcomingChores),
+    [todayChores, upcomingChores]
+  );
 
   // Calculate progress (only for today's chores)
   const progress = useMemo(() => {
@@ -171,8 +180,11 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           </TouchableOpacity>
           <Text style={styles.headerTitle}>HOME CHORES</Text>
         </View>
-        <FloatingActionButton
-          onPress={onOpenChoresModal}
+        <HeaderActions
+          onSharePress={() => setShowShareModal(true)}
+          onAddPress={onOpenChoresModal}
+          shareLabel="Share chores list"
+          addLabel="Add new chore"
         />
       </View>
 
@@ -252,6 +264,14 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
         onClose={() => setShowDetailsModal(false)}
         onUpdateAssignee={handleUpdateAssignee}
         onUpdateChore={handleUpdateChore}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title="Share Chores"
+        shareText={shareText}
       />
     </SafeAreaView>
   );

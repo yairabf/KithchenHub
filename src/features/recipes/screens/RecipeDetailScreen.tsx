@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import { colors } from '../../../theme/colors';
 import { RecipeSidebar } from '../components/RecipeSidebar';
 import { InstructionStep } from '../components/InstructionStep';
 import { Toast } from '../../../common/components/Toast';
+import { HeaderActions } from '../../../common/components/HeaderActions';
+import { ShareModal } from '../../../common/components/ShareModal';
+import { formatRecipeText } from '../../../common/utils/shareUtils';
 import { useResponsive } from '../../../common/hooks';
 import type { Ingredient } from '../../../mocks/recipes';
 import { styles } from './RecipeDetailScreen.styles';
@@ -25,6 +28,10 @@ export function RecipeDetailScreen({
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [showShareModal, setShowShareModal] = useState(false);
+
+  // Format recipe for sharing using centralized formatter
+  const shareText = useMemo(() => formatRecipeText(recipe), [recipe]);
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -76,7 +83,11 @@ export function RecipeDetailScreen({
           <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>KITCHEN HUB</Text>
-        <View style={styles.headerSpacer} />
+        <HeaderActions
+          onSharePress={() => setShowShareModal(true)}
+          shareLabel="Share recipe"
+          hideAddButton
+        />
       </View>
 
       <ScrollView
@@ -124,6 +135,14 @@ export function RecipeDetailScreen({
         message={toastMessage}
         type="success"
         onHide={hideToast}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title="Share Recipe"
+        shareText={shareText}
       />
     </SafeAreaView>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,9 @@ import { ShoppingListPanel } from '../components/ShoppingListPanel';
 import { CategoriesGrid } from '../components/CategoriesGrid';
 import { FrequentlyAddedGrid } from '../components/FrequentlyAddedGrid';
 import { CenteredModal } from '../../../common/components/CenteredModal';
-import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
+import { HeaderActions } from '../../../common/components/HeaderActions';
+import { ShareModal } from '../../../common/components/ShareModal';
+import { formatShoppingListText } from '../../../common/utils/shareUtils';
 import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
 import { useResponsive } from '../../../common/hooks';
 import { colors } from '../../../theme';
@@ -49,6 +51,7 @@ export function ShoppingListsScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showAllItemsModal, setShowAllItemsModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Filter items based on selected list
   const filteredItems = allItems.filter(item => item.listId === selectedList.id);
@@ -224,6 +227,12 @@ export function ShoppingListsScreen() {
 
   const totalItems = filteredItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Format shopping list for sharing
+  const shareText = useMemo(
+    () => formatShoppingListText(selectedList.name, filteredItems),
+    [selectedList.name, filteredItems]
+  );
+
   return (
       <SafeAreaView style={styles.container}>
         {/* Header */}
@@ -232,8 +241,11 @@ export function ShoppingListsScreen() {
             <Text style={styles.headerTitle}>{selectedList.name}</Text>
             <Text style={styles.headerSubtitle}>{totalItems} items total</Text>
           </View>
-          <FloatingActionButton
-            onPress={() => setShowQuickAddModal(true)}
+          <HeaderActions
+            onSharePress={() => setShowShareModal(true)}
+            onAddPress={() => setShowQuickAddModal(true)}
+            shareLabel="Share shopping list"
+            addLabel="Add item to list"
           />
         </View>
 
@@ -455,6 +467,14 @@ export function ShoppingListsScreen() {
           />
         </View>
       </CenteredModal>
+
+      {/* Share Modal */}
+      <ShareModal
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={`Share ${selectedList.name}`}
+        shareText={shareText}
+      />
 
       </SafeAreaView>
   );
