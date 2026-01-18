@@ -29,7 +29,6 @@ export function SwipeableWrapper({
   backgroundColor = colors.surface,
 }: SwipeableWrapperProps) {
   const translateX = useSharedValue(0);
-  const itemHeight = useSharedValue(0);
   const swipeDirection = useSharedValue<number>(0); // 1 for right, -1 for left, 0 for none
 
   const handleDelete = () => {
@@ -154,12 +153,7 @@ export function SwipeableWrapper({
   });
 
   return (
-    <View
-      style={styles.container}
-      onLayout={(event) => {
-        itemHeight.value = event.nativeEvent.layout.height;
-      }}
-    >
+    <View style={styles.container}>
       {/* Left delete background (swipe right) */}
       <Animated.View style={[styles.deleteBackground, styles.leftBackground, leftBackgroundStyle]}>
         <Ionicons name="trash-outline" size={24} color={colors.textLight} />

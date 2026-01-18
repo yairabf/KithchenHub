@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, pastelColors } from '../../../theme';
 import { ProgressRing } from '../components/ProgressRing';
-import { SwipeableChoreCard } from '../components/SwipeableChoreCard';
+import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
 import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
 import { mockChores, type Chore } from '../../../mocks/chores';
@@ -109,9 +109,9 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     };
     
     return (
-      <SwipeableChoreCard
+      <SwipeableWrapper
         key={chore.id}
-        onDelete={() => handleDeleteChore(chore.id)}
+        onSwipeDelete={() => handleDeleteChore(chore.id)}
         backgroundColor={bgColor}
       >
         <TouchableOpacity
@@ -157,7 +157,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
             )}
           </View>
         </TouchableOpacity>
-      </SwipeableChoreCard>
+      </SwipeableWrapper>
     );
   };
 
