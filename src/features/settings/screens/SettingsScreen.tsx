@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography, shadows } from '../../../theme';
+import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ManageHouseholdModal } from '../components/ManageHouseholdModal';
 
 export function SettingsScreen() {
@@ -27,9 +28,7 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
-      </View>
+      <ScreenHeader title="Settings" />
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Account Section */}
@@ -185,21 +184,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: {
-    ...typography.h2,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    flex: 1,
   },
   content: {
     flex: 1,

@@ -12,7 +12,7 @@ import { colors, pastelColors } from '../../../theme';
 import { ProgressRing } from '../components/ProgressRing';
 import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
-import { HeaderActions } from '../../../common/components/HeaderActions';
+import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatChoresText } from '../../../common/utils/shareUtils';
 import { mockChores, type Chore } from '../../../mocks/chores';
@@ -93,6 +93,20 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     [todayChores, upcomingChores]
   );
 
+  // Header actions configuration
+  const headerActions = useMemo(() => ({
+    share: {
+      onPress: () => setShowShareModal(true),
+      label: 'Share chores list'
+    },
+    ...(onOpenChoresModal && {
+      add: {
+        onPress: onOpenChoresModal,
+        label: 'Add new chore'
+      }
+    })
+  }), [onOpenChoresModal]);
+
   // Calculate progress (only for today's chores)
   const progress = useMemo(() => {
     const total = todayChores.length;
@@ -172,21 +186,10 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity style={styles.homeButton}>
-            <Ionicons name="home-outline" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>HOME CHORES</Text>
-        </View>
-        <HeaderActions
-          onSharePress={() => setShowShareModal(true)}
-          onAddPress={onOpenChoresModal}
-          shareLabel="Share chores list"
-          addLabel="Add new chore"
-        />
-      </View>
+      <ScreenHeader
+        title="HOME CHORES"
+        rightActions={headerActions}
+      />
 
       <ScrollView 
         style={styles.content} 

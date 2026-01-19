@@ -3,15 +3,12 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme/colors';
 import { RecipeSidebar } from '../components/RecipeSidebar';
 import { InstructionStep } from '../components/InstructionStep';
 import { Toast } from '../../../common/components/Toast';
-import { HeaderActions } from '../../../common/components/HeaderActions';
+import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatRecipeText } from '../../../common/utils/shareUtils';
 import { useResponsive } from '../../../common/hooks';
@@ -73,22 +70,15 @@ export function RecipeDetailScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBack}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>KITCHEN HUB</Text>
-        <HeaderActions
-          onSharePress={() => setShowShareModal(true)}
-          shareLabel="Share recipe"
-          hideAddButton
-        />
-      </View>
+      <ScreenHeader
+        title="KITCHEN HUB"
+        leftIcon="back"
+        onLeftPress={onBack}
+        rightActions={{
+          share: { onPress: () => setShowShareModal(true), label: 'Share recipe' },
+        }}
+        variant="centered"
+      />
 
       <ScrollView
         style={styles.scrollView}

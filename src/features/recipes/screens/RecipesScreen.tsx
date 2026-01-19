@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, pastelColors } from '../../../theme';
 import { colors } from '../../../theme/colors';
-import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
+import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
@@ -68,12 +68,12 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Recipes</Text>
-        <FloatingActionButton
-          onPress={handleAddRecipe}
-        />
-      </View>
+      <ScreenHeader
+        title="Recipes"
+        rightActions={{
+          add: { onPress: handleAddRecipe, label: 'Add new recipe' },
+        }}
+      />
 
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.textMuted} />

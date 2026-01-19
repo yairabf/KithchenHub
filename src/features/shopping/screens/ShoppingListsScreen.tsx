@@ -16,7 +16,7 @@ import { ShoppingListPanel } from '../components/ShoppingListPanel';
 import { CategoriesGrid } from '../components/CategoriesGrid';
 import { FrequentlyAddedGrid } from '../components/FrequentlyAddedGrid';
 import { CenteredModal } from '../../../common/components/CenteredModal';
-import { HeaderActions } from '../../../common/components/HeaderActions';
+import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatShoppingListText } from '../../../common/utils/shareUtils';
 import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
@@ -235,19 +235,14 @@ export function ShoppingListsScreen() {
 
   return (
       <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>{selectedList.name}</Text>
-            <Text style={styles.headerSubtitle}>{totalItems} items total</Text>
-          </View>
-          <HeaderActions
-            onSharePress={() => setShowShareModal(true)}
-            onAddPress={() => setShowQuickAddModal(true)}
-            shareLabel="Share shopping list"
-            addLabel="Add item to list"
-          />
-        </View>
+        <ScreenHeader
+          title={selectedList.name}
+          subtitle={`${totalItems} items total`}
+          rightActions={{
+            share: { onPress: () => setShowShareModal(true), label: 'Share shopping list' },
+            add: { onPress: () => setShowQuickAddModal(true), label: 'Add item to list' },
+          }}
+        />
 
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>

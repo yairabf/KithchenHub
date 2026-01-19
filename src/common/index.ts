@@ -1,6 +1,8 @@
 // Common/shared exports
 export { FloatingActionButton } from './components/FloatingActionButton';
 export { CenteredModal } from './components/CenteredModal';
+export { ScreenHeader } from './components/ScreenHeader';
+export type { ScreenHeaderProps } from './components/ScreenHeader';
 export { BottomPillNav } from './components/BottomPillNav';
 export type { TabKey } from './components/BottomPillNav';
 export { NavButton } from './components/NavButton';

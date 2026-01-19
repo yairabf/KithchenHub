@@ -1,39 +1,11 @@
 import { StyleSheet } from 'react-native';
-import { colors, withOpacity } from '../../../theme/colors';
+import { colors } from '../../../theme/colors';
 import { spacing } from '../../../theme/spacing';
-import { shadows } from '../../../theme/shadows';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: withOpacity(colors.border, 0.5),
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.sm,
-  },
-  headerTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2,
-    color: colors.textMuted,
-  },
-  headerSpacer: {
-    width: 40,
   },
   scrollView: {
     flex: 1,
