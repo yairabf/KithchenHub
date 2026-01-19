@@ -9,6 +9,9 @@ The Recipes feature allows users to browse, search, filter, and create recipes. 
 ### Main Recipes View
 ![Recipes Main](../screenshots/recipes/recipes-main.png)
 
+### Recipe Detail Screen
+![Recipe Detail](../screenshots/recipes/recipes-detail.png)
+
 ### Add Recipe Modal
 ![Add Recipe Modal](../screenshots/recipes/recipes-add-modal.png)
 
@@ -72,6 +75,38 @@ interface Recipe {
   - Placeholder icon for recipe image
   - Configurable width and background color (pastel)
   - Touch handler for recipe selection
+
+### RecipeSidebar
+
+- **File**: `src/features/recipes/components/RecipeSidebar/`
+- **Purpose**: Left sidebar displaying recipe information and ingredients
+- **Features**:
+  - Recipe category badges
+  - Recipe title and description
+  - Time and energy (calories) information
+  - Ingredients list with quantities
+  - "Add All" button to add all ingredients to shopping list
+  - Individual add buttons for each ingredient
+
+### IngredientCard
+
+- **File**: `src/features/recipes/components/IngredientCard/`
+- **Purpose**: Individual ingredient display with shopping list integration
+- **Features**:
+  - Ingredient image placeholder
+  - Name and quantity display
+  - Add to shopping list button
+  - Color-coded background
+
+### InstructionStep
+
+- **File**: `src/features/recipes/components/InstructionStep/`
+- **Purpose**: Individual recipe instruction step with completion tracking
+- **Features**:
+  - Step number indicator
+  - Instruction text
+  - "Mark as finished" toggle
+  - Visual feedback for completed steps
 
 ### AddRecipeModal
 

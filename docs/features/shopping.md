@@ -104,6 +104,25 @@ interface GrocerySearchBarProps {
   - "See all" button for full item view
   - Category background overlays
 
+### FrequentlyAddedGrid
+
+- **File**: `src/features/shopping/components/FrequentlyAddedGrid/`
+- **Purpose**: Quick access grid showing frequently added items
+- **Props**:
+
+```typescript
+interface FrequentlyAddedGridProps {
+  items: GroceryItem[];
+  onItemPress: (item: GroceryItem) => void;
+}
+```
+
+- **Features**:
+  - Displays up to 8 frequently added items
+  - Grid layout with item images and names
+  - Quick add functionality with tap
+  - Auto-hides when no items available
+
 ### CategoryModal
 
 - **File**: `src/features/shopping/components/CategoryModal/`
@@ -130,25 +149,6 @@ interface GrocerySearchBarProps {
   - List switcher (bubble buttons to select list)
   - Integrated grocery search bar
   - Rapid item additions
-
-### SwipeableShoppingItem
-
-- **File**: `src/features/shopping/components/SwipeableShoppingItem/`
-- **Purpose**: Gesture-based item card with swipe-to-delete
-- **Props**:
-
-```typescript
-interface SwipeableShoppingItemProps {
-  children: React.ReactNode;
-  onDelete: () => void;
-  backgroundColor?: string;
-}
-```
-
-- **Features**:
-  - Swipe left/right to delete
-  - Smooth animations with react-native-reanimated
-  - Animated background reveals trash icon
 
 ## Key Types
 
