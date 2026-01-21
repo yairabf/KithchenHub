@@ -28,7 +28,7 @@ The Shopping feature provides comprehensive shopping list management with the ab
 
 ### ShoppingListsScreen
 
-- **File**: `src/features/shopping/screens/ShoppingListsScreen.tsx`
+- **File**: `mobile/src/features/shopping/screens/ShoppingListsScreen.tsx`
 - **Purpose**: Complex shopping list management with two-column layout
 - **Key functionality**:
   - Header showing selected list name and total item count
@@ -54,7 +54,7 @@ const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
 ### ShoppingListPanel
 
-- **File**: `src/features/shopping/components/ShoppingListPanel/`
+- **File**: `mobile/src/features/shopping/components/ShoppingListPanel/`
 - **Purpose**: Left column containing list selector and shopping items
 - **Features**:
   - Horizontal drawer showing all shopping lists
@@ -64,7 +64,7 @@ const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
 ### GrocerySearchBar
 
-- **File**: `src/features/shopping/components/GrocerySearchBar/`
+- **File**: `mobile/src/features/shopping/components/GrocerySearchBar/`
 - **Purpose**: Smart search component with dropdown results
 - **Props**:
 
@@ -97,7 +97,7 @@ interface GrocerySearchBarProps {
 
 ### CategoriesGrid
 
-- **File**: `src/features/shopping/components/CategoriesGrid/`
+- **File**: `mobile/src/features/shopping/components/CategoriesGrid/`
 - **Purpose**: Visual category tiles for browsing groceries
 - **Features**:
   - Grid of category cards with images and item counts
@@ -106,7 +106,7 @@ interface GrocerySearchBarProps {
 
 ### FrequentlyAddedGrid
 
-- **File**: `src/features/shopping/components/FrequentlyAddedGrid/`
+- **File**: `mobile/src/features/shopping/components/FrequentlyAddedGrid/`
 - **Purpose**: Quick access grid showing frequently added items
 - **Props**:
 
@@ -125,7 +125,7 @@ interface FrequentlyAddedGridProps {
 
 ### CategoryModal
 
-- **File**: `src/features/shopping/components/CategoryModal/`
+- **File**: `mobile/src/features/shopping/components/CategoryModal/`
 - **Purpose**: Modal showing all items within a selected category
 - **Features**:
   - Scrollable list of items
@@ -133,7 +133,7 @@ interface FrequentlyAddedGridProps {
 
 ### AllItemsModal
 
-- **File**: `src/features/shopping/components/AllItemsModal/`
+- **File**: `mobile/src/features/shopping/components/AllItemsModal/`
 - **Purpose**: Complete grocery database browser
 - **Features**:
   - View all available groceries (111 items in database)
@@ -143,7 +143,7 @@ interface FrequentlyAddedGridProps {
 
 ### ShoppingQuickActionModal
 
-- **File**: `src/features/shopping/components/ShoppingQuickActionModal/`
+- **File**: `mobile/src/features/shopping/components/ShoppingQuickActionModal/`
 - **Purpose**: Quick add modal accessible from floating button
 - **Features**:
   - List switcher (bubble buttons to select list)

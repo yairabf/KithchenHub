@@ -19,7 +19,7 @@ The Chores feature provides household chore tracking with a visual progress ring
 
 ### ChoresScreen
 
-- **File**: `src/features/chores/screens/ChoresScreen.tsx`
+- **File**: `mobile/src/features/chores/screens/ChoresScreen.tsx`
 - **Purpose**: Comprehensive chore management with progress tracking
 - **Key functionality**:
   - Header with home icon and "HOME CHORES" title
@@ -78,7 +78,7 @@ const isWideScreen = width >= 768;
 
 ### ProgressRing
 
-- **File**: `src/features/chores/components/ProgressRing/`
+- **File**: `mobile/src/features/chores/components/ProgressRing/`
 - **Purpose**: Animated circular progress indicator
 - **Props**:
 
@@ -101,20 +101,11 @@ interface ProgressRingProps {
   - Shows percentage and thumbs-up emoji when >= 75%
   - Uses react-native-reanimated for animations
 
-### SwipeableChoreCard
+### SwipeableWrapper (from common components)
 
-- **File**: `src/features/chores/components/SwipeableChoreCard/`
-- **Purpose**: Gesture-driven chore card with swipe-to-delete
-- **Props**:
-
-```typescript
-interface SwipeableChoreCardProps {
-  children: React.ReactNode;
-  onDelete: () => void;
-  backgroundColor: string;
-}
-```
-
+- **File**: `mobile/src/common/components/SwipeableWrapper/`
+- **Purpose**: Reusable gesture-driven wrapper component for swipe-to-delete functionality
+- **Usage**: Used in ChoresScreen to wrap chore cards
 - **Features**:
   - Pan gesture handler for swipe-to-delete
   - Swipe left or right to delete (30% threshold or high velocity)
@@ -124,7 +115,7 @@ interface SwipeableChoreCardProps {
 
 ### ChoreDetailsModal
 
-- **File**: `src/features/chores/components/ChoreDetailsModal/`
+- **File**: `mobile/src/features/chores/components/ChoreDetailsModal/`
 - **Purpose**: Edit existing chore details
 - **Features**:
   - Edit chore name and icon
@@ -134,7 +125,7 @@ interface SwipeableChoreCardProps {
 
 ### ChoresQuickActionModal
 
-- **File**: `src/features/chores/components/ChoresQuickActionModal/`
+- **File**: `mobile/src/features/chores/components/ChoresQuickActionModal/`
 - **Purpose**: Quick chore creation form
 - **Features**:
   - Chore name input
@@ -172,11 +163,13 @@ export type AddChoreHandler = (newChore: {
 - **Local state**:
   - `chores` - Array of Chore objects
   - `selectedChore` - Currently selected chore for editing
-  - `showDetailsModal` - Modal visibility
+  - `showDetailsModal` - Modal visibility for editing chore details
+  - `showShareModal` - Modal visibility for sharing chores list
 - **Computed values**:
   - `todayChores` - Filtered chores for today section
   - `upcomingChores` - Filtered chores for this week/recurring
-  - `progress` - Percentage completion (memoized)
+  - `shareText` - Formatted text for sharing (memoized)
+  - `isWideScreen` - Responsive breakpoint detection (>= 768px)
 - **Parent communication**:
   - `onOpenChoresModal` - Callback to open quick add modal
   - `onRegisterAddChoreHandler` - Registers add function with parent
@@ -185,6 +178,10 @@ export type AddChoreHandler = (newChore: {
 
 - `react-native-gesture-handler` - GestureDetector for swipe interactions
 - `react-native-reanimated` - Smooth animations for progress ring and swipes
+- `SwipeableWrapper` - Shared component from `common/components` for swipe-to-delete
+- `ScreenHeader` - Shared header component with actions
+- `ShareModal` - Shared modal component for sharing functionality
+- `formatChoresText` - Utility function for formatting chores for sharing
 - `mockChores` - Initial chore data
 - `pastelColors` - Theme colors for card backgrounds
 - `useWindowDimensions` - For responsive layout detection

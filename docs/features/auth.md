@@ -12,19 +12,20 @@ The Auth feature handles user authentication for Kitchen Hub, providing two sign
 
 ### LoginScreen
 
-- **File**: `src/features/auth/screens/LoginScreen.tsx`
+- **File**: `mobile/src/features/auth/screens/LoginScreen.tsx`
 - **Purpose**: Main authentication UI displaying branding, sign-in options, and legal footer
 - **Key functionality**:
   - Display Kitchen Hub branding with emoji logo
   - Google sign-in with loading state handling
   - Guest mode sign-in option ("Skip for now")
+  - Guest data import prompt modal
   - Terms of Service and Privacy Policy links
 
 #### Code Snippet
 
 ```typescript
 export function LoginScreen() {
-  const { signInWithGoogle, signInAsGuest } = useAuth();
+  const { signInWithGoogle, signInAsGuest, showGuestImportPrompt, resolveGuestImport } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -32,7 +33,13 @@ export function LoginScreen() {
     try {
       await signInWithGoogle();
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      Alert.alert(
+        'Sign In Failed',
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in with Google. Please try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -42,7 +49,13 @@ export function LoginScreen() {
     try {
       await signInAsGuest();
     } catch (error) {
-      console.error('Guest sign-in error:', error);
+      Alert.alert(
+        'Sign In Failed',
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in as guest. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
   // ... render JSX
@@ -53,7 +66,7 @@ export function LoginScreen() {
 
 ### GoogleSignInButton
 
-- **File**: `src/features/auth/components/GoogleSignInButton/`
+- **File**: `mobile/src/features/auth/components/GoogleSignInButton/`
 - **Purpose**: Reusable button component for Google authentication
 - **Props**:
 
@@ -95,14 +108,54 @@ export function GoogleSignInButton({ onPress, isLoading }: GoogleSignInButtonPro
 }
 ```
 
+### GuestDataImportModal
+
+- **File**: `mobile/src/features/auth/components/GuestDataImportModal.tsx`
+- **Purpose**: Modal prompting users to import existing guest session data when signing in with Google
+- **Props**:
+
+```typescript
+interface GuestDataImportModalProps {
+  visible: boolean;
+  onImport: () => void;
+  onSkip: () => void;
+}
+```
+
+- **Features**:
+  - Displays when existing guest data is detected during Google sign-in
+  - Allows users to import recipes or plans from guest session
+  - Uses `CenteredModal` component for consistent styling
+  - Provides "Import local data" and "Not now" options
+
 ## State Management
 
 - **AuthContext**: Global authentication state via `useAuth()` hook
+  - `signInWithGoogle()` - Initiates Google OAuth flow
+  - `signInAsGuest()` - Creates guest user session
+  - `signOut()` - Signs out current user
+  - `showGuestImportPrompt` - Boolean indicating if guest import prompt should be shown
+  - `resolveGuestImport(shouldImport: boolean)` - Resolves the guest import prompt (import or skip)
+  - `hasGuestData` - Boolean indicating if user has guest data available for import
+  - `importGuestData()` - Imports guest session data to authenticated account
+  - `clearGuestData()` - Permanently deletes guest session data
 - **Local state**: `isLoading` boolean to track Google sign-in progress
 - **Persistence**: User data stored in AsyncStorage under `@kitchen_hub_user`
+- **Guest data tracking**: AsyncStorage keys:
+  - `@kitchen_hub_guest_import_prompt_shown` - Tracks if import prompt has been shown
+  - `@kitchen_hub_has_guest_data` - Tracks if guest data exists
 
 ## Key Dependencies
 
 - `@expo/vector-icons` - Ionicons for Google logo
+- `react-native` - Alert API for error dialogs
 - `AuthContext` - Custom context for authentication state
+- `CenteredModal` - Shared modal component for consistent UI
+- `@react-native-async-storage/async-storage` - Persistent storage for user data and guest data flags
 - Theme system (`colors`, `spacing`, `borderRadius`, `typography`)
+
+## Error Handling
+
+- **Google Sign-In Errors**: Displays user-friendly Alert dialog with error message
+- **Guest Sign-In Errors**: Displays user-friendly Alert dialog with error message
+- **Guest Data Import Errors**: Handled in AuthContext and propagated to UI layer for user feedback
