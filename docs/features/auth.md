@@ -147,12 +147,11 @@ interface GuestDataImportModalProps {
 
 ## Key Dependencies
 
-- `@expo/vector-icons` - Ionicons for Google logo
-- `react-native` - Alert API for error dialogs
-- `AuthContext` - Custom context for authentication state
-- `CenteredModal` - Shared modal component for consistent UI
-- `@react-native-async-storage/async-storage` - Persistent storage for user data and guest data flags
-- Theme system (`colors`, `spacing`, `borderRadius`, `typography`)
+- `@expo/vector-icons` - Ionicons for Google logo and icons
+- `react-native` - Core React Native components (TouchableOpacity, Text, View, ActivityIndicator, Alert, SafeAreaView)
+- `AuthContext` - Custom context for authentication state (`useAuth` hook)
+- `CenteredModal` - Shared modal component for consistent UI (used by GuestDataImportModal)
+- Theme system (`colors`, `spacing`, `borderRadius`, `typography`) - Centralized design tokens
 
 ## Error Handling
 

@@ -148,12 +148,14 @@ interface ManageHouseholdModalProps {
 
 ## Key Dependencies
 
-- `@expo/vector-icons` - Ionicons for all icons
-- `AuthContext` - User authentication state and guest data management
-- `HouseholdContext` - Household member management
+- `@expo/vector-icons` - Ionicons for all icons throughout the screen
+- `react-native` - Core React Native components (View, Text, ScrollView, TouchableOpacity, Switch, Image, SafeAreaView)
+- `AuthContext` - User authentication state and guest data management (`useAuth` hook)
+- `HouseholdContext` - Household member management (`useHousehold` hook)
+- `ScreenHeader` - Shared header component for consistent navigation
 - `CenteredModal` - Shared modal component (used by ManageHouseholdModal and guest data deletion confirmation)
-- `Toast` - Shared toast component for user feedback
-- `Switch` - React Native switch component for toggles
+- `Toast` - Shared toast component for user feedback (success/error messages)
+- Theme system (`colors`, `spacing`, `borderRadius`, `typography`, `shadows`) - Centralized design tokens
 
 ## Conditional Rendering
 
