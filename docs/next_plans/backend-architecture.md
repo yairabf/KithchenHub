@@ -1,154 +1,220 @@
-# Kitchen Hub - Backend & Database Architecture
+# NestJS Project Structure for Kitchen Hub (Expo + Prisma)
 
-## 1. Architectural Philosophy
-* **Local-First & Homelab Friendly:** The backend is designed to run as a self-hosted service (Docker container) on a home server (e.g., TrueNAS, Proxmox).
-* **Home Assistant Ready:** The system exposes entities and webhooks to integrate with Home Assistant for automation (e.g., toggling chores, smart fridge alerts).
-* **Hybrid Data Sync:** Supports offline-first usage (SQLite on device) with synchronization to the central Postgres instance when connected.
+This document describes the **adjusted backend architecture** for **Kitchen Hub**, aligned with the existing **Expo (React Native)** frontend, feature set, and long-term goals (local‑first, sync, Home Assistant integration).
 
-## 2. Technology Stack Selection
-| Component | Choice | Rationale |
-| :--- | :--- | :--- |
-| **Database** | **PostgreSQL** | Chosen over MongoDB for its ability to enforce strict relationships between Users, Lists, and Inventory while offering `JSONB` flexibility for complex recipe steps. |
-| **ORM** | **Prisma** | Provides a unified schema that works with both the local server (PostgreSQL) and potentially the mobile app (SQLite) for type-safe queries. |
-| **API** | **Node.js (Express/Fastify)** | Lightweight, scalable, and easy to containerize. |
-| **Messaging** | **MQTT** | Facilitates real-time events for Home Assistant (e.g., `kitchenhub/chores/completed`). |
+---
 
-## 3. The "Master Item" Logic
-To solve the disconnect between "Recipes" and "Shopping Lists," we utilize a centralized **MasterItem** table.
+## High-Level Decisions (Based on Your Plans)
 
-* **The Problem:** "Eggs" in a recipe is a *template*, while "Eggs" on a shopping list is an *instance*. Merging them into one table causes data conflicts.
-* **The Solution:**
-    * **`MasterItem`:** The source of truth (Name, Default Category, Default Image).
-    * **`RecipeIngredient`:** Links to a MasterItem (defines *what* is needed).
-    * **`ShoppingItem`:** Links to a MasterItem (defines *what* to buy).
-* **Benefit:** Updating an image or category in `MasterItem` instantly reflects across all recipes and active shopping lists.
+* **Frontend**: Expo (React Native)
+* **Backend**: NestJS (Fastify adapter)
+* **ORM**: **Prisma** (recommended over TypeORM)
+* **Database**: PostgreSQL (server) + future SQLite (offline/mobile)
+* **Architecture**: Feature-based, mirroring frontend features
+* **Repo Strategy**: Monorepo-friendly, but backend remains isolated
 
-## 4. Database Schema (Prisma)
+---
 
-```prisma
-// --- USER & HOUSEHOLD MANAGEMENT ---
+## Final Monorepo Layout (Recommended)
 
-model User {
-  id            String    @id @default(uuid())
-  email         String?   @unique
-  memberships   HouseholdMember[]
-}
+```text
+repo/
+  apps/
+    mobile/                 # Expo app (existing)
+    api/                    # NestJS backend
+  packages/
+    contracts/              # Shared Zod schemas & types
+```
 
-model Household {
-  id            String    @id @default(uuid())
-  name          String    // e.g., "The Smith Home"
-  members       HouseholdMember[]
-  shoppingLists ShoppingList[]
-  recipes       Recipe[]
-  chores        Chore[]
-  integrations  Integration[]
-}
+`packages/contracts` is the **only shared dependency** between mobile and backend.
 
-model HouseholdMember {
-  id            String    @id @default(uuid())
-  userId        String?   // Nullable for "Kids" profiles not yet claimed
-  householdId   String
-  label         String    // "Mom", "Dad", "Kids"
-  permissions   String    // "ADMIN", "MEMBER"
-  
-  user          User?     @relation(fields: [userId], references: [id])
-  household     Household @relation(fields: [householdId], references: [id])
-}
+---
 
-// --- THE SHARED BRAIN (Inventory & Definitions) ---
+## Backend Folder Structure (apps/api)
 
-model MasterItem {
-  id               String   @id @default(uuid())
-  name             String   @unique // "Milk", "Wagyu Beef"
-  category         String   // "Dairy", "Meat"
-  defaultImagePath String?  // Local path or URL
-  
-  shoppingInstances ShoppingItem[]
-  recipeInstances   RecipeIngredient[]
-}
+```text
+apps/api/src/
+  main.ts
+  app.module.ts
 
-// --- SHOPPING FEATURE ---
+  config/
+    configuration.ts
+    env.validation.ts       # Zod-based env validation
 
-model ShoppingList {
-  id            String    @id @default(uuid())
-  householdId   String
-  name          String
-  items         ShoppingItem[]
-  
-  household     Household @relation(fields: [householdId], references: [id])
-}
+  common/
+    constants/
+    decorators/
+    errors/
+    filters/
+    guards/
+    interceptors/
+    logger/
+    utils/
 
-model ShoppingItem {
-  id              String    @id @default(uuid())
-  listId          String
-  
-  // Link to Master DB for auto-categorization & images
-  masterItemId    String?   
-  
-  name            String    // Allow custom override
-  quantity        Float
-  unit            String?
-  isPurchased     Boolean   @default(false)
-  customImagePath String?   // Allow user to upload a specific photo for this trip
-  
-  list            ShoppingList @relation(fields: [listId], references: [id])
-  masterItem      MasterItem?  @relation(fields: [masterItemId], references: [id])
-}
+  infrastructure/
+    database/
+      prisma/
+        prisma.module.ts
+        prisma.service.ts
+        schema.prisma
+    messaging/
+      mqtt/                 # Home Assistant integration
+    push/                   # FCM / APNs (future)
+    storage/
 
-// --- RECIPE FEATURE ---
+  modules/                  # Mirrors frontend features
+    auth/
+    users/
+    households/
+    shopping/
+    recipes/
+    chores/
+    settings/
+    dashboard/
 
-model Recipe {
-  id            String    @id @default(uuid())
-  householdId   String
-  title         String
-  
-  // Structured Data
-  ingredients   RecipeIngredient[]
-  
-  // Flexible Data (JSONB) - Steps don't need strict SQL relations
-  steps         Json      // [{"step": 1, "text": "Mix..."}, {"step": 2...}]
-  
-  household     Household @relation(fields: [householdId], references: [id])
-}
+  jobs/
+    sync.processor.ts
+    notifications.processor.ts
 
-model RecipeIngredient {
-  id            String    @id @default(uuid())
-  recipeId      String
-  
-  // Link to Master DB so "Add to Shopping List" knows what to add
-  masterItemId  String?
-  
-  name          String
-  quantity      String    // "2 cups", "pinch"
-  prepNote      String?   // "diced", "sifted"
-  
-  recipe        Recipe    @relation(fields: [recipeId], references: [id])
-  masterItem    MasterItem? @relation(fields: [masterItemId], references: [id])
-}
+  health/
+  docs/
+```
 
-// --- CHORES & INTEGRATIONS ---
+---
 
-model Chore {
-  id            String    @id @default(uuid())
-  householdId   String
-  title         String
-  assigneeId    String?   // Linked to HouseholdMember
-  
-  // Home Assistant Integration
-  haEntityId    String?   // e.g., "binary_sensor.kitchen_dishes"
-  
-  recurrence    String?   // CRON string
-  dueDate       DateTime?
-  isCompleted   Boolean   @default(false)
-  
-  household     Household @relation(fields: [householdId], references: [id])
-}
+## Feature Parity with Frontend
 
-model Integration {
-  id            String    @id @default(uuid())
-  householdId   String
-  type          String    // "HOME_ASSISTANT", "WEBHOOK"
-  config        Json      // { "webhookUrl": "...", "apiKey": "..." }
-  
-  household     Household @relation(fields: [householdId], references: [id])
-}
+Each backend module corresponds directly to an Expo feature:
+
+| Frontend Feature | Backend Module |
+| ---------------- | -------------- |
+| auth             | auth           |
+| shopping         | shopping       |
+| recipes          | recipes        |
+| chores           | chores         |
+| dashboard        | dashboard      |
+| settings         | settings       |
+
+This **mirrored structure** reduces cognitive load and speeds development.
+
+---
+
+## Example: Shopping Module (Backend)
+
+```text
+modules/shopping/
+  controllers/
+    shopping-lists.controller.ts
+  services/
+    shopping.service.ts
+  repositories/
+    shopping.repository.ts
+  dtos/
+    create-list.dto.ts
+    add-item.dto.ts
+  shopping.module.ts
+```
+
+**Rules**:
+
+* Controllers = HTTP only
+* Services = business logic
+* Repositories = Prisma queries only
+
+---
+
+## Prisma over TypeORM (Why This Fits Kitchen Hub)
+
+Prisma is the better choice here because:
+
+* Matches your **MasterItem / ShoppingItem / RecipeIngredient** design
+* Strong typing across backend and contracts
+* Excellent migration safety
+* Easier future SQLite support for offline sync
+
+TypeORM would add complexity without clear upside for this project.
+
+---
+
+## Shared Contracts (`packages/contracts`)
+
+```text
+packages/contracts/
+  auth.schema.ts
+  shopping.schema.ts
+  recipes.schema.ts
+  chores.schema.ts
+  index.ts
+```
+
+* Zod schemas are the **source of truth**
+* Backend: validate requests
+* Mobile: infer TypeScript types
+
+```ts
+export const AddShoppingItemSchema = z.object({
+  masterItemId: z.string().optional(),
+  name: z.string(),
+  quantity: z.number(),
+});
+
+export type AddShoppingItem = z.infer<typeof AddShoppingItemSchema>;
+```
+
+---
+
+## API Versioning (Mobile-Safe)
+
+All endpoints are versioned:
+
+```text
+/api/v1/auth/login
+/api/v1/shopping/lists
+/api/v1/recipes
+```
+
+This protects older mobile builds.
+
+---
+
+## Sync & Local‑First Readiness
+
+Your architecture supports:
+
+* Offline Expo usage (AsyncStorage / SQLite)
+* Server reconciliation via sync jobs
+* Household-based data ownership
+
+Planned sync logic lives in:
+
+```text
+jobs/sync.processor.ts
+```
+
+---
+
+## Home Assistant & MQTT
+
+Infrastructure-level integration:
+
+```text
+infrastructure/messaging/mqtt/
+```
+
+Used for:
+
+* Chore completion events
+* Smart kitchen automations
+
+---
+
+## Summary
+
+This adjusted structure:
+
+* Matches your **existing Expo feature architecture**
+* Uses **Prisma** for safety and speed
+* Supports **local‑first + sync** goals
+* Scales to Home Assistant & IoT use cases
+
+This is a strong, long-term foundation for Kitchen Hub.
