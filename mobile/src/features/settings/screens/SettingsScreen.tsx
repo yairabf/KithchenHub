@@ -14,13 +14,43 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography, shadows } from '../../../theme';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ManageHouseholdModal } from '../components/ManageHouseholdModal';
+import { CenteredModal } from '../../../common/components/CenteredModal';
+import { Toast } from '../../../common/components/Toast';
+
 
 export function SettingsScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, signInWithGoogle, hasGuestData, importGuestData, clearGuestData } = useAuth();
   const [pushNotifications, setPushNotifications] = React.useState(true);
   const [dailySummary, setDailySummary] = React.useState(false);
   const [cloudSync, setCloudSync] = React.useState(true);
   const [showManageHousehold, setShowManageHousehold] = React.useState(false);
+  const [showClearDataConfirm, setShowClearDataConfirm] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
+
+  const handleImportGuestData = async () => {
+    try {
+      await importGuestData();
+      setToastType('success');
+      setToastMessage('Guest data imported successfully');
+    } catch (error) {
+      setToastType('error');
+      setToastMessage('Failed to import guest data. Please try again.');
+    }
+  };
+
+  const handleClearGuestData = async () => {
+    try {
+      await clearGuestData();
+      setShowClearDataConfirm(false);
+      setToastType('success');
+      setToastMessage('Guest data deleted');
+    } catch (error) {
+      setToastType('error');
+      setToastMessage('Failed to delete guest data. Please try again.');
+    }
+  };
+
 
   const handleSignOut = async () => {
     await signOut();
@@ -56,7 +86,7 @@ export function SettingsScreen() {
           </View>
 
           {user?.isGuest && (
-            <TouchableOpacity style={styles.signInPrompt}>
+            <TouchableOpacity style={styles.signInPrompt} onPress={signInWithGoogle}>
               <Ionicons name="logo-google" size={20} color={colors.google} />
               <Text style={styles.signInPromptText}>Sign in to sync your data</Text>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
@@ -101,7 +131,7 @@ export function SettingsScreen() {
         {/* Household Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Household</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.settingRow}
             onPress={() => setShowManageHousehold(true)}
           >
@@ -112,6 +142,31 @@ export function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
+
+        {/* Guest Data Section - Only visible if hasGuestData AND Signed In */}
+        {!user?.isGuest && hasGuestData && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Guest Data</Text>
+            <TouchableOpacity style={styles.settingRow} onPress={handleImportGuestData}>
+              <View style={styles.settingInfo}>
+                <Ionicons name="cloud-upload-outline" size={22} color={colors.primary} />
+                <Text style={styles.settingLabel}>Import local guest data</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => setShowClearDataConfirm(true)}
+            >
+              <View style={styles.settingInfo}>
+                <Ionicons name="trash-outline" size={22} color={colors.error} />
+                <Text style={[styles.settingLabel, { color: colors.error }]}>Delete local guest data</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Data Section */}
         <View style={styles.section}>
@@ -176,7 +231,31 @@ export function SettingsScreen() {
         visible={showManageHousehold}
         onClose={() => setShowManageHousehold(false)}
       />
-    </SafeAreaView>
+
+      <CenteredModal
+        visible={showClearDataConfirm}
+        onClose={() => setShowClearDataConfirm(false)}
+        title="Delete guest data?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleClearGuestData}
+        confirmColor={colors.error}
+        showActions={true}
+      >
+        <Text style={styles.confirmText}>
+          This will permanently remove all data created while you were in Guest mode. This action cannot be undone.
+        </Text>
+      </CenteredModal>
+
+      {toastMessage && (
+        <Toast
+          visible={!!toastMessage}
+          message={toastMessage}
+          onHide={() => setToastMessage(null)}
+          type={toastType}
+        />
+      )}
+    </SafeAreaView >
   );
 }
 
@@ -289,5 +368,12 @@ const styles = StyleSheet.create({
   versionText: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+
+  confirmText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
   },
 });

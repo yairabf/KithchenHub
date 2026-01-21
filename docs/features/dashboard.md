@@ -12,7 +12,7 @@ The Dashboard feature serves as the home screen of Kitchen Hub, providing users 
 
 ### DashboardScreen
 
-- **File**: `src/features/dashboard/screens/DashboardScreen.tsx`
+- **File**: `mobile/src/features/dashboard/screens/DashboardScreen.tsx`
 - **Purpose**: Main dashboard with overview widgets and quick-action access
 - **Key functionality**:
   - Header with Kitchen Hub logo and recipe search bar

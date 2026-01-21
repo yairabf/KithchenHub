@@ -19,7 +19,7 @@ The Recipes feature allows users to browse, search, filter, and create recipes. 
 
 ### RecipesScreen
 
-- **File**: `src/features/recipes/screens/RecipesScreen.tsx`
+- **File**: `mobile/src/features/recipes/screens/RecipesScreen.tsx`
 - **Purpose**: Recipe discovery and creation
 - **Key functionality**:
   - Search bar for finding recipes by name
@@ -49,7 +49,7 @@ const cardWidth = ((width - spacing.lg * 3) / 2) * 0.85;
 
 ### RecipeCard
 
-- **File**: `src/features/recipes/components/RecipeCard/`
+- **File**: `mobile/src/features/recipes/components/RecipeCard/`
 - **Purpose**: Individual recipe display card
 - **Props**:
 
@@ -78,7 +78,7 @@ interface Recipe {
 
 ### RecipeSidebar
 
-- **File**: `src/features/recipes/components/RecipeSidebar/`
+- **File**: `mobile/src/features/recipes/components/RecipeSidebar/`
 - **Purpose**: Left sidebar displaying recipe information and ingredients
 - **Features**:
   - Recipe category badges
@@ -90,7 +90,7 @@ interface Recipe {
 
 ### IngredientCard
 
-- **File**: `src/features/recipes/components/IngredientCard/`
+- **File**: `mobile/src/features/recipes/components/IngredientCard/`
 - **Purpose**: Individual ingredient display with shopping list integration
 - **Features**:
   - Ingredient image placeholder
@@ -100,7 +100,7 @@ interface Recipe {
 
 ### InstructionStep
 
-- **File**: `src/features/recipes/components/InstructionStep/`
+- **File**: `mobile/src/features/recipes/components/InstructionStep/`
 - **Purpose**: Individual recipe instruction step with completion tracking
 - **Features**:
   - Step number indicator
@@ -110,7 +110,7 @@ interface Recipe {
 
 ### AddRecipeModal
 
-- **File**: `src/features/recipes/components/AddRecipeModal/`
+- **File**: `mobile/src/features/recipes/components/AddRecipeModal/`
 - **Purpose**: Comprehensive recipe creation form
 - **Props**:
 
