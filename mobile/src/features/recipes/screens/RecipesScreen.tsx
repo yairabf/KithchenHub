@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing, pastelColors } from '../../../theme';
 import { colors } from '../../../theme/colors';
@@ -19,6 +20,22 @@ import { useResponsive } from '../../../common/hooks';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
 
+// Column gap constant - same for all screen sizes
+const COLUMN_GAP = spacing.md;
+
+/**
+ * Calculates the margin style for a recipe card based on its position in the grid.
+ * Cards in even positions (0, 2, 4...) get right margin to create column gap.
+ * 
+ * @param index - Zero-based index of the card in the filtered recipes array
+ * @returns ViewStyle object with marginRight property
+ */
+const calculateCardMargin = (index: number): ViewStyle => {
+  return {
+    marginRight: index % 2 === 0 ? COLUMN_GAP : 0,
+  };
+};
+
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { width, isTablet } = useResponsive();
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,15 +44,14 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const [recipes, setRecipes] = useState<Recipe[]>(mockRecipes);
 
   // Calculate card width dynamically based on screen size
-  // Account for container padding (24px each side) and gap between cards
+  // Account for container padding and gap between columns
   const cardWidth = useMemo(() => {
-    const containerPadding = 24 * 2; // contentContainer padding
-    const cardGap = spacing.md; // gap between 2 cards
-    const availableWidth = width - containerPadding - cardGap;
+    const containerPadding = spacing.lg * 2; // contentContainer padding (24px each side)
+    const availableWidth = width - containerPadding - COLUMN_GAP;
 
     if (isTablet) {
-      // 2 columns on tablet, slightly smaller cards
-      return (availableWidth / 2) * 0.9;
+      // 2 columns on tablet/web - wider cards with moderate gap between columns
+      return (availableWidth / 2) - (COLUMN_GAP / 2);
     } else {
       // 2 columns on phone, use full available width
       return availableWidth / 2;
@@ -122,6 +138,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
               backgroundColor={pastelColors[index % pastelColors.length]}
               onPress={() => onSelectRecipe?.(recipe)}
               width={cardWidth}
+              style={calculateCardMargin(index)}
             />
           ))}
         </View>

@@ -27,6 +27,8 @@ export const styles = StyleSheet.create({
   },
   filterContent: {
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    alignItems: 'center',
   },
   filterChip: {
     paddingHorizontal: spacing.md,
@@ -34,6 +36,9 @@ export const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
     marginRight: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
     ...shadows.sm,
   },
   filterChipActive: {
@@ -44,6 +49,8 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   filterChipTextActive: {
     color: colors.textLight,
@@ -58,6 +65,6 @@ export const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
 });

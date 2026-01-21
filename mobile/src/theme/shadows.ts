@@ -2,7 +2,7 @@ import { ViewStyle } from 'react-native';
 
 type ShadowStyle = Pick<ViewStyle, 'shadowColor' | 'shadowOffset' | 'shadowOpacity' | 'shadowRadius' | 'elevation'>;
 
-export const shadows: Record<'none' | 'sm' | 'md' | 'lg' | 'xl' | 'float', ShadowStyle> = {
+export const shadows: Record<'none' | 'sm' | 'md' | 'lg' | 'xl' | 'float' | 'deep', ShadowStyle> = {
   none: {
     shadowColor: 'transparent',
     shadowOffset: { width: 0, height: 0 },
@@ -45,5 +45,13 @@ export const shadows: Record<'none' | 'sm' | 'md' | 'lg' | 'xl' | 'float', Shado
     shadowOpacity: 0.18,
     shadowRadius: 20,
     elevation: 12,
+  },
+  // Deep shadow for elevated cards with maximum depth
+  deep: {
+    shadowColor: '#283618',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 16,
   },
 };

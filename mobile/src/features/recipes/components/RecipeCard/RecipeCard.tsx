@@ -5,10 +5,10 @@ import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { RecipeCardProps } from './types';
 
-export function RecipeCard({ recipe, backgroundColor, onPress, width }: RecipeCardProps) {
+export function RecipeCard({ recipe, backgroundColor, onPress, width, style }: RecipeCardProps) {
   return (
     <TouchableOpacity
-      style={[styles.recipeCard, { backgroundColor, width }]}
+      style={[styles.recipeCard, { backgroundColor, width }, style]}
       onPress={onPress}
       activeOpacity={0.8}
     >

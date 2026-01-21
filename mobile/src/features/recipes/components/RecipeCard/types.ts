@@ -1,3 +1,5 @@
+import { ViewStyle } from 'react-native';
+
 export interface Recipe {
   id: string;
   name: string;
@@ -11,4 +13,5 @@ export interface RecipeCardProps {
   backgroundColor: string;
   onPress: () => void;
   width: number;
+  style?: ViewStyle;
 }
