@@ -5,17 +5,16 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
-
-const { width } = Dimensions.get('window');
+import { GuestDataImportModal } from '../components/GuestDataImportModal';
 
 export function LoginScreen() {
-  const { signInWithGoogle, signInAsGuest } = useAuth();
+  const { signInWithGoogle, signInAsGuest, showGuestImportPrompt, resolveGuestImport } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -23,7 +22,13 @@ export function LoginScreen() {
     try {
       await signInWithGoogle();
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      Alert.alert(
+        'Sign In Failed',
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in with Google. Please try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -33,7 +38,13 @@ export function LoginScreen() {
     try {
       await signInAsGuest();
     } catch (error) {
-      console.error('Guest sign-in error:', error);
+      Alert.alert(
+        'Sign In Failed',
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in as guest. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -78,6 +89,12 @@ export function LoginScreen() {
           </Text>
         </View>
       </View>
+
+      <GuestDataImportModal
+        visible={showGuestImportPrompt}
+        onImport={() => resolveGuestImport(true)}
+        onSkip={() => resolveGuestImport(false)}
+      />
     </SafeAreaView>
   );
 }
