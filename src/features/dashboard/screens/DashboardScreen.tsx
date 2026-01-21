@@ -46,20 +46,6 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
           {isTablet && <Text style={styles.logoText}>Kitchen Hub</Text>}
         </View>
 
-        {/* Search Bar - Only show inline on tablet */}
-        {isTablet && (
-          <View style={styles.searchBar}>
-            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search recipes..."
-              placeholderTextColor={colors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-        )}
-
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.notificationButton}>
             <Ionicons name="notifications-outline" size={22} color={colors.textSecondary} />
@@ -86,20 +72,6 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
           </View>
         </View>
       </View>
-
-      {/* Phone-only search bar below header */}
-      {!isTablet && (
-        <View style={styles.searchBarPhone}>
-          <Ionicons name="search-outline" size={18} color={colors.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search recipes..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-      )}
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Greeting Section */}
