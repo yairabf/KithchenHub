@@ -12,7 +12,8 @@ export interface Instruction {
 }
 
 export interface Recipe {
-  id: string;
+  id: string; // Legacy/Display ID for now
+  localId: string; // Stable UUID
   name: string;
   cookTime: string;
   prepTime?: string;
@@ -28,6 +29,7 @@ export interface Recipe {
 export const mockRecipes: Recipe[] = [
   {
     id: '1',
+    localId: '550e8400-e29b-41d4-a716-446655440100', // Stable UUID
     name: 'Pancakes',
     cookTime: '20 min',
     prepTime: '10 min',
@@ -55,6 +57,7 @@ export const mockRecipes: Recipe[] = [
   },
   {
     id: '2',
+    localId: '550e8400-e29b-41d4-a716-446655440101',
     name: 'Pasta Carbonara',
     cookTime: '30 min',
     prepTime: '15 min',
@@ -83,6 +86,7 @@ export const mockRecipes: Recipe[] = [
   },
   {
     id: '3',
+    localId: '550e8400-e29b-41d4-a716-446655440102',
     name: 'Caesar Salad',
     cookTime: '15 min',
     prepTime: '10 min',
@@ -110,6 +114,7 @@ export const mockRecipes: Recipe[] = [
   },
   {
     id: '4',
+    localId: '550e8400-e29b-41d4-a716-446655440103',
     name: 'Tomato Soup',
     cookTime: '45 min',
     prepTime: '15 min',
@@ -138,6 +143,7 @@ export const mockRecipes: Recipe[] = [
   },
   {
     id: '5',
+    localId: '550e8400-e29b-41d4-a716-446655440104',
     name: 'Grilled Chicken',
     cookTime: '35 min',
     prepTime: '20 min',
@@ -166,6 +172,7 @@ export const mockRecipes: Recipe[] = [
   },
   {
     id: '6',
+    localId: '550e8400-e29b-41d4-a716-446655440105',
     name: 'French Toast',
     cookTime: '15 min',
     prepTime: '10 min',
