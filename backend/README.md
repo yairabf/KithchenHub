@@ -6,6 +6,8 @@ API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQ
 - JWT auth with Google sign-in (Supabase), guest login, token refresh, and offline sync
 - UUID-based user identification for seamless cross-provider integration
 - Household membership plus shopping lists/items, recipes, and chores
+- Centralized grocery catalog backing search and defaults
+- Private household uploads bucket with storage RLS policies
 - Data import from guest mode to household accounts with content fingerprinting and idempotency
 - Dashboard summaries for household activity
 - Global prefix `api/v1`; Swagger UI at `/api/docs`
@@ -64,7 +66,8 @@ npm run start:dev         # start API with watch mode
 - **Row Level Security (RLS)**:
   - Multi-tenant isolation is enforced at the database level via PostgreSQL RLS policies.
   - Users are restricted to data matching their `household_id` (retrieved via the `get_my_household_id()` SQL helper).
-  - Security policies cover `households`, `users`, `recipes`, `shopping_lists/items`, `chores`, and `import` data.
+  - Security policies cover `households`, `users`, `recipes`, `shopping_lists/items`, `master_grocery_catalog`, `chores`, and `import` data.
+  - Storage RLS restricts access to the private `household-uploads` bucket by household folder.
 
 ## Security Testing (RLS)
 To verify that Row Level Security is correctly isolating data between households:
@@ -76,6 +79,7 @@ To verify that Row Level Security is correctly isolating data between households
 3. **Internal Logic**: These tests simulate the Supabase environment by:
    - Setting the PostgreSQL role to `authenticated`.
    - Injecting JWT claims (e.g., `SET LOCAL "request.jwt.claims" = '{"sub": "..."}'`) within a transaction.
+4. **Storage RLS**: Tests require storage policies to be applied. If your DB user cannot access them, set `ALLOW_STORAGE_RLS_SKIP=true` to bypass storage checks.
 
 
 ## API Conventions
@@ -105,7 +109,7 @@ src/
   modules/
     auth/                      # Google + guest auth, token refresh, sync
     households/                # Household CRUD/membership
-    shopping/                  # Lists and items
+    shopping/                  # Lists, items, and grocery catalog search
     recipes/                   # Household recipes
     chores/                    # Task assignments and completion
     import/                    # Guest mode data import (ID-based & fingerprint deduplication)
