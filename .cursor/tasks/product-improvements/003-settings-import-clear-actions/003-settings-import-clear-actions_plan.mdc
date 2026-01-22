@@ -1,0 +1,68 @@
+
+# 003 - Settings Import & Clear Local Data actions
+
+**Epic:** Product Improvements (KH-PROD-IMP)
+**Created:** 2026-01-22
+**Status:** Planning
+
+## Overview
+Add explicit controls in the Settings screen (Account section) for users to manage local guest data after they have signed in.
+
+## User Requirements
+- **Location:** Settings -> Account section.
+- **Conditional Visibility:**
+  - "Import local guest data": Visible if Signed In + Has Guest Data + Not Imported yet.
+  - "Delete local guest data": Visible if Signed In + Has Guest Data.
+- **Actions:**
+  - **Import:** "Imports" data (logically merges) and hides the option.
+  - **Delete:** Wipes data and hides options.
+
+## Architecture
+
+### 1. Data Persistence Analysis
+- `ShoppingListsScreen`: Uses in-memory state initialized from mocks. **No persistence** found.
+- `HouseholdContext`: **Has persistence** via AsyncStorage (`@kitchen_hub_household_members`).
+- **Conclusion**: "Guest Data" currently mainly refers to `HouseholdContext` changes or is a simulated state for this phase of development.
+- **Strategy**: We will track a simple `hasGuestData` flag in `AuthContext` (persisted to AsyncStorage) that is set to `true` when a user enters as Guest. This allows us to test the UI flows even if deep data migration isn't fully implemented for all features.
+
+### 2. State Management (`AuthContext`)
+- **New State**: `hasGuestData` (boolean).
+- **Persistence**: `@kitchen_hub_has_guest_data`.
+- **Logic**:
+  - `signInAsGuest`: set `hasGuestData = true`.
+  - `importGuestData`: 
+     - set `hasGuestData = false` (or keep it tracked as 'imported' if needed, but for specific UI requirement "Import" button should disappear? Actually requirement says "Import local guest data (if available)". If I import it, it is now "Cloud Data", so "Local Guest Data" is gone/merged. So button should disappear).
+     - *Correction*: If I "Import", the data is now part of the user. So "Clear local guest data" should also disappear? Or maybe "Clear" remains?
+     - *Requirement*: "Clear action does **not** affect cloud data".
+     - *Interpretation*: Once imported, it is no longer "Guest Data". It's just user data. So both buttons should disappear after Import.
+     - *Refined Logic*:
+       - `importGuestData()` -> Merge data (noop for now) -> Clear `hasGuestData` flag -> Toast "Data imported".
+       - `clearGuestData()` -> Wipes data -> Clear `hasGuestData` flag -> Toast "Data deleted".
+
+### 3. UI Components (`SettingsScreen`)
+- **New Section**: "Guest Data" (only visible if `hasGuestData` is true AND user is signed in).
+- **Import Button**: Calls `importGuestData`.
+- **Clear Button**: Shows `CenteredModal` -> Calls `clearGuestData`.
+
+## Implementation Steps
+1.  **Update `AuthContext.tsx`**:
+    -   Add `hasGuestData` state (load from `@kitchen_hub_has_guest_data`).
+    -   Update `signInAsGuest` to set this flag.
+    -   Add `importGuestData` function: clears flag, persists.
+    -   Add `clearGuestData` function: clears flag, persists, (optional) clear `HouseholdContext` custom members.
+2.  **Update `SettingsScreen.tsx`**:
+    -   Consume `hasGuestData` from AuthContext.
+    -   Add "Account" section rows for Import/Delete (conditionally rendered).
+    -   Add Confirmation Modal for delete.
+3.  **Refine `GuestDataImportModal` integration**:
+    -   Ensure `GuestDataImportModal` also calls the new `importGuestData` so the state stays consistent.
+
+## Verification Plan
+-   **Manual**:
+    1.  Clear App Data.
+    2.  Enter as Guest.
+    3.  Sign In (Google).
+    4.  Verify Settings shows "Import" / "Delete" buttons (since `hasGuestData` was set).
+    5.  Click "Import" -> Verify buttons disappear.
+    6.  (Reset) -> Enter Guest -> Sign In.
+    7.  Click "Delete" -> Confirm -> Verify buttons disappear.

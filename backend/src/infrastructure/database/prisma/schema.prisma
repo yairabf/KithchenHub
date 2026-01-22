@@ -25,21 +25,23 @@ model Household {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String?  @unique
-  googleId   String?  @unique @map("google_id")
-  name       String?
-  avatarUrl  String?  @map("avatar_url")
-  role       String   @default("Member") // Admin, Member, Kid
-  isGuest    Boolean  @default(false) @map("is_guest")
-  deviceId   String?  @map("device_id")
-  householdId String? @map("household_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  email       String?  @unique
+  googleId    String?  @unique @map("google_id")
+  name        String?
+  avatarUrl   String?  @map("avatar_url")
+  role        String   @default("Member") // Admin, Member, Kid
+  isGuest     Boolean  @default(false) @map("is_guest")
+  deviceId    String?  @map("device_id")
+  householdId String?  @map("household_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  household     Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
-  refreshTokens RefreshToken[]
-  assignedChores Chore[] @relation("ChoreAssignee")
+  household      Household?     @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  refreshTokens  RefreshToken[]
+  assignedChores Chore[]        @relation("ChoreAssignee")
+  importBatches  ImportBatch[]
+  importMappings ImportMapping[]
 
   @@map("users")
 }
@@ -57,27 +59,28 @@ model RefreshToken {
 }
 
 model ShoppingList {
-  id         String   @id @default(cuid())
-  householdId String @map("household_id")
-  name       String
-  color      String?
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  householdId String   @map("household_id")
+  name        String
+  color       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   items     ShoppingItem[]
 
+  @@index([householdId, name])
   @@map("shopping_lists")
 }
 
 model ShoppingItem {
-  id       String   @id @default(cuid())
-  listId  String   @map("list_id")
-  name     String
-  quantity Float    @default(1)
-  unit     String?
-  isChecked Boolean @default(false) @map("is_checked")
-  category String?
+  id        String   @id @default(cuid())
+  listId    String   @map("list_id")
+  name      String
+  quantity  Float    @default(1)
+  unit      String?
+  isChecked Boolean  @default(false) @map("is_checked")
+  category  String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -87,18 +90,19 @@ model ShoppingItem {
 }
 
 model Recipe {
-  id          String   @id @default(cuid())
-  householdId String   @map("household_id")
-  title       String
-  prepTime    Int?     @map("prep_time") // in minutes
-  ingredients Json     // JSONB array of ingredients
-  instructions Json    // JSONB array of instruction steps
-  imageUrl    String?  @map("image_url")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  householdId  String   @map("household_id")
+  title        String
+  prepTime     Int?     @map("prep_time") // in minutes
+  ingredients  Json // JSONB array of ingredients
+  instructions Json // JSONB array of instruction steps
+  imageUrl     String?  @map("image_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
+  @@index([householdId, title])
   @@map("recipes")
 }
 
@@ -110,7 +114,7 @@ model Chore {
   dueDate     DateTime? @map("due_date")
   isCompleted Boolean   @default(false) @map("is_completed")
   completedAt DateTime? @map("completed_at")
-  repeat      String?   // daily, weekly, monthly, etc.
+  repeat      String? // daily, weekly, monthly, etc.
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
@@ -118,4 +122,44 @@ model Chore {
   assignee  User?     @relation("ChoreAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
 
   @@map("chores")
+}
+
+model ImportBatch {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String    @default("PENDING") // PENDING, MAPPING, PROCESSING, COMPLETED, FAILED
+  filename    String?
+  source      String // e.g. "GUEST_MODE_MIGRATION"
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  mappings ImportMapping[]
+
+  @@index([userId])
+  @@map("import_batches")
+}
+
+model ImportMapping {
+  id          String      @id @default(cuid())
+  batchId     String      @map("batch_id")
+  batch       ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  userId      String      @map("user_id")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceField String      @map("source_field")
+  sourceType  String      @map("source_type") // e.g., 'RECIPE', 'SHOPPING_LIST' to prevent ID collisions
+  targetField String      @map("target_field")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Unique constraints for idempotency:
+  // - [batchId, sourceField, sourceType]: Ensures one mapping per batch per source entity (prevents duplicates within a single import)
+  // - [userId, sourceField, sourceType]: Ensures idempotency across batches (prevents duplicates in concurrent requests)
+  // Both constraints create indexes automatically for efficient lookups in findMappingsForUser queries
+  @@unique([batchId, sourceField, sourceType])
+  @@unique([userId, sourceField, sourceType])
+  @@map("import_mappings")
 }

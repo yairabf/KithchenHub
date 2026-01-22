@@ -7,6 +7,7 @@ import { ShoppingModule } from './modules/shopping/shopping.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
 import { ChoresModule } from './modules/chores/chores.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ImportModule } from './modules/import/import.module';
 import { TransformInterceptor } from './common/interceptors';
 import { HttpExceptionFilter } from './common/filters';
 import { JwtAuthGuard } from './common/guards';
@@ -20,6 +21,7 @@ import { JwtAuthGuard } from './common/guards';
     RecipesModule,
     ChoresModule,
     DashboardModule,
+    ImportModule,
   ],
   controllers: [],
   providers: [
@@ -37,4 +39,4 @@ import { JwtAuthGuard } from './common/guards';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

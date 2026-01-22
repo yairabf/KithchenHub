@@ -47,6 +47,57 @@ const cardWidth = ((width - spacing.lg * 3) / 2) * 0.85;
 
 ## Components
 
+### RecipeDetailScreen
+
+- **File**: `mobile/src/features/recipes/screens/RecipeDetailScreen.tsx`
+- **Purpose**: Detailed view of a single recipe with ingredients and instructions
+- **Key functionality**:
+  - **Responsive Layout**: Adapts between phone (tabs) and tablet (split view)
+  - **Sticky Header**: "Ingredients | Steps" header sticks to top on scroll
+  - **Interaction**: Toggle step completion, add ingredients to shopping list
+  - **Animatons**: Smooth fade/slide for sticky header
+  - **Sharing**: Share recipe text via system share sheet
+
+#### Sticky Header Logic (`RecipeDetailScreen.utils.ts`)
+
+Pure utility functions manage the complex sticky header behavior:
+
+- `calculateStickyHeaderTopPosition`: Determines precision placement accounting for safe areas
+- `calculateIsHeaderScrolled`: Detects when main header passes threshold
+- `calculateSpacerHeight`: Prevents layout shift when header becomes sticky
+
+## Components
+
+### RecipeContentWrapper
+
+- **File**: `mobile/src/features/recipes/components/RecipeContentWrapper/`
+- **Purpose**: Main content container handling responsive layout strategies
+- **Refactoring Note**: Internally splits into `TabletRecipeContent` and `MobileRecipeContent` to manage distinct scrolling behaviors (independent columns vs single page).
+- **Props**:
+
+```typescript
+interface RecipeContentWrapperProps {
+  recipe: Recipe;
+  completedSteps: Set<string>;
+  onToggleStep: (stepId: string) => void;
+  onAddIngredient: (ingredient: Ingredient) => void;
+  onAddAllIngredients: () => void;
+  renderHeaderOnly?: boolean;       // For sticky header rendering
+  hideHeaderWhenSticky?: boolean;   // Hides static header when sticky is active
+  activeTab?: 'ingredients' | 'steps';
+  onTabChange?: (tab: 'ingredients' | 'steps') => void;
+}
+```
+
+### RecipeHeader
+
+- **File**: `mobile/src/features/recipes/components/RecipeHeader/`
+- **Purpose**: Displays top-level recipe info (image, stats, description)
+- **Features**:
+  - Hero image with gradient overlay
+  - Stats row (Prep time, Cook time, Calories, Servings)
+  - Description text
+
 ### RecipeCard
 
 - **File**: `mobile/src/features/recipes/components/RecipeCard/`
@@ -79,14 +130,7 @@ interface Recipe {
 ### RecipeSidebar
 
 - **File**: `mobile/src/features/recipes/components/RecipeSidebar/`
-- **Purpose**: Left sidebar displaying recipe information and ingredients
-- **Features**:
-  - Recipe category badges
-  - Recipe title and description
-  - Time and energy (calories) information
-  - Ingredients list with quantities
-  - "Add All" button to add all ingredients to shopping list
-  - Individual add buttons for each ingredient
+- **Status**: *Legacy/Removed in favor of RecipeContentWrapper*
 
 ### IngredientCard
 
@@ -137,7 +181,7 @@ interface Ingredient {
   quantity: string;
   unit: string;
   name: string;
-}
+  }
 
 interface Instruction {
   id: string;
@@ -214,4 +258,4 @@ const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Sna
 - Uses `pastelColors` array for card backgrounds (cycles through)
 - Grid uses flexWrap with space-between justification
 - Cards have calculated width based on screen size
-- Bottom padding (120px) for navigation clearance
+- **Scroll Padding**: `SCROLL_CONTENT_BOTTOM_PADDING` (180px) is used in `RecipeDetailScreen` to ensure content isn't hidden behind navigation bars or safe areas.

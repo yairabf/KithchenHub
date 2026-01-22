@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: spacing.lg,
     overflow: 'hidden',
-    ...shadows.lg,
+    ...shadows.deep,
   },
   recipeImageContainer: {
     height: 100,

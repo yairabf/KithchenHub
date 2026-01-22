@@ -5,6 +5,7 @@ API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQ
 ## Features
 - JWT auth with Google sign-in, guest login, token refresh, and offline sync
 - Household membership plus shopping lists/items, recipes, and chores
+- Data import from guest mode to household accounts with content fingerprinting and idempotency
 - Dashboard summaries for household activity
 - Global prefix `api/v1`; Swagger UI at `/api/docs`
 - Bearer auth required for most endpoints (auth routes are public)
@@ -59,7 +60,15 @@ npm run start:dev         # start API with watch mode
 src/
   main.ts                      # Bootstrap with Swagger + global pipes/filters
   app.module.ts                # Module wiring and global JWT guard
-  common/                      # Filters, guards, interceptors, decorators
+  common/
+    contracts/                 # Zod validation schemas for cross-module contracts
+    decorators/                # Custom decorators (@CurrentUser, @Public)
+    filters/                   # Exception filters
+    guards/                    # Auth guards (JWT, Household)
+    interceptors/              # Response transformation
+    utils/                     # Shared utility functions
+    pipes/                     # Validation pipes
+    types/                     # Shared TypeScript interfaces
   config/                      # Env validation + configuration loader
   infrastructure/database/     # Prisma module/service and schema
   modules/
@@ -68,9 +77,11 @@ src/
     shopping/                  # Lists and items
     recipes/                   # Household recipes
     chores/                    # Task assignments and completion
+    import/                    # Guest mode data import (ID-based & fingerprint deduplication)
     dashboard/                 # Aggregated dashboard data
 ```
 
 ## Notes
 - The API runs behind a global JWT guard; mark endpoints with the `@Public()` decorator to opt out.
 - Global prefix, validation pipe, error filter, and response transformer are configured in `src/main.ts`.
+- Comprehensive test coverage includes unit tests for controllers, services, and repositories with parameterized test cases.

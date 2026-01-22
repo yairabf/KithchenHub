@@ -39,3 +39,46 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+/mobile/ios
+/mobile/android
+
+# Logs
+*.log
+logs/
+*.log.*
+.cursor/debug.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Cache
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# OS
+Thumbs.db
+
+# Test artifacts
+.jest/
+
+.playwright-mcp/
