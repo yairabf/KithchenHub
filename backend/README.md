@@ -26,6 +26,9 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 ## Getting Started
@@ -50,15 +53,16 @@ npm run start:dev         # start API with watch mode
 - Inspect data: `npm run prisma:studio`
 
 ## Supabase Setup
-- **Config**: Supabase client is initialized in `src/config/supabase.ts`.
-- **Environment**: Requires `SUPABASE_URL` and `SUPABASE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` in `.env`.
+- **Config**: Supabase client is initialized in `src/modules/supabase/supabase.service.ts`.
+- **Environment**: Requires `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env`. Optionally include `SUPABASE_SERVICE_ROLE_KEY` for admin operations.
 - **Local Dev**: For local development, ensure these point to your local Supabase instance or a dev project.
 
 
 ## API Conventions
 - Base URL: `http://localhost:3000/api/v1`
 - Docs: `http://localhost:3000/api/docs`
-- Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh` (others use bearer JWT)
+- Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh`, `GET /groceries/search`, `GET /groceries/categories` (others use bearer JWT)
+- Protected routes: Most endpoints require JWT authentication; household endpoints also require household membership
 - CORS enabled with credentials for client apps
 
 ## Project Structure
@@ -85,6 +89,7 @@ src/
     chores/                    # Task assignments and completion
     import/                    # Guest mode data import (ID-based & fingerprint deduplication)
     dashboard/                 # Aggregated dashboard data
+    supabase/                  # Supabase client service (global module)
 ```
 
 ## Notes
