@@ -10,7 +10,11 @@ export class ImportRepository {
 
     /**
      * Retrieves existing import mappings for a user's source fields
-     * Uses efficient query with proper indexing on batch.userId and mapping.sourceField
+     * Uses efficient query with direct userId filter and sourceField IN clause
+     * 
+     * Requires database index on userId and composite index on (userId, sourceField)
+     * for optimal performance. The unique constraint @@unique([userId, sourceField])
+     * automatically creates the necessary index.
      * 
      * @param userId - The user ID to filter mappings by
      * @param sourceFields - Array of source field IDs to find mappings for
@@ -23,9 +27,7 @@ export class ImportRepository {
 
         const mappings = await this.prisma.importMapping.findMany({
             where: {
-                batch: {
-                    userId,
-                },
+                userId,
                 sourceField: {
                     in: sourceFields,
                 },

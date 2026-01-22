@@ -17,6 +17,14 @@ export const SCROLL_CONFIG = {
 } as const;
 
 export const SCROLL_VIEW_CONFIG = {
-  MIN_HEIGHT: 500,
-  HEIGHT_RATIO: 0.5,
+  // Safety floor for split view to prevent collapse on small screens
+  MIN_HEIGHT: 400,
+  HEIGHT_RATIO: 0.85,
 } as const;
+
+/**
+ * Bottom padding for scroll content to ensure all content is accessible
+ * Accounts for safe area insets, potential tab bars, and provides extra spacing
+ * for comfortable scrolling experience
+ */
+export const SCROLL_CONTENT_BOTTOM_PADDING = 180;

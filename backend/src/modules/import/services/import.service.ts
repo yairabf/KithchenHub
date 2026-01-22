@@ -20,6 +20,25 @@ interface ImportStats {
 type PrismaTransaction = Omit<PrismaService, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends' | 'onModuleInit' | 'onModuleDestroy'>;
 
 /**
+ * Type guard for Prisma unique constraint violation errors
+ * @param error - The error to check
+ * @returns True if error is a Prisma unique constraint violation
+ */
+function isPrismaUniqueConstraintError(error: unknown): error is { 
+    code: string; 
+    meta?: { 
+        target?: string[] 
+    } 
+} {
+    return (
+        error !== null &&
+        typeof error === 'object' &&
+        'code' in error &&
+        (error as { code: unknown }).code === 'P2002'
+    );
+}
+
+/**
  * Service for managing data import operations
  * Handles importing recipes and shopping lists from guest mode to household accounts
  * Implements deduplication through mapping tables
@@ -115,6 +134,7 @@ export class ImportService {
             if (importRequest.recipes && importRequest.recipes.length > 0) {
                 const recipeStats = await this.importRecipes(
                     prismaTransaction,
+                    userId,
                     batch.id,
                     householdId,
                     importRequest.recipes,
@@ -128,6 +148,7 @@ export class ImportService {
             if (importRequest.shoppingLists && importRequest.shoppingLists.length > 0) {
                 const listStats = await this.importShoppingLists(
                     prismaTransaction,
+                    userId,
                     batch.id,
                     householdId,
                     importRequest.shoppingLists,
@@ -166,6 +187,7 @@ export class ImportService {
      * Imports recipes within a transaction, skipping duplicates
      * 
      * @param prismaTransaction - The Prisma transaction client
+     * @param userId - The user ID performing the import (for mapping creation)
      * @param batchId - The import batch ID
      * @param householdId - The household ID to import into
      * @param recipes - Array of recipes to import
@@ -174,6 +196,7 @@ export class ImportService {
      */
     private async importRecipes(
         prismaTransaction: PrismaTransaction,
+        userId: string,
         batchId: string,
         householdId: string,
         recipes: ImportRecipeDto[],
@@ -205,6 +228,7 @@ export class ImportService {
 
             await this.createImportMapping(
                 prismaTransaction,
+                userId,
                 batchId,
                 recipe.id,
                 newRecipe.id
@@ -221,6 +245,7 @@ export class ImportService {
      * Imports shopping lists and their items within a transaction, skipping duplicates
      * 
      * @param prismaTransaction - The Prisma transaction client
+     * @param userId - The user ID performing the import (for mapping creation)
      * @param batchId - The import batch ID
      * @param householdId - The household ID to import into
      * @param shoppingLists - Array of shopping lists to import
@@ -229,6 +254,7 @@ export class ImportService {
      */
     private async importShoppingLists(
         prismaTransaction: PrismaTransaction,
+        userId: string,
         batchId: string,
         householdId: string,
         shoppingLists: ImportShoppingListDto[],
@@ -261,6 +287,7 @@ export class ImportService {
 
             await this.createImportMapping(
                 prismaTransaction,
+                userId,
                 batchId,
                 list.id,
                 newList.id
@@ -300,24 +327,46 @@ export class ImportService {
     /**
      * Creates an import mapping record for deduplication tracking
      * 
+     * Note: If a unique constraint violation occurs (P2002) on [userId, sourceField],
+     * this indicates a concurrent import request. The transaction will handle rollback
+     * and the outer error handler will provide a meaningful error message.
+     * 
      * @param prismaTransaction - The Prisma transaction client
+     * @param userId - The user ID performing the import
      * @param batchId - The import batch ID
      * @param sourceId - The original local ID from guest mode
      * @param targetId - The new server-side ID in the household
+     * @throws Prisma error P2002 if mapping already exists (concurrent request scenario)
      */
     private async createImportMapping(
         prismaTransaction: PrismaTransaction,
+        userId: string,
         batchId: string,
         sourceId: string,
         targetId: string
     ): Promise<void> {
-        await prismaTransaction.importMapping.create({
-            data: {
-                batchId,
-                sourceField: sourceId,
-                targetField: targetId,
-            },
-        });
+        try {
+            await prismaTransaction.importMapping.create({
+                data: {
+                    batchId,
+                    userId,
+                    sourceField: sourceId,
+                    targetField: targetId,
+                },
+            });
+        } catch (error: unknown) {
+            // Handle unique constraint violation (concurrent request scenario)
+            if (isPrismaUniqueConstraintError(error) && error.meta?.target?.includes('userId')) {
+                this.logger.warn(
+                    `Concurrent import detected: mapping already exists for user ${userId}, source ${sourceId}`
+                );
+                // Re-throw with more context - the transaction will handle rollback
+                throw new Error(
+                    `Import mapping already exists for source ${sourceId}. This may indicate a concurrent import request.`
+                );
+            }
+            throw error;
+        }
     }
 
     /**

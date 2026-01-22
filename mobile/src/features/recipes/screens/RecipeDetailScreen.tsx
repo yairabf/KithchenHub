@@ -38,32 +38,33 @@ export function RecipeDetailScreen({
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
-  
+
   // Track scroll position and header height for sticky header
   const [scrollY, setScrollY] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [screenHeaderHeight, setScreenHeaderHeight] = useState(0);
+  const [screenHeaderY, setScreenHeaderY] = useState(0);
   const [contentHeaderHeight, setContentHeaderHeight] = useState(0);
-  
+
   // Mobile tab state
   const [activeTab, setActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
-  
+
   // Animated values for smooth sticky header transition
   const stickyHeaderOpacity = useRef(new Animated.Value(0)).current;
   const stickyHeaderTranslateY = useRef(new Animated.Value(STICKY_HEADER_ANIMATION.INITIAL_TRANSLATE_Y)).current;
-  
+
   // Calculate sticky header top position accounting for safe area insets
   const stickyHeaderTop = useMemo(
-    () => calculateStickyHeaderTopPosition(screenHeaderHeight, insets.top),
-    [screenHeaderHeight, insets.top]
+    () => calculateStickyHeaderTopPosition(screenHeaderHeight, screenHeaderY),
+    [screenHeaderHeight, screenHeaderY]
   );
-  
+
   // Check if RecipeHeader has been scrolled past (with smoother threshold)
   const isHeaderScrolled = useMemo(
     () => calculateIsHeaderScrolled(scrollY, headerHeight),
     [scrollY, headerHeight]
   );
-  
+
   /**
    * Animates sticky header fade in and slide down
    */
@@ -82,7 +83,7 @@ export function RecipeDetailScreen({
       }),
     ]).start();
   }, [stickyHeaderOpacity, stickyHeaderTranslateY]);
-  
+
   /**
    * Animates sticky header fade out and slide up
    */
@@ -100,12 +101,12 @@ export function RecipeDetailScreen({
       }),
     ]).start();
   }, [stickyHeaderOpacity, stickyHeaderTranslateY]);
-  
+
   const shouldShowStickyHeader = useMemo(
     () => calculateShouldShowStickyHeader(isHeaderScrolled, contentHeaderHeight, screenHeaderHeight),
     [isHeaderScrolled, contentHeaderHeight, screenHeaderHeight]
   );
-  
+
   // Animate sticky header appearance/disappearance smoothly
   useEffect(() => {
     if (shouldShowStickyHeader) {
@@ -171,8 +172,9 @@ export function RecipeDetailScreen({
 
   // Handle screen header height measurement
   const handleScreenHeaderLayout = useCallback((event: LayoutChangeEvent) => {
-    const { height } = event.nativeEvent.layout;
+    const { height, y } = event.nativeEvent.layout;
     setScreenHeaderHeight(height);
+    setScreenHeaderY(y);
   }, []);
 
   // Handle content header height measurement (for spacer)
@@ -181,7 +183,7 @@ export function RecipeDetailScreen({
       setContentHeaderHeight(height);
     }
   }, []);
-  
+
   // Calculate spacer height to prevent layout shift
   const spacerHeight = useMemo(
     () => calculateSpacerHeight(isHeaderScrolled, contentHeaderHeight),
@@ -205,10 +207,10 @@ export function RecipeDetailScreen({
 
       {/* Fixed sticky header when RecipeHeader is scrolled past */}
       {screenHeaderHeight > 0 && contentHeaderHeight > 0 && (
-        <Animated.View 
+        <Animated.View
           style={[
-            styles.stickyHeader, 
-            { 
+            styles.stickyHeader,
+            {
               top: stickyHeaderTop,
               opacity: stickyHeaderOpacity,
               transform: [{ translateY: stickyHeaderTranslateY }],
@@ -246,7 +248,7 @@ export function RecipeDetailScreen({
         {/* Recipe Content Wrapper */}
         {/* Spacer to prevent jump - always render to prevent layout shift */}
         <View style={[styles.stickyHeaderSpacer, { height: spacerHeight }]} />
-        
+
         <RecipeContentWrapper
           recipe={recipe}
           completedSteps={completedSteps}

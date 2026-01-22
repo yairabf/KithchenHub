@@ -5,7 +5,7 @@ API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQ
 ## Features
 - JWT auth with Google sign-in, guest login, token refresh, and offline sync
 - Household membership plus shopping lists/items, recipes, and chores
-- Data import from guest mode to household accounts with deduplication
+- Data import from guest mode to household accounts with idempotent deduplication
 - Dashboard summaries for household activity
 - Global prefix `api/v1`; Swagger UI at `/api/docs`
 - Bearer auth required for most endpoints (auth routes are public)
@@ -77,7 +77,7 @@ src/
     shopping/                  # Lists and items
     recipes/                   # Household recipes
     chores/                    # Task assignments and completion
-    import/                    # Guest mode data import with deduplication
+    import/                    # Guest mode data import with idempotent deduplication
     dashboard/                 # Aggregated dashboard data
 ```
 

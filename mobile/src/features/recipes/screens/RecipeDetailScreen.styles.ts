@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { colors } from '../../../theme/colors';
 import { spacing, borderRadius } from '../../../theme/spacing';
 import { shadows } from '../../../theme/shadows';
+import { SCROLL_CONTENT_BOTTOM_PADDING } from './RecipeDetailScreen.constants';
 
 export const styles = StyleSheet.create({
   container: {
@@ -14,7 +15,7 @@ export const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
+    paddingBottom: SCROLL_CONTENT_BOTTOM_PADDING,
   },
   headerSection: {
     width: '100%',

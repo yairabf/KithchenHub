@@ -105,9 +105,7 @@ describe('ImportRepository', () => {
                     } else {
                         expect(mockPrismaService.importMapping.findMany).toHaveBeenCalledWith({
                             where: {
-                                batch: {
-                                    userId,
-                                },
+                                userId,
                                 sourceField: {
                                     in: sourceFields,
                                 },

@@ -2,8 +2,8 @@ import { StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius, shadows } from '../../../../theme';
 
 // Search bar dimension constants for consistent styling
-const SEARCH_BAR_INPUT_HEIGHT = 30;
-const SEARCH_BAR_TOTAL_HEIGHT = 52;
+const SEARCH_BAR_INPUT_HEIGHT = 40;
+const SEARCH_BAR_TOTAL_HEIGHT = 56;
 const SEARCH_BAR_VERTICAL_PADDING = (SEARCH_BAR_TOTAL_HEIGHT - SEARCH_BAR_INPUT_HEIGHT) / 2;
 
 export const styles = StyleSheet.create({
@@ -33,6 +33,7 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
     height: SEARCH_BAR_INPUT_HEIGHT,
+    paddingVertical: 0,
   },
   searchDropdown: {
     position: 'absolute',

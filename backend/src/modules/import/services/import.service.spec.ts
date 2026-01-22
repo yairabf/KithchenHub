@@ -384,6 +384,7 @@ describe('ImportService', () => {
             expect(mockPrismaTransaction.importMapping.create).toHaveBeenCalledWith({
                 data: {
                     batchId: 'batch-123',
+                    userId,
                     sourceField: 'local-recipe-1',
                     targetField: 'server-recipe-1',
                 },
@@ -391,6 +392,7 @@ describe('ImportService', () => {
             expect(mockPrismaTransaction.importMapping.create).toHaveBeenCalledWith({
                 data: {
                     batchId: 'batch-123',
+                    userId,
                     sourceField: 'local-list-1',
                     targetField: 'server-list-1',
                 },

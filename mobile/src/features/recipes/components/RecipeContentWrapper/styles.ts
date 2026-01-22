@@ -57,13 +57,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   ingredientsScroll: {
-    flex: 1,
+    // Height is handled dynamically via props
   },
   ingredientsScrollContent: {
     paddingBottom: spacing.xl,
   },
   stepsScroll: {
-    flex: 1,
+    // Height is handled dynamically via props
   },
   stepsScrollContent: {
     paddingBottom: spacing.xl,

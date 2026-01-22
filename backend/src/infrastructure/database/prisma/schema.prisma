@@ -41,6 +41,7 @@ model User {
   refreshTokens  RefreshToken[]
   assignedChores Chore[]        @relation("ChoreAssignee")
   importBatches  ImportBatch[]
+  importMappings ImportMapping[]
 
   @@map("users")
 }
@@ -144,11 +145,18 @@ model ImportMapping {
   id          String      @id @default(cuid())
   batchId     String      @map("batch_id")
   batch       ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  userId      String      @map("user_id")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   sourceField String      @map("source_field")
   targetField String      @map("target_field")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
+  // Unique constraints for idempotency:
+  // - [batchId, sourceField]: Ensures one mapping per batch per source (prevents duplicates within a single import)
+  // - [userId, sourceField]: Ensures idempotency across batches (prevents duplicates in concurrent requests)
+  // Both constraints create indexes automatically for efficient lookups in findMappingsForUser queries
   @@unique([batchId, sourceField])
+  @@unique([userId, sourceField])
   @@map("import_mappings")
 }

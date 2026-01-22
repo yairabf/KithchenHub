@@ -47,7 +47,7 @@ export function RecipeContentWrapper({
   const { isTablet } = useResponsive();
   const { height: windowHeight } = useWindowDimensions();
   const [internalActiveTab, setInternalActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
-  
+
   // Use controlled or internal state
   const activeTab = controlledActiveTab ?? internalActiveTab;
   const handleTabChange = useCallback((tab: 'ingredients' | 'steps') => {
@@ -57,7 +57,7 @@ export function RecipeContentWrapper({
       setInternalActiveTab(tab);
     }
   }, [controlledOnTabChange]);
-  
+
   /**
    * Handles layout measurement for header height calculation
    * Extracts duplicate logic for both tablet and mobile headers
@@ -157,7 +157,7 @@ export function RecipeContentWrapper({
         <>
           {isTablet ? (
             /* Tablet: Fixed header with side-by-side titles */
-            <View 
+            <View
               style={styles.tabletHeader}
               onLayout={handleHeaderLayoutMeasurement}
             >
@@ -168,128 +168,181 @@ export function RecipeContentWrapper({
             </View>
           ) : (
             /* Mobile: Tabs */
-            <View 
+            <View
               style={styles.tabsContainer}
               onLayout={handleHeaderLayoutMeasurement}
             >
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'ingredients' && styles.tabActive]}
-            onPress={() => handleTabChange('ingredients')}
-            activeOpacity={0.7}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeTab === 'ingredients' }}
-            accessibilityLabel="Ingredients tab"
-          >
-            <Ionicons
-              name={activeTab === 'ingredients' ? 'list' : 'list-outline'}
-              size={20}
-              color={activeTab === 'ingredients' ? colors.recipes : colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'ingredients' && styles.tabTextActive,
-              ]}
-            >
-              Ingredients
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'ingredients' && styles.tabActive]}
+                onPress={() => handleTabChange('ingredients')}
+                activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === 'ingredients' }}
+                accessibilityLabel="Ingredients tab"
+              >
+                <Ionicons
+                  name={activeTab === 'ingredients' ? 'list' : 'list-outline'}
+                  size={20}
+                  color={activeTab === 'ingredients' ? colors.recipes : colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === 'ingredients' && styles.tabTextActive,
+                  ]}
+                >
+                  Ingredients
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'steps' && styles.tabActive]}
-            onPress={() => handleTabChange('steps')}
-            activeOpacity={0.7}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: activeTab === 'steps' }}
-            accessibilityLabel="Steps tab"
-          >
-            <Ionicons
-              name={activeTab === 'steps' ? 'checkmark-circle' : 'checkmark-circle-outline'}
-              size={20}
-              color={activeTab === 'steps' ? colors.recipes : colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'steps' && styles.tabTextActive,
-              ]}
-            >
-              Steps
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'steps' && styles.tabActive]}
+                onPress={() => handleTabChange('steps')}
+                activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === 'steps' }}
+                accessibilityLabel="Steps tab"
+              >
+                <Ionicons
+                  name={activeTab === 'steps' ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                  size={20}
+                  color={activeTab === 'steps' ? colors.recipes : colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === 'steps' && styles.tabTextActive,
+                  ]}
+                >
+                  Steps
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </>
       )}
 
       {/* Content */}
       {isTablet ? (
-        /* Tablet: Both components always visible, independently scrollable */
-        <View style={styles.tabletContent}>
-          {/* Ingredients - ScrollView */}
-          <View style={styles.ingredientsColumn}>
-            <ScrollView
-              style={[
-                styles.ingredientsScroll,
-                scrollViewHeight ? { height: scrollViewHeight, maxHeight: scrollViewHeight } : undefined
-              ]}
-              contentContainerStyle={styles.ingredientsScrollContent}
-              showsVerticalScrollIndicator={true}
-              nestedScrollEnabled={true}
-              bounces={true}
-              scrollEnabled={true}
-            >
-              <RecipeIngredients
-                recipe={recipe}
-                onAddIngredient={onAddIngredient}
-                onAddAllIngredients={onAddAllIngredients}
-              />
-            </ScrollView>
-          </View>
+        <TabletRecipeContent
+          scrollViewHeight={scrollViewHeight}
+          recipe={recipe}
+          completedSteps={completedSteps}
+          onAddIngredient={onAddIngredient}
+          onAddAllIngredients={onAddAllIngredients}
+          onToggleStep={onToggleStep}
+        />
+      ) : (
+        <MobileRecipeContent
+          activeTab={activeTab}
+          recipe={recipe}
+          completedSteps={completedSteps}
+          onAddIngredient={onAddIngredient}
+          onAddAllIngredients={onAddAllIngredients}
+          onToggleStep={onToggleStep}
+        />
+      )}
+    </View>
+  );
+}
 
-          {/* Steps - ScrollView */}
-          <View style={styles.stepsColumn}>
-            <ScrollView
-              style={[
-                styles.stepsScroll,
-                scrollViewHeight ? { height: scrollViewHeight, maxHeight: scrollViewHeight } : undefined
-              ]}
-              contentContainerStyle={styles.stepsScrollContent}
-              showsVerticalScrollIndicator={true}
-              nestedScrollEnabled={true}
-              bounces={true}
-              scrollEnabled={true}
-            >
-              <RecipeSteps
-                instructions={recipe.instructions}
-                completedSteps={completedSteps}
-                onToggleStep={onToggleStep}
-              />
-            </ScrollView>
-          </View>
+// Sub-components to separate layout logic
+
+function TabletRecipeContent({
+  scrollViewHeight,
+  recipe,
+  completedSteps,
+  onAddIngredient,
+  onAddAllIngredients,
+  onToggleStep
+}: {
+  scrollViewHeight?: number;
+  recipe: any;
+  completedSteps: Set<string>;
+  onAddIngredient?: (ingredient: any) => void;
+  onAddAllIngredients?: () => void;
+  onToggleStep: (id: string) => void;
+}) {
+  return (
+    <View style={styles.tabletContent}>
+      {/* Ingredients - ScrollView */}
+      <View style={styles.ingredientsColumn}>
+        <ScrollView
+          style={[
+            styles.ingredientsScroll,
+            scrollViewHeight ? { height: scrollViewHeight } : undefined
+          ]}
+          contentContainerStyle={styles.ingredientsScrollContent}
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
+          bounces={true}
+        >
+          <RecipeIngredients
+            recipe={recipe}
+            onAddIngredient={onAddIngredient}
+            onAddAllIngredients={onAddAllIngredients}
+          />
+        </ScrollView>
+      </View>
+
+      {/* Steps - ScrollView */}
+      <View style={styles.stepsColumn}>
+        <ScrollView
+          style={[
+            styles.stepsScroll,
+            scrollViewHeight ? { height: scrollViewHeight } : undefined
+          ]}
+          contentContainerStyle={styles.stepsScrollContent}
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
+          bounces={true}
+        >
+          <RecipeSteps
+            instructions={recipe.instructions}
+            completedSteps={completedSteps}
+            onToggleStep={onToggleStep}
+          />
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+function MobileRecipeContent({
+  activeTab,
+  recipe,
+  completedSteps,
+  onAddIngredient,
+  onAddAllIngredients,
+  onToggleStep
+}: {
+  activeTab: 'ingredients' | 'steps';
+  recipe: any;
+  completedSteps: Set<string>;
+  onAddIngredient?: (ingredient: any) => void;
+  onAddAllIngredients?: () => void;
+  onToggleStep: (id: string) => void;
+}) {
+  return (
+    <View style={styles.mobileContent}>
+      {activeTab === 'ingredients' ? (
+        <View style={styles.tabContent}>
+          <RecipeIngredients
+            recipe={recipe}
+            onAddIngredient={onAddIngredient}
+            onAddAllIngredients={onAddAllIngredients}
+          />
         </View>
       ) : (
-        /* Mobile: Tab content */
-        <View style={styles.mobileContent}>
-          {activeTab === 'ingredients' ? (
-            <View style={styles.tabContent}>
-              <RecipeIngredients
-                recipe={recipe}
-                onAddIngredient={onAddIngredient}
-                onAddAllIngredients={onAddAllIngredients}
-              />
-            </View>
-          ) : (
-            <View style={styles.tabContent}>
-              <RecipeSteps
-                instructions={recipe.instructions}
-                completedSteps={completedSteps}
-                onToggleStep={onToggleStep}
-              />
-            </View>
-          )}
+        <View style={styles.tabContent}>
+          <RecipeSteps
+            instructions={recipe.instructions}
+            completedSteps={completedSteps}
+            onToggleStep={onToggleStep}
+          />
         </View>
       )}
     </View>
   );
 }
+

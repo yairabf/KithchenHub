@@ -9,18 +9,17 @@
 import { STICKY_HEADER_ANIMATION } from './RecipeDetailScreen.constants';
 
 /**
- * Calculates the sticky header top position accounting for safe area insets
+ * Calculates the sticky header top position based on header layout
  * @param headerHeight - Height of the screen header
- * @param safeAreaTop - Top inset from safe area
+ * @param headerY - Y position of the header from layout measurement
  * @returns Top position for sticky header, or 0 if header height is invalid
  */
 export function calculateStickyHeaderTopPosition(
   headerHeight: number,
-  safeAreaTop: number
+  headerY: number
 ): number {
   if (headerHeight <= 0) return 0;
-  const topInset = Math.max(0, safeAreaTop); // Ensure non-negative
-  return topInset + headerHeight;
+  return headerY + headerHeight;
 }
 
 /**
@@ -33,8 +32,8 @@ export function calculateIsHeaderScrolled(
   currentScrollY: number,
   headerHeightValue: number
 ): boolean {
-  const threshold = headerHeightValue > 0 
-    ? headerHeightValue - STICKY_HEADER_ANIMATION.SCROLL_THRESHOLD_OFFSET 
+  const threshold = headerHeightValue > 0
+    ? headerHeightValue - STICKY_HEADER_ANIMATION.SCROLL_THRESHOLD_OFFSET
     : 0;
   return currentScrollY >= threshold && threshold > 0;
 }
