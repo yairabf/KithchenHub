@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
+import { SupabaseModule } from './modules/supabase/supabase.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HouseholdsModule } from './modules/households/households.module';
 import { ShoppingModule } from './modules/shopping/shopping.module';
@@ -22,6 +23,7 @@ import { JwtAuthGuard } from './common/guards';
     ChoresModule,
     DashboardModule,
     ImportModule,
+    SupabaseModule,
   ],
   controllers: [],
   providers: [
