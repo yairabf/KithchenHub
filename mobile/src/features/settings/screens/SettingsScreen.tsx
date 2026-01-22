@@ -15,6 +15,7 @@ import { colors, spacing, borderRadius, typography, shadows } from '../../../the
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ManageHouseholdModal } from '../components/ManageHouseholdModal';
 import { CenteredModal } from '../../../common/components/CenteredModal';
+import { ImportDataModal } from '../components/ImportDataModal';
 import { Toast } from '../../../common/components/Toast';
 
 
@@ -24,19 +25,13 @@ export function SettingsScreen() {
   const [dailySummary, setDailySummary] = React.useState(false);
   const [cloudSync, setCloudSync] = React.useState(true);
   const [showManageHousehold, setShowManageHousehold] = React.useState(false);
+  const [showImportData, setShowImportData] = React.useState(false);
   const [showClearDataConfirm, setShowClearDataConfirm] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
 
-  const handleImportGuestData = async () => {
-    try {
-      await importGuestData();
-      setToastType('success');
-      setToastMessage('Guest data imported successfully');
-    } catch (error) {
-      setToastType('error');
-      setToastMessage('Failed to import guest data. Please try again.');
-    }
+  const handleImportGuestData = () => {
+    setShowImportData(true);
   };
 
   const handleClearGuestData = async () => {
@@ -230,6 +225,11 @@ export function SettingsScreen() {
       <ManageHouseholdModal
         visible={showManageHousehold}
         onClose={() => setShowManageHousehold(false)}
+      />
+
+      <ImportDataModal
+        visible={showImportData}
+        onClose={() => setShowImportData(false)}
       />
 
       <CenteredModal
