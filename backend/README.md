@@ -49,6 +49,12 @@ npm run start:dev         # start API with watch mode
 - Create/apply dev migrations: `npm run prisma:migrate` (PostgreSQL must be running)
 - Inspect data: `npm run prisma:studio`
 
+## Supabase Setup
+- **Config**: Supabase client is initialized in `src/config/supabase.ts`.
+- **Environment**: Requires `SUPABASE_URL` and `SUPABASE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` in `.env`.
+- **Local Dev**: For local development, ensure these point to your local Supabase instance or a dev project.
+
+
 ## API Conventions
 - Base URL: `http://localhost:3000/api/v1`
 - Docs: `http://localhost:3000/api/docs`
