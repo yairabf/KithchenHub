@@ -13,7 +13,8 @@ API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQ
 
 ## Requirements
 - Node.js 18+ and npm
-- PostgreSQL database reachable via `DATABASE_URL`
+- PostgreSQL database reachable via `DATABASE_URL` (use Supabase pooler if on IPv4-only networks)
+- Direct database URL for migrations via `DIRECT_URL` (recommended with Supabase)
 - `.env` file with the variables validated in `src/config/env.validation.ts`
 
 Example `.env`:
@@ -21,6 +22,7 @@ Example `.env`:
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/kitchen_hub
+DIRECT_URL=postgresql://USER:PASSWORD@localhost:5432/kitchen_hub
 JWT_SECRET=change-me-to-32+chars
 JWT_REFRESH_SECRET=change-me-to-32+chars
 JWT_EXPIRES_IN=15m
@@ -51,7 +53,9 @@ npm run start:dev         # start API with watch mode
 - Schema: `src/infrastructure/database/prisma/schema.prisma`
 - Generate client: `npm run prisma:generate`
 - Create/apply dev migrations: `npm run prisma:migrate` (PostgreSQL must be running)
+- Deploy migrations in shared environments: `npx prisma migrate deploy`
 - Inspect data: `npm run prisma:studio`
+- Supabase: prefer a direct connection string in `DIRECT_URL` for migrations; use the session pooler in `DATABASE_URL` if your network is IPv4-only.
 
 ## Supabase Setup
 - **Config**: Supabase client is initialized in `src/modules/supabase/supabase.service.ts`.
