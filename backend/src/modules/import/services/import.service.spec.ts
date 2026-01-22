@@ -13,6 +13,8 @@ describe('ImportService', () => {
 
     const mockImportRepository = {
         findMappingsForUser: jest.fn(),
+        findRecipeByFingerprint: jest.fn(),
+        findShoppingListByFingerprint: jest.fn(),
     };
 
     const mockPrismaTransaction = {
@@ -95,6 +97,8 @@ describe('ImportService', () => {
         beforeEach(() => {
             mockPrismaTransaction.importBatch.create.mockResolvedValue(mockBatch);
             mockImportRepository.findMappingsForUser.mockResolvedValue(new Map());
+            mockImportRepository.findRecipeByFingerprint.mockResolvedValue(null);
+            mockImportRepository.findShoppingListByFingerprint.mockResolvedValue(null);
         });
 
         describe.each([
@@ -397,6 +401,120 @@ describe('ImportService', () => {
                     targetField: 'server-list-1',
                 },
             });
+        });
+    });
+
+    describe('fingerprint deduplication', () => {
+        const mockRecipe = {
+            id: 'local-recipe-1',
+            title: 'Pancakes',
+            prepTime: 30,
+            ingredients: [],
+            instructions: [],
+            imageUrl: '',
+        };
+
+        const mockShoppingList = {
+            id: 'local-list-1',
+            name: 'Groceries',
+            color: '#000000',
+            items: [],
+        };
+
+        const mockBatch = {
+            id: 'batch-123',
+            userId,
+            source: ImportSource.GUEST_MODE_MIGRATION,
+            status: ImportStatus.COMPLETED,
+        };
+
+        beforeEach(() => {
+            mockPrismaTransaction.importBatch.create.mockResolvedValue(mockBatch);
+            mockImportRepository.findMappingsForUser.mockResolvedValue(new Map());
+        });
+
+        it('should skip creation and map to existing recipe if title matches (fingerprint match)', async () => {
+            // Mock: Fingerprint found
+            mockImportRepository.findRecipeByFingerprint.mockResolvedValue('existing-recipe-id');
+            // Mock: Mapping creation
+            mockPrismaTransaction.importMapping.create.mockResolvedValue({});
+
+            const result = await service.executeImport(userId, householdId, {
+                recipes: [mockRecipe],
+            });
+
+            // Verify: No recipe creation
+            expect(mockPrismaTransaction.recipe.create).not.toHaveBeenCalled();
+            // Verify: Fingerprint lookup called
+            expect(mockImportRepository.findRecipeByFingerprint).toHaveBeenCalledWith(householdId, 'Pancakes');
+            // Verify: Mapping created to existing ID
+            expect(mockPrismaTransaction.importMapping.create).toHaveBeenCalledWith({
+                data: {
+                    batchId: 'batch-123',
+                    userId,
+                    sourceField: 'local-recipe-1',
+                    targetField: 'existing-recipe-id',
+                },
+            });
+            // Verify: Stats (skipped=1, created=0)
+            expect(result.skipped).toBe(1);
+            expect(result.created).toBe(0);
+            expect(result.mappings['local-recipe-1']).toBe('existing-recipe-id');
+        });
+
+        it('should create new recipe if no fingerprint match found', async () => {
+            // Mock: No fingerprint found
+            mockImportRepository.findRecipeByFingerprint.mockResolvedValue(null);
+            // Mock: Recipe creation
+            mockPrismaTransaction.recipe.create.mockResolvedValue({ id: 'new-recipe-id' });
+            mockPrismaTransaction.importMapping.create.mockResolvedValue({});
+
+            const result = await service.executeImport(userId, householdId, {
+                recipes: [mockRecipe],
+            });
+
+            // Verify: Recipe created
+            expect(mockPrismaTransaction.recipe.create).toHaveBeenCalled();
+            // Verify: Fingerprint lookup called
+            expect(mockImportRepository.findRecipeByFingerprint).toHaveBeenCalledWith(householdId, 'Pancakes');
+            // Verify: Mapping created to NEW ID
+            expect(mockPrismaTransaction.importMapping.create).toHaveBeenCalledWith({
+                data: {
+                    batchId: 'batch-123',
+                    userId,
+                    sourceField: 'local-recipe-1',
+                    targetField: 'new-recipe-id',
+                },
+            });
+            // Verify: Stats
+            expect(result.created).toBe(1);
+        });
+
+        it('should skip creation and map to existing list if name matches (fingerprint match)', async () => {
+            // Mock: Fingerprint found
+            mockImportRepository.findShoppingListByFingerprint.mockResolvedValue('existing-list-id');
+            mockPrismaTransaction.importMapping.create.mockResolvedValue({});
+
+            const result = await service.executeImport(userId, householdId, {
+                shoppingLists: [mockShoppingList],
+            });
+
+            // Verify: No list creation
+            expect(mockPrismaTransaction.shoppingList.create).not.toHaveBeenCalled();
+            // Verify: Fingerprint lookup called
+            expect(mockImportRepository.findShoppingListByFingerprint).toHaveBeenCalledWith(householdId, 'Groceries');
+            // Verify: Mapping created
+            expect(mockPrismaTransaction.importMapping.create).toHaveBeenCalledWith({
+                data: {
+                    batchId: 'batch-123',
+                    userId,
+                    sourceField: 'local-list-1',
+                    targetField: 'existing-list-id',
+                },
+            });
+            // Verify: Stats
+            expect(result.skipped).toBe(1);
+            expect(result.created).toBe(0);
         });
     });
 });

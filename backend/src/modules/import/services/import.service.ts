@@ -24,11 +24,11 @@ type PrismaTransaction = Omit<PrismaService, '$connect' | '$disconnect' | '$on' 
  * @param error - The error to check
  * @returns True if error is a Prisma unique constraint violation
  */
-function isPrismaUniqueConstraintError(error: unknown): error is { 
-    code: string; 
-    meta?: { 
-        target?: string[] 
-    } 
+function isPrismaUniqueConstraintError(error: unknown): error is {
+    code: string;
+    meta?: {
+        target?: string[]
+    }
 } {
     return (
         error !== null &&
@@ -215,27 +215,41 @@ export class ImportService {
                 continue;
             }
 
-            const newRecipe = await prismaTransaction.recipe.create({
-                data: {
-                    householdId,
-                    title: recipe.title,
-                    prepTime: recipe.prepTime,
-                    ingredients: recipe.ingredients as unknown as Prisma.JsonValue,
-                    instructions: recipe.instructions as unknown as Prisma.JsonValue,
-                    imageUrl: recipe.imageUrl,
-                },
-            });
+            // Check for existing recipe by fingerprint (title)
+            const existingRecipeId = await this.importRepository.findRecipeByFingerprint(
+                householdId,
+                recipe.title
+            );
+
+            let targetId: string;
+
+            if (existingRecipeId) {
+                targetId = existingRecipeId;
+                stats.skipped++; // Count as skipped since we didn't create a NEW recipe
+            } else {
+                const newRecipe = await prismaTransaction.recipe.create({
+                    data: {
+                        householdId,
+                        title: recipe.title,
+                        prepTime: recipe.prepTime,
+                        ingredients: recipe.ingredients as unknown as Prisma.JsonValue,
+                        instructions: recipe.instructions as unknown as Prisma.JsonValue,
+                        imageUrl: recipe.imageUrl,
+                    },
+                });
+                targetId = newRecipe.id;
+                stats.created++;
+            }
 
             await this.createImportMapping(
                 prismaTransaction,
                 userId,
                 batchId,
                 recipe.id,
-                newRecipe.id
+                targetId
             );
 
-            stats.created++;
-            stats.mappings[recipe.id] = newRecipe.id;
+            stats.mappings[recipe.id] = targetId;
         }
 
         return stats;
@@ -273,16 +287,32 @@ export class ImportService {
                 continue;
             }
 
-            const newList = await prismaTransaction.shoppingList.create({
-                data: {
-                    householdId,
-                    name: list.name,
-                    color: list.color,
-                },
-            });
+            // Check for existing list by fingerprint (name)
+            const existingListId = await this.importRepository.findShoppingListByFingerprint(
+                householdId,
+                list.name
+            );
 
-            if (list.items && list.items.length > 0) {
-                await this.createShoppingItems(prismaTransaction, newList.id, list.items);
+            let targetId: string;
+
+            if (existingListId) {
+                targetId = existingListId;
+                stats.skipped++; // Count as skipped since we didn't create a NEW list
+            } else {
+                const newList = await prismaTransaction.shoppingList.create({
+                    data: {
+                        householdId,
+                        name: list.name,
+                        color: list.color,
+                    },
+                });
+
+                if (list.items && list.items.length > 0) {
+                    await this.createShoppingItems(prismaTransaction, newList.id, list.items);
+                }
+
+                targetId = newList.id;
+                stats.created++;
             }
 
             await this.createImportMapping(
@@ -290,11 +320,10 @@ export class ImportService {
                 userId,
                 batchId,
                 list.id,
-                newList.id
+                targetId
             );
 
-            stats.created++;
-            stats.mappings[list.id] = newList.id;
+            stats.mappings[list.id] = targetId;
         }
 
         return stats;

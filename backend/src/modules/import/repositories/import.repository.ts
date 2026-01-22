@@ -40,4 +40,54 @@ export class ImportRepository {
 
         return new Map(mappings.map((mapping) => [mapping.sourceField, mapping.targetField]));
     }
+
+    /**
+     * Finds a recipe by household ID and title (case-insensitive)
+     * Used for fingerprint deduplication
+     * 
+     * @param householdId - The household ID to search in
+     * @param title - The recipe title to search for
+     * @returns The matching recipe's ID if found, null otherwise
+     */
+    async findRecipeByFingerprint(householdId: string, title: string): Promise<string | null> {
+        const recipe = await this.prisma.recipe.findFirst({
+            where: {
+                householdId,
+                title: {
+                    equals: title,
+                    mode: 'insensitive',
+                },
+            },
+            select: {
+                id: true,
+            },
+        });
+
+        return recipe?.id || null;
+    }
+
+    /**
+     * Finds a shopping list by household ID and name (case-insensitive)
+     * Used for fingerprint deduplication
+     * 
+     * @param householdId - The household ID to search in
+     * @param name - The shopping list name to search for
+     * @returns The matching shopping list's ID if found, null otherwise
+     */
+    async findShoppingListByFingerprint(householdId: string, name: string): Promise<string | null> {
+        const list = await this.prisma.shoppingList.findFirst({
+            where: {
+                householdId,
+                name: {
+                    equals: name,
+                    mode: 'insensitive',
+                },
+            },
+            select: {
+                id: true,
+            },
+        });
+
+        return list?.id || null;
+    }
 }
