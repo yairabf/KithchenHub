@@ -3,7 +3,8 @@
 API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQL. Provides authentication, household management, shopping, recipes, chores, and dashboard data for the mobile/web clients.
 
 ## Features
-- JWT auth with Google sign-in, guest login, token refresh, and offline sync
+- JWT auth with Google sign-in (Supabase), guest login, token refresh, and offline sync
+- UUID-based user identification for seamless cross-provider integration
 - Household membership plus shopping lists/items, recipes, and chores
 - Data import from guest mode to household accounts with content fingerprinting and idempotency
 - Dashboard summaries for household activity
@@ -77,6 +78,7 @@ src/
     guards/                    # Auth guards (JWT, Household)
     interceptors/              # Response transformation
     utils/                     # Shared utility functions
+    services/                  # Shared services (e.g. UuidService)
     pipes/                     # Validation pipes
     types/                     # Shared TypeScript interfaces
   config/                      # Env validation + configuration loader
@@ -89,6 +91,8 @@ src/
     chores/                    # Task assignments and completion
     import/                    # Guest mode data import (ID-based & fingerprint deduplication)
     dashboard/                 # Aggregated dashboard data
+    users/                     # User profile management
+    settings/                  # Application and user settings
     supabase/                  # Supabase client service (global module)
 ```
 
@@ -96,3 +100,4 @@ src/
 - The API runs behind a global JWT guard; mark endpoints with the `@Public()` decorator to opt out.
 - Global prefix, validation pipe, error filter, and response transformer are configured in `src/main.ts`.
 - Comprehensive test coverage includes unit tests for controllers, services, and repositories with parameterized test cases.
+- Database uses UUID for all user-related identifiers to maintain consistency with Supabase Auth identities.
