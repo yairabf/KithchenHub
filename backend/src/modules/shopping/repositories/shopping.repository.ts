@@ -56,6 +56,7 @@ export class ShoppingRepository {
   async createItem(
     listId: string,
     data: {
+      catalogItemId?: string;
       name: string;
       quantity: number;
       unit?: string;
@@ -66,6 +67,7 @@ export class ShoppingRepository {
     return this.prisma.shoppingItem.create({
       data: {
         listId,
+        catalogItemId: data.catalogItemId,
         name: data.name,
         quantity: data.quantity,
         unit: data.unit,

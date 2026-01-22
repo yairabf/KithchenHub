@@ -3,4 +3,6 @@ export class GrocerySearchItemDto {
   name: string;
   category: string;
   defaultUnit?: string;
+  imageUrl?: string;
+  defaultQuantity?: number;
 }

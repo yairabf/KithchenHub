@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger, BadRequestException } from '@nestjs/common';
 import { ShoppingRepository } from '../repositories/shopping.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import {
@@ -22,23 +22,68 @@ import {
 @Injectable()
 export class ShoppingService {
   private readonly logger = new Logger(ShoppingService.name);
-  
-  /**
-   * In-memory grocery database.
-   * TODO: Move to database table for production use.
-   */
-  private groceryDatabase: GrocerySearchItemDto[] = [
-    { id: '1', name: 'Milk', category: 'Dairy', defaultUnit: 'gallon' },
-    { id: '2', name: 'Eggs', category: 'Dairy', defaultUnit: 'dozen' },
-    { id: '3', name: 'Bread', category: 'Bakery', defaultUnit: 'loaf' },
-    { id: '4', name: 'Bananas', category: 'Produce', defaultUnit: 'lb' },
-    { id: '5', name: 'Chicken', category: 'Meat', defaultUnit: 'lb' },
-  ];
 
   constructor(
     private shoppingRepository: ShoppingRepository,
     private prisma: PrismaService,
   ) {}
+
+  /**
+   * Resolves a catalog item by ID and throws if not found.
+   *
+   * @param catalogItemId - Catalog item identifier
+   * @returns Catalog item entity
+   */
+  private async getCatalogItemOrThrow(catalogItemId: string) {
+    const catalogItem = await this.prisma.masterGroceryCatalog.findUnique({
+      where: { id: catalogItemId },
+    });
+
+    if (!catalogItem) {
+      throw new BadRequestException('Catalog item not found');
+    }
+
+    return catalogItem;
+  }
+
+  /**
+   * Builds shopping item data from catalog/defaults and input overrides.
+   *
+   * @param input - Shopping item input
+   * @param catalogItem - Catalog item if present
+   * @param catalogItemId - Catalog item identifier
+   * @returns Persistable shopping item fields
+   */
+  private buildItemData(
+    input: {
+      name?: string;
+      quantity?: number;
+      unit?: string;
+      category?: string;
+      isChecked?: boolean;
+    },
+    catalogItem: {
+      name: string;
+      category: string;
+      defaultUnit?: string | null;
+      defaultQuantity?: number | null;
+    } | null,
+    catalogItemId?: string,
+  ) {
+    const name = catalogItem?.name ?? input.name;
+    if (!name) {
+      throw new BadRequestException('Shopping item name is required');
+    }
+
+    return {
+      catalogItemId,
+      name,
+      category: catalogItem?.category ?? input.category,
+      unit: input.unit ?? catalogItem?.defaultUnit ?? undefined,
+      quantity: input.quantity ?? catalogItem?.defaultQuantity ?? 1,
+      isChecked: input.isChecked ?? false,
+    };
+  }
 
   /**
    * Searches groceries by name (case-insensitive).
@@ -47,10 +92,24 @@ export class ShoppingService {
    * @returns Array of matching grocery items
    */
   async searchGroceries(query: string): Promise<GrocerySearchItemDto[]> {
-    const lowerQuery = query.toLowerCase();
-    return this.groceryDatabase.filter((item) =>
-      item.name.toLowerCase().includes(lowerQuery),
-    );
+    const searchTerm = query?.trim() ?? '';
+    return this.prisma.masterGroceryCatalog.findMany({
+      where: {
+        name: {
+          contains: searchTerm,
+          mode: 'insensitive',
+        },
+      },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        defaultUnit: true,
+        imageUrl: true,
+        defaultQuantity: true,
+      },
+    });
   }
 
   /**
@@ -59,8 +118,13 @@ export class ShoppingService {
    * @returns Sorted array of category names
    */
   async getCategories(): Promise<string[]> {
-    const categories = new Set(this.groceryDatabase.map((item) => item.category));
-    return Array.from(categories).sort();
+    const categories = await this.prisma.masterGroceryCatalog.findMany({
+      select: { category: true },
+      distinct: ['category'],
+      orderBy: { category: 'asc' },
+    });
+
+    return categories.map((item) => item.category);
   }
 
   /**
@@ -130,6 +194,7 @@ export class ShoppingService {
       color: list.color,
       items: list.items.map((item) => ({
         id: item.id,
+        catalogItemId: item.catalogItemId ?? undefined,
         name: item.name,
         quantity: item.quantity,
         unit: item.unit,
@@ -162,19 +227,14 @@ export class ShoppingService {
 
     const addedItems = await Promise.all(
       dto.items.map((item) =>
-        this.shoppingRepository.createItem(listId, {
-          name: item.name,
-          quantity: item.quantity || 1,
-          unit: item.unit,
-          category: item.category,
-          isChecked: item.isChecked || false,
-        }),
+        this.createItemFromInput(listId, item),
       ),
     );
 
     return {
       addedItems: addedItems.map((item) => ({
         id: item.id,
+        catalogItemId: item.catalogItemId ?? undefined,
         name: item.name,
         quantity: item.quantity,
         unit: item.unit,
@@ -216,6 +276,7 @@ export class ShoppingService {
     return {
       updatedItem: {
         id: updatedItem.id,
+        catalogItemId: updatedItem.catalogItemId ?? undefined,
         name: updatedItem.name,
         quantity: updatedItem.quantity,
         unit: updatedItem.unit,
@@ -269,5 +330,35 @@ export class ShoppingService {
     }
 
     await this.shoppingRepository.deleteList(listId);
+  }
+
+  /**
+   * Creates a shopping item from input and optional catalog defaults.
+   *
+   * @param listId - Shopping list ID
+   * @param item - Item input
+   * @returns Persisted shopping item
+   */
+  private async createItemFromInput(
+    listId: string,
+    item: {
+      catalogItemId?: string;
+      masterItemId?: string;
+      name?: string;
+      quantity?: number;
+      unit?: string;
+      category?: string;
+      isChecked?: boolean;
+    },
+  ) {
+    if (item.catalogItemId && item.masterItemId) {
+      throw new BadRequestException('Only one catalog identifier is allowed');
+    }
+
+    const catalogItemId = item.catalogItemId ?? item.masterItemId;
+    const catalogItem = catalogItemId ? await this.getCatalogItemOrThrow(catalogItemId) : null;
+    const itemData = this.buildItemData(item, catalogItem, catalogItemId);
+
+    return this.shoppingRepository.createItem(listId, itemData);
   }
 }

@@ -7,6 +7,7 @@ export class ShoppingListSummaryDto {
 
 export class ShoppingItemDto {
   id: string;
+  catalogItemId?: string;
   name: string;
   quantity: number;
   unit?: string;

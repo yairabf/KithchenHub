@@ -1,14 +1,28 @@
-import { IsArray, ValidateNested, IsString, IsNumber, IsOptional, IsBoolean, IsNotEmpty } from 'class-validator';
+import {
+  IsArray,
+  ValidateNested,
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  IsNotEmpty,
+  ValidateIf,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ShoppingItemInputDto {
   @IsString()
   @IsOptional()
-  masterItemId?: string;
+  catalogItemId?: string;
 
   @IsString()
+  @IsOptional()
+  masterItemId?: string;
+
+  @ValidateIf((item) => !item.catalogItemId && !item.masterItemId)
+  @IsString()
   @IsNotEmpty()
-  name: string;
+  name?: string;
 
   @IsNumber()
   @IsOptional()
