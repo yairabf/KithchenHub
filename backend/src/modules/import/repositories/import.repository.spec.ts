@@ -53,8 +53,8 @@ describe('ImportRepository', () => {
                 'single existing mapping',
                 'user-1',
                 ['recipe-1'],
-                [{ sourceField: 'recipe-1', targetField: 'server-recipe-1' }],
-                new Map([['recipe-1', 'server-recipe-1']]),
+                [{ sourceField: 'recipe-1', sourceType: 'RECIPE', targetField: 'server-recipe-1' }],
+                new Map([['RECIPE:recipe-1', 'server-recipe-1']]),
                 'should return map with single entry',
             ],
             [
@@ -62,14 +62,14 @@ describe('ImportRepository', () => {
                 'user-1',
                 ['recipe-1', 'recipe-2', 'list-1'],
                 [
-                    { sourceField: 'recipe-1', targetField: 'server-recipe-1' },
-                    { sourceField: 'recipe-2', targetField: 'server-recipe-2' },
-                    { sourceField: 'list-1', targetField: 'server-list-1' },
+                    { sourceField: 'recipe-1', sourceType: 'RECIPE', targetField: 'server-recipe-1' },
+                    { sourceField: 'recipe-2', sourceType: 'RECIPE', targetField: 'server-recipe-2' },
+                    { sourceField: 'list-1', sourceType: 'SHOPPING_LIST', targetField: 'server-list-1' },
                 ],
                 new Map([
-                    ['recipe-1', 'server-recipe-1'],
-                    ['recipe-2', 'server-recipe-2'],
-                    ['list-1', 'server-list-1'],
+                    ['RECIPE:recipe-1', 'server-recipe-1'],
+                    ['RECIPE:recipe-2', 'server-recipe-2'],
+                    ['SHOPPING_LIST:list-1', 'server-list-1'],
                 ]),
                 'should return map with all mappings',
             ],
@@ -78,9 +78,9 @@ describe('ImportRepository', () => {
                 'user-1',
                 ['recipe-1', 'recipe-2', 'list-1'],
                 [
-                    { sourceField: 'recipe-1', targetField: 'server-recipe-1' },
+                    { sourceField: 'recipe-1', sourceType: 'RECIPE', targetField: 'server-recipe-1' },
                 ],
-                new Map([['recipe-1', 'server-recipe-1']]),
+                new Map([['RECIPE:recipe-1', 'server-recipe-1']]),
                 'should return map with only existing mappings',
             ],
         ])(
@@ -112,6 +112,7 @@ describe('ImportRepository', () => {
                             },
                             select: {
                                 sourceField: true,
+                                sourceType: true,
                                 targetField: true,
                             },
                         });

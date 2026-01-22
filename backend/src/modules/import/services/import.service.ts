@@ -3,7 +3,7 @@ import { ImportRepository } from '../repositories/import.repository';
 import { ImportRequestDto, ImportResponseDto, ImportRecipeDto, ImportShoppingListDto } from '../dto/import.dto';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { ImportSource, ImportStatus } from '../constants/import.constants';
+import { ImportSource, ImportStatus, ImportEntityType } from '../constants/import.constants';
 
 /**
  * Statistics for import operations
@@ -209,9 +209,10 @@ export class ImportService {
         };
 
         for (const recipe of recipes) {
-            if (existingMappings.has(recipe.id)) {
+            const namespacedSourceId = `${ImportEntityType.RECIPE}:${recipe.id}`;
+            if (existingMappings.has(namespacedSourceId)) {
                 stats.skipped++;
-                stats.mappings[recipe.id] = existingMappings.get(recipe.id)!;
+                stats.mappings[recipe.id] = existingMappings.get(namespacedSourceId)!;
                 continue;
             }
 
@@ -246,6 +247,7 @@ export class ImportService {
                 userId,
                 batchId,
                 recipe.id,
+                ImportEntityType.RECIPE,
                 targetId
             );
 
@@ -281,9 +283,10 @@ export class ImportService {
         };
 
         for (const list of shoppingLists) {
-            if (existingMappings.has(list.id)) {
+            const namespacedSourceId = `${ImportEntityType.SHOPPING_LIST}:${list.id}`;
+            if (existingMappings.has(namespacedSourceId)) {
                 stats.skipped++;
-                stats.mappings[list.id] = existingMappings.get(list.id)!;
+                stats.mappings[list.id] = existingMappings.get(namespacedSourceId)!;
                 continue;
             }
 
@@ -320,6 +323,7 @@ export class ImportService {
                 userId,
                 batchId,
                 list.id,
+                ImportEntityType.SHOPPING_LIST,
                 targetId
             );
 
@@ -372,6 +376,7 @@ export class ImportService {
         userId: string,
         batchId: string,
         sourceId: string,
+        sourceType: ImportEntityType,
         targetId: string
     ): Promise<void> {
         try {
@@ -380,6 +385,7 @@ export class ImportService {
                     batchId,
                     userId,
                     sourceField: sourceId,
+                    sourceType,
                     targetField: targetId,
                 },
             });

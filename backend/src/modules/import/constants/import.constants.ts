@@ -19,3 +19,11 @@ export enum ImportStatus {
     COMPLETED = 'COMPLETED',
     FAILED = 'FAILED',
 }
+
+/**
+ * Entity types for import mapping to prevent ID collisions
+ */
+export enum ImportEntityType {
+    RECIPE = 'RECIPE',
+    SHOPPING_LIST = 'SHOPPING_LIST',
+}

@@ -34,11 +34,14 @@ export class ImportRepository {
             },
             select: {
                 sourceField: true,
+                sourceType: true,
                 targetField: true,
             },
         });
 
-        return new Map(mappings.map((mapping) => [mapping.sourceField, mapping.targetField]));
+        return new Map(
+            mappings.map((mapping) => [`${mapping.sourceType}:${mapping.sourceField}`, mapping.targetField])
+        );
     }
 
     /**

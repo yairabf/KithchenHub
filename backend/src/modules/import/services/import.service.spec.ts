@@ -4,7 +4,7 @@ import { ImportService } from './import.service';
 import { ImportRepository } from '../repositories/import.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { ImportRequestDto, ImportResponseDto } from '../dto/import.dto';
-import { ImportSource, ImportStatus } from '../constants/import.constants';
+import { ImportSource, ImportStatus, ImportEntityType } from '../constants/import.constants';
 
 describe('ImportService', () => {
     let service: ImportService;
@@ -119,7 +119,7 @@ describe('ImportService', () => {
             [
                 'duplicate recipe',
                 { recipes: [mockRecipe] },
-                new Map([['local-recipe-1', 'existing-recipe-1']]),
+                new Map([[`${ImportEntityType.RECIPE}:local-recipe-1`, 'existing-recipe-1']]),
                 { created: 0, skipped: 1, mappings: { 'local-recipe-1': 'existing-recipe-1' } },
                 'should skip recipe and return existing mapping',
             ],
@@ -133,7 +133,7 @@ describe('ImportService', () => {
             [
                 'duplicate shopping list',
                 { shoppingLists: [mockShoppingList] },
-                new Map([['local-list-1', 'existing-list-1']]),
+                new Map([[`${ImportEntityType.SHOPPING_LIST}:local-list-1`, 'existing-list-1']]),
                 { created: 0, skipped: 1, mappings: { 'local-list-1': 'existing-list-1' } },
                 'should skip list and return existing mapping',
             ],
@@ -145,7 +145,7 @@ describe('ImportService', () => {
                         { ...mockRecipe, id: 'local-recipe-2', title: 'Recipe 2' },
                     ],
                 },
-                new Map([['local-recipe-1', 'existing-recipe-1']]),
+                new Map([[`${ImportEntityType.RECIPE}:local-recipe-1`, 'existing-recipe-1']]),
                 {
                     created: 1,
                     skipped: 1,
@@ -189,7 +189,8 @@ describe('ImportService', () => {
                     const recipes = (importRequest as any).recipes || [];
                     let recipeCounter = 1;
                     recipes.forEach((recipe: any) => {
-                        if (!existingMappings.has(recipe.id)) {
+                        const namespacedId = `${ImportEntityType.RECIPE}:${recipe.id}`;
+                        if (!existingMappings.has(namespacedId)) {
                             mockPrismaTransaction.recipe.create.mockResolvedValueOnce({
                                 id: `server-recipe-${recipeCounter}`,
                             });
@@ -201,7 +202,8 @@ describe('ImportService', () => {
                     const lists = (importRequest as any).shoppingLists || [];
                     let listCounter = 1;
                     lists.forEach((list: any) => {
-                        if (!existingMappings.has(list.id)) {
+                        const namespacedId = `${ImportEntityType.SHOPPING_LIST}:${list.id}`;
+                        if (!existingMappings.has(namespacedId)) {
                             mockPrismaTransaction.shoppingList.create.mockResolvedValueOnce({
                                 id: `server-list-${listCounter}`,
                             });
@@ -390,6 +392,7 @@ describe('ImportService', () => {
                     batchId: 'batch-123',
                     userId,
                     sourceField: 'local-recipe-1',
+                    sourceType: ImportEntityType.RECIPE,
                     targetField: 'server-recipe-1',
                 },
             });
@@ -398,6 +401,7 @@ describe('ImportService', () => {
                     batchId: 'batch-123',
                     userId,
                     sourceField: 'local-list-1',
+                    sourceType: ImportEntityType.SHOPPING_LIST,
                     targetField: 'server-list-1',
                 },
             });
@@ -509,12 +513,50 @@ describe('ImportService', () => {
                     batchId: 'batch-123',
                     userId,
                     sourceField: 'local-list-1',
+                    sourceType: ImportEntityType.SHOPPING_LIST,
                     targetField: 'existing-list-id',
                 },
             });
             // Verify: Stats
             expect(result.skipped).toBe(1);
             expect(result.created).toBe(0);
+        });
+
+        it('should handle ID collisions between different entity types using namespacing', async () => {
+            // Both items share the same local ID
+            const sharedId = 'colliding-id';
+            const collidingRecipe = { ...mockRecipe, id: sharedId, title: 'Recipe 1' };
+            const collidingList = { ...mockShoppingList, id: sharedId, name: 'List 1' };
+
+            // Mock: Recipe already imported, List NOT imported
+            mockImportRepository.findMappingsForUser.mockResolvedValue(new Map([
+                [`${ImportEntityType.RECIPE}:${sharedId}`, 'server-recipe-id']
+            ]));
+
+            mockPrismaTransaction.shoppingList.create.mockResolvedValue({ id: 'server-list-id' });
+            mockPrismaTransaction.importMapping.create.mockResolvedValue({});
+
+            const result = await service.executeImport(userId, householdId, {
+                recipes: [collidingRecipe],
+                shoppingLists: [collidingList],
+            });
+
+            // Verify: Recipe skipped, List created despite same ID
+            expect(result.skipped).toBe(1); // Recipe
+            expect(result.created).toBe(1); // List
+            expect(result.mappings[sharedId]).toBe('server-list-id'); // List mapping overwrites recipe mapping in response, but both processed
+
+            // Verify: Mapping created only for shopping list
+            expect(mockPrismaTransaction.importMapping.create).toHaveBeenCalledTimes(1);
+            expect(mockPrismaTransaction.importMapping.create).toHaveBeenCalledWith({
+                data: {
+                    batchId: mockBatch.id,
+                    userId,
+                    sourceField: sharedId,
+                    sourceType: ImportEntityType.SHOPPING_LIST,
+                    targetField: 'server-list-id',
+                },
+            });
         });
     });
 });

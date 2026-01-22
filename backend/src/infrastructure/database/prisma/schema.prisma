@@ -150,15 +150,16 @@ model ImportMapping {
   userId      String      @map("user_id")
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   sourceField String      @map("source_field")
+  sourceType  String      @map("source_type") // e.g., 'RECIPE', 'SHOPPING_LIST' to prevent ID collisions
   targetField String      @map("target_field")
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
   // Unique constraints for idempotency:
-  // - [batchId, sourceField]: Ensures one mapping per batch per source (prevents duplicates within a single import)
-  // - [userId, sourceField]: Ensures idempotency across batches (prevents duplicates in concurrent requests)
+  // - [batchId, sourceField, sourceType]: Ensures one mapping per batch per source entity (prevents duplicates within a single import)
+  // - [userId, sourceField, sourceType]: Ensures idempotency across batches (prevents duplicates in concurrent requests)
   // Both constraints create indexes automatically for efficient lookups in findMappingsForUser queries
-  @@unique([batchId, sourceField])
-  @@unique([userId, sourceField])
+  @@unique([batchId, sourceField, sourceType])
+  @@unique([userId, sourceField, sourceType])
   @@map("import_mappings")
 }
