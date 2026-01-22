@@ -241,7 +241,20 @@ const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Sna
   - `searchQuery` - Search input text
   - `selectedCategory` - Active category filter
   - `showAddRecipeModal` - Modal visibility
-  - `recipes` - Array of Recipe objects
+  - `recipes` - Managed by `useRecipes` hook (switches between Local/Remote sources)
+  - `isLoading` - Loading state for async operations
+
+## Service Layer
+
+The feature now uses a **Strategy Pattern** to handle data fetching, switching transparently between local mocks and backend API based on authentication state.
+
+- **Hook**: `useRecipes()` (`mobile/src/features/recipes/hooks/useRecipes.ts`)
+  - Detects `AuthContext` state.
+  - Instantiates the appropriate service.
+- **Strategies**:
+  - `LocalRecipeService`: Returns mock data (Guest Mode).
+  - `RemoteRecipeService`: Calls backend via `api.ts` (Cloud Mode).
+- **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper.
 
 ## Key Dependencies
 
