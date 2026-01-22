@@ -9,7 +9,7 @@ export const styles = StyleSheet.create({
   },
   stickyHeaderContainer: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    width: '100%',
   },
   tabletHeader: {
     paddingHorizontal: spacing.xs,
@@ -18,6 +18,7 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.background,
+    width: '100%',
   },
   tabletHeaderRow: {
     flexDirection: 'row',
@@ -40,15 +41,29 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xl,
   },
-  ingredientsScroll: {
+  ingredientsColumn: {
     flex: 35,
     flexShrink: 0,
+  },
+  stepsColumn: {
+    flex: 65,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  ingredientsScroll: {
+    flex: 1,
   },
   ingredientsScrollContent: {
     paddingBottom: spacing.xl,
   },
   stepsScroll: {
-    flex: 65,
+    flex: 1,
   },
   stepsScrollContent: {
     paddingBottom: spacing.xl,

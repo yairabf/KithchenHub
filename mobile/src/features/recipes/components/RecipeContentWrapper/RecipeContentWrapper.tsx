@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, useWindowDimensions, LayoutChangeEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '../../../../common/hooks';
 import { colors } from '../../../../theme/colors';
@@ -7,6 +7,7 @@ import { RecipeIngredients } from '../RecipeIngredients';
 import { RecipeSteps } from '../RecipeSteps';
 import { styles } from './styles';
 import type { RecipeContentWrapperProps } from './types';
+import { SCROLL_VIEW_CONFIG } from '../../screens/RecipeDetailScreen.constants';
 
 /**
  * RecipeContentWrapper component displays recipe ingredients and steps
@@ -41,8 +42,9 @@ export function RecipeContentWrapper({
   hideHeaderWhenSticky = false,
   activeTab: controlledActiveTab,
   onTabChange: controlledOnTabChange,
+  onHeaderLayout,
 }: RecipeContentWrapperProps) {
-  const { isTablet, width } = useResponsive();
+  const { isTablet } = useResponsive();
   const { height: windowHeight } = useWindowDimensions();
   const [internalActiveTab, setInternalActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
   
@@ -56,26 +58,39 @@ export function RecipeContentWrapper({
     }
   }, [controlledOnTabChange]);
   
-  // Force re-render when width changes (for React Native Web compatibility)
-  useEffect(() => {
-    // This ensures the component re-renders when dimensions change
-  }, [width]);
+  /**
+   * Handles layout measurement for header height calculation
+   * Extracts duplicate logic for both tablet and mobile headers
+   */
+  const handleHeaderLayoutMeasurement = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    if (height > 0 && onHeaderLayout) {
+      onHeaderLayout(height);
+    }
+  }, [onHeaderLayout]);
 
-  // Calculate height for tablet ScrollViews (account for header and padding)
-  // Use a fixed height to ensure ScrollViews are scrollable when nested
-  // Subtract space for screen header, sticky header, and padding
-  const scrollViewHeight = isTablet 
-    ? Math.max(500, Math.floor(windowHeight * 0.5))
-    : undefined;
+  /**
+   * Calculates height for tablet ScrollViews to ensure they are scrollable when nested
+   * Uses minimum height and window height ratio from constants
+   */
+  const scrollViewHeight = useMemo(() => {
+    if (!isTablet) return undefined;
+    return Math.max(
+      SCROLL_VIEW_CONFIG.MIN_HEIGHT,
+      Math.floor(windowHeight * SCROLL_VIEW_CONFIG.HEIGHT_RATIO)
+    );
+  }, [isTablet, windowHeight]);
 
   // Render only header for sticky header
   if (renderHeaderOnly) {
     if (isTablet) {
       return (
         <View style={styles.stickyHeaderContainer}>
-          <View style={styles.tabletHeaderRow}>
-            <Text style={[styles.tabletTitle, styles.tabletTitleLeft]}>Ingredients</Text>
-            <Text style={[styles.tabletTitle, styles.tabletTitleRight]}>Steps</Text>
+          <View style={styles.tabletHeader}>
+            <View style={styles.tabletHeaderRow}>
+              <Text style={[styles.tabletTitle, styles.tabletTitleLeft]}>Ingredients</Text>
+              <Text style={[styles.tabletTitle, styles.tabletTitleRight]}>Steps</Text>
+            </View>
           </View>
         </View>
       );
@@ -142,7 +157,10 @@ export function RecipeContentWrapper({
         <>
           {isTablet ? (
             /* Tablet: Fixed header with side-by-side titles */
-            <View style={styles.tabletHeader}>
+            <View 
+              style={styles.tabletHeader}
+              onLayout={handleHeaderLayoutMeasurement}
+            >
               <View style={styles.tabletHeaderRow}>
                 <Text style={[styles.tabletTitle, styles.tabletTitleLeft]}>Ingredients</Text>
                 <Text style={[styles.tabletTitle, styles.tabletTitleRight]}>Steps</Text>
@@ -150,7 +168,10 @@ export function RecipeContentWrapper({
             </View>
           ) : (
             /* Mobile: Tabs */
-            <View style={styles.tabsContainer}>
+            <View 
+              style={styles.tabsContainer}
+              onLayout={handleHeaderLayoutMeasurement}
+            >
           <TouchableOpacity
             style={[styles.tab, activeTab === 'ingredients' && styles.tabActive]}
             onPress={() => handleTabChange('ingredients')}
@@ -206,42 +227,46 @@ export function RecipeContentWrapper({
         /* Tablet: Both components always visible, independently scrollable */
         <View style={styles.tabletContent}>
           {/* Ingredients - ScrollView */}
-          <ScrollView
-            style={[
-              styles.ingredientsScroll,
-              scrollViewHeight ? { height: scrollViewHeight, maxHeight: scrollViewHeight } : undefined
-            ]}
-            contentContainerStyle={styles.ingredientsScrollContent}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
-            bounces={true}
-            scrollEnabled={true}
-          >
-            <RecipeIngredients
-              recipe={recipe}
-              onAddIngredient={onAddIngredient}
-              onAddAllIngredients={onAddAllIngredients}
-            />
-          </ScrollView>
+          <View style={styles.ingredientsColumn}>
+            <ScrollView
+              style={[
+                styles.ingredientsScroll,
+                scrollViewHeight ? { height: scrollViewHeight, maxHeight: scrollViewHeight } : undefined
+              ]}
+              contentContainerStyle={styles.ingredientsScrollContent}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+              bounces={true}
+              scrollEnabled={true}
+            >
+              <RecipeIngredients
+                recipe={recipe}
+                onAddIngredient={onAddIngredient}
+                onAddAllIngredients={onAddAllIngredients}
+              />
+            </ScrollView>
+          </View>
 
           {/* Steps - ScrollView */}
-          <ScrollView
-            style={[
-              styles.stepsScroll,
-              scrollViewHeight ? { height: scrollViewHeight, maxHeight: scrollViewHeight } : undefined
-            ]}
-            contentContainerStyle={styles.stepsScrollContent}
-            showsVerticalScrollIndicator={true}
-            nestedScrollEnabled={true}
-            bounces={true}
-            scrollEnabled={true}
-          >
-            <RecipeSteps
-              instructions={recipe.instructions}
-              completedSteps={completedSteps}
-              onToggleStep={onToggleStep}
-            />
-          </ScrollView>
+          <View style={styles.stepsColumn}>
+            <ScrollView
+              style={[
+                styles.stepsScroll,
+                scrollViewHeight ? { height: scrollViewHeight, maxHeight: scrollViewHeight } : undefined
+              ]}
+              contentContainerStyle={styles.stepsScrollContent}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+              bounces={true}
+              scrollEnabled={true}
+            >
+              <RecipeSteps
+                instructions={recipe.instructions}
+                completedSteps={completedSteps}
+                onToggleStep={onToggleStep}
+              />
+            </ScrollView>
+          </View>
         </View>
       ) : (
         /* Mobile: Tab content */

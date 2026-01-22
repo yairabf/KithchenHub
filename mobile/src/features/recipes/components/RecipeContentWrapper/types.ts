@@ -10,4 +10,5 @@ export interface RecipeContentWrapperProps {
   hideHeaderWhenSticky?: boolean;
   activeTab?: 'ingredients' | 'steps';
   onTabChange?: (tab: 'ingredients' | 'steps') => void;
+  onHeaderLayout?: (height: number) => void;
 }

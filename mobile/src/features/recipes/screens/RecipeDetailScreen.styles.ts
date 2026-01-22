@@ -132,5 +132,10 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     ...shadows.sm,
+    width: '100%',
+  },
+  stickyHeaderSpacer: {
+    backgroundColor: 'transparent',
+    width: '100%',
   },
 });
