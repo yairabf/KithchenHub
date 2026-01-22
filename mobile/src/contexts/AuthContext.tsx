@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
+import { useSupabaseAuth, SupabaseUser } from '../hooks/useSupabaseAuth';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export interface User {
   id: string;
@@ -37,6 +42,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [hasGuestData, setHasGuestData] = useState(false);
 
+  const handleUserChange = async (supabaseUser: SupabaseUser | null) => {
+    if (supabaseUser) {
+      const googleUser: User = {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        name: supabaseUser.name,
+        photoUrl: supabaseUser.avatarUrl,
+        isGuest: false,
+      };
+
+      // Check if we need to prompt for guest data import
+      const isCurrentlyGuest = user?.isGuest;
+      const promptShown = await AsyncStorage.getItem(GUEST_PROMPT_KEY);
+
+      if (isCurrentlyGuest && !promptShown) {
+        setPendingUser(googleUser);
+        setShowGuestImportPrompt(true);
+      } else {
+        setUser(googleUser);
+        await saveUser(googleUser);
+      }
+    } else {
+      setUser(null);
+      await saveUser(null);
+    }
+  };
+
+  const { signInWithGoogle, signOut: supabaseSignOut } = useSupabaseAuth(handleUserChange);
+
   useEffect(() => {
     loadStoredUser();
   }, []);
@@ -69,30 +103,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signInWithGoogle = async () => {
-    // This will be implemented with actual Google Sign-In
-    // For now, simulating a Google sign-in response
-    const googleUser: User = {
-      id: 'google-user-123',
-      email: 'user@gmail.com',
-      name: 'Kitchen User',
-      photoUrl: undefined,
-      isGuest: false,
-    };
-
-    // Check if we need to prompt for guest data import
-    const isCurrentlyGuest = user?.isGuest;
-    const promptShown = await AsyncStorage.getItem(GUEST_PROMPT_KEY);
-
-    // Logic: Only show if currently Guest AND prompt hasn't been shown
-    if (isCurrentlyGuest && !promptShown) {
-      setPendingUser(googleUser);
-      setShowGuestImportPrompt(true);
-      return; // Pause sign-in to wait for user decision
+  const handleSignInWithGoogle = async () => {
+    try {
+      setIsLoading(true);
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-
-    setUser(googleUser);
-    await saveUser(googleUser);
   };
 
   const resolveGuestImport = async (shouldImport: boolean) => {
@@ -143,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInAsGuest = async () => {
     const guestUser: User = {
-      id: 'guest-' + Date.now(),
+      id: Crypto.randomUUID(),
       email: '',
       name: 'Guest',
       isGuest: true,
@@ -155,9 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(HAS_GUEST_DATA_KEY, 'true');
   };
 
-  const signOut = async () => {
-    setUser(null);
-    await saveUser(null);
+  const handleSignOut = async () => {
+    await supabaseSignOut();
   };
 
   return (
@@ -165,10 +184,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoading,
-        signInWithGoogle,
+        signInWithGoogle: handleSignInWithGoogle,
         signInAsGuest,
 
-        signOut,
+        signOut: handleSignOut,
         showGuestImportPrompt,
         resolveGuestImport,
         hasGuestData,
