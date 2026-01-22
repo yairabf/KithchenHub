@@ -61,6 +61,21 @@ npm run start:dev         # start API with watch mode
 - **Config**: Supabase client is initialized in `src/modules/supabase/supabase.service.ts`.
 - **Environment**: Requires `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env`. Optionally include `SUPABASE_SERVICE_ROLE_KEY` for admin operations.
 - **Local Dev**: For local development, ensure these point to your local Supabase instance or a dev project.
+- **Row Level Security (RLS)**:
+  - Multi-tenant isolation is enforced at the database level via PostgreSQL RLS policies.
+  - Users are restricted to data matching their `household_id` (retrieved via the `get_my_household_id()` SQL helper).
+  - Security policies cover `households`, `users`, `recipes`, `shopping_lists/items`, `chores`, and `import` data.
+
+## Security Testing (RLS)
+To verify that Row Level Security is correctly isolating data between households:
+1. **Prerequisites**: Ensure you have applied migrations (`npm run prisma:migrate`).
+2. **Run Tests**:
+   ```bash
+   npm run test src/infrastructure/database/rls.spec.ts
+   ```
+3. **Internal Logic**: These tests simulate the Supabase environment by:
+   - Setting the PostgreSQL role to `authenticated`.
+   - Injecting JWT claims (e.g., `SET LOCAL "request.jwt.claims" = '{"sub": "..."}'`) within a transaction.
 
 
 ## API Conventions
