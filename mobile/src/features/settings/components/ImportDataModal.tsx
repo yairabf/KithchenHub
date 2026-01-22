@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CenteredModal } from '../../../common/components/CenteredModal';
 import { ImportService } from '../../../services/import/importService';
+import { useAuth } from '../../../contexts/AuthContext';
 import { colors } from '../../../theme';
 
 interface ImportDataModalProps {
@@ -13,6 +14,7 @@ interface ImportDataModalProps {
 type ImportStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export function ImportDataModal({ visible, onClose }: ImportDataModalProps) {
+    const { clearGuestData } = useAuth();
     const [status, setStatus] = useState<ImportStatus>('idle');
     const [errorMessage, setErrorMessage] = useState<string>('');
 
@@ -34,16 +36,44 @@ export function ImportDataModal({ visible, onClose }: ImportDataModalProps) {
             const payload = await ImportService.gatherLocalData();
             await ImportService.submitImport(payload);
             setStatus('success');
-        } catch (error: any) {
+        } catch (error) {
             console.error('Import failed', error);
             setStatus('error');
-            setErrorMessage(error.message || 'Failed to import data');
+            const msg = error instanceof Error ? error.message : 'Failed to import data';
+            setErrorMessage(msg);
         }
     };
 
     const handleClose = () => {
         if (status === 'loading') return; // Prevent closing while loading
         onClose();
+    };
+
+    const handleClearData = () => {
+        Alert.alert(
+            'Clear Local Data?',
+            'This will remove all guest data from this device. This action cannot be undone.',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Clear',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await clearGuestData();
+                            // Optional: Show a quick toast or just close
+                            onClose();
+                        } catch (error) {
+                            console.error('Failed to clear data', error);
+                            Alert.alert('Error', 'Failed to clear local data.');
+                        }
+                    },
+                },
+            ]
+        );
     };
 
     const renderContent = () => {
@@ -64,8 +94,13 @@ export function ImportDataModal({ visible, onClose }: ImportDataModalProps) {
                         </View>
                         <Text style={styles.title}>Success!</Text>
                         <Text style={styles.text}>Your data has been successfully imported to your account.</Text>
-                        <TouchableOpacity style={styles.doneButton} onPress={handleClose}>
-                            <Text style={styles.doneText}>Done</Text>
+
+                        <TouchableOpacity style={styles.clearButton} onPress={handleClearData}>
+                            <Text style={styles.clearText}>Clear local data</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.secondaryButton} onPress={handleClose}>
+                            <Text style={styles.secondaryText}>Keep & Close</Text>
                         </TouchableOpacity>
                     </View>
                 );
@@ -135,15 +170,27 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '600',
     },
-    doneButton: {
+    clearButton: {
         marginTop: 16,
         paddingVertical: 10,
         paddingHorizontal: 20,
-        backgroundColor: colors.success,
+        backgroundColor: colors.error, // or a cautionary color
+        borderRadius: 8,
+        width: '100%',
+        alignItems: 'center',
+    },
+    clearText: {
+        color: '#fff',
+        fontWeight: '600',
+    },
+    secondaryButton: {
+        marginTop: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
         borderRadius: 8,
     },
-    doneText: {
-        color: '#fff',
+    secondaryText: {
+        color: colors.textSecondary,
         fontWeight: '600',
     },
 });

@@ -101,8 +101,11 @@ interface ImportDataModalProps {
   - Aggregates local data using `ImportService`
   - Sends data to backend API
   - Displays loading state with generic message
-  - Shows success "Done" state
+  - Shows success state with:
+    - **Clear local data** option (destructive, requires confirmation)
+    - **Keep & Close** option (preserves local data)
   - Shows error state with "Retry" capability
+  - Integration with `AuthContext` to clear guest data on user confirmation
 
 ## UI Sections
 
