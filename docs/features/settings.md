@@ -34,6 +34,7 @@ const [pushNotifications, setPushNotifications] = React.useState(true);
 const [dailySummary, setDailySummary] = React.useState(false);
 const [cloudSync, setCloudSync] = React.useState(true);
 const [showManageHousehold, setShowManageHousehold] = React.useState(false);
+const [showImportData, setShowImportData] = React.useState(false);
 const [showClearDataConfirm, setShowClearDataConfirm] = React.useState(false);
 const [toastMessage, setToastMessage] = React.useState<string | null>(null);
 const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
@@ -42,15 +43,8 @@ const [toastType, setToastType] = React.useState<'success' | 'error'>('success')
 #### Code Snippet - Guest Data Management
 
 ```typescript
-const handleImportGuestData = async () => {
-  try {
-    await importGuestData();
-    setToastType('success');
-    setToastMessage('Guest data imported successfully');
-  } catch (error) {
-    setToastType('error');
-    setToastMessage('Failed to import guest data. Please try again.');
-  }
+const handleImportGuestData = () => {
+  setShowImportData(true);
 };
 
 const handleClearGuestData = async () => {
@@ -87,7 +81,28 @@ interface ManageHouseholdModalProps {
   - Delete buttons (disabled for default members)
   - "Default" badge for built-in members
   - Uses `HouseholdContext` for state management
+  - Uses `HouseholdContext` for state management
   - Async operations for adding/removing members
+
+### ImportDataModal
+
+- **File**: `mobile/src/features/settings/components/ImportDataModal.tsx`
+- **Purpose**: Guest data import interface
+- **Props**:
+
+```typescript
+interface ImportDataModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+```
+
+- **Features**:
+  - Aggregates local data using `ImportService`
+  - Sends data to backend API
+  - Displays loading state with generic message
+  - Shows success "Done" state
+  - Shows error state with "Retry" capability
 
 ## UI Sections
 
@@ -142,6 +157,7 @@ interface ManageHouseholdModalProps {
   - `dailySummary` - Email summary toggle state
   - `cloudSync` - Cloud sync toggle state
   - `showManageHousehold` - Manage household modal visibility
+  - `showImportData` - Import data modal visibility
   - `showClearDataConfirm` - Guest data deletion confirmation modal visibility
   - `toastMessage` - Toast notification message (null when hidden)
   - `toastType` - Toast type ('success' or 'error')
@@ -152,8 +168,9 @@ interface ManageHouseholdModalProps {
 - `react-native` - Core React Native components (View, Text, ScrollView, TouchableOpacity, Switch, Image, SafeAreaView)
 - `AuthContext` - User authentication state and guest data management (`useAuth` hook)
 - `HouseholdContext` - Household member management (`useHousehold` hook)
+- `ImportService` - Logic for gathering and uploading local guest data
 - `ScreenHeader` - Shared header component for consistent navigation
-- `CenteredModal` - Shared modal component (used by ManageHouseholdModal and guest data deletion confirmation)
+- `CenteredModal` - Shared modal component (used by ManageHouseholdModal, ImportDataModal, and guest data deletion confirmation)
 - `Toast` - Shared toast component for user feedback (success/error messages)
 - Theme system (`colors`, `spacing`, `borderRadius`, `typography`, `shadows`) - Centralized design tokens
 
