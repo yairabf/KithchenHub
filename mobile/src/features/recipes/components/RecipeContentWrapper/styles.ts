@@ -1,0 +1,92 @@
+import { StyleSheet } from 'react-native';
+import { colors } from '../../../../theme/colors';
+import { spacing, borderRadius } from '../../../../theme/spacing';
+import { shadows } from '../../../../theme/shadows';
+
+export const styles = StyleSheet.create({
+  wrapper: {
+    width: '100%',
+  },
+  stickyHeaderContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  tabletHeader: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  tabletHeaderRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+  },
+  tabletTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  tabletTitleLeft: {
+    flex: 35,
+  },
+  tabletTitleRight: {
+    flex: 65,
+    paddingLeft: spacing.xl,
+  },
+  tabletContent: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  ingredientsScroll: {
+    flex: 35,
+    flexShrink: 0,
+  },
+  ingredientsScrollContent: {
+    paddingBottom: spacing.xl,
+  },
+  stepsScroll: {
+    flex: 65,
+  },
+  stepsScrollContent: {
+    paddingBottom: spacing.xl,
+  },
+  mobileContent: {
+    width: '100%',
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xs,
+    marginBottom: spacing.lg,
+    ...shadows.sm,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  tabActive: {
+    backgroundColor: colors.background,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  tabTextActive: {
+    color: colors.recipes,
+    fontWeight: '700',
+  },
+  tabContent: {
+    width: '100%',
+  },
+});

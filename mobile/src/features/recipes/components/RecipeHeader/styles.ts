@@ -6,7 +6,59 @@ import { shadows } from '../../../../theme/shadows';
 export const styles = StyleSheet.create({
   container: {
     gap: spacing.lg,
-    paddingTop: spacing.xs,
+    width: '100%',
+  },
+  imageContainer: {
+    width: '100%',
+    height: 300,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  imageBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  imageStyle: {
+    resizeMode: 'cover',
+  },
+  imageOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+  },
+  imagePlaceholder: {
+    flex: 1,
+    backgroundColor: colors.background,
+    position: 'relative',
+  },
+  placeholderContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+  },
+  titlePlaceholder: {
+    fontSize: 36,
+    fontWeight: '800',
+    lineHeight: 44,
+    color: colors.textPrimary,
+    letterSpacing: -1,
+  },
+  descriptionPlaceholder: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.textSecondary,
   },
   badgesRow: {
     flexDirection: 'row',
@@ -36,21 +88,26 @@ export const styles = StyleSheet.create({
   popularBadgeText: {
     color: '#B45309', // yellow-700
   },
+  textOverlay: {
+    gap: spacing.sm,
+  },
   title: {
     fontSize: 36,
     fontWeight: '800',
     lineHeight: 44,
-    color: colors.textPrimary,
+    color: colors.textLight,
     letterSpacing: -1,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   description: {
     fontSize: 14,
     lineHeight: 22,
-    color: colors.textSecondary,
-  },
-  createdBy: {
-    fontWeight: '700',
-    color: colors.textPrimary,
+    color: colors.textLight,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -81,50 +138,5 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
-  },
-  // Ingredients section
-  ingredientsSection: {
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  ingredientsSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xs,
-  },
-  ingredientsSectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  ingredientsList: {
-    gap: spacing.md,
-  },
-  ingredientCardWrapper: {
-    width: '100%',
-  },
-  addAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: withOpacity(colors.recipes, 0.1),
-    borderRadius: borderRadius.full,
-  },
-  addAllButtonText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.recipes,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

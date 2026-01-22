@@ -1,12 +1,14 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   SafeAreaView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  LayoutChangeEvent,
 } from 'react-native';
-import { RecipeSidebar } from '../components/RecipeSidebar';
-import { InstructionStep } from '../components/InstructionStep';
+import { RecipeHeader } from '../components/RecipeHeader';
+import { RecipeContentWrapper } from '../components/RecipeContentWrapper';
 import { Toast } from '../../../common/components/Toast';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
@@ -26,6 +28,17 @@ export function RecipeDetailScreen({
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
+  
+  // Track scroll position and header height for sticky header
+  const [scrollY, setScrollY] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [screenHeaderHeight, setScreenHeaderHeight] = useState(0);
+  
+  // Mobile tab state
+  const [activeTab, setActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
+  
+  // Check if RecipeHeader has been scrolled past
+  const isHeaderScrolled = headerHeight > 0 && scrollY >= headerHeight - 10;
 
   // Format recipe for sharing using centralized formatter
   const shareText = useMemo(() => formatRecipeText(recipe), [recipe]);
@@ -68,55 +81,81 @@ export function RecipeDetailScreen({
     showToast(`All ${recipe.ingredients.length} ingredients added`);
   }, [onAddToShoppingList, recipe.ingredients, showToast]);
 
+  // Handle scroll position tracking
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setScrollY(event.nativeEvent.contentOffset.y);
+  }, []);
+
+  // Handle header height measurement
+  const handleHeaderLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    if (height > 0) {
+      setHeaderHeight(height);
+    }
+  }, []);
+
+  // Handle screen header height measurement
+  const handleScreenHeaderLayout = useCallback((event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setScreenHeaderHeight(height);
+  }, []);
+
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScreenHeader
-        title="KITCHEN HUB"
-        leftIcon="back"
-        onLeftPress={onBack}
-        rightActions={{
-          share: { onPress: () => setShowShareModal(true), label: 'Share recipe' },
-        }}
-        variant="centered"
-      />
+      <View onLayout={handleScreenHeaderLayout}>
+        <ScreenHeader
+          title="KITCHEN HUB"
+          leftIcon="back"
+          onLeftPress={onBack}
+          rightActions={{
+            share: { onPress: () => setShowShareModal(true), label: 'Share recipe' },
+          }}
+          variant="centered"
+        />
+      </View>
+
+      {/* Fixed sticky header when RecipeHeader is scrolled past */}
+      {isHeaderScrolled && screenHeaderHeight > 0 && (
+        <View style={[styles.stickyHeader, { top: screenHeaderHeight }]}>
+          <RecipeContentWrapper
+            recipe={recipe}
+            completedSteps={completedSteps}
+            onToggleStep={handleToggleStep}
+            onAddIngredient={handleAddIngredient}
+            onAddAllIngredients={handleAddAllIngredients}
+            renderHeaderOnly={true}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+        </View>
+      )}
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
       >
-        <View style={[styles.contentRow, !isTablet && styles.contentRowPhone]}>
-          {/* Sidebar */}
-          <View style={[styles.sidebar, !isTablet && styles.sidebarPhone]}>
-            <RecipeSidebar
-              recipe={recipe}
-              onAddIngredient={handleAddIngredient}
-              onAddAllIngredients={handleAddAllIngredients}
-            />
-          </View>
-
-          {/* Main Content */}
-          <View style={[styles.mainContent, !isTablet && styles.mainContentPhone]}>
-            {/* Instructions Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Preparation Steps</Text>
-              </View>
-
-              <View style={styles.instructionsList}>
-                {recipe.instructions.map((step, index) => (
-                  <InstructionStep
-                    key={step.id}
-                    step={step}
-                    stepNumber={index + 1}
-                    isCompleted={completedSteps.has(step.id)}
-                    onToggle={() => handleToggleStep(step.id)}
-                  />
-                ))}
-              </View>
-            </View>
-          </View>
+        {/* Recipe Header */}
+        <View style={styles.headerSection} onLayout={handleHeaderLayout}>
+          <RecipeHeader recipe={recipe} />
         </View>
+
+        {/* Recipe Content Wrapper */}
+        <RecipeContentWrapper
+          recipe={recipe}
+          completedSteps={completedSteps}
+          onToggleStep={handleToggleStep}
+          onAddIngredient={handleAddIngredient}
+          onAddAllIngredients={handleAddAllIngredients}
+          hideHeaderWhenSticky={isHeaderScrolled}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
       </ScrollView>
 
       {/* Toast */}
@@ -134,6 +173,7 @@ export function RecipeDetailScreen({
         title="Share Recipe"
         shareText={shareText}
       />
+
     </SafeAreaView>
   );
 }
