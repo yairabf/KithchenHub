@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,11 +17,12 @@ import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
-import { mockRecipes, recipeCategories, type Recipe } from '../../../mocks/recipes';
+import { recipeCategories, type Recipe } from '../../../mocks/recipes';
 import { useResponsive } from '../../../common/hooks';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
 import { createRecipe } from '../utils/recipeFactory';
+import { useRecipes } from '../hooks/useRecipes';
 
 // Column gap constant - same for all screen sizes
 const COLUMN_GAP = spacing.md;
@@ -40,10 +42,10 @@ const calculateCardMargin = (index: number): ViewStyle => {
 
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { width, isTablet } = useResponsive();
+  const { recipes, isLoading, addRecipe } = useRecipes();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
-  const [recipes, setRecipes] = useState<Recipe[]>(mockRecipes);
 
   // Calculate card width dynamically based on screen size
   // Account for container padding and gap between columns
@@ -70,9 +72,9 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     setShowAddRecipeModal(true);
   };
 
-  const handleSaveRecipe = (data: NewRecipeData) => {
+  const handleSaveRecipe = async (data: NewRecipeData) => {
     const newRecipe = createRecipe(data);
-    setRecipes([newRecipe, ...recipes]);
+    await addRecipe(newRecipe);
     setShowAddRecipeModal(false);
   };
 
@@ -85,58 +87,66 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         }}
       />
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={colors.textMuted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search recipes..."
-          placeholderTextColor={colors.textMuted}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-        contentContainerStyle={styles.filterContent}
-      >
-        {recipeCategories.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.filterChip,
-              selectedCategory === category && styles.filterChipActive,
-            ]}
-            onPress={() => setSelectedCategory(category)}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                selectedCategory === category && styles.filterChipTextActive,
-              ]}
-            >
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.grid}>
-          {filteredRecipes.map((recipe, index) => (
-            <RecipeCard
-              key={recipe.id}
-              recipe={recipe}
-              backgroundColor={pastelColors[index % pastelColors.length]}
-              onPress={() => onSelectRecipe?.(recipe)}
-              width={cardWidth}
-              style={calculateCardMargin(index)}
-            />
-          ))}
+      {isLoading ? (
+        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      </ScrollView>
+      ) : (
+        <>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search recipes..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterContainer}
+            contentContainerStyle={styles.filterContent}
+          >
+            {recipeCategories.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.filterChip,
+                  selectedCategory === category && styles.filterChipActive,
+                ]}
+                onPress={() => setSelectedCategory(category)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    selectedCategory === category && styles.filterChipTextActive,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+            <View style={styles.grid}>
+              {filteredRecipes.map((recipe, index) => (
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  backgroundColor={pastelColors[index % pastelColors.length]}
+                  onPress={() => onSelectRecipe?.(recipe)}
+                  width={cardWidth}
+                  style={calculateCardMargin(index)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        </>
+      )}
 
       {/* Add Recipe Modal */}
       <AddRecipeModal
