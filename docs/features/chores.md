@@ -134,11 +134,26 @@ interface ProgressRingProps {
   - Due date and time selection
   - Section selection (today/this week)
 
+## Entity Creation (New)
+
+The feature implementation now uses a Factory Pattern to separate business logic from UI components and ensure TDD compliance.
+
+- **Factory**: `mobile/src/features/chores/utils/choreFactory.ts`
+- **Tests**: `mobile/src/features/chores/utils/__tests__/choreFactory.test.ts`
+- **Logic**: Generates `localId` using `expo-crypto` UUIDs.
+
+```typescript
+// Example usage
+import { createChore } from '../utils/choreFactory';
+const newChore = createChore(choreData);
+```
+
 ## Key Types
 
 ```typescript
 interface Chore {
   id: string;
+  localId: string; // Stable UUID
   name: string;
   icon: string;
   assignee?: string;

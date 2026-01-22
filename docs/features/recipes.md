@@ -205,11 +205,26 @@ interface Instruction {
     - Minimum 1 step required
   - Form validation (title and at least one ingredient required)
 
+## Entity Creation (New)
+
+The feature implementation now uses a Factory Pattern to separate business logic from UI components and ensure TDD compliance.
+
+- **Factory**: `mobile/src/features/recipes/utils/recipeFactory.ts`
+- **Tests**: `mobile/src/features/recipes/utils/__tests__/recipeFactory.test.ts`
+- **Logic**: Generates `localId` using `expo-crypto` UUIDs.
+
+```typescript
+// Example usage
+import { createRecipe } from '../utils/recipeFactory';
+const newRecipe = createRecipe(data);
+```
+
 ## Key Types
 
 ```typescript
 interface Recipe {
   id: string;
+  localId: string; // Stable UUID
   name: string;
   cookTime: string;
   category: string;
