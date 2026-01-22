@@ -4,6 +4,7 @@ import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 import { AuthRepository } from './repositories/auth.repository';
 import { PrismaModule } from '../../infrastructure/database/prisma/prisma.module';
+import { UuidService } from '../../common/services/uuid.service';
 import { loadConfiguration } from '../../config/configuration';
 
 const config = loadConfiguration();
@@ -17,7 +18,7 @@ const config = loadConfiguration();
     } as any),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthRepository],
+  providers: [AuthService, AuthRepository, UuidService],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

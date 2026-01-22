@@ -3,7 +3,8 @@
 API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQL. Provides authentication, household management, shopping, recipes, chores, and dashboard data for the mobile/web clients.
 
 ## Features
-- JWT auth with Google sign-in, guest login, token refresh, and offline sync
+- JWT auth with Google sign-in (Supabase), guest login, token refresh, and offline sync
+- UUID-based user identification for seamless cross-provider integration
 - Household membership plus shopping lists/items, recipes, and chores
 - Data import from guest mode to household accounts with content fingerprinting and idempotency
 - Dashboard summaries for household activity
@@ -26,6 +27,9 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 ## Getting Started
@@ -49,10 +53,17 @@ npm run start:dev         # start API with watch mode
 - Create/apply dev migrations: `npm run prisma:migrate` (PostgreSQL must be running)
 - Inspect data: `npm run prisma:studio`
 
+## Supabase Setup
+- **Config**: Supabase client is initialized in `src/modules/supabase/supabase.service.ts`.
+- **Environment**: Requires `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env`. Optionally include `SUPABASE_SERVICE_ROLE_KEY` for admin operations.
+- **Local Dev**: For local development, ensure these point to your local Supabase instance or a dev project.
+
+
 ## API Conventions
 - Base URL: `http://localhost:3000/api/v1`
 - Docs: `http://localhost:3000/api/docs`
-- Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh` (others use bearer JWT)
+- Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh`, `GET /groceries/search`, `GET /groceries/categories` (others use bearer JWT)
+- Protected routes: Most endpoints require JWT authentication; household endpoints also require household membership
 - CORS enabled with credentials for client apps
 
 ## Project Structure
@@ -67,6 +78,7 @@ src/
     guards/                    # Auth guards (JWT, Household)
     interceptors/              # Response transformation
     utils/                     # Shared utility functions
+    services/                  # Shared services (e.g. UuidService)
     pipes/                     # Validation pipes
     types/                     # Shared TypeScript interfaces
   config/                      # Env validation + configuration loader
@@ -79,9 +91,13 @@ src/
     chores/                    # Task assignments and completion
     import/                    # Guest mode data import (ID-based & fingerprint deduplication)
     dashboard/                 # Aggregated dashboard data
+    users/                     # User profile management
+    settings/                  # Application and user settings
+    supabase/                  # Supabase client service (global module)
 ```
 
 ## Notes
 - The API runs behind a global JWT guard; mark endpoints with the `@Public()` decorator to opt out.
 - Global prefix, validation pipe, error filter, and response transformer are configured in `src/main.ts`.
 - Comprehensive test coverage includes unit tests for controllers, services, and repositories with parameterized test cases.
+- Database uses UUID for all user-related identifiers to maintain consistency with Supabase Auth identities.
