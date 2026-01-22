@@ -150,11 +150,26 @@ interface FrequentlyAddedGridProps {
   - Integrated grocery search bar
   - Rapid item additions
 
+## Entity Creation (New)
+
+The feature implementation now uses a Factory Pattern to separate business logic from UI components and ensure TDD compliance.
+
+- **Factory**: `mobile/src/features/shopping/utils/shoppingFactory.ts`
+- **Tests**: `mobile/src/features/shopping/utils/__tests__/shoppingFactory.test.ts`
+- **Logic**: Generates `localId` using `expo-crypto` UUIDs.
+
+```typescript
+// Example usage
+import { createShoppingItem } from '../utils/shoppingFactory';
+const newItem = createShoppingItem(groceryItem, listId, quantity);
+```
+
 ## Key Types
 
 ```typescript
 interface ShoppingItem {
-  id: string;
+  id: string; // Legacy ID
+  localId: string; // Stable UUID
   name: string;
   image: string;
   quantity: number;
@@ -163,7 +178,8 @@ interface ShoppingItem {
 }
 
 interface ShoppingList {
-  id: string;
+  id: string; // Legacy ID
+  localId: string; // Stable UUID
   name: string;
   itemCount: number;
   icon: IoniconsName;

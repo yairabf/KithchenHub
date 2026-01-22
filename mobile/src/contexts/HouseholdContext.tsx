@@ -18,7 +18,7 @@ interface HouseholdContextType {
 
 const HouseholdContext = createContext<HouseholdContextType | undefined>(undefined);
 
-const STORAGE_KEY = '@kitchen_hub_household_members';
+export const STORAGE_KEY = '@kitchen_hub_household_members';
 
 const DEFAULT_MEMBERS: HouseholdMember[] = [
   { id: 'default-mom', name: 'Mom', isDefault: true, color: '#FFB5A7' },
