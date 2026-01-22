@@ -1,7 +1,356 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
 import { ImportRepository } from '../repositories/import.repository';
+import { ImportRequestDto, ImportResponseDto, ImportRecipeDto, ImportShoppingListDto } from '../dto/import.dto';
+import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { ImportSource, ImportStatus } from '../constants/import.constants';
 
+/**
+ * Statistics for import operations
+ */
+interface ImportStats {
+    created: number;
+    skipped: number;
+    mappings: Record<string, string>;
+}
+
+/**
+ * Type alias for Prisma transaction client
+ */
+type PrismaTransaction = Omit<PrismaService, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends' | 'onModuleInit' | 'onModuleDestroy'>;
+
+/**
+ * Service for managing data import operations
+ * Handles importing recipes and shopping lists from guest mode to household accounts
+ * Implements deduplication through mapping tables
+ */
 @Injectable()
 export class ImportService {
-    constructor(private readonly importRepository: ImportRepository) { }
+    private readonly logger = new Logger(ImportService.name);
+
+    constructor(
+        private readonly importRepository: ImportRepository,
+        private readonly prisma: PrismaService,
+    ) { }
+
+    /**
+     * Executes the import of recipes and shopping lists from guest mode to household
+     * Creates deduplication mappings to prevent duplicate imports
+     * 
+     * @param userId - The ID of the user performing the import
+     * @param householdId - The ID of the household to import data into
+     * @param importRequest - The import payload containing recipes and shopping lists
+     * @returns ImportResponseDto with counts and ID mappings
+     * @throws BadRequestException if data is invalid or duplicates are detected
+     * @throws InternalServerErrorException if transaction fails
+     */
+    async executeImport(
+        userId: string,
+        householdId: string,
+        importRequest: ImportRequestDto
+    ): Promise<ImportResponseDto> {
+        this.logger.log(`Starting import for user ${userId} in household ${householdId}`);
+
+        const sourceIds = this.extractSourceIds(importRequest);
+        const existingMappings = await this.importRepository.findMappingsForUser(userId, sourceIds);
+
+        try {
+            const result = await this.performImportTransaction(
+                userId,
+                householdId,
+                importRequest,
+                existingMappings
+            );
+
+            this.logger.log(
+                `Import completed: ${result.created} created, ${result.skipped} skipped for user ${userId}`
+            );
+
+            return result;
+        } catch (error) {
+            this.logger.error(
+                `Import failed for user ${userId}: ${error.message}`,
+                error.stack
+            );
+            throw this.handleImportError(error, userId, importRequest);
+        }
+    }
+
+    /**
+     * Extracts all source IDs from the import request for mapping lookup
+     * 
+     * @param importRequest - The import request DTO
+     * @returns Array of all source IDs (recipe and shopping list IDs)
+     */
+    private extractSourceIds(importRequest: ImportRequestDto): string[] {
+        const recipeIds = importRequest.recipes?.map((recipe) => recipe.id) || [];
+        const listIds = importRequest.shoppingLists?.map((list) => list.id) || [];
+        return [...recipeIds, ...listIds];
+    }
+
+    /**
+     * Performs the entire import operation within a database transaction
+     * 
+     * @param userId - The user ID performing the import
+     * @param householdId - The household ID to import into
+     * @param importRequest - The import request payload
+     * @param existingMappings - Map of already imported items
+     * @returns Import statistics and mappings
+     */
+    private async performImportTransaction(
+        userId: string,
+        householdId: string,
+        importRequest: ImportRequestDto,
+        existingMappings: Map<string, string>
+    ): Promise<ImportResponseDto> {
+        const stats: ImportStats = {
+            created: 0,
+            skipped: 0,
+            mappings: {}
+        };
+
+        await this.prisma.$transaction(async (prismaTransaction) => {
+            const batch = await this.createImportBatch(prismaTransaction, userId);
+
+            if (importRequest.recipes && importRequest.recipes.length > 0) {
+                const recipeStats = await this.importRecipes(
+                    prismaTransaction,
+                    batch.id,
+                    householdId,
+                    importRequest.recipes,
+                    existingMappings
+                );
+                stats.created += recipeStats.created;
+                stats.skipped += recipeStats.skipped;
+                Object.assign(stats.mappings, recipeStats.mappings);
+            }
+
+            if (importRequest.shoppingLists && importRequest.shoppingLists.length > 0) {
+                const listStats = await this.importShoppingLists(
+                    prismaTransaction,
+                    batch.id,
+                    householdId,
+                    importRequest.shoppingLists,
+                    existingMappings
+                );
+                stats.created += listStats.created;
+                stats.skipped += listStats.skipped;
+                Object.assign(stats.mappings, listStats.mappings);
+            }
+        });
+
+        return stats;
+    }
+
+    /**
+     * Creates an import batch record to track this import operation
+     * 
+     * @param prismaTransaction - The Prisma transaction client
+     * @param userId - The user ID performing the import
+     * @returns The created import batch record
+     */
+    private async createImportBatch(
+        prismaTransaction: PrismaTransaction,
+        userId: string
+    ) {
+        return await prismaTransaction.importBatch.create({
+            data: {
+                userId,
+                source: ImportSource.GUEST_MODE_MIGRATION,
+                status: ImportStatus.COMPLETED,
+            },
+        });
+    }
+
+    /**
+     * Imports recipes within a transaction, skipping duplicates
+     * 
+     * @param prismaTransaction - The Prisma transaction client
+     * @param batchId - The import batch ID
+     * @param householdId - The household ID to import into
+     * @param recipes - Array of recipes to import
+     * @param existingMappings - Map of already imported items
+     * @returns Statistics for recipe import operation
+     */
+    private async importRecipes(
+        prismaTransaction: PrismaTransaction,
+        batchId: string,
+        householdId: string,
+        recipes: ImportRecipeDto[],
+        existingMappings: Map<string, string>
+    ): Promise<ImportStats> {
+        const stats: ImportStats = {
+            created: 0,
+            skipped: 0,
+            mappings: {}
+        };
+
+        for (const recipe of recipes) {
+            if (existingMappings.has(recipe.id)) {
+                stats.skipped++;
+                stats.mappings[recipe.id] = existingMappings.get(recipe.id)!;
+                continue;
+            }
+
+            const newRecipe = await prismaTransaction.recipe.create({
+                data: {
+                    householdId,
+                    title: recipe.title,
+                    prepTime: recipe.prepTime,
+                    ingredients: recipe.ingredients as unknown as Prisma.JsonValue,
+                    instructions: recipe.instructions as unknown as Prisma.JsonValue,
+                    imageUrl: recipe.imageUrl,
+                },
+            });
+
+            await this.createImportMapping(
+                prismaTransaction,
+                batchId,
+                recipe.id,
+                newRecipe.id
+            );
+
+            stats.created++;
+            stats.mappings[recipe.id] = newRecipe.id;
+        }
+
+        return stats;
+    }
+
+    /**
+     * Imports shopping lists and their items within a transaction, skipping duplicates
+     * 
+     * @param prismaTransaction - The Prisma transaction client
+     * @param batchId - The import batch ID
+     * @param householdId - The household ID to import into
+     * @param shoppingLists - Array of shopping lists to import
+     * @param existingMappings - Map of already imported items
+     * @returns Statistics for shopping list import operation
+     */
+    private async importShoppingLists(
+        prismaTransaction: PrismaTransaction,
+        batchId: string,
+        householdId: string,
+        shoppingLists: ImportShoppingListDto[],
+        existingMappings: Map<string, string>
+    ): Promise<ImportStats> {
+        const stats: ImportStats = {
+            created: 0,
+            skipped: 0,
+            mappings: {}
+        };
+
+        for (const list of shoppingLists) {
+            if (existingMappings.has(list.id)) {
+                stats.skipped++;
+                stats.mappings[list.id] = existingMappings.get(list.id)!;
+                continue;
+            }
+
+            const newList = await prismaTransaction.shoppingList.create({
+                data: {
+                    householdId,
+                    name: list.name,
+                    color: list.color,
+                },
+            });
+
+            if (list.items && list.items.length > 0) {
+                await this.createShoppingItems(prismaTransaction, newList.id, list.items);
+            }
+
+            await this.createImportMapping(
+                prismaTransaction,
+                batchId,
+                list.id,
+                newList.id
+            );
+
+            stats.created++;
+            stats.mappings[list.id] = newList.id;
+        }
+
+        return stats;
+    }
+
+    /**
+     * Creates shopping items for a list in bulk
+     * 
+     * @param prismaTransaction - The Prisma transaction client
+     * @param listId - The shopping list ID
+     * @param items - Array of items to create
+     */
+    private async createShoppingItems(
+        prismaTransaction: PrismaTransaction,
+        listId: string,
+        items: ImportShoppingListDto['items']
+    ): Promise<void> {
+        await prismaTransaction.shoppingItem.createMany({
+            data: items.map((item) => ({
+                listId,
+                name: item.name,
+                quantity: item.quantity ?? 1,
+                unit: item.unit,
+                category: item.category,
+                isChecked: item.isChecked ?? false,
+            })),
+        });
+    }
+
+    /**
+     * Creates an import mapping record for deduplication tracking
+     * 
+     * @param prismaTransaction - The Prisma transaction client
+     * @param batchId - The import batch ID
+     * @param sourceId - The original local ID from guest mode
+     * @param targetId - The new server-side ID in the household
+     */
+    private async createImportMapping(
+        prismaTransaction: PrismaTransaction,
+        batchId: string,
+        sourceId: string,
+        targetId: string
+    ): Promise<void> {
+        await prismaTransaction.importMapping.create({
+            data: {
+                batchId,
+                sourceField: sourceId,
+                targetField: targetId,
+            },
+        });
+    }
+
+    /**
+     * Handles errors during import operations and provides meaningful error messages
+     * 
+     * @param error - The error that occurred
+     * @param userId - The user ID performing the import
+     * @param importRequest - The import request that failed
+     * @throws BadRequestException for duplicate data or invalid references
+     * @throws InternalServerErrorException for other failures
+     */
+    private handleImportError(
+        error: any,
+        userId: string,
+        importRequest: ImportRequestDto
+    ): never {
+        const recipeCount = importRequest.recipes?.length || 0;
+        const listCount = importRequest.shoppingLists?.length || 0;
+
+        if (error.code === 'P2002') {
+            throw new BadRequestException(
+                'Import failed: Duplicate data detected. You may have already imported some of this data.'
+            );
+        }
+
+        if (error.code === 'P2003') {
+            throw new BadRequestException(
+                'Import failed: Invalid household reference. Please ensure you are logged in properly.'
+            );
+        }
+
+        throw new InternalServerErrorException(
+            `Failed to import ${recipeCount} recipes and ${listCount} shopping lists. Please try again later.`
+        );
+    }
 }
