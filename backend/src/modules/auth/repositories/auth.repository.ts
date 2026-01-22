@@ -4,7 +4,14 @@ import { User, RefreshToken, Household } from '@prisma/client';
 
 @Injectable()
 export class AuthRepository {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
+
+  async findUserById(id: string): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: { household: true },
+    });
+  }
 
   async findUserByGoogleId(googleId: string): Promise<User | null> {
     return this.prisma.user.findUnique({
@@ -28,6 +35,7 @@ export class AuthRepository {
   }
 
   async createUser(data: {
+    id?: string;
     email?: string;
     googleId?: string;
     name?: string;

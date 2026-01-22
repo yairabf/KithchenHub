@@ -25,7 +25,7 @@ model Household {
 }
 
 model User {
-  id          String   @id @default(cuid())
+  id          String   @id @db.Uuid
   email       String?  @unique
   googleId    String?  @unique @map("google_id")
   name        String?
@@ -43,13 +43,14 @@ model User {
   importBatches  ImportBatch[]
   importMappings ImportMapping[]
 
+  @@index([householdId])
   @@map("users")
 }
 
 model RefreshToken {
   id        String   @id @default(cuid())
   token     String   @unique
-  userId    String   @map("user_id")
+  userId    String   @map("user_id") @db.Uuid
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -86,6 +87,8 @@ model ShoppingItem {
 
   list ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
 
+  @@index([listId])
+  @@index([listId, isChecked])
   @@map("shopping_items")
 }
 
@@ -109,7 +112,7 @@ model Recipe {
 model Chore {
   id          String    @id @default(cuid())
   householdId String    @map("household_id")
-  assigneeId  String?   @map("assignee_id")
+  assigneeId  String?   @map("assignee_id") @db.Uuid
   title       String
   dueDate     DateTime? @map("due_date")
   isCompleted Boolean   @default(false) @map("is_completed")
@@ -126,7 +129,7 @@ model Chore {
 
 model ImportBatch {
   id          String    @id @default(cuid())
-  userId      String    @map("user_id")
+  userId      String    @map("user_id") @db.Uuid
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   status      String    @default("PENDING") // PENDING, MAPPING, PROCESSING, COMPLETED, FAILED
   filename    String?
@@ -147,7 +150,7 @@ model ImportMapping {
   id          String      @id @default(cuid())
   batchId     String      @map("batch_id")
   batch       ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  userId      String      @map("user_id")
+  userId      String      @map("user_id") @db.Uuid
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   sourceField String      @map("source_field")
   sourceType  String      @map("source_type") // e.g., 'RECIPE', 'SHOPPING_LIST' to prevent ID collisions

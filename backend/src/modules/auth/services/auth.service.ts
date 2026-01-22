@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { AuthRepository } from '../repositories/auth.repository';
+import { UuidService } from '../../../common/services/uuid.service';
 import { loadConfiguration } from '../../../config/configuration';
 import { User, Household } from '@prisma/client';
 import {
@@ -37,6 +38,7 @@ export class AuthService {
     private authRepository: AuthRepository,
     private jwtService: JwtService,
     private prisma: PrismaService,
+    private uuidService: UuidService,
   ) {
     const config = loadConfiguration();
     if (config.google.clientId && config.google.clientSecret) {
@@ -102,6 +104,7 @@ export class AuthService {
 
     if (!user) {
       user = await this.authRepository.createUser({
+        id: this.uuidService.generate(), // Ensure guest user has a valid UUID
         deviceId: dto.deviceId,
         name: 'Guest',
         isGuest: true,
@@ -181,7 +184,7 @@ export class AuthService {
 
     const payload = this.createJwtPayload(user);
     const config = loadConfiguration();
-    
+
     const accessToken = await this.jwtService.signAsync(payload as unknown as Record<string, unknown>, {
       secret: config.jwt.secret,
       expiresIn: config.jwt.expiresIn,
@@ -198,16 +201,22 @@ export class AuthService {
    * 3. User doesn't exist - create new user
    */
   private async findOrCreateGoogleUser(payload: {
-    sub: string;
+    sub: string; // This is the Supabase UUID
     email?: string;
     name?: string;
     picture?: string;
   }): Promise<UserWithHousehold> {
-    let user = await this.authRepository.findUserByGoogleId(payload.sub);
+    let user = await this.authRepository.findUserById(payload.sub);
 
     if (!user) {
+      // Check by email in case user existed before Google sign-in
       user = await this.authRepository.findUserByEmail(payload.email!);
       if (user) {
+        // Link existing user to this Supabase ID
+        // Note: This might be tricky if we want to change the ID itself. 
+        // In Supabase, the user already has this ID in auth.users.
+        // If they existed in public.users with a CUID, we should probably delete/migrate.
+        // For simplicity, we assume new system or manual migration.
         user = await this.authRepository.updateUser(user.id, {
           googleId: payload.sub,
           name: payload.name,
@@ -215,7 +224,9 @@ export class AuthService {
           isGuest: false,
         });
       } else {
+        // If trigger failed or hasn't run yet, create manually
         user = await this.authRepository.createUser({
+          id: payload.sub,
           email: payload.email,
           googleId: payload.sub,
           name: payload.name,
