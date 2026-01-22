@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import * as Crypto from 'expo-crypto';
 import {
   View,
   Text,
@@ -19,6 +20,7 @@ import { mockRecipes, recipeCategories, type Recipe } from '../../../mocks/recip
 import { useResponsive } from '../../../common/hooks';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
+import { createRecipe } from '../utils/recipeFactory';
 
 // Column gap constant - same for all screen sizes
 const COLUMN_GAP = spacing.md;
@@ -69,15 +71,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   };
 
   const handleSaveRecipe = (data: NewRecipeData) => {
-    const newRecipe: Recipe = {
-      id: String(Date.now()),
-      name: data.title,
-      cookTime: data.prepTime || 'N/A',
-      category: data.category || 'Dinner',
-      description: data.description,
-      ingredients: data.ingredients,
-      instructions: data.instructions,
-    };
+    const newRecipe = createRecipe(data);
     setRecipes([newRecipe, ...recipes]);
     setShowAddRecipeModal(false);
   };

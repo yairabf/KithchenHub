@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import * as Crypto from 'expo-crypto';
 import {
   View,
   Text,
@@ -18,6 +19,7 @@ import { formatChoresText } from '../../../common/utils/shareUtils';
 import { mockChores, type Chore } from '../../../mocks/chores';
 import { styles } from './styles';
 import type { ChoresScreenProps } from './types';
+import { createChore } from '../utils/choreFactory';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
   const [chores, setChores] = useState(mockChores);
@@ -25,7 +27,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const { width } = useWindowDimensions();
-  
+
   // Responsive breakpoint: tablet/landscape at 768px+
   const isWideScreen = width >= 768;
 
@@ -64,16 +66,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     dueTime?: string;
     section: 'today' | 'thisWeek';
   }) => {
-    const chore: Chore = {
-      id: Date.now().toString(),
-      name: newChore.name,
-      assignee: newChore.assignee,
-      dueDate: newChore.dueDate,
-      dueTime: newChore.dueTime,
-      completed: false,
-      section: newChore.section,
-      icon: newChore.icon,
-    };
+    const chore = createChore(newChore);
     setChores([...chores, chore]);
   };
 
@@ -125,12 +118,12 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   const renderChoreCard = (chore: Chore, index: number) => {
     const bgColor = pastelColors[index % pastelColors.length];
-    
+
     const handleEditPress = (e: any) => {
       e.stopPropagation();
       handleChorePress(chore);
     };
-    
+
     return (
       <SwipeableWrapper
         key={chore.id}
@@ -142,7 +135,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           onPress={() => toggleChore(chore.id)}
           activeOpacity={0.7}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.choreCardEditButton}
             onPress={handleEditPress}
             activeOpacity={0.6}
@@ -153,7 +146,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
             <Text style={styles.choreCardIconText}>{chore.icon || '📋'}</Text>
           </View>
           <View style={styles.choreCardContent}>
-            <Text 
+            <Text
               style={[styles.choreCardName, chore.completed && styles.choreCompleted]}
               numberOfLines={1}
             >
@@ -191,8 +184,8 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
         rightActions={headerActions}
       />
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >

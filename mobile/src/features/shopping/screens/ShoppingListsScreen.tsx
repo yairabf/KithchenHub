@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import * as Crypto from 'expo-crypto';
 import {
   View,
   Text,
@@ -32,6 +33,7 @@ import {
   type ShoppingItem,
   type ShoppingList,
 } from '../../../mocks/shopping';
+import { createShoppingItem, createShoppingList } from '../utils/shoppingFactory';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
@@ -92,14 +94,7 @@ export function ShoppingListsScreen() {
       ));
     } else {
       // Add new item to list
-      const newItem: ShoppingItem = {
-        id: `item-${Date.now()}`,
-        name: groceryItem.name,
-        image: groceryItem.image,
-        quantity: quantity,
-        category: groceryItem.category,
-        listId: selectedList.id,
-      };
+      const newItem = createShoppingItem(groceryItem, selectedList.id, quantity);
       setAllItems(prev => [...prev, newItem]);
     }
 
@@ -108,7 +103,7 @@ export function ShoppingListsScreen() {
 
   const handleAddToList = () => {
     if (!selectedGroceryItem) return;
-    
+
     const quantity = parseInt(quantityInput, 10);
     if (isNaN(quantity) || quantity <= 0) return;
 
@@ -126,14 +121,7 @@ export function ShoppingListsScreen() {
       ));
     } else {
       // Add new item to list
-      const newItem: ShoppingItem = {
-        id: `item-${Date.now()}`,
-        name: selectedGroceryItem.name,
-        image: selectedGroceryItem.image,
-        quantity: quantity,
-        category: selectedGroceryItem.category,
-        listId: selectedList.id,
-      };
+      const newItem = createShoppingItem(selectedGroceryItem, selectedList.id, quantity);
       setAllItems(prev => [...prev, newItem]);
     }
 
@@ -175,13 +163,7 @@ export function ShoppingListsScreen() {
       return;
     }
 
-    const newList: ShoppingList = {
-      id: `list-${Date.now()}`,
-      name: trimmedName,
-      itemCount: 0,
-      icon: newListIcon,
-      color: newListColor,
-    };
+    const newList = createShoppingList(trimmedName, newListIcon, newListColor);
 
     setShoppingLists(prev => [...prev, newList]);
     setSelectedList(newList);
@@ -234,17 +216,17 @@ export function ShoppingListsScreen() {
   );
 
   return (
-      <SafeAreaView style={styles.container}>
-        <ScreenHeader
-          title={selectedList.name}
-          subtitle={`${totalItems} items total`}
-          rightActions={{
-            share: { onPress: () => setShowShareModal(true), label: 'Share shopping list' },
-            add: { onPress: () => setShowQuickAddModal(true), label: 'Add item to list' },
-          }}
-        />
+    <SafeAreaView style={styles.container}>
+      <ScreenHeader
+        title={selectedList.name}
+        subtitle={`${totalItems} items total`}
+        rightActions={{
+          share: { onPress: () => setShowShareModal(true), label: 'Share shopping list' },
+          add: { onPress: () => setShowQuickAddModal(true), label: 'Add item to list' },
+        }}
+      />
 
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
           {/* Left Column - Shopping List */}
           <ShoppingListPanel
@@ -286,9 +268,9 @@ export function ShoppingListsScreen() {
         {selectedGroceryItem && (
           <>
             <View style={styles.modalItemDisplay}>
-              <Image 
-                source={{ uri: selectedGroceryItem.image }} 
-                style={styles.modalItemImage} 
+              <Image
+                source={{ uri: selectedGroceryItem.image }}
+                style={styles.modalItemImage}
               />
               <View style={styles.modalItemInfo}>
                 <Text style={styles.modalItemName}>{selectedGroceryItem.name}</Text>
@@ -335,63 +317,63 @@ export function ShoppingListsScreen() {
         confirmDisabled={!newListName.trim()}
       >
         <View style={styles.createListInputSection}>
-                  <Text style={styles.createListLabel}>List Name</Text>
-                  <TextInput
-                    style={styles.createListInput}
-                    placeholder="Enter list name..."
-                    placeholderTextColor={colors.textMuted}
-                    value={newListName}
-                    onChangeText={setNewListName}
-                    autoFocus
-                  />
-                </View>
+          <Text style={styles.createListLabel}>List Name</Text>
+          <TextInput
+            style={styles.createListInput}
+            placeholder="Enter list name..."
+            placeholderTextColor={colors.textMuted}
+            value={newListName}
+            onChangeText={setNewListName}
+            autoFocus
+          />
+        </View>
 
-                <View style={styles.createListIconSection}>
-                  <Text style={styles.createListLabel}>Icon</Text>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.iconPickerContent}
-                  >
-                    {(['cart-outline', 'gift-outline', 'restaurant-outline', 'cube-outline', 'nutrition-outline', 'heart-outline', 'home-outline', 'star-outline'] as const).map((icon) => (
-                      <TouchableOpacity
-                        key={icon}
-                        style={[
-                          styles.iconOption,
-                          newListIcon === icon && styles.iconOptionActive
-                        ]}
-                        onPress={() => setNewListIcon(icon)}
-                      >
-                        <Ionicons name={icon} size={24} color={newListIcon === icon ? colors.chores : colors.textSecondary} />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
+        <View style={styles.createListIconSection}>
+          <Text style={styles.createListLabel}>Icon</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.iconPickerContent}
+          >
+            {(['cart-outline', 'gift-outline', 'restaurant-outline', 'cube-outline', 'nutrition-outline', 'heart-outline', 'home-outline', 'star-outline'] as const).map((icon) => (
+              <TouchableOpacity
+                key={icon}
+                style={[
+                  styles.iconOption,
+                  newListIcon === icon && styles.iconOptionActive
+                ]}
+                onPress={() => setNewListIcon(icon)}
+              >
+                <Ionicons name={icon} size={24} color={newListIcon === icon ? colors.chores : colors.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
-                <View style={styles.createListColorSection}>
-                  <Text style={styles.createListLabel}>Color</Text>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.colorPickerContent}
-                  >
-                    {['#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4', '#EC4899', '#F97316', '#14B8A6'].map((color) => (
-                      <TouchableOpacity
-                        key={color}
-                        style={[
-                          styles.colorOption,
-                          { backgroundColor: color },
-                          newListColor === color && styles.colorOptionActive
-                        ]}
-                        onPress={() => setNewListColor(color)}
-                      >
-                        {newListColor === color && (
-                          <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
+        <View style={styles.createListColorSection}>
+          <Text style={styles.createListLabel}>Color</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.colorPickerContent}
+          >
+            {['#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4', '#EC4899', '#F97316', '#14B8A6'].map((color) => (
+              <TouchableOpacity
+                key={color}
+                style={[
+                  styles.colorOption,
+                  { backgroundColor: color },
+                  newListColor === color && styles.colorOptionActive
+                ]}
+                onPress={() => setNewListColor(color)}
+              >
+                {newListColor === color && (
+                  <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       </CenteredModal>
 
       {/* Category Modal */}
@@ -471,6 +453,6 @@ export function ShoppingListsScreen() {
         shareText={shareText}
       />
 
-      </SafeAreaView>
+    </SafeAreaView>
   );
 }
