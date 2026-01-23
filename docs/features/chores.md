@@ -57,6 +57,26 @@ const progress = useMemo(() => {
 }, [todayChores]);
 ```
 
+#### Code Snippet - Service Initialization
+
+```typescript
+const { user } = useAuth();
+const isMockDataEnabled = config.mockData.enabled;
+const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+const choresService = useMemo(
+  () => createChoresService(shouldUseMockData),
+  [shouldUseMockData]
+);
+
+useEffect(() => {
+  const loadChores = async () => {
+    const data = await choresService.getChores();
+    setChores(data);
+  };
+  loadChores();
+}, [choresService]);
+```
+
 #### Code Snippet - Responsive Layout
 
 ```typescript
@@ -210,12 +230,38 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Guest users always use local data regardless of the flag
 - **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
+## Guest User Data Separation
+
+The chores feature implements guest user data separation to ensure guest users use local data while signed-in users use cloud sync, preventing API call failures in production.
+
+### Service Selection Pattern
+
+Service selection is determined by both the mock data toggle and user authentication state:
+
+```typescript
+const { user } = useAuth();
+const isMockDataEnabled = config.mockData.enabled;
+const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+const choresService = useMemo(
+  () => createChoresService(shouldUseMockData),
+  [shouldUseMockData]
+);
+```
+
+**Behavior**:
+- **Development** (`config.mockData.enabled = true`): Always uses `LocalChoresService` regardless of auth state
+- **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalChoresService` (no API calls)
+- **Production + Signed-in User** (`config.mockData.enabled = false` + authenticated): Uses `RemoteChoresService` (cloud sync)
+
+This pattern is consistent across all features (shopping, chores, recipes) to ensure guest users never attempt remote API calls for private data.
+
 ## Key Dependencies
 
 - `react-native-gesture-handler` - GestureDetector for swipe interactions
 - `react-native-reanimated` - Smooth animations for progress ring and swipes
 - `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
 - `createChoresService` - Service factory for selecting mock/real data source
+- `useAuth` - Auth context hook for determining user state
 - `SwipeableWrapper` - Shared component from `common/components` for swipe-to-delete
 - `ScreenHeader` - Shared header component with actions
 - `ShareModal` - Shared modal component for sharing functionality

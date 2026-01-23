@@ -238,15 +238,52 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Guest users always use local data regardless of the flag
 - **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
+## Guest User Data Separation
+
+The shopping feature implements guest user data separation to ensure guest users use local data while signed-in users use cloud sync, preventing API call failures in production.
+
+### Service Selection Pattern
+
+Service selection is determined by both the mock data toggle and user authentication state:
+
+```typescript
+const { user } = useAuth();
+const isMockDataEnabled = config.mockData.enabled;
+const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+const shoppingService = useMemo(
+  () => createShoppingService(shouldUseMockData),
+  [shouldUseMockData]
+);
+```
+
+**Behavior**:
+- **Development** (`config.mockData.enabled = true`): Always uses `LocalShoppingService` regardless of auth state
+- **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalShoppingService` (no API calls)
+- **Production + Signed-in User** (`config.mockData.enabled = false` + authenticated): Uses `RemoteShoppingService` (cloud sync)
+
+### List Selection Utilities
+
+To prevent stale list state when switching between mock and remote data sources, the feature uses selection utilities:
+
+- **File**: `mobile/src/features/shopping/utils/selectionUtils.ts`
+- **Functions**:
+  - `getSelectedList()`: Selects the best matching list, preserving the current selection when valid, falling back to first list
+  - `getActiveListId()`: Validates and preserves active list ID when switching data sources
+- **Tests**: `mobile/src/features/shopping/utils/__tests__/selectionUtils.test.ts` - Parameterized tests covering all scenarios
+
+This ensures that when a user switches from guest (local) to signed-in (remote), the selected list remains valid or gracefully falls back to the first available list.
+
 ## Key Dependencies
 
 - `react-native-gesture-handler` - GestureDetector for swipe interactions
 - `react-native-reanimated` - Smooth swipe animations
 - `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
 - `createShoppingService` - Service factory for selecting mock/real data source
+- `getSelectedList`, `getActiveListId` - Selection utilities from `utils/selectionUtils.ts` for preventing stale list state
 - `mockGroceriesDB` - Grocery database with images and categories (used by LocalShoppingService)
 - `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService)
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
+- `useAuth` - Auth context hook for determining user state
 - `CenteredModal` - Shared modal component
 - `ScreenHeader` - Shared header component
 - `useResponsive` - Responsive layout hook
