@@ -30,10 +30,11 @@ describe('recipeFactory', () => {
         it('should set default values for optional fields', () => {
             const recipeData = {
                 title: 'Simple Recipe',
+                prepTime: '',
+                category: '',
                 description: '',
                 ingredients: [],
                 instructions: [],
-                // Missing prepTime and category
             };
 
             const recipe = createRecipe(recipeData);

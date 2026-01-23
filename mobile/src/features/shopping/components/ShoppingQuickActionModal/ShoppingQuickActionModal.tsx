@@ -13,15 +13,19 @@ import { createShoppingService } from '../../services/shoppingService';
 import { config } from '../../../../config';
 import { styles } from './styles';
 import { ShoppingQuickActionModalProps } from './types';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { getActiveListId } from '../../utils/selectionUtils';
 
 export function ShoppingQuickActionModal({ visible, onClose }: ShoppingQuickActionModalProps) {
+  const { user } = useAuth();
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const isMockDataEnabled = config.mockData.enabled;
+  const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
   const shoppingService = useMemo(
-    () => createShoppingService(isMockDataEnabled),
-    [isMockDataEnabled]
+    () => createShoppingService(shouldUseMockData),
+    [shouldUseMockData]
   );
   const hasLists = shoppingLists.length > 0;
 
@@ -36,7 +40,7 @@ export function ShoppingQuickActionModal({ visible, onClose }: ShoppingQuickActi
         }
         setShoppingLists(data.shoppingLists);
         setGroceryItems(data.groceryItems);
-        setActiveListId((current) => current ?? data.shoppingLists[0]?.id ?? null);
+        setActiveListId((current) => getActiveListId(data.shoppingLists, current));
       } catch (error) {
         if (isMounted) {
           console.error('Failed to load quick add data:', error);

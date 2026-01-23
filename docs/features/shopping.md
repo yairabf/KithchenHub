@@ -35,15 +35,16 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - Two-column layout: shopping lists & items (left), categories discovery (right)
   - Multiple modal interactions (quantity, create list, category, all items, quick add)
   - Floating action button for quick add
-  - **Mock Data Toggle**: Loads all shopping data via `shoppingService.getShoppingData()` based on `config.mockData.enabled`
+  - **Guest Support**: Loads private list data from local mocks for guest users while signed-in users use the API
 
 #### Code Snippet - Service Initialization
 
 ```typescript
 const isMockDataEnabled = config.mockData.enabled;
+const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
 const shoppingService = useMemo(
-  () => createShoppingService(isMockDataEnabled),
-  [isMockDataEnabled]
+  () => createShoppingService(shouldUseMockData),
+  [shouldUseMockData]
 );
 
 useEffect(() => {
@@ -216,7 +217,7 @@ interface GroceryItem {
   - Various modal visibility states
 - **Service**: `createShoppingService(isMockEnabled)` factory creates service instance
   - Loads all data via `shoppingService.getShoppingData()` on mount
-  - Switches between mock and API based on `config.mockData.enabled`
+  - Switches between mock and API based on `config.mockData.enabled` or guest status
 - **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
 
 ## Service Layer
@@ -234,6 +235,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `RemoteShoppingService`: Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
+  - Guest users always use local data regardless of the flag
 - **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
 ## Key Dependencies

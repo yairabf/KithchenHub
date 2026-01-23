@@ -28,7 +28,7 @@ The Chores feature provides household chore tracking with a visual progress ring
   - Two sections: "TODAY'S CHORES" and "UPCOMING CHORES"
   - Swipeable chore cards with edit and delete capabilities
   - Floating action button to add chores
-  - **Mock Data Toggle**: Loads chores via `choresService.getChores()` based on `config.mockData.enabled`
+  - **Guest Support**: Loads chores locally for guest users while signed-in users use the API
 
 #### Props Interface
 
@@ -183,7 +183,7 @@ export type AddChoreHandler = (newChore: {
   - `showShareModal` - Modal visibility for sharing chores list
 - **Service**: `createChoresService(isMockEnabled)` factory creates service instance
   - Loads chores via `choresService.getChores()` on mount
-  - Switches between mock and API based on `config.mockData.enabled`
+  - Switches between mock and API based on `config.mockData.enabled` or guest status
 - **Computed values**:
   - `todayChores` - Filtered chores for today section
   - `upcomingChores` - Filtered chores for this week/recurring
@@ -207,6 +207,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `RemoteChoresService`: Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
+  - Guest users always use local data regardless of the flag
 - **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
 ## Key Dependencies

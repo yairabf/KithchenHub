@@ -22,4 +22,9 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textSecondary,
   },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
 });
