@@ -27,11 +27,14 @@ import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shoppi
 import { createShoppingItem, createShoppingList } from '../utils/shoppingFactory';
 import { createShoppingService } from '../services/shoppingService';
 import { config } from '../../../config';
+import { useAuth } from '../../../contexts/AuthContext';
+import { getSelectedList } from '../utils/selectionUtils';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export function ShoppingListsScreen() {
   const { isTablet } = useResponsive();
+  const { user } = useAuth();
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
@@ -51,9 +54,10 @@ export function ShoppingListsScreen() {
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const isMockDataEnabled = config.mockData.enabled;
+  const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
   const shoppingService = useMemo(
-    () => createShoppingService(isMockDataEnabled),
-    [isMockDataEnabled]
+    () => createShoppingService(shouldUseMockData),
+    [shouldUseMockData]
   );
   const fallbackList = useMemo<ShoppingList>(() => ({
     id: 'fallback-list',
@@ -80,7 +84,7 @@ export function ShoppingListsScreen() {
         setGroceryItems(data.groceryItems);
         setCategories(data.categories);
         setFrequentlyAddedItems(data.frequentlyAddedItems);
-        setSelectedList((current) => current ?? data.shoppingLists[0] ?? null);
+        setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
       } catch (error) {
         if (!isMounted) {
           return;

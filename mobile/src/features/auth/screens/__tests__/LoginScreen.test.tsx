@@ -17,21 +17,36 @@ import { Alert } from 'react-native';
 import { LoginScreen } from '../LoginScreen';
 import { useAuth } from '../../../../contexts/AuthContext';
 
+type GuestDataImportModalProps = {
+  visible: boolean;
+  onImport?: () => void;
+  onSkip?: () => void;
+};
+
+type GoogleSignInButtonProps = {
+  onPress: () => void;
+  isLoading?: boolean;
+};
+
 // Mock dependencies
 jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 jest.mock('../../components/GuestDataImportModal', () => ({
-  GuestDataImportModal: ({ visible, onImport, onSkip }: any) => (
-    visible ? <div testID="guest-import-modal" /> : null
-  ),
+  GuestDataImportModal: ({ visible }: GuestDataImportModalProps) => {
+    const { View } = require('react-native');
+    return visible ? <View testID="guest-import-modal" /> : null;
+  },
 }));
 jest.mock('../../components/GoogleSignInButton', () => ({
-  GoogleSignInButton: ({ onPress, isLoading }: any) => (
-    <button testID="google-sign-in-button" onClick={onPress} disabled={isLoading}>
-      {isLoading ? 'Loading...' : 'Sign in with Google'}
-    </button>
-  ),
+  GoogleSignInButton: ({ onPress, isLoading }: GoogleSignInButtonProps) => {
+    const { Pressable, Text } = require('react-native');
+    return (
+      <Pressable testID="google-sign-in-button" onPress={onPress} disabled={isLoading}>
+        <Text>{isLoading ? 'Loading...' : 'Sign in with Google'}</Text>
+      </Pressable>
+    );
+  },
 }));
 
 // Mock Alert

@@ -14,6 +14,16 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
+type ToastProps = {
+  visible: boolean;
+  message: string;
+  type: string;
+};
+
+type ImportDataModalProps = {
+  visible: boolean;
+};
+
 // Mock dependencies
 jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: jest.fn(),
@@ -34,9 +44,14 @@ jest.mock('../../../../contexts/HouseholdContext', () => ({
   })),
 }));
 jest.mock('../../../../common/components/Toast', () => ({
-  Toast: ({ visible, message, type }: any) => (
-    visible ? <div testID="toast" data-type={type}>{message}</div> : null
-  ),
+  Toast: ({ visible, message, type }: ToastProps) => {
+    const { Text, View } = require('react-native');
+    return visible ? (
+      <View testID="toast" accessibilityLabel={`toast-${type}`}>
+        <Text>{message}</Text>
+      </View>
+    ) : null;
+  },
 }));
 const manageHouseholdModalPath = require.resolve('../../components/ManageHouseholdModal');
 jest.mock(manageHouseholdModalPath, () => ({
@@ -50,8 +65,11 @@ jest.mock(importServicePath, () => ({
   },
 }));
 jest.mock('../../components/ImportDataModal', () => ({
-  ImportDataModal: ({ visible }: { visible: boolean }) =>
-    (visible ? <div testID="import-data-modal" /> : null),
+  ImportDataModal: ({ visible }: ImportDataModalProps) =>
+    (visible ? (() => {
+      const { View } = require('react-native');
+      return <View testID="import-data-modal" />;
+    })() : null),
 }));
 
 const { SettingsScreen } = require('../SettingsScreen');
@@ -130,8 +148,8 @@ describe('SettingsScreen', () => {
       await waitFor(() => {
         const toast = getByTestId('toast');
         expect(toast).toBeTruthy();
-        expect(toast.props.children).toBe('Guest data deleted');
-        expect(toast.props['data-type']).toBe('success');
+        expect(getByText('Guest data deleted')).toBeTruthy();
+        expect(toast.props.accessibilityLabel).toBe('toast-success');
       });
     });
 
@@ -158,8 +176,8 @@ describe('SettingsScreen', () => {
       await waitFor(() => {
         const toast = getByTestId('toast');
         expect(toast).toBeTruthy();
-        expect(toast.props.children).toBe('Failed to delete guest data. Please try again.');
-        expect(toast.props['data-type']).toBe('error');
+        expect(getByText('Failed to delete guest data. Please try again.')).toBeTruthy();
+        expect(toast.props.accessibilityLabel).toBe('toast-error');
       });
     });
 

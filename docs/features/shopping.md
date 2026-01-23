@@ -35,15 +35,16 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - Two-column layout: shopping lists & items (left), categories discovery (right)
   - Multiple modal interactions (quantity, create list, category, all items, quick add)
   - Floating action button for quick add
-  - **Mock Data Toggle**: Loads all shopping data via `shoppingService.getShoppingData()` based on `config.mockData.enabled`
+  - **Guest Support**: Loads private list data from local mocks for guest users while signed-in users use the API
 
 #### Code Snippet - Service Initialization
 
 ```typescript
 const isMockDataEnabled = config.mockData.enabled;
+const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
 const shoppingService = useMemo(
-  () => createShoppingService(isMockDataEnabled),
-  [isMockDataEnabled]
+  () => createShoppingService(shouldUseMockData),
+  [shouldUseMockData]
 );
 
 useEffect(() => {
@@ -216,7 +217,7 @@ interface GroceryItem {
   - Various modal visibility states
 - **Service**: `createShoppingService(isMockEnabled)` factory creates service instance
   - Loads all data via `shoppingService.getShoppingData()` on mount
-  - Switches between mock and API based on `config.mockData.enabled`
+  - Switches between mock and API based on `config.mockData.enabled` or guest status
 - **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
 
 ## Service Layer
@@ -234,7 +235,43 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `RemoteShoppingService`: Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
+  - Guest users always use local data regardless of the flag
 - **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
+
+## Guest User Data Separation
+
+The shopping feature implements guest user data separation to ensure guest users use local data while signed-in users use cloud sync, preventing API call failures in production.
+
+### Service Selection Pattern
+
+Service selection is determined by both the mock data toggle and user authentication state:
+
+```typescript
+const { user } = useAuth();
+const isMockDataEnabled = config.mockData.enabled;
+const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+const shoppingService = useMemo(
+  () => createShoppingService(shouldUseMockData),
+  [shouldUseMockData]
+);
+```
+
+**Behavior**:
+- **Development** (`config.mockData.enabled = true`): Always uses `LocalShoppingService` regardless of auth state
+- **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalShoppingService` (no API calls)
+- **Production + Signed-in User** (`config.mockData.enabled = false` + authenticated): Uses `RemoteShoppingService` (cloud sync)
+
+### List Selection Utilities
+
+To prevent stale list state when switching between mock and remote data sources, the feature uses selection utilities:
+
+- **File**: `mobile/src/features/shopping/utils/selectionUtils.ts`
+- **Functions**:
+  - `getSelectedList()`: Selects the best matching list, preserving the current selection when valid, falling back to first list
+  - `getActiveListId()`: Validates and preserves active list ID when switching data sources
+- **Tests**: `mobile/src/features/shopping/utils/__tests__/selectionUtils.test.ts` - Parameterized tests covering all scenarios
+
+This ensures that when a user switches from guest (local) to signed-in (remote), the selected list remains valid or gracefully falls back to the first available list.
 
 ## Key Dependencies
 
@@ -242,9 +279,11 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
 - `react-native-reanimated` - Smooth swipe animations
 - `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
 - `createShoppingService` - Service factory for selecting mock/real data source
+- `getSelectedList`, `getActiveListId` - Selection utilities from `utils/selectionUtils.ts` for preventing stale list state
 - `mockGroceriesDB` - Grocery database with images and categories (used by LocalShoppingService)
 - `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService)
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
+- `useAuth` - Auth context hook for determining user state
 - `CenteredModal` - Shared modal component
 - `ScreenHeader` - Shared header component
 - `useResponsive` - Responsive layout hook
