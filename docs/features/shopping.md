@@ -35,19 +35,28 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - Two-column layout: shopping lists & items (left), categories discovery (right)
   - Multiple modal interactions (quantity, create list, category, all items, quick add)
   - Floating action button for quick add
+  - **Mock Data Toggle**: Loads all shopping data via `shoppingService.getShoppingData()` based on `config.mockData.enabled`
 
-#### Code Snippet - State Management
+#### Code Snippet - Service Initialization
 
 ```typescript
-const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(mockShoppingLists);
-const [selectedList, setSelectedList] = useState<ShoppingList>(mockShoppingLists[0]);
-const [allItems, setAllItems] = useState<ShoppingItem[]>(mockItems);
-const [selectedGroceryItem, setSelectedGroceryItem] = useState<GroceryItem | null>(null);
-const [showQuantityModal, setShowQuantityModal] = useState(false);
-const [showCreateListModal, setShowCreateListModal] = useState(false);
-const [showCategoryModal, setShowCategoryModal] = useState(false);
-const [showAllItemsModal, setShowAllItemsModal] = useState(false);
-const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+const isMockDataEnabled = config.mockData.enabled;
+const shoppingService = useMemo(
+  () => createShoppingService(isMockDataEnabled),
+  [isMockDataEnabled]
+);
+
+useEffect(() => {
+  const loadShoppingData = async () => {
+    const data = await shoppingService.getShoppingData();
+    setShoppingLists(data.shoppingLists);
+    setAllItems(data.shoppingItems);
+    setGroceryItems(data.groceryItems);
+    setCategories(data.categories);
+    setFrequentlyAddedItems(data.frequentlyAddedItems);
+  };
+  loadShoppingData();
+}, [shoppingService]);
 ```
 
 ## Components
@@ -198,15 +207,47 @@ interface GroceryItem {
 ## State Management
 
 - **Local state**: All state managed within ShoppingListsScreen via `useState`
-- **Mock data**: Uses `mockGroceriesDB` (111 items), `mockShoppingLists`, `mockItems`, `mockCategories`
-- **Computed values**: `filteredItems` filtered by selected list, `totalItems` sum of quantities
+  - `shoppingLists` - All shopping lists
+  - `selectedList` - Currently active list
+  - `allItems` - All shopping items across lists
+  - `groceryItems` - Grocery database items
+  - `categories` - Category definitions
+  - `frequentlyAddedItems` - Frequently added grocery items
+  - Various modal visibility states
+- **Service**: `createShoppingService(isMockEnabled)` factory creates service instance
+  - Loads all data via `shoppingService.getShoppingData()` on mount
+  - Switches between mock and API based on `config.mockData.enabled`
+- **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
+
+## Service Layer
+
+The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local mocks and backend API based on environment configuration.
+
+- **Factory**: `createShoppingService(isMockEnabled: boolean)` (`mobile/src/features/shopping/services/shoppingService.ts`)
+  - Returns `LocalShoppingService` when `isMockEnabled` is true
+  - Returns `RemoteShoppingService` when `isMockEnabled` is false
+- **Interface**: `IShoppingService`
+  - `getShoppingData(): Promise<ShoppingData>` - Returns all shopping-related data
+- **ShoppingData**: Includes `shoppingLists`, `shoppingItems`, `categories`, `groceryItems`, `frequentlyAddedItems`
+- **Strategies**:
+  - `LocalShoppingService`: Returns mock data from `mockShoppingLists`, `mockItems`, `mockCategories`, `mockGroceriesDB`
+  - `RemoteShoppingService`: Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
+- **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
+  - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
+- **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
 ## Key Dependencies
 
 - `react-native-gesture-handler` - GestureDetector for swipe interactions
 - `react-native-reanimated` - Smooth swipe animations
-- `mockGroceriesDB` - Grocery database with images and categories
+- `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
+- `createShoppingService` - Service factory for selecting mock/real data source
+- `mockGroceriesDB` - Grocery database with images and categories (used by LocalShoppingService)
+- `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService)
+- `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
 - `CenteredModal` - Shared modal component
+- `ScreenHeader` - Shared header component
+- `useResponsive` - Responsive layout hook
 
 ## UI Flow
 

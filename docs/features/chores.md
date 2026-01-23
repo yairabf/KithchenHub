@@ -28,6 +28,7 @@ The Chores feature provides household chore tracking with a visual progress ring
   - Two sections: "TODAY'S CHORES" and "UPCOMING CHORES"
   - Swipeable chore cards with edit and delete capabilities
   - Floating action button to add chores
+  - **Mock Data Toggle**: Loads chores via `choresService.getChores()` based on `config.mockData.enabled`
 
 #### Props Interface
 
@@ -176,10 +177,13 @@ export type AddChoreHandler = (newChore: {
 ## State Management
 
 - **Local state**:
-  - `chores` - Array of Chore objects
+  - `chores` - Array of Chore objects (loaded from service)
   - `selectedChore` - Currently selected chore for editing
   - `showDetailsModal` - Modal visibility for editing chore details
   - `showShareModal` - Modal visibility for sharing chores list
+- **Service**: `createChoresService(isMockEnabled)` factory creates service instance
+  - Loads chores via `choresService.getChores()` on mount
+  - Switches between mock and API based on `config.mockData.enabled`
 - **Computed values**:
   - `todayChores` - Filtered chores for today section
   - `upcomingChores` - Filtered chores for this week/recurring
@@ -189,15 +193,34 @@ export type AddChoreHandler = (newChore: {
   - `onOpenChoresModal` - Callback to open quick add modal
   - `onRegisterAddChoreHandler` - Registers add function with parent
 
+## Service Layer
+
+The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local mocks and backend API based on environment configuration.
+
+- **Factory**: `createChoresService(isMockEnabled: boolean)` (`mobile/src/features/chores/services/choresService.ts`)
+  - Returns `LocalChoresService` when `isMockEnabled` is true
+  - Returns `RemoteChoresService` when `isMockEnabled` is false
+- **Interface**: `IChoresService`
+  - `getChores(): Promise<Chore[]>` - Returns all chores
+- **Strategies**:
+  - `LocalChoresService`: Returns mock data from `mockChores`
+  - `RemoteChoresService`: Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
+- **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
+  - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
+- **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
+
 ## Key Dependencies
 
 - `react-native-gesture-handler` - GestureDetector for swipe interactions
 - `react-native-reanimated` - Smooth animations for progress ring and swipes
+- `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
+- `createChoresService` - Service factory for selecting mock/real data source
 - `SwipeableWrapper` - Shared component from `common/components` for swipe-to-delete
 - `ScreenHeader` - Shared header component with actions
 - `ShareModal` - Shared modal component for sharing functionality
 - `formatChoresText` - Utility function for formatting chores for sharing
-- `mockChores` - Initial chore data
+- `mockChores` - Initial chore data (used by LocalChoresService)
+- `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
 - `pastelColors` - Theme colors for card backgrounds
 - `useWindowDimensions` - For responsive layout detection
 

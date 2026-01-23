@@ -98,8 +98,9 @@ interface ImportDataModalProps {
 ```
 
 - **Features**:
-  - Aggregates local data using `ImportService`
-  - Sends data to backend API
+  - Aggregates local data using `ImportService.gatherLocalData()`
+  - Uses service factories (`createRecipeService`, `createShoppingService`) to gather data based on `config.mockData.enabled`
+  - Sends data to backend API (`/import` endpoint)
   - Displays loading state with generic message
   - Shows success state with:
     - **Clear local data** option (destructive, requires confirmation)
@@ -172,6 +173,8 @@ interface ImportDataModalProps {
 - `AuthContext` - User authentication state and guest data management (`useAuth` hook)
 - `HouseholdContext` - Household member management (`useHousehold` hook)
 - `ImportService` - Logic for gathering and uploading local guest data
+  - Uses `createRecipeService` and `createShoppingService` factories
+  - Respects `config.mockData.enabled` when gathering data
 - `ScreenHeader` - Shared header component for consistent navigation
 - `CenteredModal` - Shared modal component (used by ManageHouseholdModal, ImportDataModal, and guest data deletion confirmation)
 - `Toast` - Shared toast component for user feedback (success/error messages)
