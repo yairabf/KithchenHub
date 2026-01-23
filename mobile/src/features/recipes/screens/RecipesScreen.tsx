@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import * as Crypto from 'expo-crypto';
 import {
   View,
   Text,
@@ -8,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,10 +19,13 @@ import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
 import { recipeCategories, type Recipe } from '../../../mocks/recipes';
 import { useResponsive } from '../../../common/hooks';
+import { resizeAndValidateImage } from '../../../common/utils';
+import { uploadRecipeImage } from '../../../services/imageUploadService';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
 import { createRecipe } from '../utils/recipeFactory';
 import { useRecipes } from '../hooks/useRecipes';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // Column gap constant - same for all screen sizes
 const COLUMN_GAP = spacing.md;
@@ -42,6 +45,7 @@ const calculateCardMargin = (index: number): ViewStyle => {
 
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { width, isTablet } = useResponsive();
+  const { user } = useAuth();
   const { recipes, isLoading, addRecipe } = useRecipes();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -73,9 +77,35 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   };
 
   const handleSaveRecipe = async (data: NewRecipeData) => {
-    const newRecipe = createRecipe(data);
-    await addRecipe(newRecipe);
+    try {
+      const baseRecipe = createRecipe({ ...data, imageUrl: undefined });
+      let imageUrl = baseRecipe.imageUrl;
+
+      if (data.imageLocalUri) {
+        const resized = await resizeAndValidateImage(data.imageLocalUri);
+
+        if (!user || user.isGuest) {
+          imageUrl = resized.uri;
+        } else {
+          if (!user.householdId) {
+            throw new Error('Household ID is missing for uploads.');
+          }
+
+          const uploaded = await uploadRecipeImage({
+            imageUri: resized.uri,
+            householdId: user.householdId,
+            recipeId: baseRecipe.localId,
+          });
+          imageUrl = uploaded.signedUrl;
+        }
+      }
+
+    await addRecipe({ ...baseRecipe, imageUrl });
     setShowAddRecipeModal(false);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'An unknown error occurred';
+    Alert.alert('Unable to save recipe', message);
+  }
   };
 
   return (

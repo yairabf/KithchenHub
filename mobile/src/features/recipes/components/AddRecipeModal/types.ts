@@ -19,6 +19,8 @@ export interface NewRecipeData {
   description: string;
   ingredients: Ingredient[];
   instructions: Instruction[];
+  imageLocalUri?: string;
+  imageUrl?: string;
 }
 
 export interface AddRecipeModalProps {

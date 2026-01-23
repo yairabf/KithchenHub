@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
+  Alert,
   TouchableOpacity,
   ScrollView,
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../../../theme';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { GrocerySearchBar, GroceryItem } from '../../../shopping/components/GrocerySearchBar';
@@ -35,12 +38,14 @@ export function AddRecipeModal({
 }: AddRecipeModalProps) {
   const [recipe, setRecipe] = useState<NewRecipeData>(createEmptyRecipe());
   const [searchQuery, setSearchQuery] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null);
 
   // Reset form when modal opens
   useEffect(() => {
     if (visible) {
       setRecipe(createEmptyRecipe());
       setSearchQuery('');
+      setImageUri(null);
     }
   }, [visible]);
 
@@ -57,9 +62,32 @@ export function AddRecipeModal({
         ...recipe,
         ingredients: recipe.ingredients.filter((ing) => ing.name.trim()),
         instructions: recipe.instructions.filter((inst) => inst.text.trim()),
+        imageLocalUri: imageUri ?? undefined,
       };
       onSave(cleanedRecipe);
     }
+  };
+
+  const handleSelectImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Permission to access photos is required.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets?.length) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUri(null);
   };
 
   // Ingredient handlers
@@ -202,6 +230,40 @@ export function AddRecipeModal({
             multiline
             numberOfLines={3}
           />
+        </View>
+
+        {/* Photo */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Photo</Text>
+          <View style={styles.photoRow}>
+            <View style={styles.photoPreview}>
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={styles.photoImage} />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons name="image-outline" size={28} color={colors.textMuted} />
+                </View>
+              )}
+            </View>
+            <View style={styles.photoActions}>
+              <TouchableOpacity style={styles.photoButton} onPress={handleSelectImage}>
+                <Ionicons
+                  name={imageUri ? 'image-outline' : 'add'}
+                  size={16}
+                  color={colors.textLight}
+                />
+                <Text style={styles.photoButtonText}>
+                  {imageUri ? 'Change Photo' : 'Add Photo'}
+                </Text>
+              </TouchableOpacity>
+              {imageUri && (
+                <TouchableOpacity style={styles.photoButtonSecondary} onPress={handleRemoveImage}>
+                  <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
+                  <Text style={styles.photoButtonSecondaryText}>Remove</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
 
         {/* Ingredients Section */}

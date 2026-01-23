@@ -8,6 +8,7 @@ export interface SupabaseUser {
     email: string;
     name: string;
     avatarUrl?: string;
+    householdId?: string;
 }
 
 /**
@@ -25,6 +26,9 @@ export function useSupabaseAuth(onUserChange: (user: SupabaseUser | null) => voi
                     email: session.user.email || '',
                     name: session.user.user_metadata?.full_name || 'Kitchen User',
                     avatarUrl: session.user.user_metadata?.avatar_url,
+                    householdId:
+                        session.user.user_metadata?.household_id ||
+                        session.user.user_metadata?.householdId,
                 });
             } else if (event === 'SIGNED_OUT') {
                 onUserChange(null);
