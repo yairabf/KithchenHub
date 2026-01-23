@@ -22,6 +22,7 @@ import type { ChoresScreenProps } from './types';
 import { createChore } from '../utils/choreFactory';
 import { createChoresService } from '../services/choresService';
 import { config } from '../../../config';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
   const [chores, setChores] = useState<Chore[]>([]);
@@ -29,10 +30,12 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const { width } = useWindowDimensions();
+  const { user } = useAuth();
   const isMockDataEnabled = config.mockData.enabled;
+  const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
   const choresService = useMemo(
-    () => createChoresService(isMockDataEnabled),
-    [isMockDataEnabled]
+    () => createChoresService(shouldUseMockData),
+    [shouldUseMockData]
   );
 
   useEffect(() => {

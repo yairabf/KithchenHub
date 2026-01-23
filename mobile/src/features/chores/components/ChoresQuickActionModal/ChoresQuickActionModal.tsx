@@ -17,6 +17,7 @@ import { styles } from './styles';
 import { ChoresQuickActionModalProps, ChoreTemplate } from './types';
 import { createChoresService } from '../../services/choresService';
 import { config } from '../../../../config';
+import { useAuth } from '../../../../contexts/AuthContext';
 
 // Mock Chores Database - Common household chores
 const mockChoresDB: ChoreTemplate[] = [
@@ -77,6 +78,7 @@ const mockChoresDB: ChoreTemplate[] = [
 
 export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQuickActionModalProps) {
   const { members } = useHousehold();
+  const { user } = useAuth();
   const [newChoreText, setNewChoreText] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<string | undefined>(undefined);
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(new Date());
@@ -88,9 +90,10 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
   const inputRef = useRef<TextInput>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMockDataEnabled = config.mockData.enabled;
+  const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
   const choresService = useMemo(
-    () => createChoresService(isMockDataEnabled),
-    [isMockDataEnabled]
+    () => createChoresService(shouldUseMockData),
+    [shouldUseMockData]
   );
 
   const getDueDateSection = (date: Date): 'today' | 'thisWeek' => {
@@ -107,7 +110,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
     let isMounted = true;
 
     const loadChoreTemplates = async () => {
-      if (isMockDataEnabled) {
+      if (shouldUseMockData) {
         setChoreTemplates(mockChoresDB);
         return;
       }
@@ -138,7 +141,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
     return () => {
       isMounted = false;
     };
-  }, [choresService, isMockDataEnabled, visible]);
+  }, [choresService, shouldUseMockData, visible]);
 
   // Search functionality with debounce
   useEffect(() => {

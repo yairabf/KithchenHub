@@ -15,6 +15,21 @@ interface ImageDimensions {
   height: number;
 }
 
+type FileInfoWithSize = FileSystem.FileInfo & { size: number };
+type FileInfoWithOptionalSize = FileSystem.FileInfo & { size?: number };
+
+const getFileInfoWithOptionalSize = async (uri: string): Promise<FileInfoWithOptionalSize> => {
+  const infoOptions = { size: true } as FileSystem.InfoOptions & { size?: boolean };
+  return (await FileSystem.getInfoAsync(uri, infoOptions)) as FileInfoWithOptionalSize;
+};
+
+/**
+ * Type guard that confirms file info includes a size in bytes.
+ */
+const isFileInfoWithSize = (info: FileSystem.FileInfo): info is FileInfoWithSize => {
+  return 'size' in info && typeof (info as { size?: number }).size === 'number';
+};
+
 /**
  * Retrieves the width and height of an image from its file URI.
  * @param uri - Local file URI of the image
@@ -61,12 +76,13 @@ const calculateResizeTarget = (dimensions: ImageDimensions): ImageDimensions | n
  * @throws Error if file size cannot be determined
  */
 const getImageFileSizeBytes = async (uri: string): Promise<number> => {
-  const fileInfo = await FileSystem.getInfoAsync(uri, { size: true });
-  const size = fileInfo?.size ?? null;
-  if (size === null) {
+  const fileInfo = await getFileInfoWithOptionalSize(uri);
+
+  if (!isFileInfoWithSize(fileInfo)) {
     throw new Error('Unable to determine image file size');
   }
-  return size;
+
+  return fileInfo.size;
 };
 
 /**
