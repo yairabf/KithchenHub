@@ -4,6 +4,7 @@ import { api } from '../../../services/api';
 export interface IRecipeService {
     getRecipes(): Promise<Recipe[]>;
     createRecipe(recipe: Partial<Recipe>): Promise<Recipe>;
+    updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe>;
 }
 
 export class LocalRecipeService implements IRecipeService {
@@ -29,6 +30,19 @@ export class LocalRecipeService implements IRecipeService {
             ...recipe,
         } as Recipe;
     }
+
+    async updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe> {
+        return {
+            id: recipeId,
+            localId: updates.localId || recipeId,
+            name: updates.name || 'New Recipe',
+            cookTime: updates.cookTime || '0 min',
+            category: updates.category || 'Dinner',
+            ingredients: updates.ingredients || [],
+            instructions: updates.instructions || [],
+            ...updates,
+        } as Recipe;
+    }
 }
 
 export class RemoteRecipeService implements IRecipeService {
@@ -39,4 +53,12 @@ export class RemoteRecipeService implements IRecipeService {
     async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
         return api.post<Recipe>('/recipes', recipe);
     }
+
+    async updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe> {
+        return api.put<Recipe>(`/recipes/${recipeId}`, updates);
+    }
 }
+
+export const createRecipeService = (isMockEnabled: boolean): IRecipeService => {
+    return isMockEnabled ? new LocalRecipeService() : new RemoteRecipeService();
+};
