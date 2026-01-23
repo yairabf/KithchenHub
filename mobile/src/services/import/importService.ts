@@ -1,8 +1,7 @@
 import { api } from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LocalRecipeService } from '../../features/recipes/services/recipeService';
-import { mockShoppingLists, mockItems } from '../../mocks/shopping';
-import { mockChores } from '../../mocks/chores';
+import { createRecipeService } from '../../features/recipes/services/recipeService';
+import { createShoppingService } from '../../features/shopping/services/shoppingService';
+import { config } from '../../config';
 import {
     ImportRequestDto,
     ImportRecipeDto,
@@ -10,9 +9,6 @@ import {
     ShoppingItemInputDto,
     ImportResponseDto
 } from './types';
-
-// Constants
-import { STORAGE_KEY as HOUSEHOLD_STORAGE_KEY } from '../../contexts/HouseholdContext';
 
 // Helper to safely parse strings to numbers
 const safeParseInt = (value: string | undefined): number => {
@@ -34,7 +30,8 @@ export class ImportService {
      */
     static async gatherLocalData(): Promise<ImportRequestDto> {
         // 1. Recipes
-        const recipeService = new LocalRecipeService();
+        const isMockDataEnabled = config.mockData.enabled;
+        const recipeService = createRecipeService(isMockDataEnabled);
         const recipes = await recipeService.getRecipes();
 
         const importRecipes: ImportRecipeDto[] = recipes.map(recipe => ({
@@ -54,8 +51,10 @@ export class ImportService {
         }));
 
         // 2. Shopping Lists
-        const importShoppingLists: ImportShoppingListDto[] = mockShoppingLists.map(list => {
-            const listItems = mockItems.filter(item => item.listId === list.id);
+        const shoppingService = createShoppingService(isMockDataEnabled);
+        const shoppingData = await shoppingService.getShoppingData();
+        const importShoppingLists: ImportShoppingListDto[] = shoppingData.shoppingLists.map(list => {
+            const listItems = shoppingData.shoppingItems.filter(item => item.listId === list.id);
             const importItems: ShoppingItemInputDto[] = listItems.map(item => ({
                 name: item.name,
                 quantity: item.quantity,

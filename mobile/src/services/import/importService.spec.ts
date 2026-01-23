@@ -1,9 +1,7 @@
 import { ImportService } from './importService';
 import { api } from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { mockRecipes } from '../../mocks/recipes';
 import { mockShoppingLists, mockItems } from '../../mocks/shopping';
-import { mockChores } from '../../mocks/chores';
 
 // Mock dependencies
 jest.mock('../../services/api', () => ({
@@ -12,25 +10,41 @@ jest.mock('../../services/api', () => ({
     },
 }));
 
-jest.mock('@react-native-async-storage/async-storage', () => ({
-    getItem: jest.fn(),
-    setItem: jest.fn(),
+const mockRecipeService = {
+    getRecipes: jest.fn().mockResolvedValue(mockRecipes),
+};
+
+const mockShoppingService = {
+    getShoppingData: jest.fn().mockResolvedValue({
+        shoppingLists: mockShoppingLists,
+        shoppingItems: mockItems,
+        categories: [],
+        groceryItems: [],
+        frequentlyAddedItems: [],
+    }),
+};
+
+jest.mock('../../config', () => ({
+    config: {
+        mockData: { enabled: true },
+    },
 }));
 
 jest.mock('../../features/recipes/services/recipeService', () => ({
-    LocalRecipeService: jest.fn().mockImplementation(() => ({
-        getRecipes: jest.fn().mockResolvedValue(mockRecipes),
-    })),
+    createRecipeService: jest.fn(() => mockRecipeService),
+}));
+
+jest.mock('../../features/shopping/services/shoppingService', () => ({
+    createShoppingService: jest.fn(() => mockShoppingService),
 }));
 
 describe('ImportService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     });
 
     describe('gatherLocalData', () => {
-        it('should gather recipes, shopping lists, and chores from mocks/local sources', async () => {
+        it('should gather recipes and shopping lists from local sources', async () => {
             const data = await ImportService.gatherLocalData();
 
             expect(data.recipes).toBeDefined();
