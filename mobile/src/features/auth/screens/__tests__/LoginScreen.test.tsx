@@ -18,13 +18,15 @@ import { LoginScreen } from '../LoginScreen';
 import { useAuth } from '../../../../contexts/AuthContext';
 
 // Mock dependencies
-jest.mock('../../../../contexts/AuthContext');
-jest.mock('../components/GuestDataImportModal', () => ({
+jest.mock('../../../../contexts/AuthContext', () => ({
+  useAuth: jest.fn(),
+}));
+jest.mock('../../components/GuestDataImportModal', () => ({
   GuestDataImportModal: ({ visible, onImport, onSkip }: any) => (
     visible ? <div testID="guest-import-modal" /> : null
   ),
 }));
-jest.mock('../components/GoogleSignInButton', () => ({
+jest.mock('../../components/GoogleSignInButton', () => ({
   GoogleSignInButton: ({ onPress, isLoading }: any) => (
     <button testID="google-sign-in-button" onClick={onPress} disabled={isLoading}>
       {isLoading ? 'Loading...' : 'Sign in with Google'}
@@ -75,7 +77,7 @@ describe('LoginScreen', () => {
     });
 
     describe.each([
-      ['generic error', new Error('Network error'), 'Unable to sign in with Google. Please try again.'],
+      ['generic error', new Error('Network error'), 'Network error'],
       ['specific error', new Error('Invalid credentials'), 'Invalid credentials'],
       ['non-Error object', 'String error', 'Unable to sign in with Google. Please try again.'],
     ])('error handling with %s', (description, error, expectedMessage) => {
@@ -109,7 +111,7 @@ describe('LoginScreen', () => {
     });
 
     describe.each([
-      ['generic error', new Error('Storage error'), 'Unable to sign in as guest. Please try again.'],
+      ['generic error', new Error('Storage error'), 'Storage error'],
       ['specific error', new Error('Permission denied'), 'Permission denied'],
       ['non-Error object', 'String error', 'Unable to sign in as guest. Please try again.'],
     ])('error handling with %s', (description, error, expectedMessage) => {

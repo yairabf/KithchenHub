@@ -12,5 +12,6 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
         description: data.description,
         ingredients: data.ingredients,
         instructions: data.instructions,
+        imageUrl: data.imageUrl,
     };
 };

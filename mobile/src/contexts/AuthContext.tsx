@@ -11,6 +11,7 @@ export interface User {
   email: string;
   name: string;
   photoUrl?: string;
+  householdId?: string;
   isGuest: boolean;
 }
 
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: supabaseUser.email,
         name: supabaseUser.name,
         photoUrl: supabaseUser.avatarUrl,
+        householdId: supabaseUser.householdId,
         isGuest: false,
       };
 

@@ -8,3 +8,6 @@ export {
   type ShareTarget,
   type ShareOption,
 } from './shareUtils';
+
+export { IMAGE_CONSTRAINTS } from './imageConstraints';
+export { resizeAndValidateImage, type ResizedImageResult } from './imageResize';

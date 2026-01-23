@@ -174,6 +174,8 @@ interface NewRecipeData {
   description: string;
   ingredients: Ingredient[];
   instructions: Instruction[];
+  imageLocalUri?: string;
+  imageUrl?: string;
 }
 
 interface Ingredient {
@@ -194,6 +196,7 @@ interface Instruction {
   - Category selection with horizontal scroll
   - Prep time input
   - Description textarea
+  - Recipe photo picker (optional)
   - **Ingredients section**:
     - Integrated grocery search bar
     - Quantity, unit, and name inputs for each ingredient
@@ -204,6 +207,32 @@ interface Instruction {
     - Add/remove step functionality
     - Minimum 1 step required
   - Form validation (title and at least one ingredient required)
+
+## Recipe Image Uploads (Mobile)
+
+Recipe images are resized client-side before upload to reduce bandwidth and storage costs.
+
+### Constraints
+
+- Max resolution: `1024x1024` (aspect ratio preserved)
+- Output format: JPEG
+- Compression quality: `0.8`
+- Max file size after resize: `2MB`
+
+### Flow
+
+1. User selects a photo in `AddRecipeModal`.
+2. Client resizes/compresses via `resizeAndValidateImage`:
+   - File: `mobile/src/common/utils/imageResize.ts`
+3. Image uploads to Supabase Storage via `uploadRecipeImage`:
+   - Bucket: `household-uploads`
+   - Path: `households/{householdId}/recipes/{recipeId}/{timestamp}.jpg`
+   - File: `mobile/src/services/imageUploadService.ts`
+4. The signed URL is stored in `imageUrl` when saving the recipe.
+
+### Notes
+
+- **Guest mode**: Images are kept as local file URIs for the current session. When signing in with Google later, these images will **not** be uploaded automatically—users would need to re-add photos after sign-in if they want them persisted to cloud storage.
 
 ## Entity Creation (New)
 

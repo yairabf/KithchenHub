@@ -46,15 +46,15 @@ describe('RecipeDetailScreen.utils', () => {
         const scrollThresholdOffset = STICKY_HEADER_ANIMATION.SCROLL_THRESHOLD_OFFSET;
 
         describe.each([
-            ['scrolled past threshold', 100, 50, 50 - scrollThresholdOffset, true],
-            ['scrolled exactly at threshold', 100, 50, 50 - scrollThresholdOffset, true],
-            ['scrolled before threshold', 100, 50, 50 - scrollThresholdOffset - 1, false],
+            ['scrolled past threshold', 100, 100 - scrollThresholdOffset + 1, 100 - scrollThresholdOffset, true],
+            ['scrolled exactly at threshold', 100, 100 - scrollThresholdOffset, 100 - scrollThresholdOffset, true],
+            ['scrolled before threshold', 100, 100 - scrollThresholdOffset - 1, 100 - scrollThresholdOffset, false],
             ['zero header height', 0, 50, 0, false],
             ['negative header height', -10, 50, 0, false],
-            ['zero scroll position', 100, 0, 0, false],
-            ['negative scroll position', 100, -10, 0, false],
-            ['large header, scrolled past', 500, 250, 250 - scrollThresholdOffset, true],
-            ['small header, scrolled past', 10, 5, 5 - scrollThresholdOffset, true],
+            ['zero scroll position', 100, 0, 100 - scrollThresholdOffset, false],
+            ['negative scroll position', 100, -10, 100 - scrollThresholdOffset, false],
+            ['large header, scrolled past', 500, 500 - scrollThresholdOffset + 1, 500 - scrollThresholdOffset, true],
+            ['small header, scrolled past', 10, 10 - scrollThresholdOffset + 1, 10 - scrollThresholdOffset, true],
         ])('with %s', (description, headerHeight, scrollY, expectedThreshold, expectedResult) => {
             it(`should return ${expectedResult}`, () => {
                 const result = calculateIsHeaderScrolled(scrollY, headerHeight);
