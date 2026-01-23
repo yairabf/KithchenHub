@@ -13,16 +13,45 @@
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { SettingsScreen } from '../SettingsScreen';
-import { useAuth } from '../../../../contexts/AuthContext';
 
 // Mock dependencies
-jest.mock('../../../../contexts/AuthContext');
+jest.mock('../../../../contexts/AuthContext', () => ({
+  useAuth: jest.fn(),
+}));
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: () => null,
+}));
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+jest.mock('../../../../contexts/HouseholdContext', () => ({
+  useHousehold: jest.fn(() => ({
+    members: [],
+    isLoading: false,
+    addMember: jest.fn(),
+    removeMember: jest.fn(),
+    getMemberById: jest.fn(),
+  })),
+}));
 jest.mock('../../../../common/components/Toast', () => ({
   Toast: ({ visible, message, type }: any) => (
     visible ? <div testID="toast" data-type={type}>{message}</div> : null
   ),
 }));
+const manageHouseholdModalPath = require.resolve('../../components/ManageHouseholdModal');
+jest.mock(manageHouseholdModalPath, () => ({
+  ManageHouseholdModal: () => null,
+}));
+const importServicePath = require.resolve('../../../../services/import/importService');
+jest.mock(importServicePath, () => ({
+  ImportService: {
+    gatherLocalData: jest.fn(async () => ({})),
+    submitImport: jest.fn(async () => undefined),
+  },
+}));
+
+const { SettingsScreen } = require('../SettingsScreen');
+const { useAuth } = require('../../../../contexts/AuthContext');
 
 describe('SettingsScreen', () => {
   const mockSignOut = jest.fn();
@@ -45,44 +74,18 @@ describe('SettingsScreen', () => {
   });
 
   describe('handleImportGuestData', () => {
-    it('should successfully import guest data', async () => {
-      mockImportGuestData.mockResolvedValue(undefined);
-      const { getByText, getByTestId } = render(<SettingsScreen />);
-
-      fireEvent.press(getByText('Import local guest data'));
-
-      await waitFor(() => {
-        expect(mockImportGuestData).toHaveBeenCalledTimes(1);
-      });
-
-      await waitFor(() => {
-        const toast = getByTestId('toast');
-        expect(toast).toBeTruthy();
-        expect(toast.props.children).toBe('Guest data imported successfully');
-        expect(toast.props['data-type']).toBe('success');
-      });
-    });
-
-    it('should show error toast when import fails', async () => {
-      mockImportGuestData.mockRejectedValue(new Error('Import failed'));
+    it('should open import modal when guest data exists', async () => {
       (useAuth as jest.Mock).mockReturnValue({
         ...defaultAuthContext,
         hasGuestData: true,
       });
 
-      const { getByText, getByTestId } = render(<SettingsScreen />);
+      const { getByText, queryByText } = render(<SettingsScreen />);
 
       fireEvent.press(getByText('Import local guest data'));
 
       await waitFor(() => {
-        expect(mockImportGuestData).toHaveBeenCalledTimes(1);
-      });
-
-      await waitFor(() => {
-        const toast = getByTestId('toast');
-        expect(toast).toBeTruthy();
-        expect(toast.props.children).toBe('Failed to import guest data. Please try again.');
-        expect(toast.props['data-type']).toBe('error');
+        expect(queryByText('Import Data')).toBeTruthy();
       });
     });
   });

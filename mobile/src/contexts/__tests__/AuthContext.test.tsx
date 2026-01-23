@@ -21,6 +21,31 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+jest.mock('expo-crypto', () => ({
+  randomUUID: jest.fn(() => 'test-uuid'),
+}));
+
+jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
+}));
+
+jest.mock('../../hooks/useSupabaseAuth', () => ({
+  useSupabaseAuth: (onUserChange: (user: any) => void) => ({
+    signInWithGoogle: jest.fn(async () => {
+      onUserChange({
+        id: 'supabase-id',
+        email: 'test@example.com',
+        name: 'Test User',
+        avatarUrl: undefined,
+        householdId: 'house-1',
+      });
+    }),
+    signOut: jest.fn(async () => {
+      onUserChange(null);
+    }),
+  }),
+}));
+
 describe('AuthContext', () => {
   beforeEach(() => {
     AsyncStorage.clear();
@@ -32,10 +57,9 @@ describe('AuthContext', () => {
         <AuthProvider>{children}</AuthProvider>
       );
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      // Set up guest data flag
       await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       await act(async () => {
         await result.current.importGuestData();
@@ -70,10 +94,9 @@ describe('AuthContext', () => {
         <AuthProvider>{children}</AuthProvider>
       );
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      // Set up guest data flag
       await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       await act(async () => {
         await result.current.clearGuestData();
@@ -116,7 +139,7 @@ describe('AuthContext', () => {
       });
 
       await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
-      await AsyncStorage.setItem('@kitchen_hub_guest_import_prompt_shown', 'false');
+      await AsyncStorage.removeItem('@kitchen_hub_guest_import_prompt_shown');
 
       // Trigger Google sign-in to set pending user
       await act(async () => {
@@ -145,7 +168,7 @@ describe('AuthContext', () => {
       });
 
       await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
-      await AsyncStorage.setItem('@kitchen_hub_guest_import_prompt_shown', 'false');
+      await AsyncStorage.removeItem('@kitchen_hub_guest_import_prompt_shown');
 
       // Trigger Google sign-in to set pending user
       await act(async () => {

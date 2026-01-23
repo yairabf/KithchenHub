@@ -16,7 +16,20 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { GuestDataImportModal } from '../GuestDataImportModal';
+
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: () => null,
+}));
+
+jest.mock('react-native-reanimated', () => {
+  const Reanimated = require('react-native-reanimated/mock');
+  return {
+    ...Reanimated,
+    runOnJS: (fn: any) => fn,
+  };
+});
+
+const { GuestDataImportModal } = require('../../GuestDataImportModal');
 
 describe('GuestDataImportModal', () => {
   describe.each([
@@ -73,7 +86,11 @@ describe('GuestDataImportModal', () => {
         />
       );
 
-      fireEvent.press(getByText('Not now'));
+      jest.useFakeTimers();
+      const cancelText = getByText('Not now');
+      fireEvent.press((cancelText.parent as any) ?? cancelText);
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
       expect(onSkip).toHaveBeenCalledTimes(1);
       expect(onImport).not.toHaveBeenCalled();
     });
