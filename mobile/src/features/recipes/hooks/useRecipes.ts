@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { IRecipeService, LocalRecipeService, RemoteRecipeService } from '../services/recipeService';
+import { createRecipeService, IRecipeService } from '../services/recipeService';
 import { Recipe } from '../../../mocks/recipes';
+import { config } from '../../../config';
 
 export function useRecipes() {
     const { user, isLoading: isAuthLoading } = useAuth();
@@ -9,14 +10,11 @@ export function useRecipes() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
+    const isMockDataEnabled = config.mockData.enabled;
+    const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
     const service: IRecipeService = useMemo(() => {
-        // Note: If user is null (not logged in), we might want to default to Local/Guest or Empty.
-        // For now assuming Guest mode is default if no user or isGuest=true.
-        if (!user || user.isGuest) {
-            return new LocalRecipeService();
-        }
-        return new RemoteRecipeService();
-    }, [user]);
+        return createRecipeService(shouldUseMockData);
+    }, [shouldUseMockData]);
 
     useEffect(() => {
         if (isAuthLoading) return;
@@ -64,10 +62,34 @@ export function useRecipes() {
         }
     };
 
+    const updateRecipe = async (recipeId: string, updates: Partial<Recipe>) => {
+        try {
+            const updatedRecipe = await service.updateRecipe(recipeId, updates);
+            setRecipes(prev =>
+                prev.map(recipe => {
+                    if (recipe.id !== recipeId) {
+                        return recipe;
+                    }
+
+                    return {
+                        ...recipe,
+                        ...updates,
+                        ...updatedRecipe,
+                    };
+                })
+            );
+            return updatedRecipe;
+        } catch (err) {
+            console.error('Failed to update recipe:', err);
+            throw err;
+        }
+    };
+
     return {
         recipes,
         isLoading,
         error,
         addRecipe,
+        updateRecipe,
     };
 }

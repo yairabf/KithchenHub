@@ -49,6 +49,10 @@ jest.mock(importServicePath, () => ({
     submitImport: jest.fn(async () => undefined),
   },
 }));
+jest.mock('../../components/ImportDataModal', () => ({
+  ImportDataModal: ({ visible }: { visible: boolean }) =>
+    (visible ? <div testID="import-data-modal" /> : null),
+}));
 
 const { SettingsScreen } = require('../SettingsScreen');
 const { useAuth } = require('../../../../contexts/AuthContext');
@@ -58,6 +62,8 @@ describe('SettingsScreen', () => {
   const mockSignInWithGoogle = jest.fn();
   const mockImportGuestData = jest.fn();
   const mockClearGuestData = jest.fn();
+  const originalWarn = console.warn;
+  const consoleWarnSpy = jest.spyOn(console, 'warn');
 
   const defaultAuthContext = {
     user: { id: '1', email: 'test@example.com', name: 'Test User', isGuest: false },
@@ -71,6 +77,16 @@ describe('SettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useAuth as jest.Mock).mockReturnValue(defaultAuthContext);
+    consoleWarnSpy.mockImplementation((message, ...args) => {
+      if (typeof message === 'string' && message.includes('SafeAreaView has been deprecated')) {
+        return;
+      }
+      originalWarn(message, ...args);
+    });
+  });
+
+  afterAll(() => {
+    consoleWarnSpy.mockRestore();
   });
 
   describe('handleImportGuestData', () => {
@@ -80,12 +96,12 @@ describe('SettingsScreen', () => {
         hasGuestData: true,
       });
 
-      const { getByText, queryByText } = render(<SettingsScreen />);
+      const { getByText, queryByTestId } = render(<SettingsScreen />);
 
       fireEvent.press(getByText('Import local guest data'));
 
       await waitFor(() => {
-        expect(queryByText('Import Data')).toBeTruthy();
+        expect(queryByTestId('import-data-modal')).toBeTruthy();
       });
     });
   });

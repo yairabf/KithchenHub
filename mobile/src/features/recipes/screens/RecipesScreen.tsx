@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,11 +16,14 @@ import { colors } from '../../../theme/colors';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
+import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
 import { recipeCategories, type Recipe } from '../../../mocks/recipes';
 import { useResponsive } from '../../../common/hooks';
 import { resizeAndValidateImage } from '../../../common/utils';
 import { uploadRecipeImage } from '../../../services/imageUploadService';
+import { api } from '../../../services/api';
+import { config } from '../../../config';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
 import { createRecipe } from '../utils/recipeFactory';
@@ -29,6 +32,63 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 // Column gap constant - same for all screen sizes
 const COLUMN_GAP = spacing.md;
+
+type GrocerySearchItemDto = {
+  id: string;
+  name: string;
+  category: string;
+  imageUrl?: string | null;
+  defaultQuantity?: number | null;
+};
+
+const mapGroceryItem = (item: GrocerySearchItemDto): GroceryItem => ({
+  id: item.id,
+  name: item.name,
+  image: item.imageUrl ?? '',
+  category: item.category,
+  defaultQuantity: item.defaultQuantity ?? 1,
+});
+
+type UpdateRecipeFn = (recipeId: string, updates: Partial<Recipe>) => Promise<Recipe>;
+
+type UploadWithCleanupParams = {
+  recipeId: string;
+  imageUri: string;
+  householdId: string;
+  updateRecipe: UpdateRecipeFn;
+};
+
+const attachGuestImage = async (
+  recipeId: string,
+  imageUri: string,
+  updateRecipe: UpdateRecipeFn
+): Promise<void> => {
+  await updateRecipe(recipeId, { imageUrl: imageUri });
+};
+
+const uploadImageWithCleanup = async ({
+  recipeId,
+  imageUri,
+  householdId,
+  updateRecipe,
+}: UploadWithCleanupParams): Promise<void> => {
+  const uploaded = await uploadRecipeImage({
+    imageUri,
+    householdId,
+    recipeId,
+  });
+
+  try {
+    await updateRecipe(recipeId, { imageUrl: uploaded.signedUrl });
+  } catch (updateError) {
+    console.error('Failed to update recipe with uploaded image URL. Image uploaded but not linked:', {
+      recipeId,
+      imagePath: uploaded.path,
+      error: updateError,
+    });
+    throw updateError;
+  }
+};
 
 /**
  * Calculates the margin style for a recipe card based on its position in the grid.
@@ -46,10 +106,41 @@ const calculateCardMargin = (index: number): ViewStyle => {
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { width, isTablet } = useResponsive();
   const { user } = useAuth();
-  const { recipes, isLoading, addRecipe } = useRecipes();
+  const { recipes, isLoading, addRecipe, updateRecipe } = useRecipes();
+  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
+  const isMockDataEnabled = config.mockData.enabled;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadGroceryItems = async () => {
+      if (isMockDataEnabled) {
+        setGroceryItems(mockGroceriesDB);
+        return;
+      }
+
+      try {
+        const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
+        if (isMounted) {
+          setGroceryItems(results.map(mapGroceryItem));
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Failed to load grocery items:', error);
+          setGroceryItems([]);
+        }
+      }
+    };
+
+    loadGroceryItems();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isMockDataEnabled]);
 
   // Calculate card width dynamically based on screen size
   // Account for container padding and gap between columns
@@ -79,33 +170,32 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const handleSaveRecipe = async (data: NewRecipeData) => {
     try {
       const baseRecipe = createRecipe({ ...data, imageUrl: undefined });
-      let imageUrl = baseRecipe.imageUrl;
+      const createdRecipe = await addRecipe({ ...baseRecipe, imageUrl: undefined });
 
       if (data.imageLocalUri) {
         const resized = await resizeAndValidateImage(data.imageLocalUri);
 
         if (!user || user.isGuest) {
-          imageUrl = resized.uri;
+          await attachGuestImage(createdRecipe.id, resized.uri, updateRecipe);
         } else {
           if (!user.householdId) {
             throw new Error('Household ID is missing for uploads.');
           }
 
-          const uploaded = await uploadRecipeImage({
+          await uploadImageWithCleanup({
+            recipeId: createdRecipe.id,
             imageUri: resized.uri,
             householdId: user.householdId,
-            recipeId: baseRecipe.localId,
+            updateRecipe,
           });
-          imageUrl = uploaded.signedUrl;
         }
       }
 
-    await addRecipe({ ...baseRecipe, imageUrl });
-    setShowAddRecipeModal(false);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'An unknown error occurred';
-    Alert.alert('Unable to save recipe', message);
-  }
+      setShowAddRecipeModal(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      Alert.alert('Unable to save recipe', message);
+    }
   };
 
   return (
@@ -184,7 +274,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         onClose={() => setShowAddRecipeModal(false)}
         onSave={handleSaveRecipe}
         categories={recipeCategories.filter((c) => c !== 'All')}
-        groceryItems={mockGroceriesDB}
+        groceryItems={groceryItems}
       />
     </SafeAreaView>
   );

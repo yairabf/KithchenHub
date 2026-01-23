@@ -1,5 +1,4 @@
-import React, { useState, useMemo } from 'react';
-import * as Crypto from 'expo-crypto';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,24 +23,21 @@ import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
 import { useResponsive } from '../../../common/hooks';
 import { colors } from '../../../theme';
 import { styles } from './styles';
-import { mockGroceriesDB } from '../../../data/groceryDatabase';
-import {
-  mockItems,
-  mockCategories,
-  mockShoppingLists,
-  mockFrequentlyAddedItems,
-  type ShoppingItem,
-  type ShoppingList,
-} from '../../../mocks/shopping';
+import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
 import { createShoppingItem, createShoppingList } from '../utils/shoppingFactory';
+import { createShoppingService } from '../services/shoppingService';
+import { config } from '../../../config';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export function ShoppingListsScreen() {
   const { isTablet } = useResponsive();
-  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>(mockShoppingLists);
-  const [selectedList, setSelectedList] = useState<ShoppingList>(mockShoppingLists[0]);
-  const [allItems, setAllItems] = useState<ShoppingItem[]>(mockItems);
+  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
+  const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
+  const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
+  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [frequentlyAddedItems, setFrequentlyAddedItems] = useState<GroceryItem[]>([]);
   const [selectedGroceryItem, setSelectedGroceryItem] = useState<GroceryItem | null>(null);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [quantityInput, setQuantityInput] = useState('1');
@@ -54,9 +50,54 @@ export function ShoppingListsScreen() {
   const [showAllItemsModal, setShowAllItemsModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const isMockDataEnabled = config.mockData.enabled;
+  const shoppingService = useMemo(
+    () => createShoppingService(isMockDataEnabled),
+    [isMockDataEnabled]
+  );
+  const fallbackList = useMemo<ShoppingList>(() => ({
+    id: 'fallback-list',
+    localId: 'fallback-list',
+    name: 'My List',
+    itemCount: 0,
+    icon: 'cart-outline',
+    color: colors.shopping,
+  }), []);
+  const activeList = selectedList ?? shoppingLists[0] ?? fallbackList;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadShoppingData = async () => {
+      try {
+        const data = await shoppingService.getShoppingData();
+        if (!isMounted) {
+          return;
+        }
+
+        setShoppingLists(data.shoppingLists);
+        setAllItems(data.shoppingItems);
+        setGroceryItems(data.groceryItems);
+        setCategories(data.categories);
+        setFrequentlyAddedItems(data.frequentlyAddedItems);
+        setSelectedList((current) => current ?? data.shoppingLists[0] ?? null);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+        console.error('Failed to load shopping data:', error);
+      }
+    };
+
+    loadShoppingData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [shoppingService]);
 
   // Filter items based on selected list
-  const filteredItems = allItems.filter(item => item.listId === selectedList.id);
+  const filteredItems = allItems.filter(item => item.listId === activeList.id);
 
   const handleQuantityChange = (itemId: string, delta: number) => {
     setAllItems(prev => prev.map(item =>
@@ -82,7 +123,7 @@ export function ShoppingListsScreen() {
 
     // Check if item already exists in the selected list
     const existingItemIndex = allItems.findIndex(
-      item => item.name === groceryItem.name && item.listId === selectedList.id
+      item => item.name === groceryItem.name && item.listId === activeList.id
     );
 
     if (existingItemIndex !== -1) {
@@ -94,7 +135,7 @@ export function ShoppingListsScreen() {
       ));
     } else {
       // Add new item to list
-      const newItem = createShoppingItem(groceryItem, selectedList.id, quantity);
+      const newItem = createShoppingItem(groceryItem, activeList.id, quantity);
       setAllItems(prev => [...prev, newItem]);
     }
 
@@ -109,7 +150,7 @@ export function ShoppingListsScreen() {
 
     // Check if item already exists in the selected list
     const existingItemIndex = allItems.findIndex(
-      item => item.name === selectedGroceryItem.name && item.listId === selectedList.id
+      item => item.name === selectedGroceryItem.name && item.listId === activeList.id
     );
 
     if (existingItemIndex !== -1) {
@@ -121,7 +162,7 @@ export function ShoppingListsScreen() {
       ));
     } else {
       // Add new item to list
-      const newItem = createShoppingItem(selectedGroceryItem, selectedList.id, quantity);
+      const newItem = createShoppingItem(selectedGroceryItem, activeList.id, quantity);
       setAllItems(prev => [...prev, newItem]);
     }
 
@@ -186,7 +227,7 @@ export function ShoppingListsScreen() {
   };
 
   const getCategoryItems = (categoryName: string): GroceryItem[] => {
-    return mockGroceriesDB.filter(item => item.category === categoryName);
+    return groceryItems.filter(item => item.category === categoryName);
   };
 
   const handleOpenAllItemsModal = () => {
@@ -211,14 +252,14 @@ export function ShoppingListsScreen() {
 
   // Format shopping list for sharing
   const shareText = useMemo(
-    () => formatShoppingListText(selectedList.name, filteredItems),
-    [selectedList.name, filteredItems]
+    () => formatShoppingListText(activeList.name, filteredItems),
+    [activeList.name, filteredItems]
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title={selectedList.name}
+        title={activeList.name}
         subtitle={`${totalItems} items total`}
         rightActions={{
           share: { onPress: () => setShowShareModal(true), label: 'Share shopping list' },
@@ -231,9 +272,10 @@ export function ShoppingListsScreen() {
           {/* Left Column - Shopping List */}
           <ShoppingListPanel
             shoppingLists={shoppingLists}
-            selectedList={selectedList}
+            selectedList={activeList}
             filteredItems={filteredItems}
-            onSelectList={setSelectedList}
+            groceryItems={groceryItems}
+            onSelectList={(list) => setSelectedList(list)}
             onCreateList={handleOpenCreateListModal}
             onSelectGroceryItem={handleSelectGroceryItem}
             onQuickAddItem={handleQuickAddItem}
@@ -244,11 +286,11 @@ export function ShoppingListsScreen() {
           {/* Right Column - Discovery */}
           <View style={[styles.rightColumn, !isTablet && styles.rightColumnPhone]}>
             <FrequentlyAddedGrid
-              items={mockFrequentlyAddedItems}
+              items={frequentlyAddedItems}
               onItemPress={handleQuickAddItem}
             />
             <CategoriesGrid
-              categories={mockCategories}
+              categories={categories}
               onCategoryPress={handleCategoryClick}
               onSeeAllPress={handleOpenAllItemsModal}
             />
@@ -260,10 +302,10 @@ export function ShoppingListsScreen() {
       <CenteredModal
         visible={showQuantityModal}
         onClose={handleCancelQuantityModal}
-        title={`Add to ${selectedList.name}`}
+        title={`Add to ${activeList.name}`}
         confirmText="Add to List"
         onConfirm={handleAddToList}
-        confirmColor={selectedList.color}
+        confirmColor={activeList.color}
       >
         {selectedGroceryItem && (
           <>
@@ -388,7 +430,7 @@ export function ShoppingListsScreen() {
       {/* All Items Modal */}
       <AllItemsModal
         visible={showAllItemsModal}
-        items={mockGroceriesDB}
+        items={groceryItems}
         onClose={handleCloseAllItemsModal}
         onSelectItem={handleSelectItemFromAllItems}
         onQuickAddItem={handleQuickAddItemFromAllItems}
@@ -414,14 +456,14 @@ export function ShoppingListsScreen() {
                 key={list.id}
                 style={[
                   styles.quickAddListBubble,
-                  selectedList.id === list.id && { backgroundColor: list.color },
+                  activeList.id === list.id && { backgroundColor: list.color },
                 ]}
                 onPress={() => setSelectedList(list)}
               >
                 <Text
                   style={[
                     styles.quickAddListBubbleText,
-                    selectedList.id === list.id && { color: colors.textLight },
+                    activeList.id === list.id && { color: colors.textLight },
                   ]}
                 >
                   {list.name}
@@ -432,7 +474,7 @@ export function ShoppingListsScreen() {
 
           {/* Search Bar */}
           <GrocerySearchBar
-            items={mockGroceriesDB}
+            items={groceryItems}
             onSelectItem={(item) => {
               setShowQuickAddModal(false);
               handleSelectGroceryItem(item);
@@ -449,7 +491,7 @@ export function ShoppingListsScreen() {
       <ShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title={`Share ${selectedList.name}`}
+        title={`Share ${activeList.name}`}
         shareText={shareText}
       />
 

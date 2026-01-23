@@ -39,6 +39,9 @@ describe('ImportDataModal', () => {
         // Should start loading
         expect(getByText('Importing your recipes, lists, and chores...')).toBeTruthy();
         expect(ImportService.gatherLocalData).toHaveBeenCalled();
+        await waitFor(() => {
+            expect(ImportService.submitImport).toHaveBeenCalled();
+        });
     });
 
     it('shows success state and clear button on successful import', async () => {

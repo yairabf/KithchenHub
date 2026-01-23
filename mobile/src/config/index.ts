@@ -1,3 +1,5 @@
+import { isMockDataEnabled } from '../common/utils/mockDataToggle';
+
 /**
  * Mobile application configuration.
  * Centralizes environment variables and application-wide settings.
@@ -10,4 +12,7 @@ export const config = {
     auth: {
         redirectScheme: 'kitchen-hub',
     },
+  mockData: {
+    enabled: isMockDataEnabled(process.env.EXPO_PUBLIC_USE_MOCK_DATA),
+  },
 };

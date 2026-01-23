@@ -6,7 +6,8 @@ API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQ
 - JWT auth with Google sign-in (Supabase), guest login, token refresh, and offline sync
 - UUID-based user identification for seamless cross-provider integration
 - Household membership plus shopping lists/items, recipes, and chores
-- Centralized grocery catalog backing search and defaults
+- Master grocery catalog (`master_grocery_catalog` table) backing search, categories, and default item properties
+- Shopping items can reference catalog items for consistency and defaults
 - Private household uploads bucket with storage RLS policies
 - Data import from guest mode to household accounts with content fingerprinting and idempotency
 - Dashboard summaries for household activity
@@ -86,6 +87,7 @@ To verify that Row Level Security is correctly isolating data between households
 - Base URL: `http://localhost:3000/api/v1`
 - Docs: `http://localhost:3000/api/docs`
 - Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh`, `GET /groceries/search`, `GET /groceries/categories` (others use bearer JWT)
+- Shopping endpoints: `GET /shopping-lists`, `POST /shopping-lists`, `GET /shopping-lists/:id`, `DELETE /shopping-lists/:id`, `POST /shopping-lists/:id/items`, `PATCH /shopping-items/:id`, `DELETE /shopping-items/:id`
 - Protected routes: Most endpoints require JWT authentication; household endpoints also require household membership
 - CORS enabled with credentials for client apps
 
@@ -109,7 +111,7 @@ src/
   modules/
     auth/                      # Google + guest auth, token refresh, sync
     households/                # Household CRUD/membership
-    shopping/                  # Lists, items, and grocery catalog search
+    shopping/                  # Lists, items, and master grocery catalog search
     recipes/                   # Household recipes
     chores/                    # Task assignments and completion
     import/                    # Guest mode data import (ID-based & fingerprint deduplication)

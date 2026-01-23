@@ -27,6 +27,8 @@ The Recipes feature allows users to browse, search, filter, and create recipes. 
   - Grid layout displaying recipe cards (2 columns)
   - Floating action button to add new recipes
   - Pastel colors for visual variety
+  - **Mock Data Toggle**: Loads grocery items from `mockGroceriesDB` or API (`/groceries/search?q=`) based on `config.mockData.enabled`
+  - **Image Upload**: Handles recipe image uploads with guest/authenticated user logic
 
 #### Code Snippet - Filtering Logic
 
@@ -270,30 +272,47 @@ const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Sna
   - `searchQuery` - Search input text
   - `selectedCategory` - Active category filter
   - `showAddRecipeModal` - Modal visibility
+  - `groceryItems` - Grocery items loaded from mock or API based on toggle
   - `recipes` - Managed by `useRecipes` hook (switches between Local/Remote sources)
   - `isLoading` - Loading state for async operations
+- **Hook**: `useRecipes()` (`mobile/src/features/recipes/hooks/useRecipes.ts`)
+  - Returns: `recipes`, `isLoading`, `error`, `addRecipe`, `updateRecipe`
+  - Uses `createRecipeService()` factory to select service implementation
+  - Determines mock vs real based on `config.mockData.enabled` OR guest user status
 
 ## Service Layer
 
-The feature now uses a **Strategy Pattern** to handle data fetching, switching transparently between local mocks and backend API based on authentication state.
+The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local mocks and backend API based on environment configuration.
 
-- **Hook**: `useRecipes()` (`mobile/src/features/recipes/hooks/useRecipes.ts`)
-  - Detects `AuthContext` state.
-  - Instantiates the appropriate service.
+- **Factory**: `createRecipeService(isMockEnabled: boolean)` (`mobile/src/features/recipes/services/recipeService.ts`)
+  - Returns `LocalRecipeService` when `isMockEnabled` is true
+  - Returns `RemoteRecipeService` when `isMockEnabled` is false
+- **Interface**: `IRecipeService`
+  - `getRecipes(): Promise<Recipe[]>`
+  - `createRecipe(recipe: Partial<Recipe>): Promise<Recipe>`
+  - `updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe>`
 - **Strategies**:
-  - `LocalRecipeService`: Returns mock data (Guest Mode).
-  - `RemoteRecipeService`: Calls backend via `api.ts` (Cloud Mode).
-- **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper.
+  - `LocalRecipeService`: Returns mock data from `mockRecipes`
+  - `RemoteRecipeService`: Calls backend via `api.ts` (`/recipes` endpoint)
+- **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
+  - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
+  - When enabled OR user is guest, uses local service
+- **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
 ## Key Dependencies
 
 - `@expo/vector-icons` - Ionicons for icons
-- `mockGroceriesDB` - For ingredient search in add modal
-- `mockRecipes` - Initial recipe data
+- `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
+- `createRecipeService` - Service factory for selecting mock/real data source
+- `mockGroceriesDB` - For ingredient search in add modal (when mock enabled)
+- `mockRecipes` - Initial recipe data (used by LocalRecipeService)
+- `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
 - `pastelColors` - Theme colors for card backgrounds
 - `GrocerySearchBar` - Reused from shopping feature for ingredient search
 - `CenteredModal` - Shared modal component
-- `FloatingActionButton` - Shared FAB component
+- `ScreenHeader` - Shared header component
+- `useAuth` - Authentication context hook
+- `useResponsive` - Responsive layout hook
 
 ## UI Flow
 

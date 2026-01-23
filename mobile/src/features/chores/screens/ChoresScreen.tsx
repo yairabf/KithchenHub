@@ -16,23 +16,53 @@ import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatChoresText } from '../../../common/utils/shareUtils';
-import { mockChores, type Chore } from '../../../mocks/chores';
+import { type Chore } from '../../../mocks/chores';
 import { styles } from './styles';
 import type { ChoresScreenProps } from './types';
 import { createChore } from '../utils/choreFactory';
+import { createChoresService } from '../services/choresService';
+import { config } from '../../../config';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
-  const [chores, setChores] = useState(mockChores);
+  const [chores, setChores] = useState<Chore[]>([]);
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const { width } = useWindowDimensions();
+  const isMockDataEnabled = config.mockData.enabled;
+  const choresService = useMemo(
+    () => createChoresService(isMockDataEnabled),
+    [isMockDataEnabled]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadChores = async () => {
+      try {
+        const data = await choresService.getChores();
+        if (isMounted) {
+          setChores(data);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Failed to load chores:', error);
+        }
+      }
+    };
+
+    loadChores();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [choresService]);
 
   // Responsive breakpoint: tablet/landscape at 768px+
   const isWideScreen = width >= 768;
 
   const toggleChore = (id: string) => {
-    setChores(chores.map(chore =>
+    setChores(prevChores => prevChores.map(chore =>
       chore.id === id ? { ...chore, completed: !chore.completed } : chore
     ));
   };
@@ -43,19 +73,19 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   };
 
   const handleUpdateAssignee = (choreId: string, assignee: string | undefined) => {
-    setChores(chores.map(chore =>
+    setChores(prevChores => prevChores.map(chore =>
       chore.id === choreId ? { ...chore, assignee } : chore
     ));
   };
 
   const handleUpdateChore = (choreId: string, updates: Partial<Chore>) => {
-    setChores(chores.map(chore =>
+    setChores(prevChores => prevChores.map(chore =>
       chore.id === choreId ? { ...chore, ...updates } : chore
     ));
   };
 
   const handleDeleteChore = (choreId: string) => {
-    setChores(chores.filter(chore => chore.id !== choreId));
+    setChores(prevChores => prevChores.filter(chore => chore.id !== choreId));
   };
 
   const handleAddChore = (newChore: {
@@ -67,7 +97,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     section: 'today' | 'thisWeek';
   }) => {
     const chore = createChore(newChore);
-    setChores([...chores, chore]);
+    setChores(prevChores => [...prevChores, chore]);
   };
 
   // Register the handler with parent on mount

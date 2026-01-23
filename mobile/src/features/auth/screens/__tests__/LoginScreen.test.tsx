@@ -41,6 +41,8 @@ describe('LoginScreen', () => {
   const mockSignInWithGoogle = jest.fn();
   const mockSignInAsGuest = jest.fn();
   const mockResolveGuestImport = jest.fn();
+  const originalWarn = console.warn;
+  const consoleWarnSpy = jest.spyOn(console, 'warn');
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -50,6 +52,16 @@ describe('LoginScreen', () => {
       showGuestImportPrompt: false,
       resolveGuestImport: mockResolveGuestImport,
     });
+    consoleWarnSpy.mockImplementation((message, ...args) => {
+      if (typeof message === 'string' && message.includes('SafeAreaView has been deprecated')) {
+        return;
+      }
+      originalWarn(message, ...args);
+    });
+  });
+
+  afterAll(() => {
+    consoleWarnSpy.mockRestore();
   });
 
   describe('Google sign-in', () => {

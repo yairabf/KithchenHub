@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import { ManageHouseholdModal } from '../../../settings/components/ManageHouseho
 import { DateTimePicker } from '../../../../common/components/DateTimePicker';
 import { styles } from './styles';
 import { ChoresQuickActionModalProps, ChoreTemplate } from './types';
+import { createChoresService } from '../../services/choresService';
+import { config } from '../../../../config';
 
 // Mock Chores Database - Common household chores
 const mockChoresDB: ChoreTemplate[] = [
@@ -82,8 +84,14 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
   const [selectedIcon, setSelectedIcon] = useState<string>('📋');
   const [searchResults, setSearchResults] = useState<ChoreTemplate[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [choreTemplates, setChoreTemplates] = useState<ChoreTemplate[]>([]);
   const inputRef = useRef<TextInput>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMockDataEnabled = config.mockData.enabled;
+  const choresService = useMemo(
+    () => createChoresService(isMockDataEnabled),
+    [isMockDataEnabled]
+  );
 
   const getDueDateSection = (date: Date): 'today' | 'thisWeek' => {
     const today = dayjs().startOf('day');
@@ -95,6 +103,43 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
     return 'thisWeek';
   };
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadChoreTemplates = async () => {
+      if (isMockDataEnabled) {
+        setChoreTemplates(mockChoresDB);
+        return;
+      }
+
+      try {
+        const chores = await choresService.getChores();
+        if (isMounted) {
+          const templates = chores.map((chore) => ({
+            id: chore.id,
+            name: chore.name,
+            icon: chore.icon ?? '🧹',
+            category: chore.section === 'today' ? 'Today' : 'Upcoming',
+          }));
+          setChoreTemplates(templates);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Failed to load chore templates:', error);
+          setChoreTemplates([]);
+        }
+      }
+    };
+
+    if (visible) {
+      loadChoreTemplates();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [choresService, isMockDataEnabled, visible]);
+
   // Search functionality with debounce
   useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -104,7 +149,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
     if (newChoreText.trim().length > 0) {
       searchTimeoutRef.current = setTimeout(() => {
         const query = newChoreText.toLowerCase().trim();
-        const results = mockChoresDB.filter(chore =>
+        const results = choreTemplates.filter(chore =>
           chore.name.toLowerCase().startsWith(query)
         );
         setSearchResults(results);
@@ -120,7 +165,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [newChoreText]);
+  }, [newChoreText, choreTemplates]);
 
   const handleSelectChoreTemplate = (choreTemplate: ChoreTemplate) => {
     setNewChoreText(choreTemplate.name);

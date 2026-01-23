@@ -10,7 +10,6 @@ import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper
 import { GroceryCard, GroceryCardContent, QuantityControls } from '../../../../common/components/GroceryCard';
 import { GrocerySearchBar } from '../GrocerySearchBar';
 import { colors, borderRadius, pastelColors } from '../../../../theme';
-import { mockGroceriesDB } from '../../../../data/groceryDatabase';
 import { styles } from './styles';
 import { ShoppingListPanelProps } from './types';
 
@@ -18,6 +17,7 @@ export function ShoppingListPanel({
   shoppingLists,
   selectedList,
   filteredItems,
+  groceryItems,
   onSelectList,
   onCreateList,
   onSelectGroceryItem,
@@ -110,7 +110,7 @@ export function ShoppingListPanel({
 
       {/* Search Bar */}
       <GrocerySearchBar
-        items={mockGroceriesDB}
+        items={groceryItems}
         onSelectItem={onSelectGroceryItem}
         onQuickAddItem={onQuickAddItem}
         variant="surface"
