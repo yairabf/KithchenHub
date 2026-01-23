@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,17 +8,56 @@ import {
 import { colors } from '../../../../theme';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { GrocerySearchBar, GroceryItem } from '../GrocerySearchBar';
-import { mockGroceriesDB } from '../../../../data/groceryDatabase';
-import { mockQuickActionLists } from '../../../../mocks/shopping';
+import type { ShoppingList } from '../../../../mocks/shopping';
+import { createShoppingService } from '../../services/shoppingService';
+import { config } from '../../../../config';
 import { styles } from './styles';
 import { ShoppingQuickActionModalProps } from './types';
 
 export function ShoppingQuickActionModal({ visible, onClose }: ShoppingQuickActionModalProps) {
-  const [activeListId, setActiveListId] = useState(mockQuickActionLists[0].id);
+  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
+  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
+  const [activeListId, setActiveListId] = useState<string | null>(null);
+  const isMockDataEnabled = config.mockData.enabled;
+  const shoppingService = useMemo(
+    () => createShoppingService(isMockDataEnabled),
+    [isMockDataEnabled]
+  );
+  const hasLists = shoppingLists.length > 0;
 
-  const activeList = mockQuickActionLists.find(l => l.id === activeListId);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadShoppingData = async () => {
+      try {
+        const data = await shoppingService.getShoppingData();
+        if (!isMounted) {
+          return;
+        }
+        setShoppingLists(data.shoppingLists);
+        setGroceryItems(data.groceryItems);
+        setActiveListId((current) => current ?? data.shoppingLists[0]?.id ?? null);
+      } catch (error) {
+        if (isMounted) {
+          console.error('Failed to load quick add data:', error);
+        }
+      }
+    };
+
+    if (visible) {
+      loadShoppingData();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [shoppingService, visible]);
 
   const handleQuickAddItem = (groceryItem: GroceryItem) => {
+    if (!activeListId) {
+      console.warn('Quick add skipped: no active list selected.');
+      return;
+    }
     // Immediately add the item with default quantity
     console.log('Adding item:', {
       name: groceryItem.name,
@@ -44,42 +83,50 @@ export function ShoppingQuickActionModal({ visible, onClose }: ShoppingQuickActi
     >
       <View>
         {/* List Switcher */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.listSwitcher}
-          contentContainerStyle={styles.listSwitcherContent}
-        >
-          {mockQuickActionLists.map(list => (
-            <TouchableOpacity
-              key={list.id}
-              style={[
-                styles.listBubble,
-                activeListId === list.id && { backgroundColor: list.color },
-              ]}
-              onPress={() => setActiveListId(list.id)}
+        {hasLists ? (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.listSwitcher}
+              contentContainerStyle={styles.listSwitcherContent}
             >
-              <Text
-                style={[
-                  styles.listBubbleText,
-                  activeListId === list.id && { color: colors.textLight },
-                ]}
-              >
-                {list.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              {shoppingLists.map(list => (
+                <TouchableOpacity
+                  key={list.id}
+                  style={[
+                    styles.listBubble,
+                    activeListId === list.id && { backgroundColor: list.color },
+                  ]}
+                  onPress={() => setActiveListId(list.id)}
+                >
+                  <Text
+                    style={[
+                      styles.listBubbleText,
+                      activeListId === list.id && { color: colors.textLight },
+                    ]}
+                  >
+                    {list.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-        {/* Search Bar using reusable component */}
-        <GrocerySearchBar
-          items={mockGroceriesDB}
-          onSelectItem={handleSelectGroceryItem}
-          onQuickAddItem={handleQuickAddItem}
-          variant="background"
-          showShadow={false}
-          allowCustomItems={true}
-        />
+            {/* Search Bar using reusable component */}
+            <GrocerySearchBar
+              items={groceryItems}
+              onSelectItem={handleSelectGroceryItem}
+              onQuickAddItem={handleQuickAddItem}
+              variant="background"
+              showShadow={false}
+              allowCustomItems={true}
+            />
+          </>
+        ) : (
+          <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+            Create a shopping list to use quick add.
+          </Text>
+        )}
       </View>
     </CenteredModal>
   );

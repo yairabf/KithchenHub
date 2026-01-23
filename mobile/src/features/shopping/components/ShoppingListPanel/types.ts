@@ -5,6 +5,7 @@ export interface ShoppingListPanelProps {
   shoppingLists: ShoppingList[];
   selectedList: ShoppingList;
   filteredItems: ShoppingItem[];
+  groceryItems: GroceryItem[];
   onSelectList: (list: ShoppingList) => void;
   onCreateList: () => void;
   onSelectGroceryItem: (item: GroceryItem) => void;
