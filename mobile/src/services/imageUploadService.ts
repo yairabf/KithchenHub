@@ -52,6 +52,16 @@ const assertRequiredParams = (params: UploadRecipeImageParams) => {
 };
 
 /**
+ * Ensures the provided storage path is valid.
+ * @param path - Supabase storage path to validate.
+ */
+const assertRequiredPath = (path: string) => {
+  if (!path?.trim()) {
+    throw new Error('Missing required path');
+  }
+};
+
+/**
  * Uploads a resized JPEG image to Supabase Storage and returns a signed URL.
  */
 export const uploadRecipeImage = async (
@@ -91,4 +101,23 @@ export const uploadRecipeImage = async (
     path: uploadData.path,
     signedUrl: signedData.signedUrl,
   };
+};
+
+/**
+ * Deletes a recipe image from Supabase Storage by path.
+ * @param path - Supabase storage path to delete.
+ */
+export const deleteRecipeImage = async (path: string): Promise<void> => {
+  assertRequiredPath(path);
+
+  const storage = supabase.storage.from(BUCKET_NAME);
+  const { data, error } = await storage.remove([path]);
+
+  if (error) {
+    throw new Error(error.message || 'Failed to delete recipe image');
+  }
+
+  if (!data) {
+    throw new Error('Failed to delete recipe image');
+  }
 };

@@ -1,4 +1,4 @@
-import { buildRecipeImagePath, uploadRecipeImage } from './imageUploadService';
+import { buildRecipeImagePath, deleteRecipeImage, uploadRecipeImage } from './imageUploadService';
 import { supabase } from './supabase';
 
 jest.mock('./supabase', () => ({
@@ -173,6 +173,40 @@ describe('imageUploadService', () => {
           recipeId: 'recipe-456',
         })
       ).rejects.toThrow('Failed to create signed image URL');
+    });
+  });
+
+  describe.each([
+    ['empty path', ''],
+    ['whitespace path', '  '],
+  ])('deleteRecipeImage validation: %s', (_label, path) => {
+    it('throws when path is invalid', async () => {
+      await expect(deleteRecipeImage(path)).rejects.toThrow('Missing required path');
+    });
+  });
+
+  describe('deleteRecipeImage', () => {
+    it('removes the image path from storage', async () => {
+      const remove = jest.fn().mockResolvedValue({ data: [{ name: 'file.jpg' }], error: null });
+      mockStorageFrom.mockReturnValue({ remove });
+
+      await expect(deleteRecipeImage('households/house/recipes/recipe/file.jpg')).resolves.toBeUndefined();
+
+      expect(remove).toHaveBeenCalledWith(['households/house/recipes/recipe/file.jpg']);
+    });
+
+    describe.each([
+      ['storage error', { data: null, error: { message: 'Delete failed' } }, 'Delete failed'],
+      ['missing data', { data: null, error: null }, 'Failed to delete recipe image'],
+    ])('error handling: %s', (_label, removeResult, expectedMessage) => {
+      it('throws a helpful error message', async () => {
+        const remove = jest.fn().mockResolvedValue(removeResult);
+        mockStorageFrom.mockReturnValue({ remove });
+
+        await expect(deleteRecipeImage('households/house/recipes/recipe/file.jpg')).rejects.toThrow(
+          expectedMessage
+        );
+      });
     });
   });
 });
