@@ -1,3 +1,10 @@
+jest.mock('expo-clipboard', () => ({
+    setStringAsync: jest.fn(),
+    getStringAsync: jest.fn(),
+    addClipboardListener: jest.fn(),
+    removeClipboardListener: jest.fn(),
+}));
+
 import { config } from '../index';
 
 describe('MobileConfig', () => {
