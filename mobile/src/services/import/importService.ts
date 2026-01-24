@@ -8,14 +8,24 @@ import {
     ShoppingItemInputDto,
     ImportResponseDto
 } from './types';
+import { validateModeMigration, validateEntitiesMode } from '../../common/validation/dataModeValidation';
 
-// Helper to safely parse strings to numbers
+/**
+ * Safely parses a string to an integer, returning 0 if parsing fails
+ * @param value - The string value to parse
+ * @returns The parsed integer, or 0 if value is undefined or NaN
+ */
 const safeParseInt = (value: string | undefined): number => {
     if (!value) return 0;
     const parsed = parseInt(value, 10);
     return isNaN(parsed) ? 0 : parsed;
 };
 
+/**
+ * Safely parses a string to a float, returning 0 if parsing fails
+ * @param value - The string value to parse
+ * @returns The parsed float, or 0 if value is undefined or NaN
+ */
 const safeParseFloat = (value: string | undefined): number => {
     if (!value) return 0;
     const parsed = parseFloat(value);
@@ -24,16 +34,27 @@ const safeParseFloat = (value: string | undefined): number => {
 
 export class ImportService {
     /**
-     * Gathers all guest local data using local services and constructs
+     * Gathers all guest local data from AsyncStorage and constructs
      * the payload for the import API.
      *
-     * Note: Always uses local services to avoid remote API data.
+     * Note: Always uses local services which read from guest storage (AsyncStorage).
+     * Returns empty arrays if no guest data exists (not mock data).
+     * 
+     * Validates that all entities are in guest mode before migration.
      */
     static async gatherLocalData(): Promise<ImportRequestDto> {
+        // Validate migration is allowed (guest to signed-in)
+        validateModeMigration('guest', 'signed-in');
+        
         // 1. Recipes
-        // Always use local services for guest imports.
-        const recipeService = createRecipeService(true);
+        // Always use guest mode service for guest imports.
+        const recipeService = createRecipeService('guest');
         const recipes = await recipeService.getRecipes();
+        
+        // Validate all recipes are in guest mode
+        if (recipes.length > 0) {
+            validateEntitiesMode(recipes, 'guest');
+        }
 
         const importRecipes: ImportRecipeDto[] = recipes.map(recipe => ({
             id: recipe.localId,
@@ -52,10 +73,21 @@ export class ImportService {
         }));
 
         // 2. Shopping Lists
-        const shoppingService = createShoppingService(true);
+        const shoppingService = createShoppingService('guest');
         const shoppingData = await shoppingService.getShoppingData();
+        
+        // Validate all shopping lists are in guest mode
+        if (shoppingData.shoppingLists.length > 0) {
+            validateEntitiesMode(shoppingData.shoppingLists, 'guest');
+        }
+        
+        // Validate all shopping items are in guest mode
+        if (shoppingData.shoppingItems.length > 0) {
+            validateEntitiesMode(shoppingData.shoppingItems, 'guest');
+        }
+        
         const importShoppingLists: ImportShoppingListDto[] = shoppingData.shoppingLists.map(list => {
-            const listItems = shoppingData.shoppingItems.filter(item => item.listId === list.id);
+            const listItems = shoppingData.shoppingItems.filter(item => item.listId === list.id || item.listId === list.localId);
             const importItems: ShoppingItemInputDto[] = listItems.map(item => ({
                 name: item.name,
                 quantity: item.quantity,

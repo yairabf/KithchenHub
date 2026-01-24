@@ -5,11 +5,24 @@ import { mockShoppingLists, mockItems } from '../../mocks/shopping';
 import { createRecipeService } from '../../features/recipes/services/recipeService';
 import { createShoppingService } from '../../features/shopping/services/shoppingService';
 import { config } from '../../config';
+import { guestStorage } from '../../common/utils/guestStorage';
 
 // Mock dependencies
 jest.mock('../../services/api', () => ({
     api: {
         post: jest.fn(),
+    },
+}));
+
+jest.mock('../../common/utils/guestStorage', () => ({
+    guestStorage: {
+        getRecipes: jest.fn().mockResolvedValue([]),
+        getShoppingLists: jest.fn().mockResolvedValue([]),
+        getShoppingItems: jest.fn().mockResolvedValue([]),
+        saveRecipes: jest.fn(),
+        saveShoppingLists: jest.fn(),
+        saveShoppingItems: jest.fn(),
+        clearAll: jest.fn(),
     },
 }));
 
@@ -52,17 +65,50 @@ describe('ImportService', () => {
             { scenario: 'mock enabled', mockEnabled: true },
             { scenario: 'mock disabled', mockEnabled: false },
         ])('service selection (%s)', ({ mockEnabled }) => {
-            it('should always use local services for guest import', async () => {
+            it('should always use guest mode services for guest import', async () => {
                 config.mockData.enabled = mockEnabled;
+
+                // Mock empty arrays to avoid validation errors in service selection test
+                (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
+                (guestStorage.getShoppingLists as jest.Mock).mockResolvedValue([]);
+                (guestStorage.getShoppingItems as jest.Mock).mockResolvedValue([]);
+                (mockRecipeService.getRecipes as jest.Mock).mockResolvedValue([]);
+                (mockShoppingService.getShoppingData as jest.Mock).mockResolvedValue({
+                    shoppingLists: [],
+                    shoppingItems: [],
+                    categories: [],
+                    groceryItems: [],
+                    frequentlyAddedItems: [],
+                });
 
                 await ImportService.gatherLocalData();
 
-                expect(jest.mocked(createRecipeService)).toHaveBeenCalledWith(true);
-                expect(jest.mocked(createShoppingService)).toHaveBeenCalledWith(true);
+                expect(jest.mocked(createRecipeService)).toHaveBeenCalledWith('guest');
+                expect(jest.mocked(createShoppingService)).toHaveBeenCalledWith('guest');
             });
         });
 
         it('should gather recipes and shopping lists from local sources', async () => {
+            // Add mode field to mock data to pass validation
+            const guestRecipes = mockRecipes.map(r => ({ ...r, mode: 'guest' as const }));
+            const guestLists = mockShoppingLists.map(l => ({ ...l, mode: 'guest' as const }));
+            const guestItems = mockItems.map(i => ({ ...i, mode: 'guest' as const }));
+
+            // Mock guestStorage to return test data
+            (guestStorage.getRecipes as jest.Mock).mockResolvedValue(guestRecipes);
+            (guestStorage.getShoppingLists as jest.Mock).mockResolvedValue(guestLists);
+            (guestStorage.getShoppingItems as jest.Mock).mockResolvedValue(guestItems);
+
+            // Update service mocks to return data from guestStorage
+            (mockRecipeService.getRecipes as jest.Mock).mockResolvedValue(guestRecipes);
+            (mockShoppingService.getShoppingData as jest.Mock).mockResolvedValue({
+                shoppingLists: guestLists,
+                shoppingItems: guestItems,
+                categories: [],
+                groceryItems: [],
+                frequentlyAddedItems: [],
+            });
+
             const data = await ImportService.gatherLocalData();
 
             expect(data.recipes).toBeDefined();
@@ -79,6 +125,13 @@ describe('ImportService', () => {
         });
 
         it('should map recipe fields correctly', async () => {
+            // Add mode field to mock data to pass validation
+            const guestRecipes = mockRecipes.map(r => ({ ...r, mode: 'guest' as const }));
+
+            // Mock guestStorage to return test data
+            (guestStorage.getRecipes as jest.Mock).mockResolvedValue(guestRecipes);
+            (mockRecipeService.getRecipes as jest.Mock).mockResolvedValue(guestRecipes);
+
             const data = await ImportService.gatherLocalData();
             const firstRecipe = data.recipes?.[0];
             const mockRecipe = mockRecipes[0];
@@ -89,6 +142,30 @@ describe('ImportService', () => {
             // For now, key fields verification:
             expect(firstRecipe?.ingredients.length).toBe(mockRecipe.ingredients.length);
             expect(firstRecipe?.instructions.length).toBe(mockRecipe.instructions.length);
+        });
+
+        it('should return empty arrays when no guest data exists', async () => {
+            // Mock guestStorage to return empty arrays
+            (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
+            (guestStorage.getShoppingLists as jest.Mock).mockResolvedValue([]);
+            (guestStorage.getShoppingItems as jest.Mock).mockResolvedValue([]);
+
+            // Update service mocks to return empty arrays
+            (mockRecipeService.getRecipes as jest.Mock).mockResolvedValue([]);
+            (mockShoppingService.getShoppingData as jest.Mock).mockResolvedValue({
+                shoppingLists: [],
+                shoppingItems: [],
+                categories: [],
+                groceryItems: [],
+                frequentlyAddedItems: [],
+            });
+
+            const data = await ImportService.gatherLocalData();
+
+            expect(data.recipes).toBeDefined();
+            expect(data.recipes?.length).toBe(0);
+            expect(data.shoppingLists).toBeDefined();
+            expect(data.shoppingLists?.length).toBe(0);
         });
     });
 
