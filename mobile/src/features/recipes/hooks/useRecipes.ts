@@ -3,6 +3,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { createRecipeService, IRecipeService } from '../services/recipeService';
 import { Recipe } from '../../../mocks/recipes';
 import { config } from '../../../config';
+import { determineUserDataMode } from '../../../common/types/dataModes';
+import { validateUserAccessToMode } from '../../../common/validation/dataModeValidation';
 
 export function useRecipes() {
     const { user, isLoading: isAuthLoading } = useAuth();
@@ -10,11 +12,18 @@ export function useRecipes() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    const isMockDataEnabled = config.mockData.enabled;
-    const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+    // Determine data mode based on user authentication state
+    const userMode = useMemo(() => {
+        if (config.mockData.enabled) {
+            return 'guest' as const;
+        }
+        return determineUserDataMode(user);
+    }, [user]);
+
+    // Create service based on mode
     const service: IRecipeService = useMemo(() => {
-        return createRecipeService(shouldUseMockData);
-    }, [shouldUseMockData]);
+        return createRecipeService(userMode);
+    }, [userMode]);
 
     useEffect(() => {
         if (isAuthLoading) return;

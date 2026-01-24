@@ -30,6 +30,7 @@ import { createShoppingService } from '../services/shoppingService';
 import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSelectedList } from '../utils/selectionUtils';
+import { determineUserDataMode } from '../../../common/types/dataModes';
 import { supabase } from '../../../services/supabase';
 import { api } from '../../../services/api';
 import {
@@ -101,13 +102,19 @@ export function ShoppingListsScreen() {
   const [showAllItemsModal, setShowAllItemsModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const isMockDataEnabled = config.mockData.enabled;
-  const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
-  const isRealtimeEnabled = !shouldUseMockData && !!user?.householdId;
+  // Determine data mode based on user authentication state
+  const userMode = useMemo(() => {
+    if (config.mockData.enabled) {
+      return 'guest' as const;
+    }
+    return determineUserDataMode(user);
+  }, [user]);
+
+  const isRealtimeEnabled = userMode === 'signed-in' && !!user?.householdId;
   const listIdFilter = buildListIdFilter(shoppingLists.map((list) => list.id));
   const shoppingService = useMemo(
-    () => createShoppingService(shouldUseMockData),
-    [shouldUseMockData]
+    () => createShoppingService(userMode),
+    [userMode]
   );
   const fallbackList = useMemo<ShoppingList>(() => ({
     id: 'fallback-list',

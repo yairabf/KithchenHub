@@ -98,8 +98,11 @@ interface ImportDataModalProps {
 ```
 
 - **Features**:
-  - Aggregates local data using `ImportService.gatherLocalData()`
-  - Uses service factories (`createRecipeService`, `createShoppingService`) to gather data based on `config.mockData.enabled`
+  - Aggregates local guest data using `ImportService.gatherLocalData()`
+  - Always uses guest mode services (`createRecipeService('guest')`, `createShoppingService('guest')`) to read from AsyncStorage
+  - Validates that all entities are in guest mode before migration
+  - Reads from real guest storage (AsyncStorage), not mock data
+  - Returns empty arrays if no guest data exists
   - Sends data to backend API (`/import` endpoint)
   - Displays loading state with generic message
   - Shows success state with:
@@ -173,8 +176,10 @@ interface ImportDataModalProps {
 - `AuthContext` - User authentication state and guest data management (`useAuth` hook)
 - `HouseholdContext` - Household member management (`useHousehold` hook)
 - `ImportService` - Logic for gathering and uploading local guest data
-  - Uses `createRecipeService` and `createShoppingService` factories
-  - Respects `config.mockData.enabled` when gathering data
+  - Always uses guest mode services (`createRecipeService('guest')`, `createShoppingService('guest')`)
+  - Reads from AsyncStorage via `guestStorage` utilities, not mock data
+  - Validates entity modes before migration using `validateModeMigration()` and `isGuestEntity()`
+  - Returns empty arrays when no guest data exists
 - `ScreenHeader` - Shared header component for consistent navigation
 - `CenteredModal` - Shared modal component (used by ManageHouseholdModal, ImportDataModal, and guest data deletion confirmation)
 - `Toast` - Shared toast component for user feedback (success/error messages)

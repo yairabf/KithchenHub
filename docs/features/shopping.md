@@ -40,11 +40,17 @@ The Shopping feature provides comprehensive shopping list management with the ab
 #### Code Snippet - Service Initialization
 
 ```typescript
-const isMockDataEnabled = config.mockData.enabled;
-const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+// Determine data mode based on user authentication state
+const userMode = useMemo(() => {
+  if (config.mockData.enabled) {
+    return 'guest' as const;
+  }
+  return determineUserDataMode(user);
+}, [user]);
+
 const shoppingService = useMemo(
-  () => createShoppingService(shouldUseMockData),
-  [shouldUseMockData]
+  () => createShoppingService(userMode),
+  [userMode]
 );
 
 useEffect(() => {
@@ -215,50 +221,67 @@ interface GroceryItem {
   - `categories` - Category definitions
   - `frequentlyAddedItems` - Frequently added grocery items
   - Various modal visibility states
-- **Service**: `createShoppingService(isMockEnabled)` factory creates service instance
+- **Service**: `createShoppingService(mode)` factory creates service instance based on data mode
   - Loads all data via `shoppingService.getShoppingData()` on mount
-  - Switches between mock and API based on `config.mockData.enabled` or guest status
+  - Mode determined by `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
 - **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
 
 ## Service Layer
 
-The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local mocks and backend API based on environment configuration.
+The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local guest storage and backend API based on user authentication state.
 
-- **Factory**: `createShoppingService(isMockEnabled: boolean)` (`mobile/src/features/shopping/services/shoppingService.ts`)
-  - Returns `LocalShoppingService` when `isMockEnabled` is true
-  - Returns `RemoteShoppingService` when `isMockEnabled` is false
+- **Factory**: `createShoppingService(mode: 'guest' | 'signed-in')` (`mobile/src/features/shopping/services/shoppingService.ts`)
+  - Returns `LocalShoppingService` when mode is 'guest'
+  - Returns `RemoteShoppingService` when mode is 'signed-in'
+  - Validates service compatibility with data mode
 - **Interface**: `IShoppingService`
   - `getShoppingData(): Promise<ShoppingData>` - Returns all shopping-related data
 - **ShoppingData**: Includes `shoppingLists`, `shoppingItems`, `categories`, `groceryItems`, `frequentlyAddedItems`
 - **Strategies**:
-  - `LocalShoppingService`: Returns mock data from `mockShoppingLists`, `mockItems`, `mockCategories`, `mockGroceriesDB`
+  - `LocalShoppingService`: 
+    - Reads lists and items from `guestStorage` (AsyncStorage) instead of mocks
+    - Returns empty arrays when no guest data exists (not mock data)
+    - Still provides reference data (categories, groceryItems, frequentlyAddedItems) from mocks as these are not user-created
   - `RemoteShoppingService`: Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
+- **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
+  - `getShoppingLists()`: Retrieves lists from AsyncStorage key `@kitchen_hub_guest_shopping_lists`
+  - `getShoppingItems()`: Retrieves items from AsyncStorage key `@kitchen_hub_guest_shopping_items`
+  - `saveShoppingLists(lists)`: Persists lists to AsyncStorage
+  - `saveShoppingItems(items)`: Persists items to AsyncStorage
+  - Returns empty arrays when no data exists or on parse errors
+  - Validates data format (ensures array and required fields)
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
-  - Guest users always use local data regardless of the flag
+  - When enabled, forces 'guest' mode regardless of user authentication state
+  - Guest users always use 'guest' mode (local service)
 - **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
 ## Guest User Data Separation
 
-The shopping feature implements guest user data separation to ensure guest users use local data while signed-in users use cloud sync, preventing API call failures in production.
+The shopping feature implements guest user data separation to ensure guest users use local storage while signed-in users use cloud sync, preventing API call failures in production.
 
 ### Service Selection Pattern
 
-Service selection is determined by both the mock data toggle and user authentication state:
+Service selection is determined by data mode based on user authentication state:
 
 ```typescript
 const { user } = useAuth();
-const isMockDataEnabled = config.mockData.enabled;
-const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+const userMode = useMemo(() => {
+  if (config.mockData.enabled) {
+    return 'guest' as const;
+  }
+  return determineUserDataMode(user);
+}, [user]);
+
 const shoppingService = useMemo(
-  () => createShoppingService(shouldUseMockData),
-  [shouldUseMockData]
+  () => createShoppingService(userMode),
+  [userMode]
 );
 ```
 
 **Behavior**:
-- **Development** (`config.mockData.enabled = true`): Always uses `LocalShoppingService` regardless of auth state
-- **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalShoppingService` (no API calls)
+- **Development** (`config.mockData.enabled = true`): Always uses `LocalShoppingService` (guest mode) regardless of auth state
+- **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalShoppingService` which reads from AsyncStorage (no API calls)
 - **Production + Signed-in User** (`config.mockData.enabled = false` + authenticated): Uses `RemoteShoppingService` (cloud sync)
 
 ### List Selection Utilities
@@ -278,7 +301,9 @@ This ensures that when a user switches from guest (local) to signed-in (remote),
 - `react-native-gesture-handler` - GestureDetector for swipe interactions
 - `react-native-reanimated` - Smooth swipe animations
 - `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
-- `createShoppingService` - Service factory for selecting mock/real data source
+- `createShoppingService` - Service factory for selecting guest/signed-in data source based on mode
+- `guestStorage` - Guest data persistence utilities (`mobile/src/common/utils/guestStorage.ts`)
+- `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
 - `getSelectedList`, `getActiveListId` - Selection utilities from `utils/selectionUtils.ts` for preventing stale list state
 - `mockGroceriesDB` - Grocery database with images and categories (used by LocalShoppingService)
 - `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService)

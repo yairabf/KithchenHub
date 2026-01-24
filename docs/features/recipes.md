@@ -290,34 +290,49 @@ const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Sna
   - `isLoading` - Loading state for async operations
 - **Hook**: `useRecipes()` (`mobile/src/features/recipes/hooks/useRecipes.ts`)
   - Returns: `recipes`, `isLoading`, `error`, `addRecipe`, `updateRecipe`
-  - Uses `createRecipeService()` factory to select service implementation
-  - Determines mock vs real based on `config.mockData.enabled` OR guest user status
+  - Uses `createRecipeService(mode)` factory to select service implementation based on data mode
+  - Determines mode using `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
+  - `addRecipe` and `updateRecipe` automatically persist to guest storage when in guest mode
   - `updateRecipe` merges updates with existing recipe data to prevent data loss
 
 ## Service Layer
 
-The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local mocks and backend API based on environment configuration.
+The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local guest storage and backend API based on user authentication state.
 
-- **Factory**: `createRecipeService(isMockEnabled: boolean)` (`mobile/src/features/recipes/services/recipeService.ts`)
-  - Returns `LocalRecipeService` when `isMockEnabled` is true
-  - Returns `RemoteRecipeService` when `isMockEnabled` is false
+- **Factory**: `createRecipeService(mode: 'guest' | 'signed-in')` (`mobile/src/features/recipes/services/recipeService.ts`)
+  - Returns `LocalRecipeService` when mode is 'guest'
+  - Returns `RemoteRecipeService` when mode is 'signed-in'
+  - Validates service compatibility with data mode
 - **Interface**: `IRecipeService`
   - `getRecipes(): Promise<Recipe[]>`
   - `createRecipe(recipe: Partial<Recipe>): Promise<Recipe>`
   - `updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe>` - Updates recipe with partial data, used for adding image URLs after upload
 - **Strategies**:
-  - `LocalRecipeService`: Returns mock data from `mockRecipes`
+  - `LocalRecipeService`: 
+    - Reads from `guestStorage.getRecipes()` (AsyncStorage) instead of mocks
+    - Returns empty array when no guest data exists (not mock data)
+    - Persists recipes to AsyncStorage via `guestStorage.saveRecipes()` on create/update
+    - Includes retry logic for concurrent write operations
+    - Validates recipe data before saving
   - `RemoteRecipeService`: Calls backend via `api.ts` (`/recipes` endpoint)
+- **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
+  - `getRecipes()`: Retrieves recipes from AsyncStorage key `@kitchen_hub_guest_recipes`
+  - `saveRecipes(recipes)`: Persists recipes to AsyncStorage
+  - Returns empty arrays when no data exists or on parse errors
+  - Validates data format (ensures array and required fields)
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
-  - When enabled OR user is guest, uses local service
+  - When enabled, forces 'guest' mode regardless of user authentication state
+  - Guest users always use 'guest' mode (local service)
 - **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
 ## Key Dependencies
 
 - `@expo/vector-icons` - Ionicons for icons
 - `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
-- `createRecipeService` - Service factory for selecting mock/real data source
+- `createRecipeService` - Service factory for selecting guest/signed-in data source based on mode
+- `guestStorage` - Guest data persistence utilities (`mobile/src/common/utils/guestStorage.ts`)
+- `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
 - `mockGroceriesDB` - For ingredient search in add modal (when mock enabled)
 - `mockRecipes` - Initial recipe data (used by LocalRecipeService)
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
