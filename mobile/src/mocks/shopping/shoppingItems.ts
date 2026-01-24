@@ -1,12 +1,11 @@
 import type { ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import type { BaseEntity } from '../../common/types/entityMetadata';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 // Types
-export interface ShoppingItem {
-  id: string; // Legacy/Display ID for now
-  localId: string; // Stable UUID
+export interface ShoppingItem extends BaseEntity {
   name: string;
   image: string;
   quantity: number;
@@ -16,17 +15,14 @@ export interface ShoppingItem {
   isChecked: boolean;
 }
 
-export interface Category {
-  id: string;
+export interface Category extends BaseEntity {
   name: string;
   itemCount: number;
   image: string;
   backgroundColor: string;
 }
 
-export interface ShoppingList {
-  id: string;
-  localId: string; // Stable UUID
+export interface ShoppingList extends BaseEntity {
   name: string;
   itemCount: number;
   icon: IoniconsName;
@@ -71,15 +67,15 @@ export const mockItems: ShoppingItem[] = [
 ];
 
 export const mockCategories: Category[] = [
-  { id: '1', name: 'Sweets', itemCount: 12, image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=200', backgroundColor: 'rgba(255, 182, 193, 0.85)' },
-  { id: '2', name: 'Freezer', itemCount: 18, image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200', backgroundColor: 'rgba(173, 216, 230, 0.85)' },
-  { id: '3', name: 'Meat', itemCount: 43, image: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=200', backgroundColor: 'rgba(210, 180, 140, 0.85)' },
-  { id: '4', name: 'Snacks', itemCount: 89, image: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=200', backgroundColor: 'rgba(255, 218, 185, 0.85)' },
-  { id: '5', name: 'Dairy', itemCount: 45, image: 'https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=200', backgroundColor: 'rgba(255, 250, 205, 0.85)' },
-  { id: '6', name: 'Beverages', itemCount: 67, image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=200', backgroundColor: 'rgba(144, 238, 144, 0.85)' },
-  { id: '7', name: 'Dips', itemCount: 89, image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=200', backgroundColor: 'rgba(255, 160, 122, 0.85)' },
-  { id: '8', name: 'Cheeses', itemCount: 12, image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=200', backgroundColor: 'rgba(255, 228, 181, 0.85)' },
-  { id: '9', name: 'Teas', itemCount: 34, image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=200', backgroundColor: 'rgba(176, 224, 230, 0.85)' },
+  { id: '1', localId: '550e8400-e29b-41d4-a716-446655440150', name: 'Sweets', itemCount: 12, image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=200', backgroundColor: 'rgba(255, 182, 193, 0.85)' },
+  { id: '2', localId: '550e8400-e29b-41d4-a716-446655440151', name: 'Freezer', itemCount: 18, image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200', backgroundColor: 'rgba(173, 216, 230, 0.85)' },
+  { id: '3', localId: '550e8400-e29b-41d4-a716-446655440152', name: 'Meat', itemCount: 43, image: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=200', backgroundColor: 'rgba(210, 180, 140, 0.85)' },
+  { id: '4', localId: '550e8400-e29b-41d4-a716-446655440153', name: 'Snacks', itemCount: 89, image: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=200', backgroundColor: 'rgba(255, 218, 185, 0.85)' },
+  { id: '5', localId: '550e8400-e29b-41d4-a716-446655440154', name: 'Dairy', itemCount: 45, image: 'https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=200', backgroundColor: 'rgba(255, 250, 205, 0.85)' },
+  { id: '6', localId: '550e8400-e29b-41d4-a716-446655440155', name: 'Beverages', itemCount: 67, image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=200', backgroundColor: 'rgba(144, 238, 144, 0.85)' },
+  { id: '7', localId: '550e8400-e29b-41d4-a716-446655440156', name: 'Dips', itemCount: 89, image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=200', backgroundColor: 'rgba(255, 160, 122, 0.85)' },
+  { id: '8', localId: '550e8400-e29b-41d4-a716-446655440157', name: 'Cheeses', itemCount: 12, image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=200', backgroundColor: 'rgba(255, 228, 181, 0.85)' },
+  { id: '9', localId: '550e8400-e29b-41d4-a716-446655440158', name: 'Teas', itemCount: 34, image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=200', backgroundColor: 'rgba(176, 224, 230, 0.85)' },
 ];
 
 // Calculate item counts dynamically

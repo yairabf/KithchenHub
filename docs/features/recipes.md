@@ -266,18 +266,51 @@ const newRecipe = createRecipe(data);
 ## Key Types
 
 ```typescript
-interface Recipe {
-  id: string;
-  localId: string; // Stable UUID
+// Recipe entity now extends BaseEntity with shared metadata
+import type { BaseEntity } from '../../../common/types/entityMetadata';
+
+interface Recipe extends BaseEntity {
+  // BaseEntity provides: id, localId, createdAt?, updatedAt?, deletedAt?
   name: string;
   cookTime: string;
+  prepTime?: string;
   category: string;
   imageUrl?: string;
+  description?: string;
+  calories?: number;
+  servings?: number;
+  ingredients: Ingredient[];
+  instructions: Instruction[];
+}
+
+// Nested sub-entities (do not extend BaseEntity)
+interface Ingredient {
+  id: string;
+  quantity: string;
+  unit: string;
+  name: string;
+  image?: string;
+}
+
+interface Instruction {
+  id: string;
+  text: string;
 }
 
 // Categories available
 const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack'];
 ```
+
+**Entity Metadata (from `BaseEntity`):**
+- `id: string` - Legacy/Display ID for UI
+- `localId: string` - Stable UUID for sync/merge operations
+- `createdAt?: Date | string` - Creation timestamp
+- `updatedAt?: Date | string` - Last modification timestamp
+- `deletedAt?: Date | string` - Soft-delete timestamp (tombstone pattern)
+
+**Note:** `Ingredient` and `Instruction` are nested sub-entities and do not extend `BaseEntity`. Metadata is managed at the `Recipe` level.
+
+See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for shared entity metadata interfaces and helpers.
 
 ## State Management
 

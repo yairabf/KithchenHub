@@ -1,3 +1,9 @@
+import type { BaseEntity } from '../../common/types/entityMetadata';
+
+/**
+ * Ingredient sub-entity within a recipe.
+ * Note: Does not extend BaseEntity as it's a nested entity, not a top-level domain entity.
+ */
 export interface Ingredient {
   id: string;
   quantity: string;
@@ -6,14 +12,19 @@ export interface Ingredient {
   image?: string; // Optional image URL for the ingredient
 }
 
+/**
+ * Instruction sub-entity within a recipe.
+ * Note: Does not extend BaseEntity as it's a nested entity, not a top-level domain entity.
+ */
 export interface Instruction {
   id: string;
   text: string;
 }
 
-export interface Recipe {
-  id: string; // Legacy/Display ID for now
-  localId: string; // Stable UUID
+/**
+ * Recipe entity - top-level domain entity with full metadata.
+ */
+export interface Recipe extends BaseEntity {
   name: string;
   cookTime: string;
   prepTime?: string;
