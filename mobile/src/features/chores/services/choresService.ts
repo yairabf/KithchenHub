@@ -1,5 +1,7 @@
 import { api } from '../../../services/api';
 import { mockChores, type Chore } from '../../../mocks/chores';
+import type { DataMode } from '../../../common/types/dataModes';
+import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
 
 /**
  * Provides chore data sources (mock vs remote) for the chores feature.
@@ -85,6 +87,35 @@ export class RemoteChoresService implements IChoresService {
   }
 }
 
-export const createChoresService = (isMockEnabled: boolean): IChoresService => {
-  return isMockEnabled ? new LocalChoresService() : new RemoteChoresService();
+/**
+ * Creates a chores service based on the data mode
+ * 
+ * @param mode - The data mode ('guest' | 'signed-in')
+ * @param entityType - The type of entity being accessed (for validation)
+ * @returns The appropriate chores service implementation
+ * @throws Error if the mode and service type are incompatible
+ */
+export const createChoresService = (
+  mode: 'guest' | 'signed-in',
+  entityType: 'chores' = 'chores'
+): IChoresService => {
+  // Public catalog cannot use chores service
+  if (mode === 'public-catalog') {
+    throw new Error('Public catalog cannot use chores service.');
+  }
+  
+  // Validate service compatibility
+  const serviceType = mode === 'guest' ? 'local' : 'remote';
+  validateServiceCompatibility(serviceType, mode);
+  
+  return mode === 'guest' ? new LocalChoresService() : new RemoteChoresService();
+};
+
+/**
+ * Legacy factory function for backward compatibility
+ * @deprecated Use createChoresService with mode parameter instead
+ */
+export const createChoresServiceLegacy = (isMockEnabled: boolean): IChoresService => {
+  const mode = isMockEnabled ? 'guest' : 'signed-in';
+  return createChoresService(mode);
 };

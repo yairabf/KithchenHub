@@ -1,8 +1,6 @@
 import { api } from '../../../services/api';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
 import {
-  mockItems,
-  mockShoppingLists,
   mockCategories,
   mockFrequentlyAddedItems,
   type ShoppingItem,
@@ -11,6 +9,9 @@ import {
 } from '../../../mocks/shopping';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import { pastelColors, colors } from '../../../theme';
+import { guestStorage } from '../../../common/utils/guestStorage';
+import type { DataMode } from '../../../common/types/dataModes';
+import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
 
 /**
  * Provides shopping data sources (mock vs remote) for the shopping feature.
@@ -50,6 +51,8 @@ type ShoppingListDetailDto = {
     id: string;
     name: string;
     quantity?: number | null;
+    unit?: string | null;
+    isChecked?: boolean | null;
     category?: string | null;
   }[];
 };
@@ -113,6 +116,8 @@ const buildShoppingItemsFromDetails = (
       name: item.name,
       image: matchingGrocery?.image ?? '',
       quantity: item.quantity ?? 1,
+      unit: item.unit ?? undefined,
+      isChecked: item.isChecked ?? false,
       category: item.category ?? matchingGrocery?.category ?? 'Other',
       listId,
     };
@@ -121,9 +126,14 @@ const buildShoppingItemsFromDetails = (
 
 export class LocalShoppingService implements IShoppingService {
   async getShoppingData(): Promise<ShoppingData> {
+    // Read from real guest storage, return empty arrays if no data exists
+    const guestLists = await guestStorage.getShoppingLists();
+    const guestItems = await guestStorage.getShoppingItems();
+
     return {
-      shoppingLists: [...mockShoppingLists],
-      shoppingItems: [...mockItems],
+      shoppingLists: guestLists,
+      shoppingItems: guestItems,
+      // Categories and grocery items are still from mocks (they're reference data, not user data)
       categories: [...mockCategories],
       groceryItems: [...mockGroceriesDB],
       frequentlyAddedItems: [...mockFrequentlyAddedItems],
@@ -175,6 +185,30 @@ export class RemoteShoppingService implements IShoppingService {
   }
 }
 
-export const createShoppingService = (isMockEnabled: boolean): IShoppingService => {
-  return isMockEnabled ? new LocalShoppingService() : new RemoteShoppingService();
+/**
+ * Creates a shopping service based on the data mode
+ * 
+ * @param mode - The data mode ('guest' | 'signed-in' | 'public-catalog')
+ * @param entityType - The type of entity being accessed (for validation)
+ * @returns The appropriate shopping service implementation
+ * @throws Error if the mode and service type are incompatible
+ */
+export const createShoppingService = (
+  mode: 'guest' | 'signed-in',
+  entityType: 'shopping-lists' | 'shopping-items' = 'shopping-lists'
+): IShoppingService => {
+  // Validate service compatibility
+  const serviceType = mode === 'guest' ? 'local' : 'remote';
+  validateServiceCompatibility(serviceType, mode);
+  
+  return mode === 'guest' ? new LocalShoppingService() : new RemoteShoppingService();
+};
+
+/**
+ * Legacy factory function for backward compatibility
+ * @deprecated Use createShoppingService with mode parameter instead
+ */
+export const createShoppingServiceLegacy = (isMockEnabled: boolean): IShoppingService => {
+  const mode = isMockEnabled ? 'guest' : 'signed-in';
+  return createShoppingService(mode);
 };

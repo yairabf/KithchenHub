@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { ViewStyle } from 'react-native';
+import type { TextStyle, ViewStyle } from 'react-native';
 
 /**
  * Props for the base GroceryCard component
@@ -35,6 +35,9 @@ export interface GroceryCardContentProps {
 
   /** Main title text displayed prominently (required) */
   title: string;
+
+  /** Optional custom styles for the title text */
+  titleStyle?: TextStyle;
 
   /**
    * Subtitle text or custom React element displayed below the title.

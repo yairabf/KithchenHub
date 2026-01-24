@@ -101,4 +101,11 @@ export const styles = StyleSheet.create({
   itemsList: {
     gap: 8,
   },
+  checkedCard: {
+    opacity: 0.65,
+  },
+  checkedTitle: {
+    color: colors.textMuted,
+    textDecorationLine: 'line-through',
+  },
 });

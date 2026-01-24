@@ -23,6 +23,7 @@ import { createChore } from '../utils/choreFactory';
 import { createChoresService } from '../services/choresService';
 import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
+import { determineUserDataMode } from '../../../common/types/dataModes';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
   const [chores, setChores] = useState<Chore[]>([]);
@@ -31,11 +32,18 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   const [showShareModal, setShowShareModal] = useState(false);
   const { width } = useWindowDimensions();
   const { user } = useAuth();
-  const isMockDataEnabled = config.mockData.enabled;
-  const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+  
+  // Determine data mode based on user authentication state
+  const userMode = useMemo(() => {
+    if (config.mockData.enabled) {
+      return 'guest' as const;
+    }
+    return determineUserDataMode(user);
+  }, [user]);
+  
   const choresService = useMemo(
-    () => createChoresService(shouldUseMockData),
-    [shouldUseMockData]
+    () => createChoresService(userMode),
+    [userMode]
   );
 
   useEffect(() => {

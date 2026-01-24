@@ -1,4 +1,3 @@
-
 # 003 - Settings Import & Clear Local Data actions
 
 **Epic:** Product Improvements (KH-PROD-IMP)

@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export const createShoppingItem = (
-    groceryItem: Omit<ShoppingItem, 'id' | 'localId' | 'listId' | 'quantity'> | GroceryItem,
+    groceryItem: Omit<ShoppingItem, 'id' | 'localId' | 'listId' | 'quantity' | 'isChecked'> | GroceryItem,
     listId: string,
     quantity: number
 ): ShoppingItem => {
@@ -19,6 +19,7 @@ export const createShoppingItem = (
         quantity: quantity,
         category: groceryItem.category,
         listId: listId,
+        isChecked: false,
     };
 };
 

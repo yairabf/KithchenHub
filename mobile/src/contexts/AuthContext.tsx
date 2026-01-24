@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { useSupabaseAuth, SupabaseUser } from '../hooks/useSupabaseAuth';
 import * as WebBrowser from 'expo-web-browser';
+import { guestStorage } from '../common/utils/guestStorage';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -152,13 +153,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearGuestData = async () => {
     try {
-      // Real app: Delete rows with guest ID or clear specific local keys
-      // await AsyncStorage.removeItem('@kitchen_hub_shopping_lists_guest');
-
+      await guestStorage.clearAll();
       setHasGuestData(false);
       await AsyncStorage.removeItem(HAS_GUEST_DATA_KEY);
     } catch (error) {
-      // Re-throw to allow UI layer to handle
+      console.error('Error clearing guest data:', error);
       throw error;
     }
   };

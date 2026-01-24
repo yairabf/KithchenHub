@@ -24,10 +24,12 @@ export function ShoppingListPanel({
   onQuickAddItem,
   onQuantityChange,
   onDeleteItem,
+  onToggleItemChecked,
 }: ShoppingListPanelProps) {
   // Memoize the render function to prevent unnecessary re-renders
   const renderShoppingItem = useCallback((item: typeof filteredItems[0], index: number) => {
     const bgColor = pastelColors[index % pastelColors.length];
+    const isChecked = item.isChecked;
 
     return (
       <SwipeableWrapper
@@ -36,11 +38,13 @@ export function ShoppingListPanel({
         backgroundColor={bgColor}
         borderRadius={borderRadius.xxl}
       >
-        <GroceryCard backgroundColor={bgColor}>
+        <GroceryCard backgroundColor={bgColor} style={isChecked ? styles.checkedCard : undefined}>
           <GroceryCardContent
             image={item.image}
             title={item.name}
             subtitle={item.category}
+            titleStyle={isChecked ? styles.checkedTitle : undefined}
+            onPress={() => onToggleItemChecked(item.id)}
             rightElement={
               <QuantityControls
                 quantity={item.quantity}
@@ -53,7 +57,7 @@ export function ShoppingListPanel({
         </GroceryCard>
       </SwipeableWrapper>
     );
-  }, [onDeleteItem, onQuantityChange]);
+  }, [onDeleteItem, onQuantityChange, onToggleItemChecked]);
 
   return (
     <View style={styles.leftColumn}>
