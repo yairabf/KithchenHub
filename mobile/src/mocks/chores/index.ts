@@ -1,6 +1,6 @@
-export interface Chore {
-  id: string; // Legacy/Display ID for now
-  localId: string; // Stable UUID
+import type { BaseEntity } from '../../common/types/entityMetadata';
+
+export interface Chore extends BaseEntity {
   name: string;
   assignee?: string;
   dueDate: string;

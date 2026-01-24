@@ -12,6 +12,7 @@ import { pastelColors, colors } from '../../../theme';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
+import { v5 as uuidv5 } from 'uuid';
 
 /**
  * Provides shopping data sources (mock vs remote) for the shopping feature.
@@ -68,6 +69,13 @@ const mapGroceryItem = (item: GrocerySearchItemDto): GroceryItem => ({
   defaultQuantity: item.defaultQuantity ?? 1,
 });
 
+// Fixed namespace UUID for generating deterministic category UUIDs
+const CATEGORY_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+
+/**
+ * Builds category list from grocery items.
+ * Generates deterministic localId based on category name for stable references.
+ */
 const buildCategoriesFromGroceries = (items: GroceryItem[]): Category[] => {
   const categoryMap = items.reduce<Record<string, GroceryItem[]>>((acc, item) => {
     const key = item.category || 'Other';
@@ -77,8 +85,14 @@ const buildCategoriesFromGroceries = (items: GroceryItem[]): Category[] => {
 
   return Object.entries(categoryMap).map(([categoryName, categoryItems], index) => {
     const fallbackImage = categoryItems.find(item => item.image)?.image ?? '';
+    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
+    
+    // Generate deterministic UUID based on category name (stable across calls)
+    const localId = uuidv5(categoryName, CATEGORY_NAMESPACE);
+    
     return {
-      id: categoryName.toLowerCase().replace(/\s+/g, '-'),
+      id: categoryId,
+      localId,
       name: categoryName,
       itemCount: categoryItems.length,
       image: fallbackImage,
