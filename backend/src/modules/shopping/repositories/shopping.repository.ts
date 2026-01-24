@@ -1,14 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { ShoppingList, ShoppingItem } from '@prisma/client';
+import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 
 @Injectable()
 export class ShoppingRepository {
+  private readonly logger = new Logger(ShoppingRepository.name);
+
   constructor(private prisma: PrismaService) {}
 
   async findListsByHousehold(householdId: string): Promise<ShoppingList[]> {
     return this.prisma.shoppingList.findMany({
-      where: { householdId },
+      where: { 
+        householdId,
+        ...ACTIVE_RECORDS_FILTER,
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -28,6 +34,7 @@ export class ShoppingRepository {
       where: { id },
       include: {
         items: {
+          where: ACTIVE_RECORDS_FILTER,
           orderBy: { createdAt: 'asc' },
         },
       },
@@ -47,9 +54,35 @@ export class ShoppingRepository {
     });
   }
 
+  /**
+   * Soft-deletes a shopping list by setting deletedAt timestamp.
+   * 
+   * NOTE: Child items (ShoppingItem) are NOT automatically soft-deleted.
+   * This is intentional design:
+   * - Items are independently managed and soft-deleted via deleteItem()
+   * - The application layer filters items by their own deletedAt status
+   * - This allows for future features like "restore list with items"
+   * 
+   * @param id - Shopping list ID to soft-delete
+   */
   async deleteList(id: string): Promise<void> {
-    await this.prisma.shoppingList.delete({
+    this.logger.log(`Soft-deleting shopping list: ${id}`);
+    await this.prisma.shoppingList.update({
       where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  /**
+   * Restores a soft-deleted shopping list.
+   * 
+   * @param id - Shopping list ID to restore
+   */
+  async restoreList(id: string): Promise<void> {
+    this.logger.log(`Restoring shopping list: ${id}`);
+    await this.prisma.shoppingList.update({
+      where: { id },
+      data: { deletedAt: null },
     });
   }
 
@@ -93,15 +126,38 @@ export class ShoppingRepository {
     });
   }
 
+  /**
+   * Soft-deletes a shopping item by setting deletedAt timestamp.
+   * 
+   * @param id - Shopping item ID to soft-delete
+   */
   async deleteItem(id: string): Promise<void> {
-    await this.prisma.shoppingItem.delete({
+    this.logger.log(`Soft-deleting shopping item: ${id}`);
+    await this.prisma.shoppingItem.update({
       where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  /**
+   * Restores a soft-deleted shopping item.
+   * 
+   * @param id - Shopping item ID to restore
+   */
+  async restoreItem(id: string): Promise<void> {
+    this.logger.log(`Restoring shopping item: ${id}`);
+    await this.prisma.shoppingItem.update({
+      where: { id },
+      data: { deletedAt: null },
     });
   }
 
   async countItemsByList(listId: string): Promise<number> {
     return this.prisma.shoppingItem.count({
-      where: { listId },
+      where: { 
+        listId,
+        ...ACTIVE_RECORDS_FILTER,
+      },
     });
   }
 }

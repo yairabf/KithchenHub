@@ -352,6 +352,99 @@ describe('Row Level Security (RLS) Integration Tests', () => {
         }, 30000);
     });
 
+    /**
+     * Soft-delete tests for household-isolated entities.
+     * Validates that soft-deleted records are properly isolated and can be set via RLS.
+     */
+    describe.each([
+        ['Recipe', 'recipe'],
+        ['Shopping List', 'shoppingList'],
+        ['Chore', 'chore'],
+    ])('%s soft-delete', (label, collection) => {
+        it(`should soft-delete ${label} and filter from active queries`, async () => {
+            const context = await createTestContext('soft-delete');
+
+            // 1. Create item as admin
+            const item = await (prisma[collection] as any).create({
+                data: {
+                    householdId: context.householdId,
+                    title: collection === 'shoppingList' ? undefined : `Test ${label}`,
+                    name: collection === 'shoppingList' ? `Test List` : undefined,
+                    ingredients: collection === 'recipe' ? [] : undefined,
+                    instructions: collection === 'recipe' ? [] : undefined,
+                },
+            });
+
+            // 2. Soft-delete as authenticated user
+            await prisma.$transaction(async (tx) => {
+                await tx.$executeRawUnsafe('SET LOCAL ROLE authenticated');
+                await tx.$executeRawUnsafe(`SET LOCAL "request.jwt.claims" = '{"sub": "${context.userId}"}'`);
+
+                await (tx[collection] as any).update({
+                    where: { id: item.id },
+                    data: { deletedAt: new Date() },
+                });
+            });
+
+            // 3. Verify item is not returned in active queries
+            const activeItems = await prisma[collection].findMany({
+                where: { 
+                    householdId: context.householdId,
+                    deletedAt: null,
+                },
+            });
+            expect(activeItems.map((i: any) => i.id)).not.toContain(item.id);
+
+            // 4. Verify item exists with deletedAt set
+            const deletedItem = await (prisma[collection] as any).findUnique({
+                where: { id: item.id },
+            });
+            expect(deletedItem.deletedAt).not.toBeNull();
+
+            // Cleanup
+            await cleanupContext(context);
+        }, 30000);
+
+        it(`should prevent cross-household soft-delete for ${label}`, async () => {
+            const contextA = await createTestContext('soft-del-a');
+            const contextB = await createTestContext('soft-del-b');
+
+            // 1. Create item in household B
+            const itemB = await (prisma[collection] as any).create({
+                data: {
+                    householdId: contextB.householdId,
+                    title: collection === 'shoppingList' ? undefined : `Item B ${label}`,
+                    name: collection === 'shoppingList' ? `List B` : undefined,
+                    ingredients: collection === 'recipe' ? [] : undefined,
+                    instructions: collection === 'recipe' ? [] : undefined,
+                },
+            });
+
+            // 2. Try to soft-delete as User A (should fail due to RLS)
+            await expect(
+                prisma.$transaction(async (tx) => {
+                    await tx.$executeRawUnsafe('SET LOCAL ROLE authenticated');
+                    await tx.$executeRawUnsafe(`SET LOCAL "request.jwt.claims" = '{"sub": "${contextA.userId}"}'`);
+
+                    await (tx[collection] as any).update({
+                        where: { id: itemB.id },
+                        data: { deletedAt: new Date() },
+                    });
+                })
+            ).rejects.toThrow();
+
+            // 3. Verify item B is still active
+            const itemStillActive = await (prisma[collection] as any).findUnique({
+                where: { id: itemB.id },
+            });
+            expect(itemStillActive.deletedAt).toBeNull();
+
+            // Cleanup
+            await cleanupContext(contextA);
+            await cleanupContext(contextB);
+        }, 30000);
+    });
+
     describe('Storage RLS for household uploads', () => {
         let storageAvailable = false;
         let buildInsertPayload: ((params: StorageInsertParams) => StorageInsertPayload | null) | null = null;

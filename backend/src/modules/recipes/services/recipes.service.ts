@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { RecipesRepository } from '../repositories/recipes.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
+import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 import {
   RecipeListItemDto,
   RecipeDetailDto,
@@ -168,8 +169,11 @@ export class RecipesService {
       throw new ForbiddenException('Access denied');
     }
 
-    const list = await this.prisma.shoppingList.findUnique({
-      where: { id: dto.targetListId },
+    const list = await this.prisma.shoppingList.findFirst({
+      where: { 
+        id: dto.targetListId,
+        ...ACTIVE_RECORDS_FILTER,
+      },
     });
 
     if (!list || list.householdId !== householdId) {
