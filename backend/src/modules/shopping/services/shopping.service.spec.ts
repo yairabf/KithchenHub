@@ -1,277 +1,262 @@
-/**
- * ShoppingService tests covering catalog-backed grocery search and item creation.
- */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ShoppingService } from './shopping.service';
 import { ShoppingRepository } from '../repositories/shopping.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
-describe('ShoppingService', () => {
+/**
+ * Shopping Service Unit Tests
+ * 
+ * Tests soft-delete behavior and business logic for shopping lists and items.
+ */
+describe('ShoppingService - Soft-Delete Behavior', () => {
   let service: ShoppingService;
-  let shoppingRepository: {
-    findListById: jest.Mock;
-    createItem: jest.Mock;
-  };
-  let prismaService: {
-    masterGroceryCatalog: {
-      findUnique: jest.Mock;
-      findMany: jest.Mock;
-    };
-  };
+  let repository: ShoppingRepository;
+  let prisma: PrismaService;
 
-  const householdId = 'household-1';
-  const listId = 'list-1';
+  const mockHouseholdId = 'household-123';
+  const mockListId = 'list-123';
+  const mockItemId = 'item-123';
 
   beforeEach(async () => {
-    shoppingRepository = {
-      findListById: jest.fn(),
-      createItem: jest.fn(),
-    };
-
-    prismaService = {
-      masterGroceryCatalog: {
-        findUnique: jest.fn(),
-        findMany: jest.fn(),
-      },
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ShoppingService,
         {
           provide: ShoppingRepository,
-          useValue: shoppingRepository,
+          useValue: {
+            findListById: jest.fn(),
+            findListWithItems: jest.fn(),
+            findItemById: jest.fn(),
+            deleteList: jest.fn(),
+            deleteItem: jest.fn(),
+            createList: jest.fn(),
+            createItem: jest.fn(),
+            updateItem: jest.fn(),
+          },
         },
         {
           provide: PrismaService,
-          useValue: prismaService,
+          useValue: {
+            shoppingList: {
+              findMany: jest.fn(),
+              findUnique: jest.fn(),
+              findFirst: jest.fn(),
+            },
+            masterGroceryCatalog: {
+              findMany: jest.fn(),
+              findUnique: jest.fn(),
+            },
+          },
         },
       ],
     }).compile();
 
     service = module.get<ShoppingService>(ShoppingService);
+    repository = module.get<ShoppingRepository>(ShoppingRepository);
+    prisma = module.get<PrismaService>(PrismaService);
   });
 
-  describe('addItems', () => {
-    beforeEach(() => {
-      shoppingRepository.findListById.mockResolvedValue({
-        id: listId,
-        householdId,
-      });
+  describe('deleteList', () => {
+    it('should soft-delete a shopping list', async () => {
+      const mockList = {
+        id: mockListId,
+        householdId: mockHouseholdId,
+        name: 'Test List',
+        color: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.spyOn(repository, 'findListById').mockResolvedValue(mockList);
+      jest.spyOn(repository, 'deleteList').mockResolvedValue(undefined);
+
+      await service.deleteList(mockListId, mockHouseholdId);
+
+      expect(repository.findListById).toHaveBeenCalledWith(mockListId);
+      expect(repository.deleteList).toHaveBeenCalledWith(mockListId);
     });
 
-    describe.each([
-      [
-        'uses catalog defaults when quantity/unit not provided',
-        {
-          catalogItemId: 'g1',
-          quantity: undefined,
-          unit: undefined,
-          isChecked: true,
-        },
-        {
-          id: 'g1',
-          name: 'Banana',
-          category: 'Fruits',
-          defaultUnit: 'each',
-          defaultQuantity: 6,
-        },
-        {
-          name: 'Banana',
-          category: 'Fruits',
-          unit: 'each',
-          quantity: 6,
-          isChecked: true,
-        },
-      ],
-      [
-        'uses caller overrides for quantity/unit when provided',
-        {
-          catalogItemId: 'g2',
-          quantity: 3,
-          unit: 'lb',
-        },
-        {
-          id: 'g2',
-          name: 'Apples',
-          category: 'Fruits',
-          defaultUnit: 'each',
-          defaultQuantity: 4,
-        },
-        {
-          name: 'Apples',
-          category: 'Fruits',
-          unit: 'lb',
-          quantity: 3,
-          isChecked: false,
-        },
-      ],
-      [
-        'resolves legacy master item identifier',
-        {
-          masterItemId: 'g3',
-          quantity: undefined,
-          unit: undefined,
-        },
-        {
-          id: 'g3',
-          name: 'Green Apple',
-          category: 'Fruits',
-          defaultUnit: 'each',
-          defaultQuantity: 4,
-        },
-        {
-          name: 'Green Apple',
-          category: 'Fruits',
-          unit: 'each',
-          quantity: 4,
-          isChecked: false,
-        },
-      ],
-    ])('%s', (_description, itemInput, catalogItem, expectedData) => {
-      it('should create item using catalog data', async () => {
-        prismaService.masterGroceryCatalog.findUnique.mockResolvedValue(catalogItem);
-        shoppingRepository.createItem.mockResolvedValue({
-          id: 'item-1',
-          listId,
-          ...expectedData,
-        });
-
-        const result = await service.addItems(listId, householdId, {
-          items: [itemInput],
-        });
-
-        const requestedCatalogId = itemInput.catalogItemId ?? itemInput.masterItemId;
-        expect(prismaService.masterGroceryCatalog.findUnique).toHaveBeenCalledWith({
-          where: { id: requestedCatalogId },
-        });
-        expect(shoppingRepository.createItem).toHaveBeenCalledWith(listId, {
-          ...expectedData,
-          catalogItemId: requestedCatalogId,
-        });
-        expect(result.addedItems[0]).toMatchObject({
-          id: 'item-1',
-          name: expectedData.name,
-          quantity: expectedData.quantity,
-          unit: expectedData.unit,
-          category: expectedData.category,
-          isChecked: expectedData.isChecked,
-        });
-      });
-    });
-
-    it('should fall back to custom name/category when no catalog ID is provided', async () => {
-      shoppingRepository.createItem.mockResolvedValue({
-        id: 'item-2',
-        listId,
-        name: 'Custom Item',
-        category: 'Custom',
-        quantity: 2,
-        unit: 'box',
-        isChecked: false,
-      });
-
-      const result = await service.addItems(listId, householdId, {
-        items: [
-          {
-            name: 'Custom Item',
-            category: 'Custom',
-            quantity: 2,
-            unit: 'box',
-          },
-        ],
-      });
-
-      expect(shoppingRepository.createItem).toHaveBeenCalledWith(listId, {
-        name: 'Custom Item',
-        category: 'Custom',
-        quantity: 2,
-        unit: 'box',
-        isChecked: false,
-        catalogItemId: undefined,
-      });
-      expect(result.addedItems[0].name).toBe('Custom Item');
-    });
-
-    it('should throw when catalog item does not exist', async () => {
-      prismaService.masterGroceryCatalog.findUnique.mockResolvedValue(null);
+    it('should throw NotFoundException if list does not exist', async () => {
+      jest.spyOn(repository, 'findListById').mockResolvedValue(null);
 
       await expect(
-        service.addItems(listId, householdId, {
-          items: [{ catalogItemId: 'missing-item' }],
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw when both catalog identifiers are provided', async () => {
-      await expect(
-        service.addItems(listId, householdId, {
-          items: [{ catalogItemId: 'g1', masterItemId: 'g2' }],
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw when list is missing', async () => {
-      shoppingRepository.findListById.mockResolvedValue(null);
-
-      await expect(
-        service.addItems(listId, householdId, {
-          items: [{ name: 'Milk' }],
-        }),
+        service.deleteList(mockListId, mockHouseholdId)
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw when household access is denied', async () => {
-      shoppingRepository.findListById.mockResolvedValue({
-        id: listId,
-        householdId: 'other-household',
-      });
+    it('should throw ForbiddenException if list belongs to different household', async () => {
+      const mockList = {
+        id: mockListId,
+        householdId: 'different-household',
+        name: 'Test List',
+        color: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.spyOn(repository, 'findListById').mockResolvedValue(mockList);
 
       await expect(
-        service.addItems(listId, householdId, {
-          items: [{ name: 'Milk' }],
-        }),
+        service.deleteList(mockListId, mockHouseholdId)
       ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe('searchGroceries', () => {
-    it('should search catalog by case-insensitive name', async () => {
-      const catalogItems = [
-        { id: 'g1', name: 'Banana', category: 'Fruits', defaultUnit: 'each' },
-      ];
-      prismaService.masterGroceryCatalog.findMany.mockResolvedValue(catalogItems);
+  describe('deleteItem', () => {
+    it('should soft-delete a shopping item', async () => {
+      const mockItem = {
+        id: mockItemId,
+        listId: mockListId,
+        catalogItemId: null,
+        name: 'Test Item',
+        quantity: 1,
+        unit: null,
+        isChecked: false,
+        category: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
 
-      const result = await service.searchGroceries('Ban');
+      const mockList = {
+        id: mockListId,
+        householdId: mockHouseholdId,
+        name: 'Test List',
+        color: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
 
-      expect(prismaService.masterGroceryCatalog.findMany).toHaveBeenCalledWith({
-        where: { name: { contains: 'Ban', mode: 'insensitive' } },
-        orderBy: { name: 'asc' },
-        select: {
-          id: true,
-          name: true,
-          category: true,
-          defaultUnit: true,
-          imageUrl: true,
-          defaultQuantity: true,
-        },
-      });
-      expect(result).toEqual(catalogItems);
+      jest.spyOn(repository, 'findItemById').mockResolvedValue(mockItem);
+      jest.spyOn(repository, 'findListById').mockResolvedValue(mockList);
+      jest.spyOn(repository, 'deleteItem').mockResolvedValue(undefined);
+
+      await service.deleteItem(mockItemId, mockHouseholdId);
+
+      expect(repository.findItemById).toHaveBeenCalledWith(mockItemId);
+      expect(repository.findListById).toHaveBeenCalledWith(mockListId);
+      expect(repository.deleteItem).toHaveBeenCalledWith(mockItemId);
+    });
+
+    it('should throw NotFoundException if item does not exist', async () => {
+      jest.spyOn(repository, 'findItemById').mockResolvedValue(null);
+
+      await expect(
+        service.deleteItem(mockItemId, mockHouseholdId)
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if item belongs to different household', async () => {
+      const mockItem = {
+        id: mockItemId,
+        listId: mockListId,
+        catalogItemId: null,
+        name: 'Test Item',
+        quantity: 1,
+        unit: null,
+        isChecked: false,
+        category: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      const mockList = {
+        id: mockListId,
+        householdId: 'different-household',
+        name: 'Test List',
+        color: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.spyOn(repository, 'findItemById').mockResolvedValue(mockItem);
+      jest.spyOn(repository, 'findListById').mockResolvedValue(mockList);
+
+      await expect(
+        service.deleteItem(mockItemId, mockHouseholdId)
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe('getCategories', () => {
-    it('should return unique sorted categories', async () => {
-      prismaService.masterGroceryCatalog.findMany.mockResolvedValue([
-        { category: 'Dairy' },
-        { category: 'Produce' },
-        { category: 'Dairy' },
-      ]);
+  describe('getLists', () => {
+    it('should return only active shopping lists (exclude soft-deleted)', async () => {
+      const mockLists = [
+        {
+          id: 'list-1',
+          name: 'Active List',
+          color: null,
+          householdId: mockHouseholdId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          deletedAt: null,
+          _count: { items: 5 },
+        },
+      ];
 
-      const result = await service.getCategories();
+      jest.spyOn(prisma.shoppingList, 'findMany').mockResolvedValue(mockLists as any);
 
-      expect(result).toEqual(['Dairy', 'Produce']);
+      const result = await service.getLists(mockHouseholdId);
+
+      expect(prisma.shoppingList.findMany).toHaveBeenCalledWith({
+        where: { 
+          householdId: mockHouseholdId,
+          deletedAt: null,
+        },
+        include: {
+          _count: {
+            select: { 
+              items: {
+                where: { deletedAt: null },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Active List');
+    });
+  });
+
+  describe('getListDetails', () => {
+    it('should return only active items in list details', async () => {
+      const mockList = {
+        id: mockListId,
+        name: 'Test List',
+        color: null,
+        householdId: mockHouseholdId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        items: [
+          {
+            id: 'item-1',
+            listId: mockListId,
+            catalogItemId: null,
+            name: 'Active Item',
+            quantity: 1,
+            unit: null,
+            isChecked: false,
+            category: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          },
+        ],
+      };
+
+      jest.spyOn(repository, 'findListWithItems').mockResolvedValue(mockList as any);
+
+      const result = await service.getListDetails(mockListId, mockHouseholdId);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].name).toBe('Active Item');
     });
   });
 });

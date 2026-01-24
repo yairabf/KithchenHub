@@ -235,14 +235,14 @@ describe('ImportService', () => {
 
                     // Verify correct number of recipe creates
                     const recipesForCheck = (importRequest as any).recipes || [];
-                    const newRecipes = recipesForCheck.filter((r: any) => !existingMappings.has(r.id));
+                    const newRecipes = recipesForCheck.filter((r: any) => !existingMappings.has(`${ImportEntityType.RECIPE}:${r.id}`));
                     expect(mockPrismaTransaction.recipe.create).toHaveBeenCalledTimes(
                         newRecipes.length
                     );
 
                     // Verify correct number of list creates
                     const listsForCheck = (importRequest as any).shoppingLists || [];
-                    const newLists = listsForCheck.filter((l: any) => !existingMappings.has(l.id));
+                    const newLists = listsForCheck.filter((l: any) => !existingMappings.has(`${ImportEntityType.SHOPPING_LIST}:${l.id}`));
                     expect(mockPrismaTransaction.shoppingList.create).toHaveBeenCalledTimes(
                         newLists.length
                     );
@@ -457,6 +457,7 @@ describe('ImportService', () => {
                     batchId: 'batch-123',
                     userId,
                     sourceField: 'local-recipe-1',
+                    sourceType: ImportEntityType.RECIPE,
                     targetField: 'existing-recipe-id',
                 },
             });
@@ -487,6 +488,7 @@ describe('ImportService', () => {
                     batchId: 'batch-123',
                     userId,
                     sourceField: 'local-recipe-1',
+                    sourceType: ImportEntityType.RECIPE,
                     targetField: 'new-recipe-id',
                 },
             });
@@ -532,6 +534,10 @@ describe('ImportService', () => {
             mockImportRepository.findMappingsForUser.mockResolvedValue(new Map([
                 [`${ImportEntityType.RECIPE}:${sharedId}`, 'server-recipe-id']
             ]));
+
+            // Mock: No fingerprint matches for either entity
+            mockImportRepository.findRecipeByFingerprint.mockResolvedValue(null);
+            mockImportRepository.findShoppingListByFingerprint.mockResolvedValue(null);
 
             mockPrismaTransaction.shoppingList.create.mockResolvedValue({ id: 'server-list-id' });
             mockPrismaTransaction.importMapping.create.mockResolvedValue({});
