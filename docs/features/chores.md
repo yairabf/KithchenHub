@@ -172,16 +172,20 @@ const newChore = createChore(choreData);
 ## Key Types
 
 ```typescript
-interface Chore {
-  id: string;
-  localId: string; // Stable UUID
+// Chore entity now extends BaseEntity with shared metadata
+import type { BaseEntity } from '../../../common/types/entityMetadata';
+
+interface Chore extends BaseEntity {
+  // BaseEntity provides: id, localId, createdAt?, updatedAt?, deletedAt?
   name: string;
-  icon: string;
   assignee?: string;
   dueDate: string;
   dueTime?: string;
+  reminder?: string;
+  isRecurring?: boolean;
   completed: boolean;
   section: 'today' | 'thisWeek' | 'recurring';
+  icon?: string;
 }
 
 export type AddChoreHandler = (newChore: {
@@ -193,6 +197,15 @@ export type AddChoreHandler = (newChore: {
   section: 'today' | 'thisWeek';
 }) => void;
 ```
+
+**Entity Metadata (from `BaseEntity`):**
+- `id: string` - Legacy/Display ID for UI
+- `localId: string` - Stable UUID for sync/merge operations
+- `createdAt?: Date | string` - Creation timestamp
+- `updatedAt?: Date | string` - Last modification timestamp
+- `deletedAt?: Date | string` - Soft-delete timestamp (tombstone pattern)
+
+See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for shared entity metadata interfaces and helpers.
 
 ## State Management
 

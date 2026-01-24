@@ -183,23 +183,34 @@ const newItem = createShoppingItem(groceryItem, listId, quantity);
 ## Key Types
 
 ```typescript
-interface ShoppingItem {
-  id: string; // Legacy ID
-  localId: string; // Stable UUID
+// Entity interfaces now extend BaseEntity with shared metadata
+import type { BaseEntity } from '../../../common/types/entityMetadata';
+
+interface ShoppingItem extends BaseEntity {
+  // BaseEntity provides: id, localId, createdAt?, updatedAt?, deletedAt?
   name: string;
   image: string;
   quantity: number;
+  unit?: string;
   category: string;
   listId: string;
+  isChecked: boolean;
 }
 
-interface ShoppingList {
-  id: string; // Legacy ID
-  localId: string; // Stable UUID
+interface ShoppingList extends BaseEntity {
+  // BaseEntity provides: id, localId, createdAt?, updatedAt?, deletedAt?
   name: string;
   itemCount: number;
   icon: IoniconsName;
   color: string;
+}
+
+interface Category extends BaseEntity {
+  // BaseEntity provides: id, localId, createdAt?, updatedAt?, deletedAt?
+  name: string;
+  itemCount: number;
+  image: string;
+  backgroundColor: string;
 }
 
 interface GroceryItem {
@@ -210,6 +221,15 @@ interface GroceryItem {
   defaultQuantity: number;
 }
 ```
+
+**Entity Metadata (from `BaseEntity`):**
+- `id: string` - Legacy/Display ID for UI
+- `localId: string` - Stable UUID for sync/merge operations
+- `createdAt?: Date | string` - Creation timestamp
+- `updatedAt?: Date | string` - Last modification timestamp
+- `deletedAt?: Date | string` - Soft-delete timestamp (tombstone pattern)
+
+See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for shared entity metadata interfaces and helpers.
 
 ## State Management
 
