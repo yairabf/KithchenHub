@@ -54,6 +54,10 @@ class ApiClient {
         return this.request<T>(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) });
     }
 
+    public patch<T, B = unknown>(endpoint: string, body: B, options?: ApiOptions): Promise<T> {
+        return this.request<T>(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) });
+    }
+
     public delete<T>(endpoint: string, options?: ApiOptions): Promise<T> {
         return this.request<T>(endpoint, { ...options, method: 'DELETE' });
     }

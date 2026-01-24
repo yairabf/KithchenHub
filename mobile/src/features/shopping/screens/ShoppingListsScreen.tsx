@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { CategoryModal } from '../components/CategoryModal';
 import { AllItemsModal } from '../components/AllItemsModal';
 import { ShoppingListPanel } from '../components/ShoppingListPanel';
@@ -29,8 +30,55 @@ import { createShoppingService } from '../services/shoppingService';
 import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSelectedList } from '../utils/selectionUtils';
+import { supabase } from '../../../services/supabase';
+import { api } from '../../../services/api';
+import {
+  applyShoppingItemChange,
+  applyShoppingListChange,
+  buildListIdFilter,
+  updateShoppingListItemCounts,
+} from '../utils/shoppingRealtime';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
+
+type ShoppingListRealtimeRow = {
+  id: string;
+  name?: string | null;
+  color?: string | null;
+  household_id?: string | null;
+};
+
+type ShoppingItemRealtimeRow = {
+  id: string;
+  list_id?: string | null;
+  name?: string | null;
+  quantity?: number | null;
+  category?: string | null;
+  is_checked?: boolean | null;
+};
+
+type UpdateShoppingItemPayload = {
+  quantity?: number;
+  isChecked?: boolean;
+};
+
+type AddShoppingItemInput = {
+  masterItemId?: string;
+  name?: string;
+  quantity?: number;
+  category?: string;
+  isChecked?: boolean;
+};
+
+type AddItemsResponse = {
+  addedItems: {
+    id: string;
+    name: string;
+    quantity: number;
+    category?: string | null;
+    isChecked: boolean;
+  }[];
+};
 
 export function ShoppingListsScreen() {
   const { isTablet } = useResponsive();
@@ -55,6 +103,8 @@ export function ShoppingListsScreen() {
   const [showShareModal, setShowShareModal] = useState(false);
   const isMockDataEnabled = config.mockData.enabled;
   const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+  const isRealtimeEnabled = !shouldUseMockData && !!user?.householdId;
+  const listIdFilter = buildListIdFilter(shoppingLists.map((list) => list.id));
   const shoppingService = useMemo(
     () => createShoppingService(shouldUseMockData),
     [shouldUseMockData]
@@ -100,19 +150,230 @@ export function ShoppingListsScreen() {
     };
   }, [shoppingService]);
 
+  useEffect(() => {
+    setShoppingLists((currentLists) =>
+      updateShoppingListItemCounts(currentLists, allItems),
+    );
+  }, [allItems]);
+
+  useEffect(() => {
+    setSelectedList((currentSelected) => getSelectedList(shoppingLists, currentSelected?.id));
+  }, [shoppingLists]);
+
+  useEffect(() => {
+    if (!isRealtimeEnabled || !user?.householdId) {
+      return;
+    }
+
+    const channel = supabase.channel(`shopping-lists-${user.householdId}`);
+
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'shopping_lists',
+        filter: `household_id=eq.${user.householdId}`,
+      },
+      (payload) => {
+        const typedPayload = payload as RealtimePostgresChangesPayload<ShoppingListRealtimeRow>;
+
+        setShoppingLists((currentLists) => {
+          const nextLists = applyShoppingListChange(currentLists, typedPayload);
+          setSelectedList((currentSelected) =>
+            getSelectedList(nextLists, currentSelected?.id),
+          );
+          return nextLists;
+        });
+
+        if (typedPayload.eventType === 'DELETE') {
+          const deletedId = typedPayload.old?.id;
+          if (deletedId) {
+            setAllItems((currentItems) =>
+              currentItems.filter((item) => item.listId !== deletedId),
+            );
+          }
+        }
+      },
+    );
+
+    channel.subscribe();
+
+    return () => {
+      channel.unsubscribe();
+      supabase.removeChannel(channel);
+    };
+  }, [isRealtimeEnabled, user?.householdId]);
+
+  useEffect(() => {
+    if (!isRealtimeEnabled || !user?.householdId || !listIdFilter) {
+      return;
+    }
+
+    const channel = supabase.channel(`shopping-items-${user.householdId}`);
+
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'shopping_items',
+        filter: listIdFilter,
+      },
+      (payload) => {
+        const typedPayload = payload as RealtimePostgresChangesPayload<ShoppingItemRealtimeRow>;
+        setAllItems((currentItems) =>
+          applyShoppingItemChange(currentItems, typedPayload, groceryItems),
+        );
+      },
+    );
+
+    channel.subscribe();
+
+    return () => {
+      channel.unsubscribe();
+      supabase.removeChannel(channel);
+    };
+  }, [groceryItems, isRealtimeEnabled, listIdFilter, user?.householdId]);
+
   // Filter items based on selected list
   const filteredItems = allItems.filter(item => item.listId === activeList.id);
 
+  const logShoppingError = (message: string, error: unknown) => {
+    console.error(message, error);
+  };
+
+  const createRemoteList = async (name: string, color: string): Promise<ShoppingList | null> => {
+    try {
+      const response = await api.post<{ id: string; name: string }, { name: string; color: string }>(
+        '/shopping-lists',
+        { name, color },
+      );
+
+      return {
+        id: response.id,
+        localId: response.id,
+        name: response.name,
+        itemCount: 0,
+        icon: newListIcon,
+        color,
+      };
+    } catch (error) {
+      logShoppingError('Failed to create shopping list:', error);
+      return null;
+    }
+  };
+
+  const updateRemoteShoppingItem = async (
+    itemId: string,
+    updates: UpdateShoppingItemPayload,
+  ) => {
+    try {
+      await api.patch(`/shopping-items/${itemId}`, updates);
+    } catch (error) {
+      logShoppingError('Failed to update shopping item:', error);
+    }
+  };
+
+  const deleteRemoteShoppingItem = async (itemId: string) => {
+    try {
+      await api.delete(`/shopping-items/${itemId}`);
+    } catch (error) {
+      logShoppingError('Failed to delete shopping item:', error);
+    }
+  };
+
+  const buildAddItemInput = (groceryItem: GroceryItem, quantity: number): AddShoppingItemInput => {
+    const isCustomItem = groceryItem.id.startsWith('custom-') || groceryItem.category === 'Custom';
+
+    return {
+      masterItemId: isCustomItem ? undefined : groceryItem.id,
+      name: groceryItem.name,
+      quantity,
+      category: groceryItem.category,
+      isChecked: false,
+    };
+  };
+
+  const mapAddedItemToShoppingItem = (item: AddItemsResponse['addedItems'][number], listId: string): ShoppingItem => {
+    const matchingGrocery = groceryItems.find(
+      (grocery) => grocery.name.toLowerCase() === item.name.toLowerCase(),
+    );
+
+    return {
+      id: item.id,
+      localId: item.id,
+      name: item.name,
+      image: matchingGrocery?.image ?? '',
+      quantity: item.quantity,
+      category: item.category ?? matchingGrocery?.category ?? 'Other',
+      listId,
+      isChecked: item.isChecked,
+    };
+  };
+
+  const addRemoteItems = async (listId: string, items: AddShoppingItemInput[]) => {
+    try {
+      const response = await api.post<AddItemsResponse, { items: AddShoppingItemInput[] }>(
+        `/shopping-lists/${listId}/items`,
+        { items },
+      );
+      const addedItems = response.addedItems.map((item) =>
+        mapAddedItemToShoppingItem(item, listId),
+      );
+      setAllItems((currentItems) => [...currentItems, ...addedItems]);
+    } catch (error) {
+      logShoppingError('Failed to add items to shopping list:', error);
+    }
+  };
+
   const handleQuantityChange = (itemId: string, delta: number) => {
-    setAllItems(prev => prev.map(item =>
+    const targetItem = allItems.find((item) => item.id === itemId);
+    if (!targetItem) {
+      return;
+    }
+
+    const nextQuantity = Math.max(1, targetItem.quantity + delta);
+    if (nextQuantity === targetItem.quantity) {
+      return;
+    }
+
+    setAllItems((prev) => prev.map((item) =>
       item.id === itemId
-        ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-        : item
+        ? { ...item, quantity: nextQuantity }
+        : item,
     ));
+
+    if (!shouldUseMockData) {
+      void updateRemoteShoppingItem(itemId, { quantity: nextQuantity });
+    }
   };
 
   const handleDeleteItem = (itemId: string) => {
-    setAllItems(prev => prev.filter(item => item.id !== itemId));
+    setAllItems((prev) => prev.filter((item) => item.id !== itemId));
+
+    if (!shouldUseMockData) {
+      void deleteRemoteShoppingItem(itemId);
+    }
+  };
+
+  const handleToggleItemChecked = (itemId: string) => {
+    const targetItem = allItems.find((item) => item.id === itemId);
+    if (!targetItem) {
+      return;
+    }
+
+    const nextChecked = !targetItem.isChecked;
+
+    setAllItems((prev) => prev.map((item) =>
+      item.id === itemId
+        ? { ...item, isChecked: nextChecked }
+        : item,
+    ));
+
+    if (!shouldUseMockData) {
+      void updateRemoteShoppingItem(itemId, { isChecked: nextChecked });
+    }
   };
 
   const handleSelectGroceryItem = (groceryItem: GroceryItem) => {
@@ -132,15 +393,26 @@ export function ShoppingListsScreen() {
 
     if (existingItemIndex !== -1) {
       // Update existing item quantity
-      setAllItems(prev => prev.map((item, index) =>
+      const existingItem = allItems[existingItemIndex];
+      const nextQuantity = existingItem.quantity + quantity;
+
+      setAllItems((prev) => prev.map((item, index) =>
         index === existingItemIndex
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
+          ? { ...item, quantity: nextQuantity }
+          : item,
       ));
+
+      if (!shouldUseMockData) {
+        void updateRemoteShoppingItem(existingItem.id, { quantity: nextQuantity });
+      }
     } else {
-      // Add new item to list
-      const newItem = createShoppingItem(groceryItem, activeList.id, quantity);
-      setAllItems(prev => [...prev, newItem]);
+      if (shouldUseMockData) {
+        // Add new item to list (mock/local)
+        const newItem = createShoppingItem(groceryItem, activeList.id, quantity);
+        setAllItems((prev) => [...prev, newItem]);
+      } else {
+        void addRemoteItems(activeList.id, [buildAddItemInput(groceryItem, quantity)]);
+      }
     }
 
     // Keep dropdown open and search query intact for rapid multi-item addition
@@ -159,15 +431,26 @@ export function ShoppingListsScreen() {
 
     if (existingItemIndex !== -1) {
       // Update existing item quantity
-      setAllItems(prev => prev.map((item, index) =>
+      const existingItem = allItems[existingItemIndex];
+      const nextQuantity = existingItem.quantity + quantity;
+
+      setAllItems((prev) => prev.map((item, index) =>
         index === existingItemIndex
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
+          ? { ...item, quantity: nextQuantity }
+          : item,
       ));
+
+      if (!shouldUseMockData) {
+        void updateRemoteShoppingItem(existingItem.id, { quantity: nextQuantity });
+      }
     } else {
-      // Add new item to list
-      const newItem = createShoppingItem(selectedGroceryItem, activeList.id, quantity);
-      setAllItems(prev => [...prev, newItem]);
+      if (shouldUseMockData) {
+        // Add new item to list (mock/local)
+        const newItem = createShoppingItem(selectedGroceryItem, activeList.id, quantity);
+        setAllItems((prev) => [...prev, newItem]);
+      } else {
+        void addRemoteItems(activeList.id, [buildAddItemInput(selectedGroceryItem, quantity)]);
+      }
     }
 
     // Reset and close
@@ -202,15 +485,26 @@ export function ShoppingListsScreen() {
     setNewListColor('#10B981');
   };
 
-  const handleCreateList = () => {
+  const handleCreateList = async () => {
     const trimmedName = newListName.trim();
     if (!trimmedName) {
       return;
     }
 
-    const newList = createShoppingList(trimmedName, newListIcon, newListColor);
+    if (shouldUseMockData) {
+      const newList = createShoppingList(trimmedName, newListIcon, newListColor);
+      setShoppingLists((prev) => [...prev, newList]);
+      setSelectedList(newList);
+      handleCancelCreateListModal();
+      return;
+    }
 
-    setShoppingLists(prev => [...prev, newList]);
+    const newList = await createRemoteList(trimmedName, newListColor);
+    if (!newList) {
+      return;
+    }
+
+    setShoppingLists((prev) => [...prev, newList]);
     setSelectedList(newList);
     handleCancelCreateListModal();
   };
@@ -285,6 +579,7 @@ export function ShoppingListsScreen() {
             onQuickAddItem={handleQuickAddItem}
             onQuantityChange={handleQuantityChange}
             onDeleteItem={handleDeleteItem}
+            onToggleItemChecked={handleToggleItemChecked}
           />
 
           {/* Right Column - Discovery */}

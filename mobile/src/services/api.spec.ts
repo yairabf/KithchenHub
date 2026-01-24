@@ -56,6 +56,27 @@ describe('ApiClient', () => {
         expect(result).toEqual(mockResponse);
     });
 
+    describe.each([
+        ['PUT', 'put', '/update', { name: 'Updated Item' }],
+        ['PATCH', 'patch', '/patch', { name: 'Patched Item' }],
+    ])('performs %s request with body correctly', (_label, method, path, payload) => {
+        it('sends the request body', async () => {
+            const mockResponse = { success: true };
+            mockSuccessResponse(mockResponse);
+
+            const result = await api[method as 'put' | 'patch'](path, payload);
+
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining(path),
+                expect.objectContaining({
+                    method: _label,
+                    body: JSON.stringify(payload),
+                })
+            );
+            expect(result).toEqual(mockResponse);
+        });
+    });
+
     it('handles API errors correctly', async () => {
         const errorMessage = 'Not Found';
         mockErrorResponse(404, errorMessage);

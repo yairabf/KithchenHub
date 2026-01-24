@@ -12,6 +12,7 @@ export function GroceryCardContent({
   image,
   customIcon,
   title,
+  titleStyle,
   subtitle,
   rightElement,
   imagePosition = 'left',
@@ -36,7 +37,7 @@ export function GroceryCardContent({
 
       {/* Middle content: Title and subtitle */}
       <View style={styles.itemDetails}>
-        <Text style={styles.itemName}>{title}</Text>
+        <Text style={[styles.itemName, titleStyle]}>{title}</Text>
         {subtitle && (
           typeof subtitle === 'string' ? (
             <Text style={styles.itemSubtitle}>{subtitle}</Text>

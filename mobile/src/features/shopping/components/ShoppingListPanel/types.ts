@@ -12,6 +12,7 @@ export interface ShoppingListPanelProps {
   onQuickAddItem: (item: GroceryItem) => void;
   onQuantityChange: (itemId: string, delta: number) => void;
   onDeleteItem: (itemId: string) => void;
+  onToggleItemChecked: (itemId: string) => void;
 }
 
 export type { ShoppingItem, ShoppingList, GroceryItem };

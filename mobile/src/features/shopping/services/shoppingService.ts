@@ -50,6 +50,8 @@ type ShoppingListDetailDto = {
     id: string;
     name: string;
     quantity?: number | null;
+    unit?: string | null;
+    isChecked?: boolean | null;
     category?: string | null;
   }[];
 };
@@ -113,6 +115,8 @@ const buildShoppingItemsFromDetails = (
       name: item.name,
       image: matchingGrocery?.image ?? '',
       quantity: item.quantity ?? 1,
+      unit: item.unit ?? undefined,
+      isChecked: item.isChecked ?? false,
       category: item.category ?? matchingGrocery?.category ?? 'Other',
       listId,
     };
