@@ -212,7 +212,7 @@ interface Instruction {
 
 ## Recipe Image Uploads (Mobile)
 
-Recipe images are resized client-side before upload to reduce bandwidth and storage costs.
+Recipe images are resized client-side before upload to reduce bandwidth and storage costs. The upload flow prevents orphaned images by creating the recipe first, then uploading the image, and finally updating the recipe with the image URL.
 
 ### Constraints
 
@@ -221,20 +221,33 @@ Recipe images are resized client-side before upload to reduce bandwidth and stor
 - Compression quality: `0.8`
 - Max file size after resize: `2MB`
 
-### Flow
+### Upload Flow
 
 1. User selects a photo in `AddRecipeModal`.
 2. Client resizes/compresses via `resizeAndValidateImage`:
    - File: `mobile/src/common/utils/imageResize.ts`
-3. Image uploads to Supabase Storage via `uploadRecipeImage`:
-   - Bucket: `household-uploads`
-   - Path: `households/{householdId}/recipes/{recipeId}/{timestamp}.jpg`
-   - File: `mobile/src/services/imageUploadService.ts`
+3. **Recipe Creation Flow** (prevents orphaned uploads):
+   - **Step 1**: Create recipe first (without image) via `addRecipe()`
+   - **Step 2**: Upload image to Supabase Storage using the server recipe ID:
+     - Bucket: `household-uploads`
+     - Path: `households/{householdId}/recipes/{recipeId}/{timestamp}.jpg`
+     - File: `mobile/src/services/imageUploadService.ts`
+   - **Step 3**: Update recipe with image URL via `updateRecipe()`
+   - **Step 4**: If update fails, cleanup uploaded image via `deleteRecipeImage()`
 4. The signed URL is stored in `imageUrl` when saving the recipe.
+
+### Helper Functions
+
+The upload flow uses helper functions to maintain clean separation of concerns:
+
+- **`attachGuestImage`**: Updates recipe with local image URI for guest users
+- **`uploadImageWithCleanup`**: Handles authenticated user uploads with automatic cleanup on failure
+- **`deleteRecipeImage`**: Removes orphaned images from Supabase Storage when recipe update fails
 
 ### Notes
 
 - **Guest mode**: Images are kept as local file URIs for the current session. When signing in with Google later, these images will **not** be uploaded automatically—users would need to re-add photos after sign-in if they want them persisted to cloud storage.
+- **Orphan Prevention**: The create → upload → update flow ensures that if recipe creation fails, no orphaned images remain in storage. If the update step fails after upload, the uploaded image is automatically deleted.
 
 ## Entity Creation (New)
 
@@ -279,6 +292,7 @@ const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Sna
   - Returns: `recipes`, `isLoading`, `error`, `addRecipe`, `updateRecipe`
   - Uses `createRecipeService()` factory to select service implementation
   - Determines mock vs real based on `config.mockData.enabled` OR guest user status
+  - `updateRecipe` merges updates with existing recipe data to prevent data loss
 
 ## Service Layer
 
@@ -290,7 +304,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
 - **Interface**: `IRecipeService`
   - `getRecipes(): Promise<Recipe[]>`
   - `createRecipe(recipe: Partial<Recipe>): Promise<Recipe>`
-  - `updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe>`
+  - `updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe>` - Updates recipe with partial data, used for adding image URLs after upload
 - **Strategies**:
   - `LocalRecipeService`: Returns mock data from `mockRecipes`
   - `RemoteRecipeService`: Calls backend via `api.ts` (`/recipes` endpoint)
@@ -307,6 +321,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
 - `mockGroceriesDB` - For ingredient search in add modal (when mock enabled)
 - `mockRecipes` - Initial recipe data (used by LocalRecipeService)
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
+- `deleteRecipeImage` - Image cleanup utility (`mobile/src/services/imageUploadService.ts`) for removing orphaned uploads
 - `pastelColors` - Theme colors for card backgrounds
 - `GrocerySearchBar` - Reused from shopping feature for ingredient search
 - `CenteredModal` - Shared modal component
