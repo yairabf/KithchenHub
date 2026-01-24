@@ -88,6 +88,7 @@ To verify that Row Level Security is correctly isolating data between households
 - Docs: `http://localhost:3000/api/docs`
 - Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh`, `GET /groceries/search`, `GET /groceries/categories` (others use bearer JWT)
 - Shopping endpoints: `GET /shopping-lists`, `POST /shopping-lists`, `GET /shopping-lists/:id`, `DELETE /shopping-lists/:id`, `POST /shopping-lists/:id/items`, `PATCH /shopping-items/:id`, `DELETE /shopping-items/:id`
+- Recipe endpoints: `GET /recipes`, `POST /recipes`, `GET /recipes/:id`, `PUT /recipes/:id`, `POST /recipes/:id/cook`
 - Protected routes: Most endpoints require JWT authentication; household endpoints also require household membership
 - CORS enabled with credentials for client apps
 
