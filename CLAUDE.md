@@ -109,6 +109,58 @@ import { colors, spacing, typography } from '../theme';
 ```
 Primary brand color is `#FF6B35` (warm orange). Each section has an accent color (shopping: green, recipes: orange, chores: purple).
 
+## Backend Data Management Patterns
+
+### Soft-Delete Pattern
+User-owned entities (households, shopping lists, items, recipes, chores) support soft-delete functionality:
+
+- **Implementation**: Entities have a `deletedAt` timestamp field (nullable)
+- **Active records**: `deletedAt` is `null`
+- **Deleted records**: `deletedAt` contains a timestamp
+
+**Use the shared filter constant:**
+```typescript
+import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
+
+// Query active records
+const recipes = await prisma.recipe.findMany({
+  where: { 
+    householdId,
+    ...ACTIVE_RECORDS_FILTER,  // Applies deletedAt: null
+  }
+});
+```
+
+**When including related entities:**
+```typescript
+include: { 
+  items: { 
+    where: ACTIVE_RECORDS_FILTER,  // Filter nested relations
+  } 
+}
+```
+
+**When deleting entities:**
+- Use repository methods like `deleteRecipe()`, `deleteList()`, etc.
+- These methods log the operation and set `deletedAt`
+- Example: `await repository.deleteRecipe(id)`
+
+**Recovery (restoring deleted records):**
+- Use repository restore methods: `restoreRecipe()`, `restoreList()`, `restoreChore()`, `restoreItem()`
+- Example: `await repository.restoreRecipe(id)`
+
+**Cascade Behavior:**
+- Parent entity soft-deletes do NOT automatically cascade to children
+- Shopping list deletion does not delete its items
+- Application layer filters handle orphaned records
+- This allows selective restoration and recovery workflows
+
+### Timestamp Management
+- All entities have `createdAt` and `updatedAt` timestamps
+- `createdAt`: Set automatically on creation via `@default(now())`
+- `updatedAt`: Maintained automatically by Prisma's `@updatedAt` directive
+- Never manually set `updatedAt` - let Prisma handle it
+
 ## Key Dependencies
 - `react-native-reanimated` - requires babel plugin (already configured in babel.config.js)
 - `react-native-gesture-handler` - GestureHandlerRootView wraps the app

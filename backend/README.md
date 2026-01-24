@@ -6,6 +6,12 @@ API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQ
 - JWT auth with Google sign-in (Supabase), guest login, token refresh, and offline sync
 - UUID-based user identification for seamless cross-provider integration
 - Household membership plus shopping lists/items, recipes, and chores
+- **Soft Deletes**: User-owned entities (households, shopping lists, items, recipes, chores) support soft-delete via `deleted_at` timestamp
+  - Centralized `ACTIVE_RECORDS_FILTER` constant for consistent querying
+  - Repository-level restore methods for data recovery (`restoreRecipe()`, `restoreList()`, etc.)
+  - Audit logging for all soft-delete and restore operations
+  - No automatic cascade (parent deletes don't affect children)
+- **Automatic Timestamps**: All entities include `created_at` and `updated_at` timestamps; `updated_at` is automatically maintained by Prisma
 - Master grocery catalog (`master_grocery_catalog` table) backing search, categories, and default item properties
 - Shopping items can reference catalog items for consistency and defaults
 - Private household uploads bucket with storage RLS policies
