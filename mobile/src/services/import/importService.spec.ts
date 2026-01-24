@@ -2,6 +2,9 @@ import { ImportService } from './importService';
 import { api } from '../../services/api';
 import { mockRecipes } from '../../mocks/recipes';
 import { mockShoppingLists, mockItems } from '../../mocks/shopping';
+import { createRecipeService } from '../../features/recipes/services/recipeService';
+import { createShoppingService } from '../../features/shopping/services/shoppingService';
+import { config } from '../../config';
 
 // Mock dependencies
 jest.mock('../../services/api', () => ({
@@ -41,9 +44,24 @@ jest.mock('../../features/shopping/services/shoppingService', () => ({
 describe('ImportService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        config.mockData.enabled = true;
     });
 
     describe('gatherLocalData', () => {
+        describe.each([
+            { scenario: 'mock enabled', mockEnabled: true },
+            { scenario: 'mock disabled', mockEnabled: false },
+        ])('service selection (%s)', ({ mockEnabled }) => {
+            it('should always use local services for guest import', async () => {
+                config.mockData.enabled = mockEnabled;
+
+                await ImportService.gatherLocalData();
+
+                expect(jest.mocked(createRecipeService)).toHaveBeenCalledWith(true);
+                expect(jest.mocked(createShoppingService)).toHaveBeenCalledWith(true);
+            });
+        });
+
         it('should gather recipes and shopping lists from local sources', async () => {
             const data = await ImportService.gatherLocalData();
 

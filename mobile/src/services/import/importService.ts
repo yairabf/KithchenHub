@@ -1,7 +1,6 @@
 import { api } from '../../services/api';
 import { createRecipeService } from '../../features/recipes/services/recipeService';
 import { createShoppingService } from '../../features/shopping/services/shoppingService';
-import { config } from '../../config';
 import {
     ImportRequestDto,
     ImportRecipeDto,
@@ -25,13 +24,15 @@ const safeParseFloat = (value: string | undefined): number => {
 
 export class ImportService {
     /**
-     * Gathers all "local" data from various sources (mocks and AsyncStorage)
-     * constructs the payload for the import API.
+     * Gathers all guest local data using local services and constructs
+     * the payload for the import API.
+     *
+     * Note: Always uses local services to avoid remote API data.
      */
     static async gatherLocalData(): Promise<ImportRequestDto> {
         // 1. Recipes
-        const isMockDataEnabled = config.mockData.enabled;
-        const recipeService = createRecipeService(isMockDataEnabled);
+        // Always use local services for guest imports.
+        const recipeService = createRecipeService(true);
         const recipes = await recipeService.getRecipes();
 
         const importRecipes: ImportRecipeDto[] = recipes.map(recipe => ({
@@ -51,7 +52,7 @@ export class ImportService {
         }));
 
         // 2. Shopping Lists
-        const shoppingService = createShoppingService(isMockDataEnabled);
+        const shoppingService = createShoppingService(true);
         const shoppingData = await shoppingService.getShoppingData();
         const importShoppingLists: ImportShoppingListDto[] = shoppingData.shoppingLists.map(list => {
             const listItems = shoppingData.shoppingItems.filter(item => item.listId === list.id);
