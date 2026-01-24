@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger, BadRequestException } from '@nestjs/common';
 import { ShoppingRepository } from '../repositories/shopping.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
+import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 import {
   GrocerySearchItemDto,
   ShoppingListSummaryDto,
@@ -136,10 +137,17 @@ export class ShoppingService {
    */
   async getLists(householdId: string): Promise<ShoppingListSummaryDto[]> {
     const lists = await this.prisma.shoppingList.findMany({
-      where: { householdId },
+      where: { 
+        householdId,
+        ...ACTIVE_RECORDS_FILTER,
+      },
       include: {
         _count: {
-          select: { items: true },
+          select: { 
+            items: {
+              where: ACTIVE_RECORDS_FILTER,
+            },
+          },
         },
       },
       orderBy: { createdAt: 'desc' },

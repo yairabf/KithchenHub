@@ -1,16 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { Recipe } from '@prisma/client';
+import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 
 @Injectable()
 export class RecipesRepository {
+  private readonly logger = new Logger(RecipesRepository.name);
+
   constructor(private prisma: PrismaService) {}
 
   async findRecipesByHousehold(
     householdId: string,
     filters?: { category?: string; search?: string },
   ): Promise<Recipe[]> {
-    const where: any = { householdId };
+    const where: any = { 
+      householdId,
+      ...ACTIVE_RECORDS_FILTER,
+    };
 
     if (filters?.search) {
       where.title = {
@@ -69,9 +75,29 @@ export class RecipesRepository {
     });
   }
 
+  /**
+   * Soft-deletes a recipe by setting deletedAt timestamp.
+   * 
+   * @param id - Recipe ID to soft-delete
+   */
   async deleteRecipe(id: string): Promise<void> {
-    await this.prisma.recipe.delete({
+    this.logger.log(`Soft-deleting recipe: ${id}`);
+    await this.prisma.recipe.update({
       where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  /**
+   * Restores a soft-deleted recipe.
+   * 
+   * @param id - Recipe ID to restore
+   */
+  async restoreRecipe(id: string): Promise<void> {
+    this.logger.log(`Restoring recipe: ${id}`);
+    await this.prisma.recipe.update({
+      where: { id },
+      data: { deletedAt: null },
     });
   }
 }
