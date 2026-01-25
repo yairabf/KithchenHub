@@ -1,9 +1,10 @@
-import { Recipe } from '../../../mocks/recipes';
+import { Recipe, mockRecipes } from '../../../mocks/recipes';
 import { api } from '../../../services/api';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
 import { withUpdatedAt, markDeleted, withCreatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
+import { isDevMode } from '../../../common/utils/devMode';
 
 /**
  * DTO types for API responses
@@ -71,10 +72,58 @@ function buildRecipeWithDefaults(recipe: Partial<Recipe>): Recipe {
 }
 
 export class LocalRecipeService implements IRecipeService {
+    /**
+     * Seeds mock recipes into storage when empty (dev-only).
+     * 
+     * This method checks if the app is in development mode and if storage is truly empty
+     * (no records at all, including soft-deleted). If both conditions are met, it seeds
+     * mock recipes with proper timestamps and saves them to storage.
+     * 
+     * Note: guestStorage.getRecipes() returns ALL recipes including soft-deleted ones.
+     * So recipes.length === 0 means storage is truly empty (no records at all).
+     * 
+     * @param existingRecipes - Current recipes from storage
+     * @returns Seeded recipes if seeding occurred, null otherwise
+     * @throws {Error} If seeding fails with a descriptive error message
+     * @private
+     */
+    private async seedRecipesIfEmpty(existingRecipes: Recipe[]): Promise<Recipe[] | null> {
+        // Only seed in dev mode when storage is truly empty
+        const shouldSeed = isDevMode() && existingRecipes.length === 0;
+        if (!shouldSeed) {
+            return null;
+        }
+
+        try {
+            // Ensure all mock recipes have createdAt timestamps
+            // withCreatedAt() is safe - it won't overwrite existing timestamps
+            const seededRecipes = mockRecipes.map(recipe => 
+                withCreatedAt(recipe)
+            );
+            
+            // Save seeded recipes to storage
+            await guestStorage.saveRecipes(seededRecipes);
+            
+            return seededRecipes;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to seed mock recipes in dev mode: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Retrieves all recipes from guest storage.
+     * 
+     * In development mode, automatically seeds mock recipes if storage is empty.
+     * This seeding only occurs when storage is truly empty (no records, including soft-deleted).
+     * 
+     * @returns Promise resolving to array of recipes
+     * @throws {Error} If storage read fails or seeding fails in dev mode
+     */
     async getRecipes(): Promise<Recipe[]> {
-        // Read from real guest storage, return empty array if no data exists
         const guestRecipes = await guestStorage.getRecipes();
-        return guestRecipes;
+        const seededRecipes = await this.seedRecipesIfEmpty(guestRecipes);
+        return seededRecipes ?? guestRecipes;
     }
 
     async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {

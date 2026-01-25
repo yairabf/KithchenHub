@@ -1,0 +1,21 @@
+{
+  "name": "kitchen-hub",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:mock": "cd mobile && npm run start:mock",
+    "dev:backend": "concurrently \"npm run backend:dev\" \"npm run mobile:start:backend\"",
+    "dev:backend:ios": "concurrently \"npm run backend:dev\" \"npm run mobile:ios:backend\"",
+    "dev:backend:android": "concurrently \"npm run backend:dev\" \"npm run mobile:android:backend\"",
+    "backend:dev": "cd backend && npm run start:dev",
+    "mobile:start:mock": "cd mobile && npm run start:mock",
+    "mobile:start:backend": "cd mobile && npm run start:backend",
+    "mobile:ios:mock": "cd mobile && npm run ios:mock",
+    "mobile:ios:backend": "cd mobile && npm run ios:backend",
+    "mobile:android:mock": "cd mobile && npm run android:mock",
+    "mobile:android:backend": "cd mobile && npm run android:backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

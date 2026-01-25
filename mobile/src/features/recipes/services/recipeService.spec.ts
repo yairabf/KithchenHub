@@ -6,6 +6,7 @@ import {
 import { api } from '../../../services/api';
 import { mockRecipes } from '../../../mocks/recipes';
 import { guestStorage } from '../../../common/utils/guestStorage';
+import { isDevMode } from '../../../common/utils/devMode';
 
 // Mock the api client
 jest.mock('../../../services/api', () => ({
@@ -23,6 +24,11 @@ jest.mock('../../../common/utils/guestStorage', () => ({
         getRecipes: jest.fn().mockResolvedValue([]),
         saveRecipes: jest.fn().mockResolvedValue(undefined),
     },
+}));
+
+// Mock devMode utility
+jest.mock('../../../common/utils/devMode', () => ({
+    isDevMode: jest.fn(),
 }));
 
 describe('createRecipeService', () => {
@@ -160,6 +166,122 @@ describe('Recipe Services', () => {
             const recipe = await service.createRecipe({ name: '' });
             expect(recipe.name).toBe('New Recipe');
             expect(recipe.localId).toBeDefined();
+        });
+
+        describe('Dev-Only Seeding', () => {
+            beforeEach(() => {
+                jest.clearAllMocks();
+            });
+
+            it('seeds mock recipes when storage is empty in dev mode', async () => {
+                (isDevMode as jest.Mock).mockReturnValue(true);
+                (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
+
+                const recipes = await service.getRecipes();
+
+                expect(recipes).toHaveLength(mockRecipes.length);
+                expect(guestStorage.saveRecipes).toHaveBeenCalledWith(
+                    expect.arrayContaining([
+                        expect.objectContaining({ name: 'Pancakes' }),
+                        expect.objectContaining({ name: 'Pasta Carbonara' }),
+                    ])
+                );
+                // Verify all seeded recipes have createdAt
+                recipes.forEach(recipe => {
+                    expect(recipe.createdAt).toBeInstanceOf(Date);
+                });
+            });
+
+            describe.each([
+                [
+                    'storage has existing recipes',
+                    true, // isDevMode
+                    [{
+                        id: '1',
+                        localId: 'uuid-1',
+                        name: 'Existing',
+                        cookTime: '30 min',
+                        category: 'Dinner',
+                        ingredients: [],
+                        instructions: [],
+                    }],
+                ],
+                [
+                    'storage has soft-deleted recipes',
+                    true, // isDevMode
+                    [{
+                        id: '1',
+                        localId: 'uuid-1',
+                        name: 'Deleted Recipe',
+                        cookTime: '30 min',
+                        category: 'Dinner',
+                        ingredients: [],
+                        instructions: [],
+                        deletedAt: new Date(), // Soft-deleted
+                    }],
+                ],
+                [
+                    'production mode with empty storage',
+                    false, // isDevMode
+                    [],
+                ],
+            ])('does not seed when %s', (_description, isDev, existingRecipes) => {
+                it('returns existing recipes without seeding', async () => {
+                    (isDevMode as jest.Mock).mockReturnValue(isDev);
+                    (guestStorage.getRecipes as jest.Mock).mockResolvedValue(existingRecipes);
+
+                    const recipes = await service.getRecipes();
+
+                    expect(recipes).toEqual(existingRecipes);
+                    expect(guestStorage.saveRecipes).not.toHaveBeenCalled();
+                });
+            });
+
+            it('seeded recipes have proper timestamps', async () => {
+                (isDevMode as jest.Mock).mockReturnValue(true);
+                (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
+                
+                const beforeSeeding = Date.now();
+                const recipes = await service.getRecipes();
+                const afterSeeding = Date.now();
+
+                // Verify all seeded recipes have createdAt timestamps
+                recipes.forEach(recipe => {
+                    expect(recipe.createdAt).toBeInstanceOf(Date);
+                    const timestamp = recipe.createdAt!.getTime();
+                    expect(timestamp).toBeGreaterThan(0);
+                    // Verify timestamp is recent (within test execution time)
+                    expect(timestamp).toBeGreaterThanOrEqual(beforeSeeding);
+                    expect(timestamp).toBeLessThanOrEqual(afterSeeding);
+                });
+            });
+
+            it('seeding is idempotent - only seeds once when empty', async () => {
+                (isDevMode as jest.Mock).mockReturnValue(true);
+                (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
+
+                // First call should seed
+                const firstCall = await service.getRecipes();
+                expect(firstCall).toHaveLength(mockRecipes.length);
+                expect(guestStorage.saveRecipes).toHaveBeenCalledTimes(1);
+
+                // Second call should return seeded recipes (no re-seeding)
+                (guestStorage.getRecipes as jest.Mock).mockResolvedValue(firstCall);
+                const secondCall = await service.getRecipes();
+                expect(secondCall).toHaveLength(mockRecipes.length);
+                // saveRecipes should still be called only once (from first call)
+                expect(guestStorage.saveRecipes).toHaveBeenCalledTimes(1);
+            });
+
+            it('throws meaningful error when seeding fails', async () => {
+                (isDevMode as jest.Mock).mockReturnValue(true);
+                (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
+                (guestStorage.saveRecipes as jest.Mock).mockRejectedValue(new Error('Storage full'));
+
+                await expect(service.getRecipes()).rejects.toThrow(
+                    'Failed to seed mock recipes in dev mode: Storage full'
+                );
+            });
         });
     });
 
