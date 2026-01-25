@@ -140,6 +140,22 @@ interface ProgressRingProps {
   - Smooth spring animations
   - Direction locking to prevent multi-directional swipes
 
+### ChoreCard (Internal Component)
+
+- **File**: `mobile/src/features/chores/screens/ChoresScreen.tsx` (defined within ChoresScreen)
+- **Purpose**: Individual chore card with sync status indicator
+- **Features**:
+  - Displays chore icon, name, assignee, and due date
+  - Edit and delete actions via swipe gestures
+  - **Sync Status Indicator** (signed-in users only):
+    - Displays visual indicator in top-right corner of chore icon
+    - Shows pending state (clock icon) when chore is queued for sync
+    - Shows failed state (warning icon) when sync has permanently failed
+    - Hidden when chore is confirmed (synced successfully)
+    - Uses `useEntitySyncStatusWithEntity` hook to determine status
+    - Integrates with sync queue system for real-time status updates
+    - Wrapped with `React.memo()` for performance optimization
+
 ### ChoreDetailsModal
 
 - **File**: `mobile/src/features/chores/components/ChoreDetailsModal/`
@@ -428,6 +444,9 @@ Utility for applying remote updates to local cached state:
 - `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueueStorage.ts`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`)
 - `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors)
 - `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
+- `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Used by ChoreCard to display sync status indicators
+- `SyncStatusIndicator` - Sync status indicator component (`mobile/src/common/components/SyncStatusIndicator/`) - Visual indicator component showing pending, confirmed, or failed sync status. Displays clock icon for pending, warning icon for failed, checkmark for confirmed
+- `determineIndicatorStatus` - Status determination utility (`mobile/src/common/utils/syncStatusUtils.ts`) - Utility function that determines indicator status from sync status flags (failed > pending > confirmed priority)
 
 ## UI Flow
 

@@ -116,6 +116,7 @@ interface RecipeCardProps {
 
 interface Recipe {
   id: string;
+  localId?: string;
   name: string;
   cookTime: string;
   category: string;
@@ -128,6 +129,13 @@ interface Recipe {
   - Placeholder icon for recipe image
   - Configurable width and background color (pastel)
   - Touch handler for recipe selection
+  - **Sync Status Indicator** (signed-in users only):
+    - Displays visual indicator in top-right corner of recipe image
+    - Shows pending state (clock icon) when recipe is queued for sync
+    - Shows failed state (warning icon) when sync has permanently failed
+    - Hidden when recipe is confirmed (synced successfully)
+    - Uses `useEntitySyncStatusWithEntity` hook to determine status
+    - Integrates with sync queue system for real-time status updates
 
 ### RecipeSidebar
 
@@ -505,6 +513,9 @@ Utility for applying remote updates to local cached state:
 - `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueueStorage.ts`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`)
 - `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors)
 - `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
+- `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Used by RecipeCard to display sync status indicators
+- `SyncStatusIndicator` - Sync status indicator component (`mobile/src/common/components/SyncStatusIndicator/`) - Visual indicator component showing pending, confirmed, or failed sync status. Displays clock icon for pending, warning icon for failed, checkmark for confirmed
+- `determineIndicatorStatus` - Status determination utility (`mobile/src/common/utils/syncStatusUtils.ts`) - Utility function that determines indicator status from sync status flags (failed > pending > confirmed priority)
 
 ## UI Flow
 
