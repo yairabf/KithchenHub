@@ -24,9 +24,10 @@ import { createChoresService } from '../services/choresService';
 import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { determineUserDataMode } from '../../../common/types/dataModes';
+import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
+import { CacheAwareChoreRepository } from '../../../common/repositories/cacheAwareChoreRepository';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
-  const [chores, setChores] = useState<Chore[]>([]);
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -41,41 +42,63 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     return determineUserDataMode(user);
   }, [user]);
   
+  const isSignedIn = userMode === 'signed-in';
+  
   const choresService = useMemo(
     () => createChoresService(userMode),
     [userMode]
   );
-
+  
+  const repository = useMemo(() => {
+    return isSignedIn ? new CacheAwareChoreRepository(choresService) : null;
+  }, [choresService, isSignedIn]);
+  
+  // Use cache hook for signed-in users
+  const { data: cachedChores } = useCachedEntities<Chore>('chores');
+  
+  // For guest mode, use service directly
+  const [guestChores, setGuestChores] = useState<Chore[]>([]);
+  
+  const chores = isSignedIn ? cachedChores : guestChores;
+  
+  // Load chores for guest mode
   useEffect(() => {
-    let isMounted = true;
-
-    const loadChores = async () => {
-      try {
-        const data = await choresService.getChores();
-        if (isMounted) {
-          setChores(data);
+    if (!isSignedIn) {
+      let isMounted = true;
+      const loadChores = async () => {
+        try {
+          const data = await choresService.getChores();
+          if (isMounted) {
+            setGuestChores(data);
+          }
+        } catch (error) {
+          if (isMounted) {
+            console.error('Failed to load chores:', error);
+          }
         }
-      } catch (error) {
-        if (isMounted) {
-          console.error('Failed to load chores:', error);
-        }
-      }
-    };
-
-    loadChores();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [choresService]);
+      };
+      loadChores();
+      return () => { isMounted = false; };
+    }
+  }, [choresService, isSignedIn]);
 
   // Responsive breakpoint: tablet/landscape at 768px+
   const isWideScreen = width >= 768;
 
-  const toggleChore = (id: string) => {
-    setChores(prevChores => prevChores.map(chore =>
-      chore.id === id ? { ...chore, completed: !chore.completed } : chore
-    ));
+  const toggleChore = async (id: string) => {
+    if (repository) {
+      // Signed-in: use repository (cache events will update UI)
+      try {
+        await repository.toggle(id);
+      } catch (error) {
+        console.error('Failed to toggle chore:', error);
+      }
+    } else {
+      // Guest: update local state
+      setGuestChores(prevChores => prevChores.map(chore =>
+        chore.id === id ? { ...chore, completed: !chore.completed } : chore
+      ));
+    }
   };
 
   const handleChorePress = (chore: Chore) => {
@@ -83,23 +106,53 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     setShowDetailsModal(true);
   };
 
-  const handleUpdateAssignee = (choreId: string, assignee: string | undefined) => {
-    setChores(prevChores => prevChores.map(chore =>
-      chore.id === choreId ? { ...chore, assignee } : chore
-    ));
+  const handleUpdateAssignee = async (choreId: string, assignee: string | undefined) => {
+    if (repository) {
+      // Signed-in: use repository
+      try {
+        await repository.update(choreId, { assignee });
+      } catch (error) {
+        console.error('Failed to update chore assignee:', error);
+      }
+    } else {
+      // Guest: update local state
+      setGuestChores(prevChores => prevChores.map(chore =>
+        chore.id === choreId ? { ...chore, assignee } : chore
+      ));
+    }
   };
 
-  const handleUpdateChore = (choreId: string, updates: Partial<Chore>) => {
-    setChores(prevChores => prevChores.map(chore =>
-      chore.id === choreId ? { ...chore, ...updates } : chore
-    ));
+  const handleUpdateChore = async (choreId: string, updates: Partial<Chore>) => {
+    if (repository) {
+      // Signed-in: use repository
+      try {
+        await repository.update(choreId, updates);
+      } catch (error) {
+        console.error('Failed to update chore:', error);
+      }
+    } else {
+      // Guest: update local state
+      setGuestChores(prevChores => prevChores.map(chore =>
+        chore.id === choreId ? { ...chore, ...updates } : chore
+      ));
+    }
   };
 
-  const handleDeleteChore = (choreId: string) => {
-    setChores(prevChores => prevChores.filter(chore => chore.id !== choreId));
+  const handleDeleteChore = async (choreId: string) => {
+    if (repository) {
+      // Signed-in: use repository
+      try {
+        await repository.delete(choreId);
+      } catch (error) {
+        console.error('Failed to delete chore:', error);
+      }
+    } else {
+      // Guest: update local state
+      setGuestChores(prevChores => prevChores.filter(chore => chore.id !== choreId));
+    }
   };
 
-  const handleAddChore = (newChore: {
+  const handleAddChore = async (newChore: {
     name: string;
     icon: string;
     assignee?: string;
@@ -107,8 +160,18 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     dueTime?: string;
     section: 'today' | 'thisWeek';
   }) => {
-    const chore = createChore(newChore);
-    setChores(prevChores => [...prevChores, chore]);
+    if (repository) {
+      // Signed-in: use repository
+      try {
+        await repository.create(newChore);
+      } catch (error) {
+        console.error('Failed to create chore:', error);
+      }
+    } else {
+      // Guest: update local state
+      const chore = createChore(newChore);
+      setGuestChores(prevChores => [...prevChores, chore]);
+    }
   };
 
   // Register the handler with parent on mount

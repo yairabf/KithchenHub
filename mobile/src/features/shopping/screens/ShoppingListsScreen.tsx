@@ -33,6 +33,8 @@ import { getSelectedList } from '../utils/selectionUtils';
 import { determineUserDataMode } from '../../../common/types/dataModes';
 import { supabase } from '../../../services/supabase';
 import { api } from '../../../services/api';
+import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
+import { CacheAwareShoppingRepository } from '../../../common/repositories/cacheAwareShoppingRepository';
 import {
   applyShoppingItemChange,
   applyShoppingListChange,
@@ -62,9 +64,7 @@ type ShoppingItemRealtimeRow = {
 export function ShoppingListsScreen() {
   const { isTablet } = useResponsive();
   const { user } = useAuth();
-  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
-  const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
   const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [frequentlyAddedItems, setFrequentlyAddedItems] = useState<GroceryItem[]>([]);
@@ -80,6 +80,7 @@ export function ShoppingListsScreen() {
   const [showAllItemsModal, setShowAllItemsModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  
   // Determine data mode based on user authentication state
   const userMode = useMemo(() => {
     if (config.mockData.enabled) {
@@ -88,12 +89,30 @@ export function ShoppingListsScreen() {
     return determineUserDataMode(user);
   }, [user]);
 
-  const isRealtimeEnabled = userMode === 'signed-in' && !!user?.householdId;
-  const listIdFilter = buildListIdFilter(shoppingLists.map((list) => list.id));
+  const isSignedIn = userMode === 'signed-in';
+  const isRealtimeEnabled = isSignedIn && !!user?.householdId;
+  
+  // Create service and repository
   const shoppingService = useMemo(
     () => createShoppingService(userMode),
     [userMode]
   );
+  
+  const repository = useMemo(() => {
+    return isSignedIn ? new CacheAwareShoppingRepository(shoppingService) : null;
+  }, [shoppingService, isSignedIn]);
+  
+  // Use cache hooks for signed-in users
+  const { data: cachedLists, isLoading: isListsLoading } = useCachedEntities<ShoppingList>('shoppingLists');
+  const { data: cachedItems, isLoading: isItemsLoading } = useCachedEntities<ShoppingItem>('shoppingItems');
+  
+  // For guest mode, use service directly
+  const [guestLists, setGuestLists] = useState<ShoppingList[]>([]);
+  const [guestItems, setGuestItems] = useState<ShoppingItem[]>([]);
+  
+  const shoppingLists = isSignedIn ? cachedLists : guestLists;
+  const allItems = isSignedIn ? cachedItems : guestItems;
+  
   const fallbackList = useMemo<ShoppingList>(() => ({
     id: 'fallback-list',
     localId: 'fallback-list',
@@ -103,43 +122,73 @@ export function ShoppingListsScreen() {
     color: colors.shopping,
   }), []);
   const activeList = selectedList ?? shoppingLists[0] ?? fallbackList;
+  
+  const listIdFilter = buildListIdFilter(shoppingLists.map((list) => list.id));
 
+  // Load data for guest mode or initial load for signed-in
   useEffect(() => {
-    let isMounted = true;
-
-    const loadShoppingData = async () => {
-      try {
-        const data = await shoppingService.getShoppingData();
-        if (!isMounted) {
-          return;
+    if (isSignedIn && repository) {
+      // For signed-in, use repository to load grocery items and build categories
+      const loadGroceryData = async () => {
+        try {
+          const data = await repository.getShoppingData();
+          setGroceryItems(data.groceryItems);
+          setCategories(data.categories);
+          setFrequentlyAddedItems(data.frequentlyAddedItems);
+        } catch (error) {
+          console.error('Failed to load grocery data:', error);
         }
-
-        setShoppingLists(data.shoppingLists);
-        setAllItems(data.shoppingItems);
-        setGroceryItems(data.groceryItems);
-        setCategories(data.categories);
-        setFrequentlyAddedItems(data.frequentlyAddedItems);
-        setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
-      } catch (error) {
-        if (!isMounted) {
-          return;
+      };
+      loadGroceryData();
+    } else {
+      // Guest mode: use service directly
+      let isMounted = true;
+      const loadShoppingData = async () => {
+        try {
+          const data = await shoppingService.getShoppingData();
+          if (!isMounted) return;
+          
+          setGuestLists(data.shoppingLists);
+          setGuestItems(data.shoppingItems);
+          setGroceryItems(data.groceryItems);
+          setCategories(data.categories);
+          setFrequentlyAddedItems(data.frequentlyAddedItems);
+          setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
+        } catch (error) {
+          if (!isMounted) return;
+          console.error('Failed to load shopping data:', error);
         }
-        console.error('Failed to load shopping data:', error);
-      }
-    };
-
-    loadShoppingData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [shoppingService]);
-
+      };
+      loadShoppingData();
+      return () => { isMounted = false; };
+    }
+  }, [shoppingService, repository, isSignedIn]);
+  
+  // For signed-in mode, load grocery data when lists/items change
   useEffect(() => {
-    setShoppingLists((currentLists) =>
-      updateShoppingListItemCounts(currentLists, allItems),
-    );
-  }, [allItems]);
+    if (isSignedIn && repository && shoppingLists.length > 0) {
+      const loadGroceryData = async () => {
+        try {
+          const data = await repository.getShoppingData();
+          setGroceryItems(data.groceryItems);
+          setCategories(data.categories);
+          setFrequentlyAddedItems(data.frequentlyAddedItems);
+        } catch (error) {
+          console.error('Failed to load grocery data:', error);
+        }
+      };
+      loadGroceryData();
+    }
+  }, [repository, isSignedIn, shoppingLists.length]);
+
+  // Update list item counts when items change (for guest mode)
+  useEffect(() => {
+    if (!isSignedIn) {
+      setGuestLists((currentLists) =>
+        updateShoppingListItemCounts(currentLists, allItems),
+      );
+    }
+  }, [allItems, isSignedIn]);
 
   useEffect(() => {
     setSelectedList((currentSelected) => getSelectedList(shoppingLists, currentSelected?.id));
@@ -163,22 +212,27 @@ export function ShoppingListsScreen() {
       (payload) => {
         const typedPayload = payload as RealtimePostgresChangesPayload<ShoppingListRealtimeRow>;
 
-        setShoppingLists((currentLists) => {
-          const nextLists = applyShoppingListChange(currentLists, typedPayload);
-          setSelectedList((currentSelected) =>
-            getSelectedList(nextLists, currentSelected?.id),
-          );
-          return nextLists;
-        });
-
-        if (typedPayload.eventType === 'DELETE') {
-          const deletedId = typedPayload.old?.id;
-          if (deletedId) {
-            setAllItems((currentItems) =>
-              currentItems.filter((item) => item.listId !== deletedId),
+        // For signed-in users, realtime updates will be handled by cache refresh
+        // For guest mode, update local state
+        if (!isSignedIn) {
+          setGuestLists((currentLists: ShoppingList[]) => {
+            const nextLists = applyShoppingListChange(currentLists, typedPayload);
+            setSelectedList((currentSelected) =>
+              getSelectedList(nextLists, currentSelected?.id),
             );
+            return nextLists;
+          });
+
+          if (typedPayload.eventType === 'DELETE') {
+            const deletedId = typedPayload.old?.id;
+            if (deletedId) {
+              setGuestItems((currentItems: ShoppingItem[]) =>
+                currentItems.filter((item) => item.listId !== deletedId),
+              );
+            }
           }
         }
+        // For signed-in: cache events will update UI via useCachedEntities
       },
     );
 
@@ -207,9 +261,14 @@ export function ShoppingListsScreen() {
       },
       (payload) => {
         const typedPayload = payload as RealtimePostgresChangesPayload<ShoppingItemRealtimeRow>;
-        setAllItems((currentItems) =>
-          applyShoppingItemChange(currentItems, typedPayload, groceryItems),
-        );
+        // For signed-in users, realtime updates will be handled by cache refresh
+        // For now, we still update local state for immediate UI feedback
+        // TODO: Integrate realtime updates with cache events
+        if (!isSignedIn) {
+          setGuestItems((currentItems) =>
+            applyShoppingItemChange(currentItems, typedPayload, groceryItems),
+          );
+        }
       },
     );
 
@@ -227,6 +286,42 @@ export function ShoppingListsScreen() {
   const logShoppingError = (message: string, error: unknown) => {
     console.error(message, error);
   };
+  
+  // Helper to use repository if available (signed-in), otherwise use service (guest)
+  const createItem = async (item: Partial<ShoppingItem>) => {
+    if (repository) {
+      return repository.createItem(item);
+    }
+    return shoppingService.createItem(item);
+  };
+  
+  const updateItem = async (itemId: string, updates: Partial<ShoppingItem>) => {
+    if (repository) {
+      return repository.updateItem(itemId, updates);
+    }
+    return shoppingService.updateItem(itemId, updates);
+  };
+  
+  const deleteItem = async (itemId: string) => {
+    if (repository) {
+      return repository.deleteItem(itemId);
+    }
+    return shoppingService.deleteItem(itemId);
+  };
+  
+  const toggleItem = async (itemId: string) => {
+    if (repository) {
+      return repository.toggleItem(itemId);
+    }
+    return shoppingService.toggleItem(itemId);
+  };
+  
+  const createList = async (list: Partial<ShoppingList>) => {
+    if (repository) {
+      return repository.createList(list);
+    }
+    return shoppingService.createList(list);
+  };
 
   /**
    * Executes a service operation with optimistic UI updates and automatic revert on error.
@@ -241,13 +336,21 @@ export function ShoppingListsScreen() {
    * @example
    * ```typescript
    * await executeWithOptimisticUpdate(
-   *   () => shoppingService.toggleItem(itemId),
-   *   () => setAllItems(prev => prev.map(item => 
-   *     item.id === itemId ? {...item, isChecked: true} : item
-   *   )),
-   *   () => setAllItems(prev => prev.map(item => 
-   *     item.id === itemId ? {...item, isChecked: false} : item
-   *   )),
+   *   () => toggleItem(itemId),
+   *   () => {
+   *     if (!isSignedIn) {
+   *       setGuestItems(prev => prev.map(item => 
+   *         item.id === itemId ? {...item, isChecked: true} : item
+   *       ));
+   *     }
+   *   },
+   *   () => {
+   *     if (!isSignedIn) {
+   *       setGuestItems(prev => prev.map(item => 
+   *         item.id === itemId ? {...item, isChecked: false} : item
+   *       ));
+   *     }
+   *   },
    *   'Failed to toggle item:'
    * );
    * ```
@@ -258,11 +361,17 @@ export function ShoppingListsScreen() {
     revertUpdate: () => void,
     errorMessage: string
   ): Promise<T | null> => {
-    optimisticUpdate();
+    // Only apply optimistic updates for guest mode
+    // For signed-in mode, cache events will update UI automatically
+    if (!isSignedIn) {
+      optimisticUpdate();
+    }
     try {
       return await operation();
     } catch (error) {
-      revertUpdate();
+      if (!isSignedIn) {
+        revertUpdate();
+      }
       logShoppingError(errorMessage, error);
       return null;
     }
@@ -282,20 +391,24 @@ export function ShoppingListsScreen() {
     }
 
     await executeWithOptimisticUpdate(
-      () => shoppingService.updateItem(itemId, { quantity: nextQuantity }),
+      () => updateItem(itemId, { quantity: nextQuantity }),
       () => {
-        setAllItems((prev) => prev.map((item) =>
-          item.id === itemId || item.localId === itemId
-            ? { ...item, quantity: nextQuantity }
-            : item,
-        ));
+        if (!isSignedIn) {
+          setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+            item.id === itemId || item.localId === itemId
+              ? { ...item, quantity: nextQuantity }
+              : item,
+          ));
+        }
       },
       () => {
-        setAllItems((prev) => prev.map((item) =>
-          item.id === itemId || item.localId === itemId
-            ? { ...item, quantity: previousQuantity }
-            : item,
-        ));
+        if (!isSignedIn) {
+          setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+            item.id === itemId || item.localId === itemId
+              ? { ...item, quantity: previousQuantity }
+              : item,
+          ));
+        }
       },
       'Failed to update shopping item quantity:'
     );
@@ -308,12 +421,16 @@ export function ShoppingListsScreen() {
     }
 
     await executeWithOptimisticUpdate(
-      () => shoppingService.deleteItem(itemId),
+      () => deleteItem(itemId),
       () => {
-        setAllItems((prev) => prev.filter((item) => item.id !== itemId && item.localId !== itemId));
+        if (!isSignedIn) {
+          setGuestItems((prev: ShoppingItem[]) => prev.filter((item) => item.id !== itemId && item.localId !== itemId));
+        }
       },
       () => {
-        setAllItems((prev) => [...prev, targetItem]);
+        if (!isSignedIn) {
+          setGuestItems((prev: ShoppingItem[]) => [...prev, targetItem]);
+        }
       },
       'Failed to delete shopping item:'
     );
@@ -329,20 +446,24 @@ export function ShoppingListsScreen() {
     const nextChecked = !previousChecked;
 
     await executeWithOptimisticUpdate(
-      () => shoppingService.toggleItem(itemId),
+      () => toggleItem(itemId),
       () => {
-        setAllItems((prev) => prev.map((item) =>
-          item.id === itemId || item.localId === itemId
-            ? { ...item, isChecked: nextChecked }
-            : item,
-        ));
+        if (!isSignedIn) {
+          setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+            item.id === itemId || item.localId === itemId
+              ? { ...item, isChecked: nextChecked }
+              : item,
+          ));
+        }
       },
       () => {
-        setAllItems((prev) => prev.map((item) =>
-          item.id === itemId || item.localId === itemId
-            ? { ...item, isChecked: previousChecked }
-            : item,
-        ));
+        if (!isSignedIn) {
+          setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+            item.id === itemId || item.localId === itemId
+              ? { ...item, isChecked: previousChecked }
+              : item,
+          ));
+        }
       },
       'Failed to toggle shopping item:'
     );
@@ -369,45 +490,64 @@ export function ShoppingListsScreen() {
       const nextQuantity = previousQuantity + quantity;
 
       await executeWithOptimisticUpdate(
-        () => shoppingService.updateItem(existingItem.id, { quantity: nextQuantity }),
+        () => updateItem(existingItem.id, { quantity: nextQuantity }),
         () => {
-          setAllItems((prev) => prev.map((item) =>
-            item.id === existingItem.id || item.localId === existingItem.localId
-              ? { ...item, quantity: nextQuantity }
-              : item,
-          ));
+          if (!isSignedIn) {
+            setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+              item.id === existingItem.id || item.localId === existingItem.localId
+                ? { ...item, quantity: nextQuantity }
+                : item,
+            ));
+          }
         },
         () => {
-          setAllItems((prev) => prev.map((item) =>
-            item.id === existingItem.id || item.localId === existingItem.localId
-              ? { ...item, quantity: previousQuantity }
-              : item,
-          ));
+          if (!isSignedIn) {
+            setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+              item.id === existingItem.id || item.localId === existingItem.localId
+                ? { ...item, quantity: previousQuantity }
+                : item,
+            ));
+          }
         },
         'Failed to update shopping item quantity:'
       );
     } else {
-      // Create new item with optimistic UI update
-      const tempItem = createShoppingItem(groceryItem, activeList.id, quantity);
-      setAllItems((prev) => [...prev, tempItem]);
+      // Create new item with optimistic UI update (guest mode only)
+      if (!isSignedIn) {
+        const tempItem = createShoppingItem(groceryItem, activeList.id, quantity);
+        setGuestItems((prev: ShoppingItem[]) => [...prev, tempItem]);
 
-      try {
-        const newItem = await shoppingService.createItem({
-          name: groceryItem.name,
-          listId: activeList.id,
-          quantity,
-          category: groceryItem.category,
-          image: groceryItem.image,
-        });
-        
-        // Replace temp item with real item from service
-        setAllItems((prev) => prev.map((item) =>
-          item.localId === tempItem.localId ? newItem : item
-        ));
-      } catch (error) {
-        // Remove temp item on error
-        setAllItems((prev) => prev.filter((item) => item.localId !== tempItem.localId));
-        logShoppingError('Failed to create shopping item:', error);
+        try {
+          const newItem = await createItem({
+            name: groceryItem.name,
+            listId: activeList.id,
+            quantity,
+            category: groceryItem.category,
+            image: groceryItem.image,
+          });
+          
+          // Replace temp item with real item from service
+          setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+            item.localId === tempItem.localId ? newItem : item
+          ));
+        } catch (error) {
+          // Remove temp item on error
+          setGuestItems((prev: ShoppingItem[]) => prev.filter((item) => item.localId !== tempItem.localId));
+          logShoppingError('Failed to create shopping item:', error);
+        }
+      } else {
+        // Signed-in mode: just call repository (cache events will update UI)
+        try {
+          await createItem({
+            name: groceryItem.name,
+            listId: activeList.id,
+            quantity,
+            category: groceryItem.category,
+            image: groceryItem.image,
+          });
+        } catch (error) {
+          logShoppingError('Failed to create shopping item:', error);
+        }
       }
     }
 
@@ -431,45 +571,64 @@ export function ShoppingListsScreen() {
       const nextQuantity = previousQuantity + quantity;
 
       await executeWithOptimisticUpdate(
-        () => shoppingService.updateItem(existingItem.id, { quantity: nextQuantity }),
+        () => updateItem(existingItem.id, { quantity: nextQuantity }),
         () => {
-          setAllItems((prev) => prev.map((item) =>
-            item.id === existingItem.id || item.localId === existingItem.localId
-              ? { ...item, quantity: nextQuantity }
-              : item,
-          ));
+          if (!isSignedIn) {
+            setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+              item.id === existingItem.id || item.localId === existingItem.localId
+                ? { ...item, quantity: nextQuantity }
+                : item,
+            ));
+          }
         },
         () => {
-          setAllItems((prev) => prev.map((item) =>
-            item.id === existingItem.id || item.localId === existingItem.localId
-              ? { ...item, quantity: previousQuantity }
-              : item,
-          ));
+          if (!isSignedIn) {
+            setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+              item.id === existingItem.id || item.localId === existingItem.localId
+                ? { ...item, quantity: previousQuantity }
+                : item,
+            ));
+          }
         },
         'Failed to update shopping item quantity:'
       );
     } else {
-      // Create new item with optimistic UI update
-      const tempItem = createShoppingItem(selectedGroceryItem, activeList.id, quantity);
-      setAllItems((prev) => [...prev, tempItem]);
+      // Create new item with optimistic UI update (guest mode only)
+      if (!isSignedIn) {
+        const tempItem = createShoppingItem(selectedGroceryItem, activeList.id, quantity);
+        setGuestItems((prev: ShoppingItem[]) => [...prev, tempItem]);
 
-      try {
-        const newItem = await shoppingService.createItem({
-          name: selectedGroceryItem.name,
-          listId: activeList.id,
-          quantity,
-          category: selectedGroceryItem.category,
-          image: selectedGroceryItem.image,
-        });
-        
-        // Replace temp item with real item from service
-        setAllItems((prev) => prev.map((item) =>
-          item.localId === tempItem.localId ? newItem : item
-        ));
-      } catch (error) {
-        // Remove temp item on error
-        setAllItems((prev) => prev.filter((item) => item.localId !== tempItem.localId));
-        logShoppingError('Failed to create shopping item:', error);
+        try {
+          const newItem = await createItem({
+            name: selectedGroceryItem.name,
+            listId: activeList.id,
+            quantity,
+            category: selectedGroceryItem.category,
+            image: selectedGroceryItem.image,
+          });
+          
+          // Replace temp item with real item from service
+          setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
+            item.localId === tempItem.localId ? newItem : item
+          ));
+        } catch (error) {
+          // Remove temp item on error
+          setGuestItems((prev: ShoppingItem[]) => prev.filter((item) => item.localId !== tempItem.localId));
+          logShoppingError('Failed to create shopping item:', error);
+        }
+      } else {
+        // Signed-in mode: just call repository (cache events will update UI)
+        try {
+          await createItem({
+            name: selectedGroceryItem.name,
+            listId: activeList.id,
+            quantity,
+            category: selectedGroceryItem.category,
+            image: selectedGroceryItem.image,
+          });
+        } catch (error) {
+          logShoppingError('Failed to create shopping item:', error);
+        }
       }
     }
 
@@ -511,14 +670,19 @@ export function ShoppingListsScreen() {
       return;
     }
 
-    // Always call service method (service handles guest vs signed-in internally)
+    // Use repository if available (signed-in), otherwise use service (guest)
     try {
-      const newList = await shoppingService.createList({
+      const newList = await createList({
         name: trimmedName,
         icon: newListIcon,
         color: newListColor,
       });
-      setShoppingLists((prev) => [...prev, newList]);
+      
+      // For guest mode, update local state
+      // For signed-in mode, cache events will update UI automatically
+      if (!isSignedIn) {
+        setGuestLists((prev: ShoppingList[]) => [...prev, newList]);
+      }
       setSelectedList(newList);
       handleCancelCreateListModal();
     } catch (error) {

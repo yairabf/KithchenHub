@@ -325,8 +325,16 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
   - Returns: `recipes`, `isLoading`, `error`, `addRecipe`, `updateRecipe`
   - Uses `createRecipeService(mode)` factory to select service implementation based on data mode
   - Determines mode using `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
-  - `addRecipe` and `updateRecipe` automatically persist to guest storage when in guest mode
-  - `updateRecipe` merges updates with existing recipe data to prevent data loss
+  - **Cache-Aware Repository Pattern** (signed-in users only):
+    - Uses `CacheAwareRecipeRepository` which wraps `RemoteRecipeService`
+    - Uses `useCachedEntities<Recipe>('recipes')` hook for reactive cache access
+    - Cache automatically updates UI when data changes (via cache events)
+    - `addRecipe` and `updateRecipe` use repository methods that implement write-through caching
+    - Cache events trigger automatic UI re-renders without manual refresh
+  - **Guest Mode**:
+    - Uses service directly (no cache layer)
+    - `addRecipe` and `updateRecipe` automatically persist to guest storage
+    - `updateRecipe` merges updates with existing recipe data to prevent data loss
 
 ## Service Layer
 
@@ -368,18 +376,32 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
     - Server timestamps are authoritative and overwrite client timestamps on response
     - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
-    - **Cache-First Strategy** (signed-in users only):
-      - `getRecipes()`: Uses `getCached()` for cache-first reads with background refresh
+- **Cache-Aware Repository Layer** (signed-in users only):
+  - **Repository**: `CacheAwareRecipeRepository` (`mobile/src/common/repositories/cacheAwareRecipeRepository.ts`)
+    - Wraps `RemoteRecipeService` with cache-first read strategies and write-through caching
+    - Implements `ICacheAwareRepository<Recipe>` interface
+    - **Cache-First Reads**:
+      - `findAll()`: Uses `getCached()` for cache-first reads with background refresh
         - Returns cached data immediately if fresh or stale
         - Triggers background refresh for stale data (non-blocking)
         - Blocks for network fetch if cache is expired (when online)
         - Returns cached data if offline (even if expired)
-      - `createRecipe()`, `updateRecipe()`, `deleteRecipe()`: Use write-through caching
-        - Updates cache immediately after successful API operations
-        - Maintains cache freshness for subsequent reads
-      - Cache metadata tracks `lastSyncedAt` per entity type
-      - TTL configuration: 5min stale threshold, 10min expiration
-      - See `mobile/src/common/repositories/cacheAwareRepository.ts` for implementation details
+      - `findById()`: Reads directly from cache (optimized, no network fetch)
+    - **Write-Through Caching**:
+      - `create()`, `update()`, `delete()`: Update cache immediately after successful API operations
+      - Uses helper functions (`addEntityToCache`, `updateEntityInCache`) for error handling
+      - Cache errors are logged but don't fail operations (server write succeeded)
+      - Cache is invalidated on error to force refresh on next read
+    - **Cache Events**: Emits cache change events after writes to trigger UI updates
+  - **Reactive Cache Hook**: `useCachedEntities<Recipe>('recipes')` (`mobile/src/common/hooks/useCachedEntities.ts`)
+    - Subscribes to cache change events for automatic UI updates
+    - Returns: `data`, `isLoading`, `error`, `refresh`
+    - Automatically re-reads cache when change events are emitted
+    - Provides manual refresh function for pull-to-refresh scenarios
+  - **Cache Configuration**:
+    - Cache metadata tracks `lastSyncedAt` per entity type
+    - TTL configuration: 5min stale threshold, 10min expiration
+    - See `mobile/src/common/repositories/cacheAwareRepository.ts` for implementation details
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
   - Storage keys are centrally managed via `getGuestStorageKey(ENTITY_TYPES.*)` from `dataModeStorage.ts`
   - Uses envelope format internally: `{ version: 1, updatedAt: string, data: T[] }` for versioning support
@@ -474,7 +496,10 @@ Utility for applying remote updates to local cached state:
 - `conflictResolution` - Conflict resolution utilities (`mobile/src/common/utils/conflictResolution.ts`)
 - `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
 - `guestNoSyncGuardrails` - Guest mode sync guardrails (`mobile/src/common/guards/guestNoSyncGuardrails.ts`) - Runtime assertions preventing guest data from syncing remotely
-- `cacheAwareRepository` - Cache-first repository (`mobile/src/common/repositories/cacheAwareRepository.ts`) - Provides `getCached()` and `setCached()` for cache-first reads and write-through caching
+- `CacheAwareRecipeRepository` - Cache-aware repository (`mobile/src/common/repositories/cacheAwareRecipeRepository.ts`) - Wraps `RemoteRecipeService` with cache-first reads and write-through caching. Implements `ICacheAwareRepository<Recipe>` interface.
+- `useCachedEntities` - Reactive cache hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that subscribes to cache changes and automatically updates UI when cache changes. Used by `useRecipes` for signed-in users.
+- `cacheAwareRepository` - Cache utilities (`mobile/src/common/repositories/cacheAwareRepository.ts`) - Provides `getCached()`, `setCached()`, `addEntityToCache()`, `updateEntityInCache()`, and `readCachedEntitiesForUpdate()` for cache-first reads and write-through caching
+- `cacheEvents` - Cache event bus (`mobile/src/common/utils/cacheEvents.ts`) - Event emitter for cache change notifications. Used to trigger UI updates when cache changes.
 - `cacheStorage` - Cache storage utilities (`mobile/src/common/utils/cacheStorage.ts`) - Thin wrapper layer for safe cache access with TTL support. Provides `readCacheArray()`, `writeCacheArray()`, `getCacheState()`, and `shouldRefreshCache()` helpers. Used internally by `cacheAwareRepository`.
 - `networkStatus` - Network status singleton (`mobile/src/common/utils/networkStatus.ts`) - Provides `getIsOnline()` for checking network connectivity outside React components
 
