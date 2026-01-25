@@ -35,7 +35,9 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - Two-column layout: shopping lists & items (left), categories discovery (right)
   - Multiple modal interactions (quantity, create list, category, all items, quick add)
   - Floating action button for quick add
-  - **Guest Support**: Loads private list data from local mocks for guest users while signed-in users use the API
+  - **Guest Support**: Loads private list data from local storage (AsyncStorage) for guest users while signed-in users use the API
+  - **Service Integration**: All CRUD operations (toggle, delete, update, create) always call service methods - no userMode branching in handlers
+  - **Optimistic UI Updates**: All operations use optimistic updates with automatic revert on error via `executeWithOptimisticUpdate` helper
 
 #### Code Snippet - Service Initialization
 
@@ -234,9 +236,9 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
 ## State Management
 
 - **Local state**: All state managed within ShoppingListsScreen via `useState`
-  - `shoppingLists` - All shopping lists
+  - `shoppingLists` - All shopping lists (active only - deleted items filtered by service)
   - `selectedList` - Currently active list
-  - `allItems` - All shopping items across lists
+  - `allItems` - All shopping items across lists (active only - deleted items filtered by service)
   - `groceryItems` - Grocery database items
   - `categories` - Category definitions
   - `frequentlyAddedItems` - Frequently added grocery items
@@ -244,7 +246,9 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
 - **Service**: `createShoppingService(mode)` factory creates service instance based on data mode
   - Loads all data via `shoppingService.getShoppingData()` on mount
   - Mode determined by `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
+  - **Service handles mode internally**: Screen handlers always call service methods; service implementation (LocalShoppingService vs RemoteShoppingService) handles guest vs signed-in logic
 - **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
+- **Optimistic Updates**: All CRUD operations use `executeWithOptimisticUpdate()` helper for responsive UX with automatic error revert
 
 ## Service Layer
 
@@ -268,10 +272,12 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
 - **Service Classes** (extracted into separate files):
   - `LocalShoppingService` (`mobile/src/features/shopping/services/LocalShoppingService.ts`): 
     - Reads lists and items from `guestStorage` (AsyncStorage) instead of mocks
+    - **Filters deleted items**: `getShoppingData()` uses `isEntityActive()` to filter out soft-deleted items (tombstone pattern)
     - Returns empty arrays when no guest data exists (not mock data)
     - Still provides reference data (categories, groceryItems, frequentlyAddedItems) from mocks as these are not user-created
     - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
     - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
+    - **ID Matching**: Service methods accept both `id` and `localId` via `findEntityIndex()` which checks both identifiers
   - `RemoteShoppingService` (`mobile/src/features/shopping/services/RemoteShoppingService.ts`): 
     - Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
     - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
@@ -345,6 +351,45 @@ const shoppingService = useMemo(
 - **Development** (`config.mockData.enabled = true`): Always uses `LocalShoppingService` (guest mode) regardless of auth state
 - **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalShoppingService` which reads from AsyncStorage (no API calls)
 - **Production + Signed-in User** (`config.mockData.enabled = false` + authenticated): Uses `RemoteShoppingService` (cloud sync)
+
+### Handler Implementation Pattern
+
+All screen handlers follow a consistent pattern that eliminates userMode branching:
+
+- **Always call service methods**: Handlers never branch on `userMode` - they always call `shoppingService` methods
+- **Service handles mode internally**: `LocalShoppingService` writes to AsyncStorage, `RemoteShoppingService` calls API
+- **Optimistic UI updates**: All operations use `executeWithOptimisticUpdate()` helper for responsive UX
+- **Automatic error revert**: Failed operations automatically revert optimistic state changes
+- **ID matching**: Handlers support both `id` and `localId` for consistent entity identification
+
+**Helper Function**: `executeWithOptimisticUpdate<T>()`
+- Eliminates code duplication across handlers (~90 lines reduced)
+- Provides consistent error handling and revert logic
+- Maintains responsive UX with optimistic updates
+
+**Example Handler Pattern**:
+```typescript
+const handleToggleItemChecked = async (itemId: string) => {
+  const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
+  if (!targetItem) return;
+
+  const previousChecked = targetItem.isChecked;
+  const nextChecked = !previousChecked;
+
+  await executeWithOptimisticUpdate(
+    () => shoppingService.toggleItem(itemId),  // Always call service
+    () => { /* optimistic update */ },
+    () => { /* revert on error */ },
+    'Failed to toggle shopping item:'
+  );
+};
+```
+
+**Create Operations**: Use temporary items for instant UI feedback:
+- Create temp item with `createShoppingItem()` for immediate display
+- Call `shoppingService.createItem()` to persist
+- Replace temp item with real item from service on success
+- Remove temp item on error
 
 ### List Selection Utilities
 
@@ -424,6 +469,7 @@ Utility for applying remote updates to local cached state:
 - `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
 - `createShoppingService` - Service factory for selecting guest/signed-in data source based on mode
 - `guestStorage` - Guest data persistence utilities (`mobile/src/common/utils/guestStorage.ts`)
+- `isEntityActive` - Utility to filter active entities (`mobile/src/common/types/entityMetadata.ts`) - used by `LocalShoppingService.getShoppingData()` to filter deleted items
 - `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
 - `getSelectedList`, `getActiveListId` - Selection utilities from `utils/selectionUtils.ts` for preventing stale list state
 - `mockGroceriesDB` - Grocery database with images and categories (used by LocalShoppingService)
