@@ -125,10 +125,23 @@ interface GrocerySearchBarProps {
 
 - **File**: `mobile/src/features/shopping/components/CategoriesGrid/`
 - **Purpose**: Visual category tiles for browsing groceries
+- **Props**:
+
+```typescript
+interface CategoriesGridProps {
+  categories: Category[];
+  onCategoryPress: (categoryName: string) => void;
+  onSeeAllPress: () => void;
+}
+```
+
 - **Features**:
   - Grid of category cards with images and item counts
   - "See all" button for full item view
   - Category background overlays
+  - **Image Validation**: Uses `isValidImageUrl()` utility to validate category images before rendering
+  - **Conditional Rendering**: Renders `ImageBackground` when category has valid image URL, falls back to plain `View` with background color when image is invalid or missing
+  - **Test IDs**: Includes `testID` attributes for testing (`category-image-background-{id}` and `category-no-image-{id}`)
 
 ### FrequentlyAddedGrid
 
@@ -288,6 +301,12 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Reads lists and items from `guestStorage` (AsyncStorage) instead of mocks
     - **Filters deleted items**: `getShoppingData()` uses `isEntityActive()` to filter out soft-deleted items (tombstone pattern)
     - Returns empty arrays when no guest data exists (not mock data)
+    - **Mock Data Seeding**: Automatically seeds mock shopping lists and items when storage is empty (dev mode or when `config.mockData.enabled` is true)
+      - Only seeds when storage is truly empty (no records at all, including soft-deleted)
+      - Uses `seedShoppingDataIfEmpty()` private method to handle seeding logic
+      - Seeds mock data with proper `createdAt` timestamps via `withCreatedAt()` helper
+      - **Graceful Error Handling**: If seeding fails, logs error in dev mode but continues with empty arrays (seeding is a convenience feature, not critical)
+      - Idempotent: won't re-seed after user deletes all lists/items (tombstones remain)
     - **Catalog Data**: Uses `catalogService.getCatalogData()` to fetch reference data (categories, groceryItems, frequentlyAddedItems) with API → Cache → Mock fallback strategy
     - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
     - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
@@ -495,8 +514,10 @@ Utility for applying remote updates to local cached state:
 - `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Provides catalog data with API → Cache → Mock fallback strategy. Used by all shopping services (LocalShoppingService, RemoteShoppingService, CacheAwareShoppingRepository) for consistent catalog fetching
 - `catalogUtils` - Catalog utilities (`mobile/src/common/utils/catalogUtils.ts`) - Shared functions for building categories and frequently added items. Used by all services for consistent data transformation
 - `GrocerySearchItemDto` - Shared type (`mobile/src/common/types/catalog.ts`) - Centralized DTO type for catalog API responses, preventing code duplication
+- `isValidImageUrl` - Image validation utility (`mobile/src/common/utils/imageUtils.ts`) - Validates image URL strings (handles empty strings, whitespace-only strings, null/undefined). Used by `CategoriesGrid` to determine if category images should be rendered
 - `mockGroceriesDB` - Grocery database with images and categories (fallback data for catalog service)
-- `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService)
+- `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService for seeding)
+- `isDevMode` - Development mode detection utility (`mobile/src/common/utils/devMode.ts`) - Wrapper around React Native `__DEV__` constant for testability. Used by `LocalShoppingService` to determine if dev-only seeding should occur
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
 - `useAuth` - Auth context hook for determining user state
 - `CenteredModal` - Shared modal component
