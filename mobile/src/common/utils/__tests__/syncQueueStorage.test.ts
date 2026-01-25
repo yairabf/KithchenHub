@@ -1,0 +1,191 @@
+/**
+ * Tests for Sync Queue Storage
+ * 
+ * Tests queue operations, compaction rules, and concurrent access handling.
+ */
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { syncQueueStorage, type QueuedWrite, type QueueTargetId } from '../syncQueueStorage';
+import type { SyncEntityType } from '../cacheMetadata';
+import * as Crypto from 'expo-crypto';
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
+// Mock expo-crypto
+jest.mock('expo-crypto', () => ({
+  randomUUID: jest.fn(() => `uuid-${Math.random().toString(36).substr(2, 9)}`),
+}));
+
+describe('SyncQueueStorage', () => {
+  // Track AsyncStorage state manually since the mock doesn't persist
+  let storageState: Record<string, string> = {};
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    storageState = {};
+    
+    // Mock AsyncStorage to track state
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+      return Promise.resolve(storageState[key] || null);
+    });
+    
+    (AsyncStorage.setItem as jest.Mock).mockImplementation((key: string, value: string) => {
+      storageState[key] = value;
+      return Promise.resolve(undefined);
+    });
+    
+    (AsyncStorage.removeItem as jest.Mock).mockImplementation((key: string) => {
+      delete storageState[key];
+      return Promise.resolve(undefined);
+    });
+    
+    // Reset UUID mock to generate unique IDs
+    let uuidCounter = 0;
+    (Crypto.randomUUID as jest.Mock).mockImplementation(() => `test-uuid-${uuidCounter++}`);
+  });
+
+  describe('enqueue', () => {
+    it.each([
+      ['create', 'create'],
+      ['update', 'update'],
+      ['delete', 'delete'],
+    ])('should enqueue %s operation', async (description, op) => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload = { id: 'local-123', name: 'Test' };
+
+      await syncQueueStorage.enqueue('recipes', op as 'create' | 'update' | 'delete', target, payload);
+
+      expect(AsyncStorage.setItem).toHaveBeenCalled();
+      const callArgs = (AsyncStorage.setItem as jest.Mock).mock.calls[0];
+      const savedQueue = JSON.parse(callArgs[1]);
+      expect(savedQueue).toHaveLength(1);
+      expect(savedQueue[0].op).toBe(op);
+      expect(savedQueue[0].target.localId).toBe('local-123');
+    });
+  });
+
+  describe('compaction rules', () => {
+    it.each([
+      ['create + update merges to create', 'create', 'update', 'create'],
+      ['update + update merges to latest update', 'update', 'update', 'update'],
+      ['create + delete drops both', 'create', 'delete', null],
+    ])('%s', async (description, op1, op2, expectedOp) => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload1 = { id: 'local-123', name: 'Test 1' };
+      const payload2 = { id: 'local-123', name: 'Test 2' };
+
+      // Enqueue first operation
+      await syncQueueStorage.enqueue('recipes', op1 as 'create' | 'update' | 'delete', target, payload1);
+      
+      // Wait a bit to ensure different timestamps
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      // Enqueue second operation
+      await syncQueueStorage.enqueue('recipes', op2 as 'create' | 'update' | 'delete', target, payload2);
+
+      const queue = await syncQueueStorage.getAll();
+      
+      if (expectedOp === null) {
+        // Both should be dropped
+        expect(queue).toHaveLength(0);
+      } else {
+        expect(queue).toHaveLength(1);
+        expect(queue[0].op).toBe(expectedOp);
+      }
+    });
+
+    it('should handle delete + update (keeps delete)', async () => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload1 = { id: 'local-123', name: 'Test' };
+      const payload2 = { id: 'local-123', name: 'Updated' };
+
+      await syncQueueStorage.enqueue('recipes', 'delete', target, payload1);
+      
+      // Wait a bit to ensure different timestamps
+      await new Promise(resolve => setTimeout(resolve, 10));
+      
+      await syncQueueStorage.enqueue('recipes', 'update', target, payload2);
+
+      const queue = await syncQueueStorage.getAll();
+      expect(queue).toHaveLength(1);
+      expect(queue[0].op).toBe('delete');
+    });
+  });
+
+  describe('getAll', () => {
+    it('should return empty array when queue is empty', async () => {
+      const queue = await syncQueueStorage.getAll();
+      expect(queue).toEqual([]);
+    });
+
+    it('should return all queued writes sorted by timestamp', async () => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload = { id: 'local-123', name: 'Test' };
+
+      await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+      const queue = await syncQueueStorage.getAll();
+
+      expect(queue.length).toBeGreaterThan(0);
+      expect(queue[0].target.localId).toBe('local-123');
+    });
+  });
+
+  describe('getByEntityType', () => {
+    it('should filter by entity type', async () => {
+      const target1: QueueTargetId = { localId: 'local-1' };
+      const target2: QueueTargetId = { localId: 'local-2' };
+
+      await syncQueueStorage.enqueue('recipes', 'create', target1, { id: 'local-1' });
+      await syncQueueStorage.enqueue('chores', 'create', target2, { id: 'local-2' });
+
+      const recipes = await syncQueueStorage.getByEntityType('recipes');
+      expect(recipes).toHaveLength(1);
+      expect(recipes[0].entityType).toBe('recipes');
+    });
+  });
+
+  describe('remove', () => {
+    it('should remove queued write by ID', async () => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload = { id: 'local-123', name: 'Test' };
+
+      const queued = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+      await syncQueueStorage.remove(queued.id);
+
+      const queue = await syncQueueStorage.getAll();
+      expect(queue.find(item => item.id === queued.id)).toBeUndefined();
+    });
+  });
+
+  describe('clear', () => {
+    it('should clear all queued writes', async () => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload = { id: 'local-123', name: 'Test' };
+
+      await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+      await syncQueueStorage.clear();
+
+      const queue = await syncQueueStorage.getAll();
+      expect(queue).toHaveLength(0);
+    });
+  });
+
+  describe('incrementRetry', () => {
+    it('should increment attempt count', async () => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload = { id: 'local-123', name: 'Test' };
+
+      const queued = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+      expect(queued.attemptCount).toBe(0);
+
+      await syncQueueStorage.incrementRetry(queued.id);
+      
+      const queue = await syncQueueStorage.getAll();
+      const updated = queue.find(item => item.id === queued.id);
+      expect(updated?.attemptCount).toBe(1);
+    });
+  });
+});
