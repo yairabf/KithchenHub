@@ -1,14 +1,22 @@
-import { api } from './api';
+import { api, ApiError, NetworkError, setNetworkStatusProvider } from './api';
 
 // Mock global fetch
 global.fetch = jest.fn();
 
+class MockAbortError extends Error {
+    constructor() {
+        super('Aborted');
+        this.name = 'AbortError';
+    }
+}
+
 describe('ApiClient', () => {
     beforeEach(() => {
         (global.fetch as jest.Mock).mockClear();
+        setNetworkStatusProvider();
     });
 
-    const mockSuccessResponse = (data: any) => {
+    const mockSuccessResponse = <T,>(data: T) => {
         (global.fetch as jest.Mock).mockResolvedValue({
             ok: true,
             json: async () => data,
@@ -23,78 +31,108 @@ describe('ApiClient', () => {
         });
     };
 
-    it('performs GET request correctly', async () => {
-        const mockData = { id: 1, name: 'Test' };
-        mockSuccessResponse(mockData);
-
-        const result = await api.get('/test');
-
-        expect(global.fetch).toHaveBeenCalledWith(
-            expect.stringContaining('/test'),
-            expect.objectContaining({
-                method: 'GET',
-                headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-            })
-        );
-        expect(result).toEqual(mockData);
-    });
-
-    it('performs POST request with body correctly', async () => {
-        const mockResponse = { success: true };
-        const payload = { name: 'New Item' };
-        mockSuccessResponse(mockResponse);
-
-        const result = await api.post('/create', payload);
-
-        expect(global.fetch).toHaveBeenCalledWith(
-            expect.stringContaining('/create'),
-            expect.objectContaining({
-                method: 'POST',
-                body: JSON.stringify(payload),
-            })
-        );
-        expect(result).toEqual(mockResponse);
-    });
-
     describe.each([
+        ['GET', 'get', '/test', undefined],
+        ['POST', 'post', '/create', { name: 'New Item' }],
         ['PUT', 'put', '/update', { name: 'Updated Item' }],
         ['PATCH', 'patch', '/patch', { name: 'Patched Item' }],
-    ])('performs %s request with body correctly', (_label, method, path, payload) => {
-        it('sends the request body', async () => {
+    ])('performs %s request correctly', (methodLabel, methodName, path, payload) => {
+        it('sends request with expected method and body', async () => {
             const mockResponse = { success: true };
             mockSuccessResponse(mockResponse);
 
-            const result = await api[method as 'put' | 'patch'](path, payload);
+            const result =
+                methodName === 'get'
+                    ? await api.get(path)
+                    : await api[methodName as 'post' | 'put' | 'patch'](path, payload);
 
             expect(global.fetch).toHaveBeenCalledWith(
                 expect.stringContaining(path),
                 expect.objectContaining({
-                    method: _label,
-                    body: JSON.stringify(payload),
+                    method: methodLabel,
+                    ...(payload ? { body: JSON.stringify(payload) } : {}),
                 })
             );
             expect(result).toEqual(mockResponse);
         });
     });
 
-    it('handles API errors correctly', async () => {
-        const errorMessage = 'Not Found';
-        mockErrorResponse(404, errorMessage);
+    describe.each([
+        ['includes auth token', { token: 'fake-token' }, 'Bearer fake-token'],
+    ])('auth header handling: %s', (_label, options, expected) => {
+        it('adds authorization header when token provided', async () => {
+            mockSuccessResponse({});
+            await api.get('/protected', options);
 
-        await expect(api.get('/unknown')).rejects.toThrow(errorMessage);
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining('/protected'),
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        Authorization: expected,
+                    }),
+                })
+            );
+        });
     });
 
-    it('includes auth token if provided', async () => {
-        mockSuccessResponse({});
-        await api.get('/protected', { token: 'fake-token' });
+    describe.each([
+        ['API error response', 404, 'Not Found'],
+    ])('API error handling: %s', (_label, status, message) => {
+        it('throws ApiError with status and message', async () => {
+            mockErrorResponse(status, message);
 
-        expect(global.fetch).toHaveBeenCalledWith(
-            expect.stringContaining('/protected'),
-            expect.objectContaining({
-                headers: expect.objectContaining({
-                    Authorization: 'Bearer fake-token',
-                }),
-            })
-        );
+            const promise = api.get('/unknown');
+            await expect(promise).rejects.toBeInstanceOf(ApiError);
+            await expect(promise).rejects.toThrow(message);
+        });
+    });
+
+    describe.each([
+        [
+            'offline via provider',
+            () => setNetworkStatusProvider(() => ({ isOffline: true })),
+            false,
+        ],
+        [
+            'fetch failure',
+            () => (global.fetch as jest.Mock).mockRejectedValue(new Error('Network failed')),
+            true,
+        ],
+    ])('network error handling: %s', (_label, setup, shouldCallFetch) => {
+        it('throws NetworkError', async () => {
+            setup();
+            await expect(api.get('/any')).rejects.toBeInstanceOf(NetworkError);
+
+            if (shouldCallFetch) {
+                expect(global.fetch).toHaveBeenCalled();
+            } else {
+                expect(global.fetch).not.toHaveBeenCalled();
+            }
+        });
+    });
+
+    it('throws NetworkError on timeout', async () => {
+        jest.useFakeTimers();
+        (global.fetch as jest.Mock).mockImplementation((_url: string, options?: RequestInit) => {
+            return new Promise((_resolve, reject) => {
+                const signal = options?.signal;
+                if (!signal) {
+                    return;
+                }
+
+                if (signal.aborted) {
+                    reject(new MockAbortError());
+                    return;
+                }
+
+                signal.addEventListener('abort', () => reject(new MockAbortError()));
+            });
+        });
+
+        const promise = api.get('/slow');
+        jest.advanceTimersByTime(16_000);
+
+        await expect(promise).rejects.toBeInstanceOf(NetworkError);
+        jest.useRealTimers();
     });
 });
