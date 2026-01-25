@@ -270,12 +270,17 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `updateEntityInStorage()`: Centralized helper for updating entities in storage arrays
   - Reduces code duplication across local services
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
-  - `getChores()`: Retrieves chores from AsyncStorage key `@kitchen_hub_guest_chores`
+  - Storage keys are centrally managed via `getGuestStorageKey(ENTITY_TYPES.*)` from `dataModeStorage.ts`
+  - Uses envelope format internally: `{ version: 1, updatedAt: string, data: T[] }` for versioning support
+  - `getChores()`: Retrieves chores from AsyncStorage (key: `@kitchen_hub_guest_chores`)
     - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
-  - `saveChores(chores)`: Persists chores to AsyncStorage
+    - Automatically upgrades legacy array format to envelope format on read
+  - `saveChores(chores)`: Persists chores to AsyncStorage as envelope format
     - Serializes timestamps from Date objects to ISO strings (shallow serialization)
-  - Returns empty arrays when no data exists or on parse errors
-  - Validates data format (ensures array and required fields)
+    - Creates envelope with version 1 and current timestamp
+  - Returns empty arrays when no data exists or on parse errors (graceful degradation)
+  - Validates data format and filters invalid entities
+  - **Internal Helpers**: Uses `readEntityEnvelope()` and `writeEntityEnvelope()` from `guestStorageHelpers.ts` for type-safe operations
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
   - Guest users always use local data regardless of the flag
