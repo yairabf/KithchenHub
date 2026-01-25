@@ -64,3 +64,29 @@ describe('createChoresServiceLegacy', () => {
     });
   });
 });
+
+describe('LocalChoresService', () => {
+  let service: LocalChoresService;
+
+  beforeEach(() => {
+    service = new LocalChoresService();
+    jest.clearAllMocks();
+  });
+
+  describe('Storage persistence (smoke test)', () => {
+    it('should persist chore to guestStorage', async () => {
+      (guestStorage.getChores as jest.Mock).mockResolvedValue([]);
+      
+      const chore = await service.createChore({ name: 'Test Chore' });
+      
+      // Verify storage was called
+      expect(guestStorage.saveChores).toHaveBeenCalled();
+      expect(guestStorage.saveChores).toHaveBeenCalledWith([chore]);
+      
+      // Verify chore can be retrieved
+      (guestStorage.getChores as jest.Mock).mockResolvedValue([chore]);
+      const retrieved = await service.getChores();
+      expect(retrieved).toContainEqual(expect.objectContaining({ name: 'Test Chore' }));
+    });
+  });
+});
