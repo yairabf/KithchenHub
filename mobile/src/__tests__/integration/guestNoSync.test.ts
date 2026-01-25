@@ -22,7 +22,12 @@ jest.mock('../../common/services/catalogService', () => ({
       categories: [],
       frequentlyAddedItems: [],
     }),
+    getGroceryItems: jest.fn().mockResolvedValue([]),
+    getCategories: jest.fn().mockResolvedValue([]),
+    getFrequentlyAddedItems: jest.fn().mockResolvedValue([]),
   },
+  CatalogService: jest.fn(),
+  createCatalogService: jest.fn(),
 }));
 
 // Mock api methods
