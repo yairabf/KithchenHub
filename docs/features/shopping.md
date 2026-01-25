@@ -282,12 +282,13 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Reads lists and items from `guestStorage` (AsyncStorage) instead of mocks
     - **Filters deleted items**: `getShoppingData()` uses `isEntityActive()` to filter out soft-deleted items (tombstone pattern)
     - Returns empty arrays when no guest data exists (not mock data)
-    - Still provides reference data (categories, groceryItems, frequentlyAddedItems) from mocks as these are not user-created
+    - **Catalog Data**: Uses `catalogService.getCatalogData()` to fetch reference data (categories, groceryItems, frequentlyAddedItems) with API → Cache → Mock fallback strategy
     - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
     - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
     - **ID Matching**: Service methods accept both `id` and `localId` via `findEntityIndex()` which checks both identifiers
   - `RemoteShoppingService` (`mobile/src/features/shopping/services/RemoteShoppingService.ts`): 
-    - Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
+    - Calls backend via `api.ts` (`/shopping-lists`, `/shopping-lists/{id}` endpoints)
+    - **Catalog Data**: Uses shared `catalogUtils` functions (`buildCategoriesFromGroceries`, `buildFrequentlyAddedItems`) for consistency
     - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
     - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
     - All CRUD operations fetch existing entities before updating to prevent data loss
@@ -482,7 +483,9 @@ Utility for applying remote updates to local cached state:
 - `isEntityActive` - Utility to filter active entities (`mobile/src/common/types/entityMetadata.ts`) - used by `LocalShoppingService.getShoppingData()` to filter deleted items
 - `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
 - `getSelectedList`, `getActiveListId` - Selection utilities from `utils/selectionUtils.ts` for preventing stale list state
-- `mockGroceriesDB` - Grocery database with images and categories (used by LocalShoppingService)
+- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Provides catalog data with API → Cache → Mock fallback strategy (used by LocalShoppingService)
+- `catalogUtils` - Catalog utilities (`mobile/src/common/utils/catalogUtils.ts`) - Shared functions for building categories and frequently added items (used by RemoteShoppingService)
+- `mockGroceriesDB` - Grocery database with images and categories (fallback data for catalog service)
 - `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService)
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
 - `useAuth` - Auth context hook for determining user state
