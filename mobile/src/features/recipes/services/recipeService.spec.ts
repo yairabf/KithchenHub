@@ -8,6 +8,17 @@ import { mockRecipes } from '../../../mocks/recipes';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import { isDevMode } from '../../../common/utils/devMode';
 
+// Mock AsyncStorage (required for cache-aware repository)
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
+// Mock network status utility
+jest.mock('../../../common/utils/networkStatus', () => ({
+  getIsOnline: jest.fn(() => true),
+  setNetworkStatusProvider: jest.fn(),
+}));
+
 // Mock the api client
 jest.mock('../../../services/api', () => ({
     api: {

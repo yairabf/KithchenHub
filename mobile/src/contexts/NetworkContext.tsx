@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, ReactNode } from 'react';
 import NetInfo, { useNetInfo, NetInfoStateType } from '@react-native-community/netinfo';
 import { setNetworkStatusProvider } from '../services/api';
+import { setNetworkStatusProvider as setCacheNetworkStatusProvider } from '../common/utils/networkStatus';
 
 type NetworkContextValue = {
   isConnected: boolean | null;
@@ -47,6 +48,11 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
   // Expose network status to API client
   useEffect(() => {
     setNetworkStatusProvider(() => ({ isOffline: value.isOffline }));
+  }, [value.isOffline]);
+
+  // Expose network status to cache layer
+  useEffect(() => {
+    setCacheNetworkStatusProvider(() => !value.isOffline);
   }, [value.isOffline]);
 
   return <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>;

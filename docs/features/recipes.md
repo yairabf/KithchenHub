@@ -368,6 +368,18 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
     - Server timestamps are authoritative and overwrite client timestamps on response
     - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
+    - **Cache-First Strategy** (signed-in users only):
+      - `getRecipes()`: Uses `getCached()` for cache-first reads with background refresh
+        - Returns cached data immediately if fresh or stale
+        - Triggers background refresh for stale data (non-blocking)
+        - Blocks for network fetch if cache is expired (when online)
+        - Returns cached data if offline (even if expired)
+      - `createRecipe()`, `updateRecipe()`, `deleteRecipe()`: Use write-through caching
+        - Updates cache immediately after successful API operations
+        - Maintains cache freshness for subsequent reads
+      - Cache metadata tracks `lastSyncedAt` per entity type
+      - TTL configuration: 5min stale threshold, 10min expiration
+      - See `mobile/src/common/repositories/cacheAwareRepository.ts` for implementation details
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
   - Storage keys are centrally managed via `getGuestStorageKey(ENTITY_TYPES.*)` from `dataModeStorage.ts`
   - Uses envelope format internally: `{ version: 1, updatedAt: string, data: T[] }` for versioning support
@@ -462,6 +474,8 @@ Utility for applying remote updates to local cached state:
 - `conflictResolution` - Conflict resolution utilities (`mobile/src/common/utils/conflictResolution.ts`)
 - `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
 - `guestNoSyncGuardrails` - Guest mode sync guardrails (`mobile/src/common/guards/guestNoSyncGuardrails.ts`) - Runtime assertions preventing guest data from syncing remotely
+- `cacheAwareRepository` - Cache-first repository (`mobile/src/common/repositories/cacheAwareRepository.ts`) - Provides `getCached()` and `setCached()` for cache-first reads and write-through caching
+- `networkStatus` - Network status singleton (`mobile/src/common/utils/networkStatus.ts`) - Provides `getIsOnline()` for checking network connectivity outside React components
 
 ## UI Flow
 
