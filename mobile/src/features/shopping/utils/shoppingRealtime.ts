@@ -2,12 +2,21 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping';
 import { colors } from '../../../theme';
+import { isEntityDeleted } from '../../../common/types/entityMetadata';
+import { mergeEntitiesWithTombstones } from '../../../common/utils/conflictResolution';
+import { fromSupabaseTimestamps } from '../../../common/utils/timestamps';
 
 type ShoppingListRow = {
   id: string;
   name?: string;
   color?: string | null;
   household_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  deleted_at?: string | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+  deletedAt?: string | Date | null;
 };
 
 type ShoppingItemRow = {
@@ -17,6 +26,12 @@ type ShoppingItemRow = {
   quantity?: number | null;
   category?: string | null;
   is_checked?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  deleted_at?: string | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+  deletedAt?: string | Date | null;
 };
 
 const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
@@ -40,7 +55,7 @@ const findMatchingGrocery = (items: GroceryItem[], name: string | null | undefin
 };
 
 const mapListRowToList = (row: ShoppingListRow, existing?: ShoppingList): ShoppingList => {
-  return {
+  const base = {
     id: row.id,
     localId: row.id,
     name: normalizeListName(row.name, existing?.name),
@@ -48,6 +63,36 @@ const mapListRowToList = (row: ShoppingListRow, existing?: ShoppingList): Shoppi
     icon: existing?.icon ?? DEFAULT_LIST_ICON,
     color: normalizeListColor(row.color ?? existing?.color),
   };
+
+  // Normalize timestamps from snake_case to camelCase Date objects
+  // Prefer snake_case from database, fallback to camelCase if already normalized
+  // Convert null to undefined for fromSupabaseTimestamps compatibility
+  const withTimestamps = fromSupabaseTimestamps({
+    ...base,
+    created_at: row.created_at ?? undefined,
+    updated_at: row.updated_at ?? undefined,
+    deleted_at: row.deleted_at ?? undefined,
+  });
+
+  // If timestamps were already in camelCase (from existing), preserve them
+  // Convert to Date objects if they're strings
+  if (row.createdAt || row.updatedAt || row.deletedAt) {
+    const result: ShoppingList = {
+      ...withTimestamps,
+      createdAt: row.createdAt instanceof Date 
+        ? row.createdAt 
+        : (typeof row.createdAt === 'string' ? new Date(row.createdAt) : withTimestamps.createdAt),
+      updatedAt: row.updatedAt instanceof Date 
+        ? row.updatedAt 
+        : (typeof row.updatedAt === 'string' ? new Date(row.updatedAt) : withTimestamps.updatedAt),
+      deletedAt: row.deletedAt instanceof Date 
+        ? row.deletedAt 
+        : (typeof row.deletedAt === 'string' ? new Date(row.deletedAt) : withTimestamps.deletedAt),
+    };
+    return result;
+  }
+
+  return withTimestamps;
 };
 
 const mapItemRowToItem = (
@@ -57,7 +102,7 @@ const mapItemRowToItem = (
 ): ShoppingItem => {
   const matchingGrocery = findMatchingGrocery(groceryItems, row.name ?? existing?.name);
 
-  return {
+  const base = {
     id: row.id,
     localId: row.id,
     name: row.name ?? existing?.name ?? 'Untitled Item',
@@ -67,6 +112,36 @@ const mapItemRowToItem = (
     listId: row.list_id ?? existing?.listId ?? '',
     isChecked: row.is_checked ?? existing?.isChecked ?? false,
   };
+
+  // Normalize timestamps from snake_case to camelCase Date objects
+  // Prefer snake_case from database, fallback to camelCase if already normalized
+  // Convert null to undefined for fromSupabaseTimestamps compatibility
+  const withTimestamps = fromSupabaseTimestamps({
+    ...base,
+    created_at: row.created_at ?? undefined,
+    updated_at: row.updated_at ?? undefined,
+    deleted_at: row.deleted_at ?? undefined,
+  });
+
+  // If timestamps were already in camelCase (from existing), preserve them
+  // Convert to Date objects if they're strings
+  if (row.createdAt || row.updatedAt || row.deletedAt) {
+    const result: ShoppingItem = {
+      ...withTimestamps,
+      createdAt: row.createdAt instanceof Date 
+        ? row.createdAt 
+        : (typeof row.createdAt === 'string' ? new Date(row.createdAt) : withTimestamps.createdAt),
+      updatedAt: row.updatedAt instanceof Date 
+        ? row.updatedAt 
+        : (typeof row.updatedAt === 'string' ? new Date(row.updatedAt) : withTimestamps.updatedAt),
+      deletedAt: row.deletedAt instanceof Date 
+        ? row.deletedAt 
+        : (typeof row.deletedAt === 'string' ? new Date(row.deletedAt) : withTimestamps.deletedAt),
+    };
+    return result;
+  }
+
+  return withTimestamps;
 };
 
 export const applyShoppingListChange = (
@@ -91,10 +166,18 @@ export const applyShoppingListChange = (
   const nextList = mapListRowToList(updatedRow, existing);
 
   if (!existing) {
+    if (isEntityDeleted(nextList)) {
+      return lists;
+    }
     return [...lists, nextList];
   }
 
-  return lists.map((list) => (list.id === updatedRow.id ? nextList : list));
+  const merged = mergeEntitiesWithTombstones(existing, nextList);
+  if (!merged) {
+    return lists.filter((list) => list.id !== updatedRow.id);
+  }
+
+  return lists.map((list) => (list.id === updatedRow.id ? merged : list));
 };
 
 export const applyShoppingItemChange = (
@@ -120,10 +203,18 @@ export const applyShoppingItemChange = (
   const nextItem = mapItemRowToItem(updatedRow, groceryItems, existing);
 
   if (!existing) {
+    if (isEntityDeleted(nextItem)) {
+      return items;
+    }
     return [...items, nextItem];
   }
 
-  return items.map((item) => (item.id === updatedRow.id ? nextItem : item));
+  const merged = mergeEntitiesWithTombstones(existing, nextItem);
+  if (!merged) {
+    return items.filter((item) => item.id !== updatedRow.id);
+  }
+
+  return items.map((item) => (item.id === updatedRow.id ? merged : item));
 };
 
 export const updateShoppingListItemCounts = (

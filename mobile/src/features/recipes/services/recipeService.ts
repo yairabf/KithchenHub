@@ -258,6 +258,10 @@ export class RemoteRecipeService implements IRecipeService {
  * @param entityType - The type of entity being accessed (for validation)
  * @returns The appropriate recipe service implementation
  * @throws Error if the mode and service type are incompatible
+ * 
+ * @remarks
+ * Note: Conflict resolution (sync application) should be called in the sync pipeline/repository layer,
+ * NOT inside Remote*Service methods. This keeps services focused on transport.
  */
 export const createRecipeService = (
   mode: 'guest' | 'signed-in',
