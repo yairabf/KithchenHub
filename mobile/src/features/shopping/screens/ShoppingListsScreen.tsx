@@ -58,28 +58,6 @@ type ShoppingItemRealtimeRow = {
   is_checked?: boolean | null;
 };
 
-type UpdateShoppingItemPayload = {
-  quantity?: number;
-  isChecked?: boolean;
-};
-
-type AddShoppingItemInput = {
-  masterItemId?: string;
-  name?: string;
-  quantity?: number;
-  category?: string;
-  isChecked?: boolean;
-};
-
-type AddItemsResponse = {
-  addedItems: {
-    id: string;
-    name: string;
-    quantity: number;
-    category?: string | null;
-    isChecked: boolean;
-  }[];
-};
 
 export function ShoppingListsScreen() {
   const { isTablet } = useResponsive();
@@ -250,137 +228,124 @@ export function ShoppingListsScreen() {
     console.error(message, error);
   };
 
-  const createRemoteList = async (name: string, color: string): Promise<ShoppingList | null> => {
+  /**
+   * Executes a service operation with optimistic UI updates and automatic revert on error.
+   * This helper eliminates code duplication across handlers while maintaining responsive UX.
+   * 
+   * @param operation - Async function that performs the service call
+   * @param optimisticUpdate - Function to apply optimistic state change
+   * @param revertUpdate - Function to revert state on error
+   * @param errorMessage - Error message for logging
+   * @returns The result of the operation, or null if it failed
+   * 
+   * @example
+   * ```typescript
+   * await executeWithOptimisticUpdate(
+   *   () => shoppingService.toggleItem(itemId),
+   *   () => setAllItems(prev => prev.map(item => 
+   *     item.id === itemId ? {...item, isChecked: true} : item
+   *   )),
+   *   () => setAllItems(prev => prev.map(item => 
+   *     item.id === itemId ? {...item, isChecked: false} : item
+   *   )),
+   *   'Failed to toggle item:'
+   * );
+   * ```
+   */
+  const executeWithOptimisticUpdate = async <T,>(
+    operation: () => Promise<T>,
+    optimisticUpdate: () => void,
+    revertUpdate: () => void,
+    errorMessage: string
+  ): Promise<T | null> => {
+    optimisticUpdate();
     try {
-      const response = await api.post<{ id: string; name: string }, { name: string; color: string }>(
-        '/shopping-lists',
-        { name, color },
-      );
-
-      return {
-        id: response.id,
-        localId: response.id,
-        name: response.name,
-        itemCount: 0,
-        icon: newListIcon,
-        color,
-      };
+      return await operation();
     } catch (error) {
-      logShoppingError('Failed to create shopping list:', error);
+      revertUpdate();
+      logShoppingError(errorMessage, error);
       return null;
     }
   };
 
-  const updateRemoteShoppingItem = async (
-    itemId: string,
-    updates: UpdateShoppingItemPayload,
-  ) => {
-    try {
-      await api.patch(`/shopping-items/${itemId}`, updates);
-    } catch (error) {
-      logShoppingError('Failed to update shopping item:', error);
+
+  const handleQuantityChange = async (itemId: string, delta: number) => {
+    const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
+    if (!targetItem) {
+      return;
     }
-  };
 
-  const deleteRemoteShoppingItem = async (itemId: string) => {
-    try {
-      await api.delete(`/shopping-items/${itemId}`);
-    } catch (error) {
-      logShoppingError('Failed to delete shopping item:', error);
+    const previousQuantity = targetItem.quantity;
+    const nextQuantity = Math.max(1, previousQuantity + delta);
+    if (nextQuantity === previousQuantity) {
+      return;
     }
-  };
 
-  const buildAddItemInput = (groceryItem: GroceryItem, quantity: number): AddShoppingItemInput => {
-    const isCustomItem = groceryItem.id.startsWith('custom-') || groceryItem.category === 'Custom';
-
-    return {
-      masterItemId: isCustomItem ? undefined : groceryItem.id,
-      name: groceryItem.name,
-      quantity,
-      category: groceryItem.category,
-      isChecked: false,
-    };
-  };
-
-  const mapAddedItemToShoppingItem = (item: AddItemsResponse['addedItems'][number], listId: string): ShoppingItem => {
-    const matchingGrocery = groceryItems.find(
-      (grocery) => grocery.name.toLowerCase() === item.name.toLowerCase(),
+    await executeWithOptimisticUpdate(
+      () => shoppingService.updateItem(itemId, { quantity: nextQuantity }),
+      () => {
+        setAllItems((prev) => prev.map((item) =>
+          item.id === itemId || item.localId === itemId
+            ? { ...item, quantity: nextQuantity }
+            : item,
+        ));
+      },
+      () => {
+        setAllItems((prev) => prev.map((item) =>
+          item.id === itemId || item.localId === itemId
+            ? { ...item, quantity: previousQuantity }
+            : item,
+        ));
+      },
+      'Failed to update shopping item quantity:'
     );
-
-    return {
-      id: item.id,
-      localId: item.id,
-      name: item.name,
-      image: matchingGrocery?.image ?? '',
-      quantity: item.quantity,
-      category: item.category ?? matchingGrocery?.category ?? 'Other',
-      listId,
-      isChecked: item.isChecked,
-    };
   };
 
-  const addRemoteItems = async (listId: string, items: AddShoppingItemInput[]) => {
-    try {
-      const response = await api.post<AddItemsResponse, { items: AddShoppingItemInput[] }>(
-        `/shopping-lists/${listId}/items`,
-        { items },
-      );
-      const addedItems = response.addedItems.map((item) =>
-        mapAddedItemToShoppingItem(item, listId),
-      );
-      setAllItems((currentItems) => [...currentItems, ...addedItems]);
-    } catch (error) {
-      logShoppingError('Failed to add items to shopping list:', error);
-    }
-  };
-
-  const handleQuantityChange = (itemId: string, delta: number) => {
-    const targetItem = allItems.find((item) => item.id === itemId);
+  const handleDeleteItem = async (itemId: string) => {
+    const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
     if (!targetItem) {
       return;
     }
 
-    const nextQuantity = Math.max(1, targetItem.quantity + delta);
-    if (nextQuantity === targetItem.quantity) {
-      return;
-    }
-
-    setAllItems((prev) => prev.map((item) =>
-      item.id === itemId
-        ? { ...item, quantity: nextQuantity }
-        : item,
-    ));
-
-    if (!shouldUseMockData) {
-      void updateRemoteShoppingItem(itemId, { quantity: nextQuantity });
-    }
+    await executeWithOptimisticUpdate(
+      () => shoppingService.deleteItem(itemId),
+      () => {
+        setAllItems((prev) => prev.filter((item) => item.id !== itemId && item.localId !== itemId));
+      },
+      () => {
+        setAllItems((prev) => [...prev, targetItem]);
+      },
+      'Failed to delete shopping item:'
+    );
   };
 
-  const handleDeleteItem = (itemId: string) => {
-    setAllItems((prev) => prev.filter((item) => item.id !== itemId));
-
-    if (!shouldUseMockData) {
-      void deleteRemoteShoppingItem(itemId);
-    }
-  };
-
-  const handleToggleItemChecked = (itemId: string) => {
-    const targetItem = allItems.find((item) => item.id === itemId);
+  const handleToggleItemChecked = async (itemId: string) => {
+    const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
     if (!targetItem) {
       return;
     }
 
-    const nextChecked = !targetItem.isChecked;
+    const previousChecked = targetItem.isChecked;
+    const nextChecked = !previousChecked;
 
-    setAllItems((prev) => prev.map((item) =>
-      item.id === itemId
-        ? { ...item, isChecked: nextChecked }
-        : item,
-    ));
-
-    if (!shouldUseMockData) {
-      void updateRemoteShoppingItem(itemId, { isChecked: nextChecked });
-    }
+    await executeWithOptimisticUpdate(
+      () => shoppingService.toggleItem(itemId),
+      () => {
+        setAllItems((prev) => prev.map((item) =>
+          item.id === itemId || item.localId === itemId
+            ? { ...item, isChecked: nextChecked }
+            : item,
+        ));
+      },
+      () => {
+        setAllItems((prev) => prev.map((item) =>
+          item.id === itemId || item.localId === itemId
+            ? { ...item, isChecked: previousChecked }
+            : item,
+        ));
+      },
+      'Failed to toggle shopping item:'
+    );
   };
 
   const handleSelectGroceryItem = (groceryItem: GroceryItem) => {
@@ -390,73 +355,121 @@ export function ShoppingListsScreen() {
     // Keep dropdown open so user can continue adding items after modal closes
   };
 
-  const handleQuickAddItem = (groceryItem: GroceryItem) => {
+  const handleQuickAddItem = async (groceryItem: GroceryItem) => {
     const quantity = groceryItem.defaultQuantity;
 
     // Check if item already exists in the selected list
-    const existingItemIndex = allItems.findIndex(
+    const existingItem = allItems.find(
       item => item.name === groceryItem.name && item.listId === activeList.id
     );
 
-    if (existingItemIndex !== -1) {
+    if (existingItem) {
       // Update existing item quantity
-      const existingItem = allItems[existingItemIndex];
-      const nextQuantity = existingItem.quantity + quantity;
+      const previousQuantity = existingItem.quantity;
+      const nextQuantity = previousQuantity + quantity;
 
-      setAllItems((prev) => prev.map((item, index) =>
-        index === existingItemIndex
-          ? { ...item, quantity: nextQuantity }
-          : item,
-      ));
-
-      if (!shouldUseMockData) {
-        void updateRemoteShoppingItem(existingItem.id, { quantity: nextQuantity });
-      }
+      await executeWithOptimisticUpdate(
+        () => shoppingService.updateItem(existingItem.id, { quantity: nextQuantity }),
+        () => {
+          setAllItems((prev) => prev.map((item) =>
+            item.id === existingItem.id || item.localId === existingItem.localId
+              ? { ...item, quantity: nextQuantity }
+              : item,
+          ));
+        },
+        () => {
+          setAllItems((prev) => prev.map((item) =>
+            item.id === existingItem.id || item.localId === existingItem.localId
+              ? { ...item, quantity: previousQuantity }
+              : item,
+          ));
+        },
+        'Failed to update shopping item quantity:'
+      );
     } else {
-      if (shouldUseMockData) {
-        // Add new item to list (mock/local)
-        const newItem = createShoppingItem(groceryItem, activeList.id, quantity);
-        setAllItems((prev) => [...prev, newItem]);
-      } else {
-        void addRemoteItems(activeList.id, [buildAddItemInput(groceryItem, quantity)]);
+      // Create new item with optimistic UI update
+      const tempItem = createShoppingItem(groceryItem, activeList.id, quantity);
+      setAllItems((prev) => [...prev, tempItem]);
+
+      try {
+        const newItem = await shoppingService.createItem({
+          name: groceryItem.name,
+          listId: activeList.id,
+          quantity,
+          category: groceryItem.category,
+          image: groceryItem.image,
+        });
+        
+        // Replace temp item with real item from service
+        setAllItems((prev) => prev.map((item) =>
+          item.localId === tempItem.localId ? newItem : item
+        ));
+      } catch (error) {
+        // Remove temp item on error
+        setAllItems((prev) => prev.filter((item) => item.localId !== tempItem.localId));
+        logShoppingError('Failed to create shopping item:', error);
       }
     }
 
     // Keep dropdown open and search query intact for rapid multi-item addition
   };
 
-  const handleAddToList = () => {
+  const handleAddToList = async () => {
     if (!selectedGroceryItem) return;
 
     const quantity = parseInt(quantityInput, 10);
     if (isNaN(quantity) || quantity <= 0) return;
 
     // Check if item already exists in the selected list
-    const existingItemIndex = allItems.findIndex(
+    const existingItem = allItems.find(
       item => item.name === selectedGroceryItem.name && item.listId === activeList.id
     );
 
-    if (existingItemIndex !== -1) {
+    if (existingItem) {
       // Update existing item quantity
-      const existingItem = allItems[existingItemIndex];
-      const nextQuantity = existingItem.quantity + quantity;
+      const previousQuantity = existingItem.quantity;
+      const nextQuantity = previousQuantity + quantity;
 
-      setAllItems((prev) => prev.map((item, index) =>
-        index === existingItemIndex
-          ? { ...item, quantity: nextQuantity }
-          : item,
-      ));
-
-      if (!shouldUseMockData) {
-        void updateRemoteShoppingItem(existingItem.id, { quantity: nextQuantity });
-      }
+      await executeWithOptimisticUpdate(
+        () => shoppingService.updateItem(existingItem.id, { quantity: nextQuantity }),
+        () => {
+          setAllItems((prev) => prev.map((item) =>
+            item.id === existingItem.id || item.localId === existingItem.localId
+              ? { ...item, quantity: nextQuantity }
+              : item,
+          ));
+        },
+        () => {
+          setAllItems((prev) => prev.map((item) =>
+            item.id === existingItem.id || item.localId === existingItem.localId
+              ? { ...item, quantity: previousQuantity }
+              : item,
+          ));
+        },
+        'Failed to update shopping item quantity:'
+      );
     } else {
-      if (shouldUseMockData) {
-        // Add new item to list (mock/local)
-        const newItem = createShoppingItem(selectedGroceryItem, activeList.id, quantity);
-        setAllItems((prev) => [...prev, newItem]);
-      } else {
-        void addRemoteItems(activeList.id, [buildAddItemInput(selectedGroceryItem, quantity)]);
+      // Create new item with optimistic UI update
+      const tempItem = createShoppingItem(selectedGroceryItem, activeList.id, quantity);
+      setAllItems((prev) => [...prev, tempItem]);
+
+      try {
+        const newItem = await shoppingService.createItem({
+          name: selectedGroceryItem.name,
+          listId: activeList.id,
+          quantity,
+          category: selectedGroceryItem.category,
+          image: selectedGroceryItem.image,
+        });
+        
+        // Replace temp item with real item from service
+        setAllItems((prev) => prev.map((item) =>
+          item.localId === tempItem.localId ? newItem : item
+        ));
+      } catch (error) {
+        // Remove temp item on error
+        setAllItems((prev) => prev.filter((item) => item.localId !== tempItem.localId));
+        logShoppingError('Failed to create shopping item:', error);
       }
     }
 
@@ -498,22 +511,19 @@ export function ShoppingListsScreen() {
       return;
     }
 
-    if (shouldUseMockData) {
-      const newList = createShoppingList(trimmedName, newListIcon, newListColor);
+    // Always call service method (service handles guest vs signed-in internally)
+    try {
+      const newList = await shoppingService.createList({
+        name: trimmedName,
+        icon: newListIcon,
+        color: newListColor,
+      });
       setShoppingLists((prev) => [...prev, newList]);
       setSelectedList(newList);
       handleCancelCreateListModal();
-      return;
+    } catch (error) {
+      logShoppingError('Failed to create shopping list:', error);
     }
-
-    const newList = await createRemoteList(trimmedName, newListColor);
-    if (!newList) {
-      return;
-    }
-
-    setShoppingLists((prev) => [...prev, newList]);
-    setSelectedList(newList);
-    handleCancelCreateListModal();
   };
 
   const handleCategoryClick = (categoryName: string) => {
