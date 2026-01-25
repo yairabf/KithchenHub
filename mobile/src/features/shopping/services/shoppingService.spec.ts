@@ -1,10 +1,26 @@
 import {
   createShoppingService,
-  LocalShoppingService,
-  RemoteShoppingService,
 } from './shoppingService';
+import { LocalShoppingService } from './LocalShoppingService';
+import { RemoteShoppingService } from './RemoteShoppingService';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import { mockShoppingLists, mockItems } from '../../../mocks/shopping';
+import { api } from '../../../services/api';
+
+// Mock expo-crypto
+jest.mock('expo-crypto', () => ({
+    randomUUID: jest.fn(() => 'mock-uuid'),
+}));
+
+// Mock the api client
+jest.mock('../../../services/api', () => ({
+    api: {
+        get: jest.fn(),
+        post: jest.fn(),
+        put: jest.fn(),
+        patch: jest.fn(),
+    },
+}));
 
 // Mock guestStorage
 jest.mock('../../../common/utils/guestStorage', () => ({

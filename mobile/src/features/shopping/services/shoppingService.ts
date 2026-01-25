@@ -1,18 +1,11 @@
-import { api } from '../../../services/api';
-import { mockGroceriesDB } from '../../../data/groceryDatabase';
-import {
-  mockCategories,
-  mockFrequentlyAddedItems,
-  type ShoppingItem,
-  type ShoppingList,
-  type Category,
-} from '../../../mocks/shopping';
+import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
 import type { GroceryItem } from '../components/GrocerySearchBar';
-import { pastelColors, colors } from '../../../theme';
-import { guestStorage } from '../../../common/utils/guestStorage';
-import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
-import { v5 as uuidv5 } from 'uuid';
+import { LocalShoppingService } from './LocalShoppingService';
+import { RemoteShoppingService } from './RemoteShoppingService';
+
+// Re-export classes for convenience
+export { LocalShoppingService, RemoteShoppingService };
 
 /**
  * Provides shopping data sources (mock vs remote) for the shopping feature.
@@ -27,177 +20,16 @@ export interface ShoppingData {
 
 export interface IShoppingService {
   getShoppingData(): Promise<ShoppingData>;
+  // CRUD methods
+  createList(list: Partial<ShoppingList>): Promise<ShoppingList>;
+  updateList(listId: string, updates: Partial<ShoppingList>): Promise<ShoppingList>;
+  deleteList(listId: string): Promise<void>;
+  createItem(item: Partial<ShoppingItem>): Promise<ShoppingItem>;
+  updateItem(itemId: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem>;
+  deleteItem(itemId: string): Promise<void>;
+  toggleItem(itemId: string): Promise<ShoppingItem>;
 }
 
-type GrocerySearchItemDto = {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl?: string | null;
-  defaultQuantity?: number | null;
-};
-
-type ShoppingListSummaryDto = {
-  id: string;
-  name: string;
-  color?: string | null;
-  itemCount?: number | null;
-};
-
-type ShoppingListDetailDto = {
-  id: string;
-  name: string;
-  color?: string | null;
-  items: {
-    id: string;
-    name: string;
-    quantity?: number | null;
-    unit?: string | null;
-    isChecked?: boolean | null;
-    category?: string | null;
-  }[];
-};
-
-const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
-const DEFAULT_LIST_COLOR = colors.shopping;
-
-const mapGroceryItem = (item: GrocerySearchItemDto): GroceryItem => ({
-  id: item.id,
-  name: item.name,
-  image: item.imageUrl ?? '',
-  category: item.category,
-  defaultQuantity: item.defaultQuantity ?? 1,
-});
-
-// Fixed namespace UUID for generating deterministic category UUIDs
-const CATEGORY_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-
-/**
- * Builds category list from grocery items.
- * Generates deterministic localId based on category name for stable references.
- */
-const buildCategoriesFromGroceries = (items: GroceryItem[]): Category[] => {
-  const categoryMap = items.reduce<Record<string, GroceryItem[]>>((acc, item) => {
-    const key = item.category || 'Other';
-    const existing = acc[key] ?? [];
-    return { ...acc, [key]: [...existing, item] };
-  }, {});
-
-  return Object.entries(categoryMap).map(([categoryName, categoryItems], index) => {
-    const fallbackImage = categoryItems.find(item => item.image)?.image ?? '';
-    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
-    
-    // Generate deterministic UUID based on category name (stable across calls)
-    const localId = uuidv5(categoryName, CATEGORY_NAMESPACE);
-    
-    return {
-      id: categoryId,
-      localId,
-      name: categoryName,
-      itemCount: categoryItems.length,
-      image: fallbackImage,
-      backgroundColor: pastelColors[index % pastelColors.length],
-    };
-  });
-};
-
-const buildFrequentlyAddedItems = (items: GroceryItem[]): GroceryItem[] => {
-  return items.slice(0, 8);
-};
-
-const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => ({
-  id: list.id,
-  localId: list.id,
-  name: list.name,
-  itemCount: list.itemCount ?? 0,
-  icon: DEFAULT_LIST_ICON,
-  color: list.color ?? DEFAULT_LIST_COLOR,
-});
-
-const buildShoppingItemsFromDetails = (
-  listId: string,
-  items: ShoppingListDetailDto['items'],
-  groceries: GroceryItem[],
-): ShoppingItem[] => {
-  return items.map((item) => {
-    const matchingGrocery = groceries.find(
-      (grocery) => grocery.name.toLowerCase() === item.name.toLowerCase()
-    );
-
-    return {
-      id: item.id,
-      localId: item.id,
-      name: item.name,
-      image: matchingGrocery?.image ?? '',
-      quantity: item.quantity ?? 1,
-      unit: item.unit ?? undefined,
-      isChecked: item.isChecked ?? false,
-      category: item.category ?? matchingGrocery?.category ?? 'Other',
-      listId,
-    };
-  });
-};
-
-export class LocalShoppingService implements IShoppingService {
-  async getShoppingData(): Promise<ShoppingData> {
-    // Read from real guest storage, return empty arrays if no data exists
-    const guestLists = await guestStorage.getShoppingLists();
-    const guestItems = await guestStorage.getShoppingItems();
-
-    return {
-      shoppingLists: guestLists,
-      shoppingItems: guestItems,
-      // Categories and grocery items are still from mocks (they're reference data, not user data)
-      categories: [...mockCategories],
-      groceryItems: [...mockGroceriesDB],
-      frequentlyAddedItems: [...mockFrequentlyAddedItems],
-    };
-  }
-}
-
-export class RemoteShoppingService implements IShoppingService {
-  async getShoppingData(): Promise<ShoppingData> {
-    const groceryItems = await this.getGroceryItems();
-    const shoppingLists = await this.getShoppingLists();
-    const shoppingItems = await this.getShoppingItems(shoppingLists, groceryItems);
-
-    const categories = buildCategoriesFromGroceries(groceryItems);
-    const frequentlyAddedItems = buildFrequentlyAddedItems(groceryItems);
-
-    return {
-      shoppingLists,
-      shoppingItems,
-      categories,
-      groceryItems,
-      frequentlyAddedItems,
-    };
-  }
-
-  private async getGroceryItems(): Promise<GroceryItem[]> {
-    const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
-    return results.map(mapGroceryItem);
-  }
-
-  private async getShoppingLists(): Promise<ShoppingList[]> {
-    const lists = await api.get<ShoppingListSummaryDto[]>('/shopping-lists');
-    return lists.map(mapShoppingListSummary);
-  }
-
-  private async getShoppingItems(
-    shoppingLists: ShoppingList[],
-    groceryItems: GroceryItem[],
-  ): Promise<ShoppingItem[]> {
-    const listDetails = await Promise.all(
-      shoppingLists.map((list) =>
-        api.get<ShoppingListDetailDto>(`/shopping-lists/${list.id}`)
-      )
-    );
-
-    return listDetails.flatMap((listDetail) =>
-      buildShoppingItemsFromDetails(listDetail.id, listDetail.items, groceryItems)
-    );
-  }
-}
 
 /**
  * Creates a shopping service based on the data mode
