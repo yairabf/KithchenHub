@@ -122,7 +122,9 @@ src/
     pipes/                     # Validation pipes
     types/                     # Shared TypeScript interfaces
   config/                      # Env validation + configuration loader
-  infrastructure/database/     # Prisma module/service and schema
+  infrastructure/
+    database/                  # Prisma module/service and schema
+      filters/                 # Soft-delete filter constants and helpers
   modules/
     auth/                      # Google + guest auth, token refresh, sync
     households/                # Household CRUD/membership
