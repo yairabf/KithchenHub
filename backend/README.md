@@ -130,8 +130,6 @@ src/
     chores/                    # Task assignments and completion
     import/                    # Guest mode data import (ID-based & fingerprint deduplication)
     dashboard/                 # Aggregated dashboard data
-    users/                     # User profile management
-    settings/                  # Application and user settings
     supabase/                  # Supabase client service (global module)
 ```
 
