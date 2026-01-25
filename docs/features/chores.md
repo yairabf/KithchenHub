@@ -60,12 +60,18 @@ const progress = useMemo(() => {
 #### Code Snippet - Service Initialization
 
 ```typescript
+// Determine data mode based on user authentication state
 const { user } = useAuth();
-const isMockDataEnabled = config.mockData.enabled;
-const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+const userMode = useMemo(() => {
+  if (config.mockData.enabled) {
+    return 'guest' as const;
+  }
+  return determineUserDataMode(user);
+}, [user]);
+
 const choresService = useMemo(
-  () => createChoresService(shouldUseMockData),
-  [shouldUseMockData]
+  () => createChoresService(userMode),
+  [userMode]
 );
 
 useEffect(() => {
@@ -214,9 +220,10 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
   - `selectedChore` - Currently selected chore for editing
   - `showDetailsModal` - Modal visibility for editing chore details
   - `showShareModal` - Modal visibility for sharing chores list
-- **Service**: `createChoresService(isMockEnabled)` factory creates service instance
+- **Service**: `createChoresService(mode: 'guest' | 'signed-in')` factory creates service instance based on data mode
   - Loads chores via `choresService.getChores()` on mount
-  - Switches between mock and API based on `config.mockData.enabled` or guest status
+  - Mode determined by `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
+  - **Service handles mode internally**: Screen handlers always call service methods; service implementation (LocalChoresService vs RemoteChoresService) handles guest vs signed-in logic
 - **Computed values**:
   - `todayChores` - Filtered chores for today section
   - `upcomingChores` - Filtered chores for this week/recurring
@@ -234,7 +241,6 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Returns `LocalChoresService` when mode is 'guest'
   - Returns `RemoteChoresService` when mode is 'signed-in'
   - Validates service compatibility with data mode
-  - **Legacy**: `createChoresServiceLegacy(isMockEnabled: boolean)` for backward compatibility
 - **Entity Factory**: `createChore()` (`mobile/src/features/chores/utils/choreFactory.ts`)
   - Creates new chore objects with required fields
   - **Automatically populates `createdAt`** using `withCreatedAt()` helper
@@ -245,20 +251,22 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - `updateChore(choreId: string, updates: Partial<Chore>): Promise<Chore>` - Update existing chore
     - `deleteChore(choreId: string): Promise<void>` - Soft-delete chore
     - `toggleChore(choreId: string): Promise<Chore>` - Toggle chore completion status
-- **Strategies**:
-  - `LocalChoresService`: 
-    - Reads chores from `guestStorage.getChores()` (AsyncStorage) when data exists
-    - Falls back to mock data from `mockChores` when no guest data exists
-    - Persists chores to AsyncStorage via `guestStorage.saveChores()` on create/update/delete
-    - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
-    - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
-  - `RemoteChoresService`: 
-    - Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
-    - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
-    - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
-    - Fetches updated entities after mutations to get authoritative server timestamps
-    - Server timestamps are authoritative and overwrite client timestamps on response
-    - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
+  - **Service Classes** (extracted into separate files):
+    - `LocalChoresService`: 
+      - Reads chores from `guestStorage.getChores()` (AsyncStorage) instead of mocks
+      - **Filters deleted items**: `getChores()` uses `isEntityActive()` to filter out soft-deleted items (tombstone pattern)
+      - Returns empty arrays when no guest data exists (not mock data)
+      - Persists chores to AsyncStorage via `guestStorage.saveChores()` on create/update/delete
+      - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
+      - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
+      - **ID Matching**: Service methods accept both `id` and `localId` via `findEntityIndex()` which checks both identifiers
+    - `RemoteChoresService`: 
+      - Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
+      - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
+      - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
+      - All CRUD operations fetch existing entities before updating to prevent data loss
+      - Server timestamps are authoritative and overwrite client timestamps on response
+      - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
 - **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
   - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `choreFactory.ts`)
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
@@ -284,7 +292,8 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - **Internal Helpers**: Uses `readEntityEnvelope()` and `writeEntityEnvelope()` from `guestStorageHelpers.ts` for type-safe operations
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
-  - Guest users always use local data regardless of the flag
+  - When enabled, forces 'guest' mode regardless of user authentication state
+  - Guest users always use 'guest' mode (local service)
 - **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
 
 ## Guest User Data Separation
@@ -293,22 +302,35 @@ The chores feature implements guest user data separation to ensure guest users u
 
 ### Service Selection Pattern
 
-Service selection is determined by both the mock data toggle and user authentication state:
+Service selection is determined by data mode based on user authentication state:
 
 ```typescript
 const { user } = useAuth();
-const isMockDataEnabled = config.mockData.enabled;
-const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
+const userMode = useMemo(() => {
+  if (config.mockData.enabled) {
+    return 'guest' as const;
+  }
+  return determineUserDataMode(user);
+}, [user]);
+
 const choresService = useMemo(
-  () => createChoresService(shouldUseMockData),
-  [shouldUseMockData]
+  () => createChoresService(userMode),
+  [userMode]
 );
 ```
 
 **Behavior**:
-- **Development** (`config.mockData.enabled = true`): Always uses `LocalChoresService` regardless of auth state
-- **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalChoresService` (no API calls)
+- **Development** (`config.mockData.enabled = true`): Always uses `LocalChoresService` (guest mode) regardless of auth state
+- **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalChoresService` which reads from AsyncStorage (no API calls)
 - **Production + Signed-in User** (`config.mockData.enabled = false` + authenticated): Uses `RemoteChoresService` (cloud sync)
+
+### Handler Implementation Pattern
+
+All screen handlers follow a consistent pattern that eliminates userMode branching:
+
+- **Always call service methods**: Handlers never branch on `userMode` - they always call `choresService` methods
+- **Service handles mode internally**: `LocalChoresService` writes to AsyncStorage, `RemoteChoresService` calls API
+- **ID matching**: Handlers support both `id` and `localId` for consistent entity identification
 
 This pattern is consistent across all features (shopping, chores, recipes) to ensure guest users never attempt remote API calls for private data.
 
@@ -358,7 +380,9 @@ Utility for applying remote updates to local cached state:
 - `react-native-gesture-handler` - GestureDetector for swipe interactions
 - `react-native-reanimated` - Smooth animations for progress ring and swipes
 - `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
-- `createChoresService` - Service factory for selecting mock/real data source
+- `createChoresService` - Service factory for selecting guest/signed-in data source based on mode
+- `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
+- `isEntityActive` - Utility to filter active entities (`mobile/src/common/types/entityMetadata.ts`) - used by `LocalChoresService.getChores()` to filter deleted items
 - `useAuth` - Auth context hook for determining user state
 - `SwipeableWrapper` - Shared component from `common/components` for swipe-to-delete
 - `ScreenHeader` - Shared header component with actions

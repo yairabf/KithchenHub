@@ -7,10 +7,11 @@ API service for Kitchen Hub, built with NestJS (Fastify) and Prisma on PostgreSQ
 - UUID-based user identification for seamless cross-provider integration
 - Household membership plus shopping lists/items, recipes, and chores
 - **Soft Deletes**: User-owned entities (households, shopping lists, items, recipes, chores) support soft-delete via `deleted_at` timestamp
-  - Centralized `ACTIVE_RECORDS_FILTER` constant for consistent querying
-  - Repository-level restore methods for data recovery (`restoreRecipe()`, `restoreList()`, etc.)
+  - Centralized `ACTIVE_RECORDS_FILTER` constant for consistent querying (located in `src/infrastructure/database/filters/soft-delete.filter.ts`)
+  - Helper function `buildActiveRecordsFilter()` for combining active filter with additional conditions
+  - Repository-level restore methods for data recovery (`restoreRecipe()`, `restoreList()`, `restoreChore()`, `restoreItem()`)
   - Audit logging for all soft-delete and restore operations
-  - No automatic cascade (parent deletes don't affect children)
+  - No automatic cascade (parent deletes don't affect children, allowing selective restoration)
 - **Automatic Timestamps**: All entities include `created_at` and `updated_at` timestamps; `updated_at` is automatically maintained by Prisma
 - Master grocery catalog (`master_grocery_catalog` table) backing search, categories, and default item properties
 - Shopping items can reference catalog items for consistency and defaults
@@ -95,11 +96,11 @@ To verify that Row Level Security is correctly isolating data between households
 - Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh`, `GET /groceries/search`, `GET /groceries/categories` (all other endpoints require bearer JWT)
 - Auth endpoints: `POST /auth/google`, `POST /auth/guest`, `POST /auth/sync`, `POST /auth/refresh`
   - Sync endpoint (`POST /auth/sync`): Accepts offline data (shopping lists, recipes, chores) and performs simple upsert operations. Returns sync result with status (`synced`, `partial`, or `failed`) and conflicts array for items that failed to sync. Client-side conflict resolution handles timestamp-based merging using Last-Write-Wins (LWW) with tombstone semantics.
-- Household endpoints: `GET /household`, `PUT /household`, `POST /household/invite`, `DELETE /household/members/:id`
-- Shopping endpoints: `GET /shopping-lists`, `POST /shopping-lists`, `GET /shopping-lists/:id`, `DELETE /shopping-lists/:id`, `POST /shopping-lists/:id/items`, `PATCH /shopping-items/:id`, `DELETE /shopping-items/:id`
+- Household endpoints: `GET /household`, `PUT /household` (update household details), `POST /household/invite` (invite members), `DELETE /household/members/:id` (remove member)
+- Shopping endpoints: `GET /shopping-lists`, `POST /shopping-lists`, `GET /shopping-lists/:id`, `DELETE /shopping-lists/:id` (soft-delete), `POST /shopping-lists/:id/items` (bulk add items), `PATCH /shopping-items/:id`, `DELETE /shopping-items/:id` (soft-delete)
 - Grocery catalog endpoints (public): `GET /groceries/search`, `GET /groceries/categories`
-- Recipe endpoints: `GET /recipes` (supports `?category=` and `?search=` query params), `POST /recipes`, `GET /recipes/:id`, `PUT /recipes/:id`, `POST /recipes/:id/cook`
-- Chore endpoints: `GET /chores` (supports `?start=` and `?end=` date query params), `POST /chores`, `PATCH /chores/:id`, `PATCH /chores/:id/status`, `GET /chores/stats` (supports `?date=` query param)
+- Recipe endpoints: `GET /recipes` (supports `?category=` and `?search=` query params), `POST /recipes`, `GET /recipes/:id`, `PUT /recipes/:id`, `POST /recipes/:id/cook` (adds recipe ingredients to shopping list)
+- Chore endpoints: `GET /chores` (supports `?start=` and `?end=` date query params), `POST /chores`, `PATCH /chores/:id`, `PATCH /chores/:id/status` (toggle completion), `GET /chores/stats` (supports `?date=` query param)
 - Dashboard endpoints: `GET /dashboard/summary`
 - Import endpoints: `POST /import`
 - Protected routes: Most endpoints require JWT authentication; household endpoints also require household membership

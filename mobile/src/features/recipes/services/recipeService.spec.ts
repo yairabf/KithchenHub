@@ -283,6 +283,26 @@ describe('Recipe Services', () => {
                 );
             });
         });
+
+        describe('Storage persistence (smoke test)', () => {
+            it('should persist recipe to guestStorage', async () => {
+                // Mock isDevMode to return false to prevent seeding
+                (isDevMode as jest.Mock).mockReturnValue(false);
+                (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
+                (guestStorage.saveRecipes as jest.Mock).mockResolvedValue(undefined);
+                
+                const recipe = await service.createRecipe({ name: 'Test Recipe' });
+                
+                // Verify storage was called
+                expect(guestStorage.saveRecipes).toHaveBeenCalled();
+                expect(guestStorage.saveRecipes).toHaveBeenCalledWith([recipe]);
+                
+                // Verify recipe can be retrieved
+                (guestStorage.getRecipes as jest.Mock).mockResolvedValue([recipe]);
+                const retrieved = await service.getRecipes();
+                expect(retrieved).toContainEqual(expect.objectContaining({ name: 'Test Recipe' }));
+            });
+        });
     });
 
     describe('RemoteRecipeService', () => {
