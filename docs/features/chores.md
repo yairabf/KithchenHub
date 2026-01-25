@@ -216,14 +216,38 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
 ## State Management
 
 - **Local state**:
-  - `chores` - Array of Chore objects (loaded from service)
+  - `chores` - Array of Chore objects (loaded from service or cache)
   - `selectedChore` - Currently selected chore for editing
   - `showDetailsModal` - Modal visibility for editing chore details
   - `showShareModal` - Modal visibility for sharing chores list
+  - `guestChores` - Local state for guest mode (when not using cache)
 - **Service**: `createChoresService(mode: 'guest' | 'signed-in')` factory creates service instance based on data mode
-  - Loads chores via `choresService.getChores()` on mount
   - Mode determined by `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
   - **Service handles mode internally**: Screen handlers always call service methods; service implementation (LocalChoresService vs RemoteChoresService) handles guest vs signed-in logic
+- **Cache-Aware Repository Layer** (signed-in users only):
+  - **Repository**: `CacheAwareChoreRepository` (`mobile/src/common/repositories/cacheAwareChoreRepository.ts`)
+    - Wraps `RemoteChoresService` with cache-first read strategies and write-through caching
+    - Implements `ICacheAwareRepository<Chore>` interface
+    - **Cache-First Reads**:
+      - `findAll()`: Uses `getCached()` for cache-first reads with background refresh
+      - Returns cached data immediately if fresh or stale
+      - Triggers background refresh for stale data (non-blocking)
+      - Blocks for network fetch if cache is expired (when online)
+      - Returns cached data if offline (even if expired)
+    - **Write-Through Caching**:
+      - `create()`, `update()`, `delete()`, `toggle()`: Update cache immediately after successful API operations
+      - Cache errors are logged but don't fail operations (server write succeeded)
+      - Cache is invalidated on error to force refresh on next read
+    - **Offline Write Queue**: All write operations enqueue writes when offline for later sync
+    - **Cache Events**: Emits cache change events after writes to trigger UI updates
+  - **Reactive Cache Hook**: `useCachedEntities<Chore>('chores')` (`mobile/src/common/hooks/useCachedEntities.ts`)
+    - Subscribes to cache change events for automatic UI updates
+    - Returns: `data`, `isLoading`, `error`, `refresh`
+    - Automatically re-reads cache when change events are emitted
+    - Used by `ChoresScreen` for signed-in users
+  - **Guest Mode**: Uses service directly (no cache layer)
+    - Loads chores via `choresService.getChores()` on mount
+    - Updates local state (`guestChores`) directly
 - **Computed values**:
   - `todayChores` - Filtered chores for today section
   - `upcomingChores` - Filtered chores for this week/recurring
@@ -395,6 +419,14 @@ Utility for applying remote updates to local cached state:
 - `conflictResolution` - Conflict resolution utilities (`mobile/src/common/utils/conflictResolution.ts`)
 - `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
 - `guestNoSyncGuardrails` - Guest mode sync guardrails (`mobile/src/common/guards/guestNoSyncGuardrails.ts`) - Runtime assertions preventing guest data from syncing remotely
+- `CacheAwareChoreRepository` - Cache-aware repository (`mobile/src/common/repositories/cacheAwareChoreRepository.ts`) - Wraps `RemoteChoresService` with cache-first reads and write-through caching. Implements `ICacheAwareRepository<Chore>` interface.
+- `useCachedEntities` - Reactive cache hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that subscribes to cache changes and automatically updates UI when cache changes. Used by `ChoresScreen` for signed-in users.
+- `cacheAwareRepository` - Cache utilities (`mobile/src/common/repositories/cacheAwareRepository.ts`) - Provides `getCached()`, `setCached()`, `addEntityToCache()`, `updateEntityInCache()`, and `readCachedEntitiesForUpdate()` for cache-first reads and write-through caching
+- `cacheEvents` - Cache event bus (`mobile/src/common/utils/cacheEvents.ts`) - Event emitter for cache change notifications. Used to trigger UI updates when cache changes.
+- `cacheStorage` - Cache storage utilities (`mobile/src/common/utils/cacheStorage.ts`) - Thin wrapper layer for safe cache access with TTL support. Provides `readCacheArray()`, `writeCacheArray()`, `getCacheState()`, and `shouldRefreshCache()` helpers. Used internally by `cacheAwareRepository`.
+- `networkStatus` - Network status singleton (`mobile/src/common/utils/networkStatus.ts`) - Provides `getIsOnline()` for checking network connectivity outside React components
+- `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueueStorage.ts`) - Manages queued write operations for offline sync
+- `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background processor that syncs queued writes when online
 
 ## UI Flow
 
