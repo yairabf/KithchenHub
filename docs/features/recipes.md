@@ -344,6 +344,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `createRecipe(recipe: Partial<Recipe>): Promise<Recipe>`
   - `updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe>` - Updates recipe with partial data, used for adding image URLs after upload
     - **Automatically updates `updatedAt`** using `withUpdatedAt()` helper
+  - `deleteRecipe(recipeId: string): Promise<void>` - Soft-deletes recipe using tombstone pattern
 - **Strategies**:
   - `LocalRecipeService`: 
     - Reads from `guestStorage.getRecipes()` (AsyncStorage) instead of mocks
@@ -356,6 +357,10 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
       - `updateRecipe()`: Automatically updates `updatedAt` via `withUpdatedAt()` helper
       - Timestamps are serialized to ISO strings when persisting to AsyncStorage
   - `RemoteRecipeService`: Calls backend via `api.ts` (`/recipes` endpoint)
+    - Uses `RecipeApiResponse` DTO type instead of `any` for type safety
+    - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
+    - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
+    - Server timestamps are authoritative and overwrite client timestamps on response
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
   - `getRecipes()`: Retrieves recipes from AsyncStorage key `@kitchen_hub_guest_recipes`
     - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
@@ -367,7 +372,12 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `recipeFactory.ts`)
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification (used in `recipeService.ts`)
   - `markDeleted()`: Sets `deletedAt` for soft-delete operations
+  - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)
+  - `toSupabaseTimestamps()`: Converts camelCase timestamps to snake_case for API payloads
   - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
+- **DTO Types**: `RecipeApiResponse` type defined in `recipeService.ts`
+  - Replaces `any` types for improved type safety
+  - Supports both camelCase and snake_case timestamp formats from API
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
   - When enabled, forces 'guest' mode regardless of user authentication state

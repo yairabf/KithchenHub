@@ -240,14 +240,42 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - **Automatically populates `createdAt`** using `withCreatedAt()` helper
 - **Interface**: `IChoresService`
   - `getChores(): Promise<Chore[]>` - Returns all chores
+  - **CRUD Methods**:
+    - `createChore(chore: Partial<Chore>): Promise<Chore>` - Create new chore
+    - `updateChore(choreId: string, updates: Partial<Chore>): Promise<Chore>` - Update existing chore
+    - `deleteChore(choreId: string): Promise<void>` - Soft-delete chore
+    - `toggleChore(choreId: string): Promise<Chore>` - Toggle chore completion status
 - **Strategies**:
-  - `LocalChoresService`: Returns mock data from `mockChores`
-  - `RemoteChoresService`: Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
+  - `LocalChoresService`: 
+    - Reads chores from `guestStorage.getChores()` (AsyncStorage) when data exists
+    - Falls back to mock data from `mockChores` when no guest data exists
+    - Persists chores to AsyncStorage via `guestStorage.saveChores()` on create/update/delete
+    - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
+    - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
+  - `RemoteChoresService`: 
+    - Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
+    - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
+    - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
+    - Fetches updated entities after mutations to get authoritative server timestamps
+    - Server timestamps are authoritative and overwrite client timestamps on response
 - **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
   - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `choreFactory.ts`)
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
   - `markDeleted()`: Sets `deletedAt` for soft-delete operations
+  - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)
+  - `toSupabaseTimestamps()`: Converts camelCase timestamps to snake_case for API payloads
   - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
+- **Entity Operations Utility**: `mobile/src/common/utils/entityOperations.ts`
+  - `findEntityIndex()`: Finds entity by ID or localId with error handling
+  - `updateEntityInStorage()`: Centralized helper for updating entities in storage arrays
+  - Reduces code duplication across local services
+- **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
+  - `getChores()`: Retrieves chores from AsyncStorage key `@kitchen_hub_guest_chores`
+    - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
+  - `saveChores(chores)`: Persists chores to AsyncStorage
+    - Serializes timestamps from Date objects to ISO strings (shallow serialization)
+  - Returns empty arrays when no data exists or on parse errors
+  - Validates data format (ensures array and required fields)
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
   - Guest users always use local data regardless of the flag

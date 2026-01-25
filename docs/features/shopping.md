@@ -256,13 +256,28 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Validates service compatibility with data mode
 - **Interface**: `IShoppingService`
   - `getShoppingData(): Promise<ShoppingData>` - Returns all shopping-related data
+  - **CRUD Methods**:
+    - `createList(list: Partial<ShoppingList>): Promise<ShoppingList>` - Create new shopping list
+    - `updateList(listId: string, updates: Partial<ShoppingList>): Promise<ShoppingList>` - Update existing list
+    - `deleteList(listId: string): Promise<void>` - Soft-delete shopping list
+    - `createItem(item: Partial<ShoppingItem>): Promise<ShoppingItem>` - Create new shopping item
+    - `updateItem(itemId: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem>` - Update existing item
+    - `deleteItem(itemId: string): Promise<void>` - Soft-delete shopping item
+    - `toggleItem(itemId: string): Promise<ShoppingItem>` - Toggle item checked status
 - **ShoppingData**: Includes `shoppingLists`, `shoppingItems`, `categories`, `groceryItems`, `frequentlyAddedItems`
-- **Strategies**:
-  - `LocalShoppingService`: 
+- **Service Classes** (extracted into separate files):
+  - `LocalShoppingService` (`mobile/src/features/shopping/services/LocalShoppingService.ts`): 
     - Reads lists and items from `guestStorage` (AsyncStorage) instead of mocks
     - Returns empty arrays when no guest data exists (not mock data)
     - Still provides reference data (categories, groceryItems, frequentlyAddedItems) from mocks as these are not user-created
-  - `RemoteShoppingService`: Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
+    - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
+    - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
+  - `RemoteShoppingService` (`mobile/src/features/shopping/services/RemoteShoppingService.ts`): 
+    - Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
+    - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
+    - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
+    - All CRUD operations fetch existing entities before updating to prevent data loss
+    - Server timestamps are authoritative and overwrite client timestamps on response
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
   - `getShoppingLists()`: Retrieves lists from AsyncStorage key `@kitchen_hub_guest_shopping_lists`
     - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
@@ -283,7 +298,13 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `withCreatedAt()`: Auto-populates `createdAt` on entity creation
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
   - `markDeleted()`: Sets `deletedAt` for soft-delete operations
+  - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)
+  - `toSupabaseTimestamps()`: Converts camelCase timestamps to snake_case for API payloads
   - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
+- **Entity Operations Utility**: `mobile/src/common/utils/entityOperations.ts`
+  - `findEntityIndex()`: Finds entity by ID or localId with error handling
+  - `updateEntityInStorage()`: Centralized helper for updating entities in storage arrays
+  - Reduces code duplication across local services by ~60 lines
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
   - When enabled, forces 'guest' mode regardless of user authentication state
