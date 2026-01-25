@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Recipe } from '../../mocks/recipes';
 import { ShoppingList, ShoppingItem } from '../../mocks/shopping';
+import { toPersistedTimestamps, fromPersistedTimestamps } from '../types/entityMetadata';
 
 const GUEST_RECIPES_KEY = '@kitchen_hub_guest_recipes';
 const GUEST_SHOPPING_LISTS_KEY = '@kitchen_hub_guest_shopping_lists';
@@ -12,15 +13,17 @@ const GUEST_SHOPPING_ITEMS_KEY = '@kitchen_hub_guest_shopping_items';
  * @returns True if the recipe is valid, false otherwise
  */
 function validateRecipe(recipe: unknown): recipe is Recipe {
+  if (!recipe || typeof recipe !== 'object') {
+    return false;
+  }
+  
+  const candidate = recipe as Record<string, unknown>;
+  
   return (
-    recipe !== null &&
-    typeof recipe === 'object' &&
-    'localId' in recipe &&
-    typeof (recipe as any).localId === 'string' &&
-    (recipe as any).localId.length > 0 &&
-    'name' in recipe &&
-    typeof (recipe as any).name === 'string' &&
-    (recipe as any).name.trim().length > 0
+    typeof candidate.localId === 'string' &&
+    candidate.localId.length > 0 &&
+    typeof candidate.name === 'string' &&
+    candidate.name.trim().length > 0
   );
 }
 
@@ -30,15 +33,17 @@ function validateRecipe(recipe: unknown): recipe is Recipe {
  * @returns True if the list is valid, false otherwise
  */
 function validateShoppingList(list: unknown): list is ShoppingList {
+  if (!list || typeof list !== 'object') {
+    return false;
+  }
+  
+  const candidate = list as Record<string, unknown>;
+  
   return (
-    list !== null &&
-    typeof list === 'object' &&
-    'localId' in list &&
-    typeof (list as any).localId === 'string' &&
-    (list as any).localId.length > 0 &&
-    'name' in list &&
-    typeof (list as any).name === 'string' &&
-    (list as any).name.trim().length > 0
+    typeof candidate.localId === 'string' &&
+    candidate.localId.length > 0 &&
+    typeof candidate.name === 'string' &&
+    candidate.name.trim().length > 0
   );
 }
 
@@ -48,18 +53,19 @@ function validateShoppingList(list: unknown): list is ShoppingList {
  * @returns True if the item is valid, false otherwise
  */
 function validateShoppingItem(item: unknown): item is ShoppingItem {
+  if (!item || typeof item !== 'object') {
+    return false;
+  }
+  
+  const candidate = item as Record<string, unknown>;
+  
   return (
-    item !== null &&
-    typeof item === 'object' &&
-    'localId' in item &&
-    typeof (item as any).localId === 'string' &&
-    (item as any).localId.length > 0 &&
-    'name' in item &&
-    typeof (item as any).name === 'string' &&
-    (item as any).name.trim().length > 0 &&
-    'listId' in item &&
-    typeof (item as any).listId === 'string' &&
-    (item as any).listId.length > 0
+    typeof candidate.localId === 'string' &&
+    candidate.localId.length > 0 &&
+    typeof candidate.name === 'string' &&
+    candidate.name.trim().length > 0 &&
+    typeof candidate.listId === 'string' &&
+    candidate.listId.length > 0
   );
 }
 
@@ -75,6 +81,7 @@ export const guestStorage = {
    * @returns Array of Recipe objects, or empty array if none exist
    * @remarks Returns empty array on error to prevent app crashes.
    *          Errors are logged with storage key context for debugging.
+   *          Timestamps are normalized from ISO strings to Date objects (shallow normalization only).
    */
   async getRecipes(): Promise<Recipe[]> {
     try {
@@ -87,8 +94,14 @@ export const guestStorage = {
         console.error(`Invalid recipe data format in ${GUEST_RECIPES_KEY}: expected array, got ${typeof parsed}`);
         return [];
       }
+      // Filter out null/invalid items before normalization
+      const validItems = parsed.filter((r): r is Record<string, unknown> => 
+        r !== null && typeof r === 'object'
+      );
+      // Shallow normalization: convert ISO strings to Date objects (top-level entities only)
+      const normalized = validItems.map(fromPersistedTimestamps);
       // Validate each recipe has required fields
-      return parsed.filter((r): r is Recipe => 
+      return normalized.filter((r): r is Recipe => 
         r && typeof r === 'object' && r.localId && typeof r.localId === 'string' && r.name && typeof r.name === 'string'
       );
     } catch (error) {
@@ -101,6 +114,8 @@ export const guestStorage = {
    * Saves guest recipes to AsyncStorage.
    * @param recipes - Array of Recipe objects to save
    * @throws Error if storage operation fails or recipes are invalid
+   * @remarks Timestamps are serialized from Date objects to ISO strings (shallow serialization only).
+   *          deletedAt is omitted (not null) for active records.
    */
   async saveRecipes(recipes: Recipe[]): Promise<void> {
     // Validate input
@@ -114,7 +129,9 @@ export const guestStorage = {
     }
     
     try {
-      await AsyncStorage.setItem(GUEST_RECIPES_KEY, JSON.stringify(recipes));
+      // Shallow serialization: convert Date objects to ISO strings (top-level entities only)
+      const serialized = recipes.map(toPersistedTimestamps);
+      await AsyncStorage.setItem(GUEST_RECIPES_KEY, JSON.stringify(serialized));
     } catch (error) {
       console.error(`Error saving guest recipes to ${GUEST_RECIPES_KEY}:`, error);
       throw error;
@@ -126,6 +143,7 @@ export const guestStorage = {
    * @returns Array of ShoppingList objects, or empty array if none exist
    * @remarks Returns empty array on error to prevent app crashes.
    *          Errors are logged with storage key context for debugging.
+   *          Timestamps are normalized from ISO strings to Date objects (shallow normalization only).
    */
   async getShoppingLists(): Promise<ShoppingList[]> {
     try {
@@ -138,8 +156,14 @@ export const guestStorage = {
         console.error(`Invalid shopping list data format in ${GUEST_SHOPPING_LISTS_KEY}: expected array, got ${typeof parsed}`);
         return [];
       }
+      // Filter out null/invalid items before normalization
+      const validItems = parsed.filter((l): l is Record<string, unknown> => 
+        l !== null && typeof l === 'object'
+      );
+      // Shallow normalization: convert ISO strings to Date objects (top-level entities only)
+      const normalized = validItems.map(fromPersistedTimestamps);
       // Validate each list has required fields
-      return parsed.filter((l): l is ShoppingList => 
+      return normalized.filter((l): l is ShoppingList => 
         l && typeof l === 'object' && l.localId && typeof l.localId === 'string' && l.name && typeof l.name === 'string'
       );
     } catch (error) {
@@ -152,10 +176,14 @@ export const guestStorage = {
    * Saves guest shopping lists to AsyncStorage.
    * @param lists - Array of ShoppingList objects to save
    * @throws Error if storage operation fails
+   * @remarks Timestamps are serialized from Date objects to ISO strings (shallow serialization only).
+   *          deletedAt is omitted (not null) for active records.
    */
   async saveShoppingLists(lists: ShoppingList[]): Promise<void> {
     try {
-      await AsyncStorage.setItem(GUEST_SHOPPING_LISTS_KEY, JSON.stringify(lists));
+      // Shallow serialization: convert Date objects to ISO strings (top-level entities only)
+      const serialized = lists.map(toPersistedTimestamps);
+      await AsyncStorage.setItem(GUEST_SHOPPING_LISTS_KEY, JSON.stringify(serialized));
     } catch (error) {
       console.error(`Error saving guest shopping lists to ${GUEST_SHOPPING_LISTS_KEY}:`, error);
       throw error;
@@ -167,6 +195,7 @@ export const guestStorage = {
    * @returns Array of ShoppingItem objects, or empty array if none exist
    * @remarks Returns empty array on error to prevent app crashes.
    *          Errors are logged with storage key context for debugging.
+   *          Timestamps are normalized from ISO strings to Date objects (shallow normalization only).
    */
   async getShoppingItems(): Promise<ShoppingItem[]> {
     try {
@@ -179,8 +208,14 @@ export const guestStorage = {
         console.error(`Invalid shopping item data format in ${GUEST_SHOPPING_ITEMS_KEY}: expected array, got ${typeof parsed}`);
         return [];
       }
+      // Filter out null/invalid items before normalization
+      const validItems = parsed.filter((i): i is Record<string, unknown> => 
+        i !== null && typeof i === 'object'
+      );
+      // Shallow normalization: convert ISO strings to Date objects (top-level entities only)
+      const normalized = validItems.map(fromPersistedTimestamps);
       // Validate each item has required fields
-      return parsed.filter((i): i is ShoppingItem => 
+      return normalized.filter((i): i is ShoppingItem => 
         i && typeof i === 'object' && i.localId && typeof i.localId === 'string' && i.name && typeof i.name === 'string' && i.listId && typeof i.listId === 'string'
       );
     } catch (error) {
@@ -193,6 +228,8 @@ export const guestStorage = {
    * Saves guest shopping items to AsyncStorage.
    * @param items - Array of ShoppingItem objects to save
    * @throws Error if storage operation fails or items are invalid
+   * @remarks Timestamps are serialized from Date objects to ISO strings (shallow serialization only).
+   *          deletedAt is omitted (not null) for active records.
    */
   async saveShoppingItems(items: ShoppingItem[]): Promise<void> {
     // Validate input
@@ -206,7 +243,9 @@ export const guestStorage = {
     }
     
     try {
-      await AsyncStorage.setItem(GUEST_SHOPPING_ITEMS_KEY, JSON.stringify(items));
+      // Shallow serialization: convert Date objects to ISO strings (top-level entities only)
+      const serialized = items.map(toPersistedTimestamps);
+      await AsyncStorage.setItem(GUEST_SHOPPING_ITEMS_KEY, JSON.stringify(serialized));
     } catch (error) {
       console.error(`Error saving guest shopping items to ${GUEST_SHOPPING_ITEMS_KEY}:`, error);
       throw error;

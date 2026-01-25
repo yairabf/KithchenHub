@@ -9,6 +9,8 @@ import {
   BaseEntity,
   isEntityDeleted,
   isEntityActive,
+  toPersistedTimestamps,
+  fromPersistedTimestamps,
   serializeTimestamps,
   deserializeTimestamps,
 } from '../entityMetadata';
@@ -137,17 +139,19 @@ describe('isEntityActive', () => {
   });
 });
 
-describe('serializeTimestamps', () => {
+describe('toPersistedTimestamps', () => {
   it('should convert Date timestamps to ISO strings', () => {
     const entity: EntityTimestamps = {
       createdAt: new Date('2026-01-25T12:00:00.000Z'),
       updatedAt: new Date('2026-01-25T13:00:00.000Z'),
     };
 
-    const serialized = serializeTimestamps(entity);
+    const serialized = toPersistedTimestamps(entity);
 
     expect(serialized.createdAt).toBe('2026-01-25T12:00:00.000Z');
     expect(serialized.updatedAt).toBe('2026-01-25T13:00:00.000Z');
+    expect(typeof serialized.createdAt).toBe('string');
+    expect(typeof serialized.updatedAt).toBe('string');
   });
 
   it('should preserve string timestamps', () => {
@@ -156,7 +160,7 @@ describe('serializeTimestamps', () => {
       updatedAt: '2026-01-25T13:00:00.000Z',
     };
 
-    const serialized = serializeTimestamps(entity);
+    const serialized = toPersistedTimestamps(entity);
 
     expect(serialized.createdAt).toBe('2026-01-25T12:00:00.000Z');
     expect(serialized.updatedAt).toBe('2026-01-25T13:00:00.000Z');
@@ -168,7 +172,7 @@ describe('serializeTimestamps', () => {
       updatedAt: '2026-01-25T13:00:00.000Z',
     };
 
-    const serialized = serializeTimestamps(entity);
+    const serialized = toPersistedTimestamps(entity);
 
     expect(serialized.createdAt).toBe('2026-01-25T12:00:00.000Z');
     expect(serialized.updatedAt).toBe('2026-01-25T13:00:00.000Z');
@@ -180,7 +184,7 @@ describe('serializeTimestamps', () => {
       deletedAt: new Date('2026-01-25T14:00:00.000Z'),
     };
 
-    const serialized = serializeTimestamps(entity);
+    const serialized = toPersistedTimestamps(entity);
 
     expect(serialized.createdAt).toBe('2026-01-25T12:00:00.000Z');
     expect(serialized.deletedAt).toBe('2026-01-25T14:00:00.000Z');
@@ -191,7 +195,7 @@ describe('serializeTimestamps', () => {
       createdAt: new Date('2026-01-25T12:00:00.000Z'),
     };
 
-    const serialized = serializeTimestamps(entity);
+    const serialized = toPersistedTimestamps(entity);
 
     expect(serialized.createdAt).toBe('2026-01-25T12:00:00.000Z');
     expect(serialized.updatedAt).toBeUndefined();
@@ -212,7 +216,7 @@ describe('serializeTimestamps', () => {
       createdAt: new Date('2026-01-25T12:00:00.000Z'),
     };
 
-    const serialized = serializeTimestamps(entity);
+    const serialized = toPersistedTimestamps(entity);
 
     expect(serialized.id).toBe('123');
     expect(serialized.localId).toBe('550e8400-e29b-41d4-a716-446655440000');
@@ -222,14 +226,27 @@ describe('serializeTimestamps', () => {
   });
 });
 
-describe('deserializeTimestamps', () => {
+describe('serializeTimestamps (alias)', () => {
+  it('should be an alias for toPersistedTimestamps', () => {
+    const entity: EntityTimestamps = {
+      createdAt: new Date('2026-01-25T12:00:00.000Z'),
+    };
+
+    const result1 = serializeTimestamps(entity);
+    const result2 = toPersistedTimestamps(entity);
+
+    expect(result1.createdAt).toBe(result2.createdAt);
+  });
+});
+
+describe('fromPersistedTimestamps', () => {
   it('should convert ISO string timestamps to Date objects', () => {
     const entity: EntityTimestamps = {
       createdAt: '2026-01-25T12:00:00.000Z',
       updatedAt: '2026-01-25T13:00:00.000Z',
     };
 
-    const deserialized = deserializeTimestamps(entity);
+    const deserialized = fromPersistedTimestamps(entity);
 
     expect(deserialized.createdAt).toBeInstanceOf(Date);
     expect(deserialized.updatedAt).toBeInstanceOf(Date);
@@ -246,7 +263,7 @@ describe('deserializeTimestamps', () => {
       updatedAt: updatedDate,
     };
 
-    const deserialized = deserializeTimestamps(entity);
+    const deserialized = fromPersistedTimestamps(entity);
 
     expect(deserialized.createdAt).toBe(createdDate);
     expect(deserialized.updatedAt).toBe(updatedDate);
@@ -260,7 +277,7 @@ describe('deserializeTimestamps', () => {
       updatedAt: updatedDate,
     };
 
-    const deserialized = deserializeTimestamps(entity);
+    const deserialized = fromPersistedTimestamps(entity);
 
     expect(deserialized.createdAt).toBeInstanceOf(Date);
     expect(deserialized.updatedAt).toBe(updatedDate);
@@ -272,7 +289,7 @@ describe('deserializeTimestamps', () => {
       deletedAt: '2026-01-25T14:00:00.000Z',
     };
 
-    const deserialized = deserializeTimestamps(entity);
+    const deserialized = fromPersistedTimestamps(entity);
 
     expect(deserialized.createdAt).toBeInstanceOf(Date);
     expect(deserialized.deletedAt).toBeInstanceOf(Date);
@@ -284,7 +301,7 @@ describe('deserializeTimestamps', () => {
       createdAt: '2026-01-25T12:00:00.000Z',
     };
 
-    const deserialized = deserializeTimestamps(entity);
+    const deserialized = fromPersistedTimestamps(entity);
 
     expect(deserialized.createdAt).toBeInstanceOf(Date);
     expect(deserialized.updatedAt).toBeUndefined();
@@ -305,7 +322,7 @@ describe('deserializeTimestamps', () => {
       createdAt: '2026-01-25T12:00:00.000Z',
     };
 
-    const deserialized = deserializeTimestamps(entity);
+    const deserialized = fromPersistedTimestamps(entity);
 
     expect(deserialized.id).toBe('123');
     expect(deserialized.localId).toBe('550e8400-e29b-41d4-a716-446655440000');
@@ -315,7 +332,20 @@ describe('deserializeTimestamps', () => {
   });
 });
 
-describe('serializeTimestamps and deserializeTimestamps round-trip', () => {
+describe('deserializeTimestamps (alias)', () => {
+  it('should be an alias for fromPersistedTimestamps', () => {
+    const entity: EntityTimestamps = {
+      createdAt: '2026-01-25T12:00:00.000Z',
+    };
+
+    const result1 = deserializeTimestamps(entity);
+    const result2 = fromPersistedTimestamps(entity);
+
+    expect((result1.createdAt as Date).getTime()).toBe((result2.createdAt as Date).getTime());
+  });
+});
+
+describe('toPersistedTimestamps and fromPersistedTimestamps round-trip', () => {
   it('should maintain data integrity through serialization and deserialization', () => {
     interface TestEntity extends BaseEntity {
       name: string;
@@ -330,10 +360,10 @@ describe('serializeTimestamps and deserializeTimestamps round-trip', () => {
     };
 
     // Serialize (for persistence)
-    const serialized = serializeTimestamps(original);
+    const serialized = toPersistedTimestamps(original);
     
     // Deserialize (when loading from storage)
-    const deserialized = deserializeTimestamps(serialized);
+    const deserialized = fromPersistedTimestamps(serialized);
 
     expect(deserialized.id).toBe(original.id);
     expect(deserialized.localId).toBe(original.localId);
@@ -343,14 +373,14 @@ describe('serializeTimestamps and deserializeTimestamps round-trip', () => {
   });
 });
 
-describe('deserializeTimestamps - error handling', () => {
+describe('fromPersistedTimestamps - error handling', () => {
   it('should throw error for invalid ISO string', () => {
     const entity: EntityTimestamps = {
       createdAt: 'not-a-date',
     };
 
-    expect(() => deserializeTimestamps(entity)).toThrow('Invalid ISO 8601 timestamp');
-    expect(() => deserializeTimestamps(entity)).toThrow('createdAt');
+    expect(() => fromPersistedTimestamps(entity)).toThrow('Invalid ISO 8601 timestamp');
+    expect(() => fromPersistedTimestamps(entity)).toThrow('createdAt');
   });
 
   it('should throw error for partial date string (missing time)', () => {
@@ -358,8 +388,8 @@ describe('deserializeTimestamps - error handling', () => {
       updatedAt: '2026-01-25',
     };
 
-    expect(() => deserializeTimestamps(entity)).toThrow('Invalid ISO 8601 timestamp');
-    expect(() => deserializeTimestamps(entity)).toThrow('updatedAt');
+    expect(() => fromPersistedTimestamps(entity)).toThrow('Invalid ISO 8601 timestamp');
+    expect(() => fromPersistedTimestamps(entity)).toThrow('updatedAt');
   });
 
   it('should handle empty string as undefined', () => {
@@ -367,7 +397,7 @@ describe('deserializeTimestamps - error handling', () => {
       createdAt: '',
     };
 
-    const result = deserializeTimestamps(entity);
+    const result = fromPersistedTimestamps(entity);
     expect(result.createdAt).toBeUndefined();
   });
 
@@ -376,7 +406,7 @@ describe('deserializeTimestamps - error handling', () => {
       deletedAt: '2026-13-45T99:99:99.999Z', // Invalid month, day, hours
     };
 
-    expect(() => deserializeTimestamps(entity)).toThrow('Invalid ISO 8601 timestamp');
+    expect(() => fromPersistedTimestamps(entity)).toThrow('Invalid ISO 8601 timestamp');
   });
 
   it('should throw error for Date object with NaN timestamp', () => {
@@ -385,8 +415,8 @@ describe('deserializeTimestamps - error handling', () => {
       createdAt: invalidDate,
     };
 
-    expect(() => deserializeTimestamps(entity)).toThrow('Invalid Date object');
-    expect(() => deserializeTimestamps(entity)).toThrow('Date is NaN');
+    expect(() => fromPersistedTimestamps(entity)).toThrow('Invalid Date object');
+    expect(() => fromPersistedTimestamps(entity)).toThrow('Date is NaN');
   });
 });
 
@@ -424,14 +454,14 @@ describe('isEntityDeleted - edge cases', () => {
   });
 });
 
-describe('serializeTimestamps - performance optimization', () => {
+describe('toPersistedTimestamps - performance optimization', () => {
   it('should return same object reference when no conversion needed', () => {
     const entity: EntityTimestamps = {
       createdAt: '2026-01-25T12:00:00.000Z',
       updatedAt: '2026-01-25T13:00:00.000Z',
     };
 
-    const result = serializeTimestamps(entity);
+    const result = toPersistedTimestamps(entity);
     
     // Should be the same reference (performance optimization)
     expect(result).toBe(entity);
@@ -443,7 +473,7 @@ describe('serializeTimestamps - performance optimization', () => {
       updatedAt: '2026-01-25T13:00:00.000Z',
     };
 
-    const result = serializeTimestamps(entity);
+    const result = toPersistedTimestamps(entity);
     
     // Should be a different reference (conversion happened)
     expect(result).not.toBe(entity);
