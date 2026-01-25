@@ -12,7 +12,7 @@
  */
 
 import React from 'react';
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from '../AuthContext';
 
@@ -96,7 +96,12 @@ describe('AuthContext', () => {
 
       await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
+      const { result, rerender } = renderHook(() => useAuth(), { wrapper });
+
+      // Wait for initial load to complete
+      await waitFor(() => {
+        expect(result.current.hasGuestData).toBe(true);
+      });
 
       await act(async () => {
         await result.current.clearGuestData();
@@ -104,7 +109,11 @@ describe('AuthContext', () => {
 
       const hasGuestData = await AsyncStorage.getItem('@kitchen_hub_has_guest_data');
       expect(hasGuestData).toBeNull();
-      expect(result.current.hasGuestData).toBe(false);
+      
+      // Wait for state to update after clearGuestData
+      await waitFor(() => {
+        expect(result.current.hasGuestData).toBe(false);
+      }, { timeout: 3000 });
     });
 
     it('should throw error when AsyncStorage fails', async () => {

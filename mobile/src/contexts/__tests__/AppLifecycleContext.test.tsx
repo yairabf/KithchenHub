@@ -1,22 +1,31 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react-native';
-import { AppLifecycleProvider, useAppLifecycle } from '../AppLifecycleContext';
 
 const listeners: Array<(state: string) => void> = [];
 
+// Mock AppState specifically - avoid spreading entire react-native to prevent native module loading issues
 jest.mock('react-native', () => {
-  const actual = jest.requireActual('react-native');
+  // Only require what we absolutely need, avoid full module load
+  const mockAppState = {
+    currentState: 'active' as const,
+    addEventListener: jest.fn((_type: string, handler: (state: string) => void) => {
+      listeners.push(handler);
+      return { remove: jest.fn() };
+    }),
+  };
+
+  // Return minimal mock that only includes AppState
+  // This avoids loading native modules that don't exist in test environment
   return {
-    ...actual,
-    AppState: {
-      currentState: 'active',
-      addEventListener: (_type: string, handler: (state: string) => void) => {
-        listeners.push(handler);
-        return { remove: jest.fn() };
-      },
+    AppState: mockAppState,
+    Platform: {
+      OS: 'ios',
+      select: jest.fn((obj: any) => obj.ios || obj.default),
     },
   };
 });
+
+import { AppLifecycleProvider, useAppLifecycle } from '../AppLifecycleContext';
 
 describe('AppLifecycleContext', () => {
   beforeEach(() => {

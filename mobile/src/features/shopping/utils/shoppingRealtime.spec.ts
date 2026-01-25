@@ -96,7 +96,12 @@ describe('applyShoppingListChange', () => {
     expect(result.map((list) => list.id)).toEqual(expectedIds);
 
     if (expectedName) {
-      expect(result[0]?.name).toBe(expectedName);
+      // For INSERT, the new list is added at the end, so check the last item
+      // For UPDATE, check the first item (the updated one)
+      const listToCheck = payload.eventType === 'INSERT' 
+        ? result[result.length - 1]
+        : result[0];
+      expect(listToCheck?.name).toBe(expectedName);
     }
   });
 });
@@ -154,7 +159,12 @@ describe('applyShoppingItemChange', () => {
     expect(result.map((item) => item.id)).toEqual(expectedIds);
 
     if (expectedImage) {
-      expect(result[0]?.image).toBe(expectedImage);
+      // For INSERT, the new item is added at the end, so check the last item
+      // For UPDATE, check the first item (the updated one)
+      const itemToCheck = payload.eventType === 'INSERT' 
+        ? result[result.length - 1]
+        : result[0];
+      expect(itemToCheck?.image).toBe(expectedImage);
     }
   });
 });
