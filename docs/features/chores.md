@@ -258,6 +258,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
     - Fetches updated entities after mutations to get authoritative server timestamps
     - Server timestamps are authoritative and overwrite client timestamps on response
+    - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
 - **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
   - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `choreFactory.ts`)
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
@@ -348,6 +349,7 @@ Utility for applying remote updates to local cached state:
   - Merges using `mergeEntityArrays()` with conflict resolution
   - Persists merged result back to cache
   - Should be called in sync pipeline/repository layer, NOT inside Remote*Service methods
+  - **Defense-in-Depth Guardrail**: Validates storage key mode to ensure only signed-in cache keys are used. Throws error if called with guest or unknown storage keys, preventing programming errors.
 
 **Note**: Conflict resolution is client-side. The backend sync endpoint (`POST /auth/sync`) performs simple upsert operations and returns conflicts. Client-side utilities handle timestamp-based merging.
 
@@ -368,6 +370,7 @@ Utility for applying remote updates to local cached state:
 - `useWindowDimensions` - For responsive layout detection
 - `conflictResolution` - Conflict resolution utilities (`mobile/src/common/utils/conflictResolution.ts`)
 - `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
+- `guestNoSyncGuardrails` - Guest mode sync guardrails (`mobile/src/common/guards/guestNoSyncGuardrails.ts`) - Runtime assertions preventing guest data from syncing remotely
 
 ## UI Flow
 

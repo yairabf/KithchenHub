@@ -135,6 +135,7 @@ src/
 
 ## Notes
 - The API runs behind a global JWT guard; mark endpoints with the `@Public()` decorator to opt out.
+- **Guest Mode Protection**: Guest users can only access public endpoints (`/auth/guest`, `/auth/google`, `/auth/refresh`, `/groceries/*`). All other endpoints require valid JWT tokens with household membership, preventing guest data from syncing to the backend.
 - Global prefix, validation pipe, error filter, and response transformer are configured in `src/main.ts`.
 - Comprehensive test coverage includes unit tests for controllers, services, and repositories with parameterized test cases.
 - Database uses UUID for all user-related identifiers to maintain consistency with Supabase Auth identities.

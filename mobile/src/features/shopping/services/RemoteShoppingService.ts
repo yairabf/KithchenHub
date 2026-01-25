@@ -116,6 +116,15 @@ const buildShoppingItemsFromDetails = (
   });
 };
 
+/**
+ * Remote shopping service for signed-in users.
+ * 
+ * This service should only be instantiated for signed-in users.
+ * Service factory (createShoppingService) prevents guest mode from creating this service.
+ * 
+ * Defense-in-depth: All methods make API calls which require authentication.
+ * Guest users cannot provide valid JWT tokens, so API calls will fail at the backend.
+ */
 export class RemoteShoppingService implements IShoppingService {
   async getShoppingData(): Promise<ShoppingData> {
     const groceryItems = await this.getGroceryItems();

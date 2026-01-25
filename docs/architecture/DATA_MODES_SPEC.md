@@ -299,7 +299,47 @@ function validateModeMigration(
 - `validateEntitiesMode()` - Validates array of entities
 - `validateUserAccessToMode()` - Validates user can access mode
 
-### 6. Migration Guardrails
+### 6. Sync Guardrails
+
+**Location**: `mobile/src/common/guards/guestNoSyncGuardrails.ts`
+
+Prevent guest data from syncing remotely with runtime assertions at boundaries:
+
+```typescript
+// Guard at sync entry points
+import { assertSignedInMode } from '../guards/guestNoSyncGuardrails';
+import { useAuth } from '../../contexts/AuthContext';
+
+export function enqueueSyncAction(action: SyncAction): void {
+  const { user } = useAuth();
+  assertSignedInMode(user, 'Sync action enqueue');
+  // ... enqueue logic
+}
+
+// Defense-in-depth in sync application
+export async function applyRemoteUpdatesToLocal(...) {
+  // Validates storage key mode (getSignedInCacheKey implies signed-in)
+  const keyMode = getModeFromStorageKey(storageKey);
+  if (keyMode === 'guest') {
+    throw new Error('applyRemoteUpdatesToLocal() called with guest storage key.');
+  }
+  // ... sync logic
+}
+```
+
+**Guardrail Functions**:
+- `assertSignedInMode(user, operation)` - Asserts user is signed-in (not guest)
+- `assertNoGuestMode(user, operation)` - Asserts user is not guest
+
+**Integration Points**:
+- Sync queue enqueue functions (when implemented) - Guard at entry
+- Sync orchestrator entry points (`startSync()`, `runSyncCycle()`) - Guard at entry
+- `applyRemoteUpdatesToLocal()` - Defense-in-depth validation of storage key mode
+- Remote service classes - Documented to require authentication (service factories prevent guest mode)
+
+**Key Principle**: Guard at boundaries, not thread state through every function. Guardrails check user state at sync entry points.
+
+### 7. Migration Guardrails
 
 **Location**: `mobile/src/services/import/importService.ts`
 
@@ -386,6 +426,7 @@ static async gatherLocalData(): Promise<ImportRequestDto> {
 4. **API Protection**: Backend rejects unauthorized access attempts ✅
 5. **Clear Separation**: Each entity has explicit mode assignment ✅
 6. **Migration Safety**: Guest-to-signed migration validates and transforms correctly ✅
+7. **Sync Guardrails**: Guest mode cannot enqueue sync actions or trigger remote sync operations ✅
 
 ## Testing Strategy
 

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ENTITY_TYPES, getSignedInCacheKey } from '../storage/dataModeStorage';
+import { ENTITY_TYPES, getSignedInCacheKey, getModeFromStorageKey } from '../storage/dataModeStorage';
 import { EntityTimestamps, fromPersistedTimestamps, toPersistedTimestamps } from '../types/entityMetadata';
 import { mergeEntityArrays } from './conflictResolution';
 
@@ -63,6 +63,16 @@ export async function applyRemoteUpdatesToLocal<T extends EntityTimestamps>(
 ): Promise<void> {
   const storageEntity = entityTypeToStorageKey[entityType];
   const storageKey = getSignedInCacheKey(storageEntity);
+
+  // Defense-in-depth: Validate storage key implies signed-in mode
+  // If storage key is not signed-in, this is a programming error
+  const keyMode = getModeFromStorageKey(storageKey);
+  if (keyMode !== 'signed-in') {
+    const modeDescription = keyMode ?? 'unknown';
+    throw new Error(
+      `applyRemoteUpdatesToLocal() called with ${modeDescription} storage key. This function requires signed-in cache keys. Guest data is local-only and never synced remotely.`
+    );
+  }
 
   try {
     const cached = await AsyncStorage.getItem(storageKey);
