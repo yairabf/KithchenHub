@@ -11,13 +11,15 @@ This specification defines three explicit data modes for KitchenHub to ensure cl
 **Purpose**: Local-only data storage for unauthenticated users exploring the app
 
 **Characteristics**:
-- Data stored exclusively on device (AsyncStorage/SQLite)
+- Data stored exclusively on device (AsyncStorage v1 - see [Guest Storage Decision](./GUEST_STORAGE_DECISION.md))
 - No cloud synchronization
 - No household association
 - No cross-device access
 - Data persists until app uninstall or explicit clear
 
 **Storage Location**: `@kitchen_hub_guest_*` keys in AsyncStorage
+
+**Storage Backend**: AsyncStorage is the chosen backend for Guest Mode v1. See [Guest Storage Backend Decision](./GUEST_STORAGE_DECISION.md) for operational limits, migration triggers, and migration plan to SQLite/WatermelonDB when needed.
 
 ### 2. Signed-In Mode
 
