@@ -5,14 +5,7 @@ import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shoppi
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingData, IShoppingService } from './shoppingService';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../../../common/utils/catalogUtils';
-
-type GrocerySearchItemDto = {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl?: string | null;
-  defaultQuantity?: number | null;
-};
+import { catalogService } from '../../../common/services/catalogService';
 
 type ShoppingListSummaryDto = {
   id: string;
@@ -39,15 +32,8 @@ const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
 const DEFAULT_LIST_COLOR = colors.shopping;
 const FREQUENTLY_ADDED_ITEMS_LIMIT = 8;
 
-const mapGroceryItem = (item: GrocerySearchItemDto): GroceryItem => ({
-  id: item.id,
-  name: item.name,
-  image: item.imageUrl ?? '',
-  category: item.category,
-  defaultQuantity: item.defaultQuantity ?? 1,
-});
-
 // Note: Category building utilities moved to common/utils/catalogUtils.ts
+// Catalog data fetching is handled by catalogService
 
 const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => ({
   id: list.id,
@@ -271,9 +257,17 @@ export class RemoteShoppingService implements IShoppingService {
     return mapped;
   }
 
+  /**
+   * Fetches grocery items using CatalogService with fallback strategy.
+   * 
+   * Delegates to CatalogService which implements: API → Cache → Mock fallback.
+   * This ensures consistent behavior across all services and always returns data
+   * (never throws on network errors - always has mock fallback).
+   * 
+   * @returns Array of grocery items (never empty - always has mock fallback)
+   */
   private async getGroceryItems(): Promise<GroceryItem[]> {
-    const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
-    return results.map(mapGroceryItem);
+    return catalogService.getGroceryItems();
   }
 
   private async getShoppingLists(): Promise<ShoppingList[]> {

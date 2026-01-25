@@ -18,17 +18,22 @@ import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../util
 import { mockGroceriesDB } from '../../data/groceryDatabase';
 import type { GroceryItem } from '../../features/shopping/components/GrocerySearchBar';
 import type { Category } from '../../mocks/shopping';
+import type { GrocerySearchItemDto } from '../types/catalog';
 
 /**
- * DTO type for API response
+ * Enum to track which data source was used for catalog items.
+ * Used in logging to identify fallback path taken (API → Cache → Mock).
+ * 
+ * @example
+ * ```typescript
+ * console.log('Catalog source:', CatalogSource.API);
+ * ```
  */
-type GrocerySearchItemDto = {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl?: string | null;
-  defaultQuantity?: number | null;
-};
+export enum CatalogSource {
+  API = 'api',
+  CACHE = 'cache',
+  MOCK = 'mock',
+}
 
 /**
  * Storage keys for catalog cache
@@ -139,6 +144,22 @@ export class CatalogService {
   }
 
   /**
+   * Internal logging helper that conditionally logs based on environment.
+   * Only logs in development mode to avoid performance impact in production.
+   * 
+   * @param level - Log level ('log' or 'warn')
+   * @param message - Log message
+   * @param data - Optional data object to log
+   */
+  private logCatalogEvent(level: 'log' | 'warn', message: string, data?: object): void {
+    // Only log in development mode (React Native's __DEV__ flag)
+    // In production, logging is disabled to avoid performance overhead
+    if (__DEV__) {
+      console[level](`[CatalogService] ${message}`, data);
+    }
+  }
+
+  /**
    * Internal method to fetch grocery items with fallback strategy
    * 
    * @returns Array of grocery items
@@ -152,19 +173,21 @@ export class CatalogService {
       // Cache successful response
       await this.cacheGroceryItems(items);
       
+      this.logCatalogEvent('log', 'Fetched from API', { itemCount: items.length, source: CatalogSource.API });
       return items;
     } catch (error) {
       // Handle network errors - fallback to cache
       if (error instanceof NetworkError) {
-        console.warn('Network unavailable: Falling back to cached catalog data.');
+        this.logCatalogEvent('warn', 'Network unavailable, falling back to cache', { source: CatalogSource.CACHE });
         const cached = await this.getCachedGroceryItems();
         
         if (cached.length > 0) {
+          this.logCatalogEvent('log', 'Using cached catalog data', { itemCount: cached.length, source: CatalogSource.CACHE });
           return cached;
         }
         
         // Cache empty - fallback to mock data
-        console.warn('Cache empty: Using mock catalog data.');
+        this.logCatalogEvent('warn', 'Cache empty, using mock catalog data', { itemCount: mockGroceriesDB.length, source: CatalogSource.MOCK });
         return mockGroceriesDB;
       }
       
