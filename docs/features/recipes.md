@@ -336,10 +336,14 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Returns `LocalRecipeService` when mode is 'guest'
   - Returns `RemoteRecipeService` when mode is 'signed-in'
   - Validates service compatibility with data mode
+- **Entity Factory**: `createRecipe()` (`mobile/src/features/recipes/utils/recipeFactory.ts`)
+  - Creates new recipe objects with required fields
+  - **Automatically populates `createdAt`** using `withCreatedAt()` helper
 - **Interface**: `IRecipeService`
   - `getRecipes(): Promise<Recipe[]>`
   - `createRecipe(recipe: Partial<Recipe>): Promise<Recipe>`
   - `updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe>` - Updates recipe with partial data, used for adding image URLs after upload
+    - **Automatically updates `updatedAt`** using `withUpdatedAt()` helper
 - **Strategies**:
   - `LocalRecipeService`: 
     - Reads from `guestStorage.getRecipes()` (AsyncStorage) instead of mocks
@@ -347,12 +351,23 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Persists recipes to AsyncStorage via `guestStorage.saveRecipes()` on create/update
     - Includes retry logic for concurrent write operations
     - Validates recipe data before saving
+    - **Timestamp Management**: 
+      - `createRecipe()`: Automatically populates `createdAt` via `withCreatedAt()` helper
+      - `updateRecipe()`: Automatically updates `updatedAt` via `withUpdatedAt()` helper
+      - Timestamps are serialized to ISO strings when persisting to AsyncStorage
   - `RemoteRecipeService`: Calls backend via `api.ts` (`/recipes` endpoint)
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
   - `getRecipes()`: Retrieves recipes from AsyncStorage key `@kitchen_hub_guest_recipes`
+    - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
   - `saveRecipes(recipes)`: Persists recipes to AsyncStorage
+    - Serializes timestamps from Date objects to ISO strings (shallow serialization)
   - Returns empty arrays when no data exists or on parse errors
   - Validates data format (ensures array and required fields)
+- **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
+  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `recipeFactory.ts`)
+  - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification (used in `recipeService.ts`)
+  - `markDeleted()`: Sets `deletedAt` for soft-delete operations
+  - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
   - When enabled, forces 'guest' mode regardless of user authentication state

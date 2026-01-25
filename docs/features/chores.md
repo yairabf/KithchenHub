@@ -230,14 +230,24 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
 
 The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local mocks and backend API based on environment configuration.
 
-- **Factory**: `createChoresService(isMockEnabled: boolean)` (`mobile/src/features/chores/services/choresService.ts`)
-  - Returns `LocalChoresService` when `isMockEnabled` is true
-  - Returns `RemoteChoresService` when `isMockEnabled` is false
+- **Factory**: `createChoresService(mode: 'guest' | 'signed-in')` (`mobile/src/features/chores/services/choresService.ts`)
+  - Returns `LocalChoresService` when mode is 'guest'
+  - Returns `RemoteChoresService` when mode is 'signed-in'
+  - Validates service compatibility with data mode
+  - **Legacy**: `createChoresServiceLegacy(isMockEnabled: boolean)` for backward compatibility
+- **Entity Factory**: `createChore()` (`mobile/src/features/chores/utils/choreFactory.ts`)
+  - Creates new chore objects with required fields
+  - **Automatically populates `createdAt`** using `withCreatedAt()` helper
 - **Interface**: `IChoresService`
   - `getChores(): Promise<Chore[]>` - Returns all chores
 - **Strategies**:
   - `LocalChoresService`: Returns mock data from `mockChores`
   - `RemoteChoresService`: Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
+- **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
+  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `choreFactory.ts`)
+  - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
+  - `markDeleted()`: Sets `deletedAt` for soft-delete operations
+  - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
   - Guest users always use local data regardless of the flag

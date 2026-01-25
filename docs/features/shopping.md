@@ -265,11 +265,25 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `RemoteShoppingService`: Calls backend via `api.ts` (`/groceries/search`, `/shopping-lists`, `/shopping-lists/{id}` endpoints)
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
   - `getShoppingLists()`: Retrieves lists from AsyncStorage key `@kitchen_hub_guest_shopping_lists`
+    - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
   - `getShoppingItems()`: Retrieves items from AsyncStorage key `@kitchen_hub_guest_shopping_items`
+    - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
   - `saveShoppingLists(lists)`: Persists lists to AsyncStorage
+    - Serializes timestamps from Date objects to ISO strings (shallow serialization)
   - `saveShoppingItems(items)`: Persists items to AsyncStorage
+    - Serializes timestamps from Date objects to ISO strings (shallow serialization)
   - Returns empty arrays when no data exists or on parse errors
   - Validates data format (ensures array and required fields)
+- **Entity Factories**: `mobile/src/features/shopping/utils/shoppingFactory.ts`
+  - `createShoppingList()`: Creates new shopping list objects
+    - **Automatically populates `createdAt`** using `withCreatedAt()` helper
+  - `createShoppingItem()`: Creates new shopping item objects
+    - **Automatically populates `createdAt`** using `withCreatedAt()` helper
+- **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
+  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation
+  - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
+  - `markDeleted()`: Sets `deletedAt` for soft-delete operations
+  - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
 - **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
   - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
   - When enabled, forces 'guest' mode regardless of user authentication state
