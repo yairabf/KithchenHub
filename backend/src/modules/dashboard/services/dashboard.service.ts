@@ -4,7 +4,7 @@ import { DashboardSummaryDto, RecentActivityDto } from '../dtos';
 
 /**
  * Dashboard service providing aggregated data for the home screen.
- * 
+ *
  * Responsibilities:
  * - Aggregate counts from multiple modules
  * - Generate recent activity feed
@@ -19,7 +19,7 @@ export class DashboardService {
   /**
    * Gets comprehensive dashboard summary for a user's household.
    * Aggregates data from shopping lists, chores, recipes, and recent activity.
-   * 
+   *
    * @param userId - The user ID
    * @param householdId - The household ID
    * @returns Dashboard summary with counts and recent activity

@@ -27,7 +27,7 @@ export class JwtAuthGuard implements CanActivate {
 
   /**
    * Validates JWT token from Authorization header.
-   * 
+   *
    * @param context - Execution context containing request
    * @returns true if authentication succeeds
    * @throws UnauthorizedException if token is missing or invalid
@@ -42,7 +42,9 @@ export class JwtAuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<AuthenticatedFastifyRequest>();
+    const request = context
+      .switchToHttp()
+      .getRequest<AuthenticatedFastifyRequest>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
@@ -74,7 +76,9 @@ export class JwtAuthGuard implements CanActivate {
   /**
    * Extracts Bearer token from Authorization header.
    */
-  private extractTokenFromHeader(request: AuthenticatedFastifyRequest): string | undefined {
+  private extractTokenFromHeader(
+    request: AuthenticatedFastifyRequest,
+  ): string | undefined {
     const authHeader = request.headers.authorization;
     if (!authHeader || typeof authHeader !== 'string') {
       return undefined;

@@ -362,12 +362,17 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
     - Server timestamps are authoritative and overwrite client timestamps on response
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
-  - `getRecipes()`: Retrieves recipes from AsyncStorage key `@kitchen_hub_guest_recipes`
+  - Storage keys are centrally managed via `getGuestStorageKey(ENTITY_TYPES.*)` from `dataModeStorage.ts`
+  - Uses envelope format internally: `{ version: 1, updatedAt: string, data: T[] }` for versioning support
+  - `getRecipes()`: Retrieves recipes from AsyncStorage (key: `@kitchen_hub_guest_recipes`)
     - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
-  - `saveRecipes(recipes)`: Persists recipes to AsyncStorage
+    - Automatically upgrades legacy array format to envelope format on read
+  - `saveRecipes(recipes)`: Persists recipes to AsyncStorage as envelope format
     - Serializes timestamps from Date objects to ISO strings (shallow serialization)
-  - Returns empty arrays when no data exists or on parse errors
-  - Validates data format (ensures array and required fields)
+    - Creates envelope with version 1 and current timestamp
+  - Returns empty arrays when no data exists or on parse errors (graceful degradation)
+  - Validates data format and filters invalid entities
+  - **Internal Helpers**: Uses `readEntityEnvelope()` and `writeEntityEnvelope()` from `guestStorageHelpers.ts` for type-safe operations
 - **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
   - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `recipeFactory.ts`)
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification (used in `recipeService.ts`)

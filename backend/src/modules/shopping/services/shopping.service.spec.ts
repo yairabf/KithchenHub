@@ -6,7 +6,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 /**
  * Shopping Service Unit Tests
- * 
+ *
  * Tests soft-delete behavior and business logic for shopping lists and items.
  */
 describe('ShoppingService - Soft-Delete Behavior', () => {
@@ -82,7 +82,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       jest.spyOn(repository, 'findListById').mockResolvedValue(null);
 
       await expect(
-        service.deleteList(mockListId, mockHouseholdId)
+        service.deleteList(mockListId, mockHouseholdId),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -100,7 +100,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       jest.spyOn(repository, 'findListById').mockResolvedValue(mockList);
 
       await expect(
-        service.deleteList(mockListId, mockHouseholdId)
+        service.deleteList(mockListId, mockHouseholdId),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -146,7 +146,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       jest.spyOn(repository, 'findItemById').mockResolvedValue(null);
 
       await expect(
-        service.deleteItem(mockItemId, mockHouseholdId)
+        service.deleteItem(mockItemId, mockHouseholdId),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -179,7 +179,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       jest.spyOn(repository, 'findListById').mockResolvedValue(mockList);
 
       await expect(
-        service.deleteItem(mockItemId, mockHouseholdId)
+        service.deleteItem(mockItemId, mockHouseholdId),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -199,18 +199,20 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
         },
       ];
 
-      jest.spyOn(prisma.shoppingList, 'findMany').mockResolvedValue(mockLists as any);
+      jest
+        .spyOn(prisma.shoppingList, 'findMany')
+        .mockResolvedValue(mockLists as any);
 
       const result = await service.getLists(mockHouseholdId);
 
       expect(prisma.shoppingList.findMany).toHaveBeenCalledWith({
-        where: { 
+        where: {
           householdId: mockHouseholdId,
           deletedAt: null,
         },
         include: {
           _count: {
-            select: { 
+            select: {
               items: {
                 where: { deletedAt: null },
               },
@@ -251,7 +253,9 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
         ],
       };
 
-      jest.spyOn(repository, 'findListWithItems').mockResolvedValue(mockList as any);
+      jest
+        .spyOn(repository, 'findListWithItems')
+        .mockResolvedValue(mockList as any);
 
       const result = await service.getListDetails(mockListId, mockHouseholdId);
 

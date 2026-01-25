@@ -15,7 +15,7 @@ import {
 
 /**
  * Household service managing household operations and member management.
- * 
+ *
  * Responsibilities:
  * - Retrieve household information with members
  * - Update household settings (admin only)
@@ -33,7 +33,7 @@ export class HouseholdsService {
 
   /**
    * Gets the household for a user with all members.
-   * 
+   *
    * @param userId - The user ID
    * @returns Household details with member list
    * @throws NotFoundException if user doesn't belong to a household
@@ -76,7 +76,7 @@ export class HouseholdsService {
   /**
    * Updates household settings (name, timezone).
    * Only admins can update household settings.
-   * 
+   *
    * @param userId - The user ID requesting the update
    * @param dto - Update data
    * @returns Updated household details
@@ -110,7 +110,7 @@ export class HouseholdsService {
   /**
    * Invites a new member to the household via email.
    * Only admins can invite members.
-   * 
+   *
    * @param userId - The user ID sending the invitation
    * @param dto - Contains the email to invite
    * @returns Invitation token
@@ -149,7 +149,7 @@ export class HouseholdsService {
   /**
    * Removes a member from the household.
    * Only admins can remove members. Users cannot remove themselves.
-   * 
+   *
    * @param userId - The user ID requesting the removal
    * @param memberId - The ID of the member to remove
    * @throws NotFoundException if user doesn't belong to a household or member not found

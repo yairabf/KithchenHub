@@ -279,16 +279,23 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - All CRUD operations fetch existing entities before updating to prevent data loss
     - Server timestamps are authoritative and overwrite client timestamps on response
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
-  - `getShoppingLists()`: Retrieves lists from AsyncStorage key `@kitchen_hub_guest_shopping_lists`
+  - Storage keys are centrally managed via `getGuestStorageKey(ENTITY_TYPES.*)` from `dataModeStorage.ts`
+  - Uses envelope format internally: `{ version: 1, updatedAt: string, data: T[] }` for versioning support
+  - `getShoppingLists()`: Retrieves lists from AsyncStorage (key: `@kitchen_hub_guest_shopping_lists`)
     - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
-  - `getShoppingItems()`: Retrieves items from AsyncStorage key `@kitchen_hub_guest_shopping_items`
+    - Automatically upgrades legacy array format to envelope format on read
+  - `getShoppingItems()`: Retrieves items from AsyncStorage (key: `@kitchen_hub_guest_shopping_items`)
     - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
-  - `saveShoppingLists(lists)`: Persists lists to AsyncStorage
+    - Automatically upgrades legacy array format to envelope format on read
+  - `saveShoppingLists(lists)`: Persists lists to AsyncStorage as envelope format
     - Serializes timestamps from Date objects to ISO strings (shallow serialization)
-  - `saveShoppingItems(items)`: Persists items to AsyncStorage
+    - Creates envelope with version 1 and current timestamp
+  - `saveShoppingItems(items)`: Persists items to AsyncStorage as envelope format
     - Serializes timestamps from Date objects to ISO strings (shallow serialization)
-  - Returns empty arrays when no data exists or on parse errors
-  - Validates data format (ensures array and required fields)
+    - Creates envelope with version 1 and current timestamp
+  - Returns empty arrays when no data exists or on parse errors (graceful degradation)
+  - Validates data format and filters invalid entities
+  - **Internal Helpers**: Uses `readEntityEnvelope()` and `writeEntityEnvelope()` from `guestStorageHelpers.ts` for type-safe operations
 - **Entity Factories**: `mobile/src/features/shopping/utils/shoppingFactory.ts`
   - `createShoppingList()`: Creates new shopping list objects
     - **Automatically populates `createdAt`** using `withCreatedAt()` helper

@@ -10,11 +10,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { RecipesService } from '../services/recipes.service';
-import {
-  CreateRecipeDto,
-  UpdateRecipeDto,
-  CookRecipeDto,
-} from '../dtos';
+import { CreateRecipeDto, UpdateRecipeDto, CookRecipeDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 
@@ -32,7 +28,10 @@ export class RecipesController {
     if (!user.householdId) {
       throw new BadRequestException('User must belong to a household');
     }
-    return this.recipesService.getRecipes(user.householdId, { category, search });
+    return this.recipesService.getRecipes(user.householdId, {
+      category,
+      search,
+    });
   }
 
   @Post()

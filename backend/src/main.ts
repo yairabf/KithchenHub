@@ -44,14 +44,18 @@ async function bootstrap(): Promise<void> {
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  
+
   await SwaggerModule.setup('api/docs', app, document, {
     customSiteTitle: 'Kitchen Hub API Docs',
   });
 
   await app.listen(config.port, '0.0.0.0');
-  console.log(`Application is running on: http://localhost:${config.port}/api/v1`);
-  console.log(`Swagger documentation: http://localhost:${config.port}/api/docs`);
+  console.log(
+    `Application is running on: http://localhost:${config.port}/api/v1`,
+  );
+  console.log(
+    `Swagger documentation: http://localhost:${config.port}/api/docs`,
+  );
 }
 
 void bootstrap();

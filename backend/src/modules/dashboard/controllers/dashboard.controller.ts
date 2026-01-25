@@ -1,4 +1,9 @@
-import { Controller, Get, UseGuards, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { DashboardService } from '../services/dashboard.service';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';

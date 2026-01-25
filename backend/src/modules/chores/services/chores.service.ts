@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { ChoresRepository } from '../repositories/chores.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import {
@@ -12,7 +17,7 @@ import {
 
 /**
  * Chores service managing household chores, assignments, and completion tracking.
- * 
+ *
  * Responsibilities:
  * - Chore CRUD operations
  * - Chore assignment management
@@ -30,7 +35,7 @@ export class ChoresService {
 
   /**
    * Gets chores for a household, organized by today and upcoming.
-   * 
+   *
    * @param householdId - The household ID
    * @param dateRange - Optional start and end date filters
    * @returns Chores organized by today and upcoming
@@ -76,7 +81,7 @@ export class ChoresService {
 
   /**
    * Creates a new chore for a household.
-   * 
+   *
    * @param householdId - The household ID
    * @param dto - Chore creation data
    * @returns Created chore ID
@@ -97,7 +102,7 @@ export class ChoresService {
 
   /**
    * Updates a chore (assignment, title, due date).
-   * 
+   *
    * @param choreId - The chore ID
    * @param householdId - The household ID for authorization
    * @param dto - Update data
@@ -131,7 +136,7 @@ export class ChoresService {
 
   /**
    * Toggles completion status of a chore.
-   * 
+   *
    * @param choreId - The chore ID
    * @param householdId - The household ID for authorization
    * @param dto - Contains completion status
@@ -156,9 +161,8 @@ export class ChoresService {
 
     await this.choresRepository.toggleCompletion(choreId, dto.isCompleted);
 
-    const stats = await this.choresRepository.countChoresByHousehold(
-      householdId,
-    );
+    const stats =
+      await this.choresRepository.countChoresByHousehold(householdId);
 
     return {
       progress: {
@@ -171,15 +175,12 @@ export class ChoresService {
 
   /**
    * Gets chore statistics for a household.
-   * 
+   *
    * @param householdId - The household ID
    * @param date - Optional date filter
    * @returns Chore statistics (total, completed, pending)
    */
-  async getStats(
-    householdId: string,
-    date?: string,
-  ): Promise<ChoreStatsDto> {
+  async getStats(householdId: string, date?: string): Promise<ChoreStatsDto> {
     const filterDate = date ? new Date(date) : undefined;
     const stats = await this.choresRepository.countChoresByHousehold(
       householdId,

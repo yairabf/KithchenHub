@@ -10,11 +10,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ChoresService } from '../services/chores.service';
-import {
-  CreateChoreDto,
-  UpdateChoreDto,
-  ToggleCompletionDto,
-} from '../dtos';
+import { CreateChoreDto, UpdateChoreDto, ToggleCompletionDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 

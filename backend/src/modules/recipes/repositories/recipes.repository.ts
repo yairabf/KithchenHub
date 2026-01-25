@@ -13,7 +13,7 @@ export class RecipesRepository {
     householdId: string,
     filters?: { category?: string; search?: string },
   ): Promise<Recipe[]> {
-    const where: any = { 
+    const where: any = {
       householdId,
       ...ACTIVE_RECORDS_FILTER,
     };
@@ -77,7 +77,7 @@ export class RecipesRepository {
 
   /**
    * Soft-deletes a recipe by setting deletedAt timestamp.
-   * 
+   *
    * @param id - Recipe ID to soft-delete
    */
   async deleteRecipe(id: string): Promise<void> {
@@ -90,7 +90,7 @@ export class RecipesRepository {
 
   /**
    * Restores a soft-deleted recipe.
-   * 
+   *
    * @param id - Recipe ID to restore
    */
   async restoreRecipe(id: string): Promise<void> {

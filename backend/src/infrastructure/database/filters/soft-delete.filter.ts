@@ -1,6 +1,6 @@
 /**
  * Soft-delete filter constants for querying active (non-deleted) records.
- * 
+ *
  * Usage:
  * ```typescript
  * await prisma.recipe.findMany({
@@ -20,10 +20,10 @@ export const ACTIVE_RECORDS_FILTER = { deletedAt: null } as const;
 
 /**
  * Helper to build active records filter with additional conditions.
- * 
+ *
  * @param additionalWhere - Additional where conditions to combine with active filter
  * @returns Combined where clause
- * 
+ *
  * @example
  * ```typescript
  * const where = buildActiveRecordsFilter({ householdId: 'abc-123' });

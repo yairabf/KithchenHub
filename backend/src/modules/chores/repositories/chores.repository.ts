@@ -13,7 +13,7 @@ export class ChoresRepository {
     householdId: string,
     filters?: { start?: Date; end?: Date },
   ): Promise<(Chore & { assignee: { name: string } | null })[]> {
-    const where: any = { 
+    const where: any = {
       householdId,
       ...ACTIVE_RECORDS_FILTER,
     };
@@ -81,10 +81,7 @@ export class ChoresRepository {
     });
   }
 
-  async toggleCompletion(
-    id: string,
-    isCompleted: boolean,
-  ): Promise<Chore> {
+  async toggleCompletion(id: string, isCompleted: boolean): Promise<Chore> {
     return this.prisma.chore.update({
       where: { id },
       data: {
@@ -98,7 +95,7 @@ export class ChoresRepository {
     householdId: string,
     filters?: { date?: Date },
   ): Promise<{ total: number; completed: number }> {
-    const where: any = { 
+    const where: any = {
       householdId,
       ...ACTIVE_RECORDS_FILTER,
     };
@@ -124,7 +121,7 @@ export class ChoresRepository {
 
   /**
    * Soft-deletes a chore by setting deletedAt timestamp.
-   * 
+   *
    * @param id - Chore ID to soft-delete
    */
   async deleteChore(id: string): Promise<void> {
@@ -137,7 +134,7 @@ export class ChoresRepository {
 
   /**
    * Restores a soft-deleted chore.
-   * 
+   *
    * @param id - Chore ID to restore
    */
   async restoreChore(id: string): Promise<void> {

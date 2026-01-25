@@ -6,7 +6,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 /**
  * Chores Service Unit Tests
- * 
+ *
  * Tests soft-delete behavior and business logic for chores.
  */
 describe('ChoresService - Soft-Delete Behavior', () => {
@@ -47,7 +47,7 @@ describe('ChoresService - Soft-Delete Behavior', () => {
     it('should return only active chores (exclude soft-deleted)', async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -82,7 +82,9 @@ describe('ChoresService - Soft-Delete Behavior', () => {
         },
       ];
 
-      jest.spyOn(repository, 'findChoresByHousehold').mockResolvedValue(mockChores as any);
+      jest
+        .spyOn(repository, 'findChoresByHousehold')
+        .mockResolvedValue(mockChores as any);
 
       const result = await service.getChores(mockHouseholdId);
 
@@ -104,7 +106,9 @@ describe('ChoresService - Soft-Delete Behavior', () => {
         completed: 5,
       };
 
-      jest.spyOn(repository, 'countChoresByHousehold').mockResolvedValue(mockStats);
+      jest
+        .spyOn(repository, 'countChoresByHousehold')
+        .mockResolvedValue(mockStats);
 
       const result = await service.getStats(mockHouseholdId);
 
@@ -140,8 +144,12 @@ describe('ChoresService - Soft-Delete Behavior', () => {
         title: 'Updated Title',
       };
 
-      jest.spyOn(repository, 'findChoreById').mockResolvedValue(mockChore as any);
-      jest.spyOn(repository, 'updateChore').mockResolvedValue(mockUpdatedChore as any);
+      jest
+        .spyOn(repository, 'findChoreById')
+        .mockResolvedValue(mockChore as any);
+      jest
+        .spyOn(repository, 'updateChore')
+        .mockResolvedValue(mockUpdatedChore as any);
 
       const result = await service.updateChore(mockChoreId, mockHouseholdId, {
         title: 'Updated Title',
@@ -154,7 +162,9 @@ describe('ChoresService - Soft-Delete Behavior', () => {
       jest.spyOn(repository, 'findChoreById').mockResolvedValue(null);
 
       await expect(
-        service.updateChore(mockChoreId, mockHouseholdId, { title: 'New Title' })
+        service.updateChore(mockChoreId, mockHouseholdId, {
+          title: 'New Title',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -173,10 +183,14 @@ describe('ChoresService - Soft-Delete Behavior', () => {
         deletedAt: null,
       };
 
-      jest.spyOn(repository, 'findChoreById').mockResolvedValue(mockChore as any);
+      jest
+        .spyOn(repository, 'findChoreById')
+        .mockResolvedValue(mockChore as any);
 
       await expect(
-        service.updateChore(mockChoreId, mockHouseholdId, { title: 'New Title' })
+        service.updateChore(mockChoreId, mockHouseholdId, {
+          title: 'New Title',
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -202,15 +216,26 @@ describe('ChoresService - Soft-Delete Behavior', () => {
         completed: 6,
       };
 
-      jest.spyOn(repository, 'findChoreById').mockResolvedValue(mockChore as any);
+      jest
+        .spyOn(repository, 'findChoreById')
+        .mockResolvedValue(mockChore as any);
       jest.spyOn(repository, 'toggleCompletion').mockResolvedValue(undefined);
-      jest.spyOn(repository, 'countChoresByHousehold').mockResolvedValue(mockStats);
+      jest
+        .spyOn(repository, 'countChoresByHousehold')
+        .mockResolvedValue(mockStats);
 
-      const result = await service.toggleCompletion(mockChoreId, mockHouseholdId, {
-        isCompleted: true,
-      });
+      const result = await service.toggleCompletion(
+        mockChoreId,
+        mockHouseholdId,
+        {
+          isCompleted: true,
+        },
+      );
 
-      expect(repository.toggleCompletion).toHaveBeenCalledWith(mockChoreId, true);
+      expect(repository.toggleCompletion).toHaveBeenCalledWith(
+        mockChoreId,
+        true,
+      );
       expect(result.progress.total).toBe(10);
       expect(result.progress.completed).toBe(6);
       expect(result.progress.pending).toBe(4);
