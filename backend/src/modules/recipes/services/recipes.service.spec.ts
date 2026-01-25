@@ -6,7 +6,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 /**
  * Recipes Service Unit Tests
- * 
+ *
  * Tests soft-delete behavior and business logic for recipes.
  */
 describe('RecipesService - Soft-Delete Behavior', () => {
@@ -67,7 +67,9 @@ describe('RecipesService - Soft-Delete Behavior', () => {
         },
       ];
 
-      jest.spyOn(repository, 'findRecipesByHousehold').mockResolvedValue(mockRecipes as any);
+      jest
+        .spyOn(repository, 'findRecipesByHousehold')
+        .mockResolvedValue(mockRecipes as any);
 
       const result = await service.getRecipes(mockHouseholdId);
 
@@ -95,9 +97,13 @@ describe('RecipesService - Soft-Delete Behavior', () => {
         },
       ];
 
-      jest.spyOn(repository, 'findRecipesByHousehold').mockResolvedValue(mockRecipes as any);
+      jest
+        .spyOn(repository, 'findRecipesByHousehold')
+        .mockResolvedValue(mockRecipes as any);
 
-      const result = await service.getRecipes(mockHouseholdId, { search: 'pasta' });
+      const result = await service.getRecipes(mockHouseholdId, {
+        search: 'pasta',
+      });
 
       expect(repository.findRecipesByHousehold).toHaveBeenCalledWith(
         mockHouseholdId,
@@ -164,9 +170,14 @@ describe('RecipesService - Soft-Delete Behavior', () => {
         },
       ];
 
-      jest.spyOn(repository, 'findRecipeById').mockResolvedValue(mockRecipe as any);
-      jest.spyOn(prisma.shoppingList, 'findFirst').mockResolvedValue(mockList as any);
-      jest.spyOn(prisma.shoppingItem, 'create')
+      jest
+        .spyOn(repository, 'findRecipeById')
+        .mockResolvedValue(mockRecipe as any);
+      jest
+        .spyOn(prisma.shoppingList, 'findFirst')
+        .mockResolvedValue(mockList as any);
+      jest
+        .spyOn(prisma.shoppingItem, 'create')
         .mockResolvedValueOnce(mockCreatedItems[0] as any)
         .mockResolvedValueOnce(mockCreatedItems[1] as any);
 
@@ -199,13 +210,15 @@ describe('RecipesService - Soft-Delete Behavior', () => {
         deletedAt: null,
       };
 
-      jest.spyOn(repository, 'findRecipeById').mockResolvedValue(mockRecipe as any);
+      jest
+        .spyOn(repository, 'findRecipeById')
+        .mockResolvedValue(mockRecipe as any);
       jest.spyOn(prisma.shoppingList, 'findFirst').mockResolvedValue(null);
 
       await expect(
         service.cookRecipe(mockRecipeId, mockHouseholdId, {
           targetListId: 'deleted-list',
-        })
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });

@@ -11,11 +11,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ShoppingService } from '../services/shopping.service';
-import {
-  CreateListDto,
-  AddItemsDto,
-  UpdateItemDto,
-} from '../dtos';
+import { CreateListDto, AddItemsDto, UpdateItemDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 import { Public } from '../../../common/decorators/public.decorator';

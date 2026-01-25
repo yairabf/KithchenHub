@@ -4,7 +4,7 @@ import { User, RefreshToken, Household } from '@prisma/client';
 
 @Injectable()
 export class AuthRepository {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async findUserById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({

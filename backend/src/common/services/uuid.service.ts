@@ -7,12 +7,12 @@ import * as crypto from 'crypto';
  */
 @Injectable()
 export class UuidService {
-    /**
-     * Generates a random UUID (v4).
-     * 
-     * @returns A string containing a random UUID.
-     */
-    generate(): string {
-        return crypto.randomUUID();
-    }
+  /**
+   * Generates a random UUID (v4).
+   *
+   * @returns A string containing a random UUID.
+   */
+  generate(): string {
+    return crypto.randomUUID();
+  }
 }

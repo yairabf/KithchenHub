@@ -11,7 +11,7 @@ export class ShoppingRepository {
 
   async findListsByHousehold(householdId: string): Promise<ShoppingList[]> {
     return this.prisma.shoppingList.findMany({
-      where: { 
+      where: {
         householdId,
         ...ACTIVE_RECORDS_FILTER,
       },
@@ -56,13 +56,13 @@ export class ShoppingRepository {
 
   /**
    * Soft-deletes a shopping list by setting deletedAt timestamp.
-   * 
+   *
    * NOTE: Child items (ShoppingItem) are NOT automatically soft-deleted.
    * This is intentional design:
    * - Items are independently managed and soft-deleted via deleteItem()
    * - The application layer filters items by their own deletedAt status
    * - This allows for future features like "restore list with items"
-   * 
+   *
    * @param id - Shopping list ID to soft-delete
    */
   async deleteList(id: string): Promise<void> {
@@ -75,7 +75,7 @@ export class ShoppingRepository {
 
   /**
    * Restores a soft-deleted shopping list.
-   * 
+   *
    * @param id - Shopping list ID to restore
    */
   async restoreList(id: string): Promise<void> {
@@ -128,7 +128,7 @@ export class ShoppingRepository {
 
   /**
    * Soft-deletes a shopping item by setting deletedAt timestamp.
-   * 
+   *
    * @param id - Shopping item ID to soft-delete
    */
   async deleteItem(id: string): Promise<void> {
@@ -141,7 +141,7 @@ export class ShoppingRepository {
 
   /**
    * Restores a soft-deleted shopping item.
-   * 
+   *
    * @param id - Shopping item ID to restore
    */
   async restoreItem(id: string): Promise<void> {
@@ -154,7 +154,7 @@ export class ShoppingRepository {
 
   async countItemsByList(listId: string): Promise<number> {
     return this.prisma.shoppingItem.count({
-      where: { 
+      where: {
         listId,
         ...ACTIVE_RECORDS_FILTER,
       },

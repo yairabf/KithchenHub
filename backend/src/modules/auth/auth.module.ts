@@ -21,4 +21,4 @@ const config = loadConfiguration();
   providers: [AuthService, AuthRepository, UuidService],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

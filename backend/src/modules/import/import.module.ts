@@ -5,9 +5,9 @@ import { ImportRepository } from './repositories/import.repository';
 import { PrismaModule } from '../../infrastructure/database/prisma/prisma.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [ImportController],
-    providers: [ImportService, ImportRepository],
-    exports: [ImportService],
+  imports: [PrismaModule],
+  controllers: [ImportController],
+  providers: [ImportService, ImportRepository],
+  exports: [ImportService],
 })
-export class ImportModule { }
+export class ImportModule {}

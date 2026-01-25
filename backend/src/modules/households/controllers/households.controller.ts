@@ -9,10 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { HouseholdsService } from '../services/households.service';
-import {
-  UpdateHouseholdDto,
-  InviteMemberDto,
-} from '../dtos';
+import { UpdateHouseholdDto, InviteMemberDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 

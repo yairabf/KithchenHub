@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { ShoppingRepository } from '../repositories/shopping.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
@@ -14,7 +20,7 @@ import {
 
 /**
  * Shopping service handling shopping lists, items, and grocery search.
- * 
+ *
  * Responsibilities:
  * - Shopping list CRUD operations
  * - Shopping item management
@@ -88,7 +94,7 @@ export class ShoppingService {
 
   /**
    * Searches groceries by name (case-insensitive).
-   * 
+   *
    * @param query - Search query string
    * @returns Array of matching grocery items
    */
@@ -115,7 +121,7 @@ export class ShoppingService {
 
   /**
    * Gets all unique grocery categories.
-   * 
+   *
    * @returns Sorted array of category names
    */
   async getCategories(): Promise<string[]> {
@@ -131,19 +137,19 @@ export class ShoppingService {
   /**
    * Gets all shopping lists for a household with item counts.
    * Uses a single query with aggregation to avoid N+1 problem.
-   * 
+   *
    * @param householdId - The household ID
    * @returns Array of shopping list summaries with item counts
    */
   async getLists(householdId: string): Promise<ShoppingListSummaryDto[]> {
     const lists = await this.prisma.shoppingList.findMany({
-      where: { 
+      where: {
         householdId,
         ...ACTIVE_RECORDS_FILTER,
       },
       include: {
         _count: {
-          select: { 
+          select: {
             items: {
               where: ACTIVE_RECORDS_FILTER,
             },
@@ -163,7 +169,7 @@ export class ShoppingService {
 
   /**
    * Creates a new shopping list.
-   * 
+   *
    * @param householdId - The household ID
    * @param dto - List creation data
    * @returns Created list ID and name
@@ -178,14 +184,17 @@ export class ShoppingService {
 
   /**
    * Gets detailed information about a shopping list including all items.
-   * 
+   *
    * @param listId - The shopping list ID
    * @param householdId - The household ID for authorization
    * @returns Shopping list details with items
    * @throws NotFoundException if list doesn't exist
    * @throws ForbiddenException if user doesn't have access
    */
-  async getListDetails(listId: string, householdId: string): Promise<ShoppingListDetailDto> {
+  async getListDetails(
+    listId: string,
+    householdId: string,
+  ): Promise<ShoppingListDetailDto> {
     const list = await this.shoppingRepository.findListWithItems(listId);
 
     if (!list) {
@@ -214,7 +223,7 @@ export class ShoppingService {
 
   /**
    * Adds multiple items to a shopping list.
-   * 
+   *
    * @param listId - The shopping list ID
    * @param householdId - The household ID for authorization
    * @param dto - Items to add
@@ -222,7 +231,11 @@ export class ShoppingService {
    * @throws NotFoundException if list doesn't exist
    * @throws ForbiddenException if user doesn't have access
    */
-  async addItems(listId: string, householdId: string, dto: AddItemsDto): Promise<{ addedItems: ShoppingItemDto[] }> {
+  async addItems(
+    listId: string,
+    householdId: string,
+    dto: AddItemsDto,
+  ): Promise<{ addedItems: ShoppingItemDto[] }> {
     const list = await this.shoppingRepository.findListById(listId);
 
     if (!list) {
@@ -234,9 +247,7 @@ export class ShoppingService {
     }
 
     const addedItems = await Promise.all(
-      dto.items.map((item) =>
-        this.createItemFromInput(listId, item),
-      ),
+      dto.items.map((item) => this.createItemFromInput(listId, item)),
     );
 
     return {
@@ -254,7 +265,7 @@ export class ShoppingService {
 
   /**
    * Updates a shopping item (quantity or checked status).
-   * 
+   *
    * @param itemId - The shopping item ID
    * @param householdId - The household ID for authorization
    * @param dto - Update data
@@ -296,7 +307,7 @@ export class ShoppingService {
 
   /**
    * Deletes a shopping item.
-   * 
+   *
    * @param itemId - The shopping item ID
    * @param householdId - The household ID for authorization
    * @throws NotFoundException if item doesn't exist
@@ -320,7 +331,7 @@ export class ShoppingService {
 
   /**
    * Deletes a shopping list and all its items.
-   * 
+   *
    * @param listId - The shopping list ID
    * @param householdId - The household ID for authorization
    * @throws NotFoundException if list doesn't exist
@@ -364,7 +375,9 @@ export class ShoppingService {
     }
 
     const catalogItemId = item.catalogItemId ?? item.masterItemId;
-    const catalogItem = catalogItemId ? await this.getCatalogItemOrThrow(catalogItemId) : null;
+    const catalogItem = catalogItemId
+      ? await this.getCatalogItemOrThrow(catalogItemId)
+      : null;
     const itemData = this.buildItemData(item, catalogItem, catalogItemId);
 
     return this.shoppingRepository.createItem(listId, itemData);

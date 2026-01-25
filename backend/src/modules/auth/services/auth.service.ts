@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
@@ -17,12 +22,20 @@ import {
   SyncRecipeDto,
   SyncChoreDto,
 } from '../dtos';
-import { JwtPayload, SyncConflict, SyncResult, UserWithHousehold } from '../types';
-import { REFRESH_TOKEN_EXPIRY_DAYS, MAX_SYNC_ITEMS } from '../../../common/constants/token-expiry.constants';
+import {
+  JwtPayload,
+  SyncConflict,
+  SyncResult,
+  UserWithHousehold,
+} from '../types';
+import {
+  REFRESH_TOKEN_EXPIRY_DAYS,
+  MAX_SYNC_ITEMS,
+} from '../../../common/constants/token-expiry.constants';
 
 /**
  * Authentication service handling user authentication, token management, and data synchronization.
- * 
+ *
  * Responsibilities:
  * - Google OAuth authentication
  * - Guest user authentication
@@ -48,11 +61,11 @@ export class AuthService {
 
   /**
    * Authenticates a user using Google OAuth ID token.
-   * 
+   *
    * @param dto - Contains the Google ID token to verify
    * @returns Authentication response with access token, refresh token, and user info
    * @throws UnauthorizedException if token is invalid or Google OAuth is not configured
-   * 
+   *
    * @example
    * ```typescript
    * const response = await authService.authenticateGoogle({ idToken: '...' });
@@ -95,7 +108,7 @@ export class AuthService {
   /**
    * Authenticates a guest user by device ID.
    * Creates a new guest user if one doesn't exist for the device.
-   * 
+   *
    * @param dto - Contains the device ID
    * @returns Authentication response with access token and guest user info
    */
@@ -124,7 +137,7 @@ export class AuthService {
   /**
    * Synchronizes offline data to the cloud for a user.
    * Validates input size and structure before processing.
-   * 
+   *
    * @param userId - The ID of the user performing the sync
    * @param syncData - The data to synchronize (lists, recipes, chores)
    * @returns Sync result with status and any conflicts encountered
@@ -139,17 +152,26 @@ export class AuthService {
     const conflicts: SyncConflict[] = [];
 
     if (syncData.lists) {
-      const listConflicts = await this.syncShoppingLists(user.householdId!, syncData.lists);
+      const listConflicts = await this.syncShoppingLists(
+        user.householdId!,
+        syncData.lists,
+      );
       conflicts.push(...listConflicts);
     }
 
     if (syncData.recipes) {
-      const recipeConflicts = await this.syncRecipes(user.householdId!, syncData.recipes);
+      const recipeConflicts = await this.syncRecipes(
+        user.householdId!,
+        syncData.recipes,
+      );
       conflicts.push(...recipeConflicts);
     }
 
     if (syncData.chores) {
-      const choreConflicts = await this.syncChores(user.householdId!, syncData.chores);
+      const choreConflicts = await this.syncChores(
+        user.householdId!,
+        syncData.chores,
+      );
       conflicts.push(...choreConflicts);
     }
 
@@ -159,7 +181,7 @@ export class AuthService {
 
   /**
    * Refreshes an access token using a refresh token.
-   * 
+   *
    * @param dto - Contains the refresh token
    * @returns New access token
    * @throws UnauthorizedException if refresh token is invalid or expired
@@ -185,10 +207,13 @@ export class AuthService {
     const payload = this.createJwtPayload(user);
     const config = loadConfiguration();
 
-    const accessToken = await this.jwtService.signAsync(payload as unknown as Record<string, unknown>, {
-      secret: config.jwt.secret,
-      expiresIn: config.jwt.expiresIn,
-    } as any);
+    const accessToken = await this.jwtService.signAsync(
+      payload as unknown as Record<string, unknown>,
+      {
+        secret: config.jwt.secret,
+        expiresIn: config.jwt.expiresIn,
+      } as any,
+    );
 
     return { accessToken };
   }
@@ -213,7 +238,7 @@ export class AuthService {
       user = await this.authRepository.findUserByEmail(payload.email!);
       if (user) {
         // Link existing user to this Supabase ID
-        // Note: This might be tricky if we want to change the ID itself. 
+        // Note: This might be tricky if we want to change the ID itself.
         // In Supabase, the user already has this ID in auth.users.
         // If they existed in public.users with a CUID, we should probably delete/migrate.
         // For simplicity, we assume new system or manual migration.
@@ -264,7 +289,9 @@ export class AuthService {
   /**
    * Validates that user exists and belongs to a household.
    */
-  private async validateUserHasHousehold(userId: string): Promise<UserWithHousehold> {
+  private async validateUserHasHousehold(
+    userId: string,
+  ): Promise<UserWithHousehold> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { household: true },
@@ -440,22 +467,30 @@ export class AuthService {
   /**
    * Generates access and refresh tokens for a user.
    */
-  private async generateTokens(user: User & { household: Household | null }): Promise<{
+  private async generateTokens(
+    user: User & { household: Household | null },
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
     const config = loadConfiguration();
     const payload = this.createJwtPayload(user);
 
-    const accessToken = await this.jwtService.signAsync(payload as unknown as Record<string, unknown>, {
-      secret: config.jwt.secret,
-      expiresIn: config.jwt.expiresIn,
-    } as any);
+    const accessToken = await this.jwtService.signAsync(
+      payload as unknown as Record<string, unknown>,
+      {
+        secret: config.jwt.secret,
+        expiresIn: config.jwt.expiresIn,
+      } as any,
+    );
 
-    const refreshToken = await this.jwtService.signAsync(payload as unknown as Record<string, unknown>, {
-      secret: config.jwt.refreshSecret,
-      expiresIn: config.jwt.refreshExpiresIn,
-    } as any);
+    const refreshToken = await this.jwtService.signAsync(
+      payload as unknown as Record<string, unknown>,
+      {
+        secret: config.jwt.refreshSecret,
+        expiresIn: config.jwt.refreshExpiresIn,
+      } as any,
+    );
 
     const expiresAt = this.calculateRefreshTokenExpiry();
 
@@ -492,7 +527,9 @@ export class AuthService {
   /**
    * Maps user entity to response DTO.
    */
-  private mapUserToResponse(user: User & { household: Household | null }): UserResponseDto {
+  private mapUserToResponse(
+    user: User & { household: Household | null },
+  ): UserResponseDto {
     return {
       id: user.id,
       email: user.email,

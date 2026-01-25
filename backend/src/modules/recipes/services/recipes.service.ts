@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { RecipesRepository } from '../repositories/recipes.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
@@ -9,11 +14,14 @@ import {
   UpdateRecipeDto,
   CookRecipeDto,
 } from '../dtos';
-import { RecipeIngredientDto, RecipeInstructionDto } from '../dtos/recipe-detail-response.dto';
+import {
+  RecipeIngredientDto,
+  RecipeInstructionDto,
+} from '../dtos/recipe-detail-response.dto';
 
 /**
  * Recipes service managing recipe CRUD operations and cooking functionality.
- * 
+ *
  * Responsibilities:
  * - Recipe listing with search and category filters
  * - Recipe creation and updates
@@ -31,7 +39,7 @@ export class RecipesService {
 
   /**
    * Gets all recipes for a household with optional filtering.
-   * 
+   *
    * @param householdId - The household ID
    * @param filters - Optional category and search filters
    * @returns Array of recipe list items
@@ -54,14 +62,17 @@ export class RecipesService {
 
   /**
    * Gets detailed information about a specific recipe.
-   * 
+   *
    * @param recipeId - The recipe ID
    * @param householdId - The household ID for authorization
    * @returns Recipe details with ingredients and instructions
    * @throws NotFoundException if recipe doesn't exist
    * @throws ForbiddenException if user doesn't have access
    */
-  async getRecipe(recipeId: string, householdId: string): Promise<RecipeDetailDto> {
+  async getRecipe(
+    recipeId: string,
+    householdId: string,
+  ): Promise<RecipeDetailDto> {
     const recipe = await this.recipesRepository.findRecipeById(recipeId);
 
     if (!recipe) {
@@ -88,7 +99,7 @@ export class RecipesService {
 
   /**
    * Creates a new recipe for a household.
-   * 
+   *
    * @param householdId - The household ID
    * @param dto - Recipe creation data
    * @returns Created recipe ID
@@ -110,7 +121,7 @@ export class RecipesService {
 
   /**
    * Updates an existing recipe.
-   * 
+   *
    * @param recipeId - The recipe ID
    * @param householdId - The household ID for authorization
    * @param dto - Update data
@@ -146,7 +157,7 @@ export class RecipesService {
 
   /**
    * Adds recipe ingredients to a shopping list (cook feature).
-   * 
+   *
    * @param recipeId - The recipe ID
    * @param householdId - The household ID for authorization
    * @param dto - Contains target shopping list ID
@@ -158,7 +169,14 @@ export class RecipesService {
     recipeId: string,
     householdId: string,
     dto: CookRecipeDto,
-  ): Promise<{ itemsAdded: Array<{ id: string; name: string; quantity: number; unit?: string }> }> {
+  ): Promise<{
+    itemsAdded: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+      unit?: string;
+    }>;
+  }> {
     const recipe = await this.recipesRepository.findRecipeById(recipeId);
 
     if (!recipe) {
@@ -170,7 +188,7 @@ export class RecipesService {
     }
 
     const list = await this.prisma.shoppingList.findFirst({
-      where: { 
+      where: {
         id: dto.targetListId,
         ...ACTIVE_RECORDS_FILTER,
       },

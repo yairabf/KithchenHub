@@ -19,12 +19,12 @@ import { Public } from '../../../common/decorators/public.decorator';
 
 /**
  * Authentication controller handling user authentication and data synchronization.
- * 
+ *
  * Public endpoints:
  * - POST /auth/google - Google OAuth authentication
  * - POST /auth/guest - Guest user authentication
  * - POST /auth/refresh - Token refresh
- * 
+ *
  * Protected endpoints:
  * - POST /auth/sync - Offline data synchronization
  */
@@ -34,7 +34,7 @@ export class AuthController {
 
   /**
    * Authenticates a user using Google OAuth ID token.
-   * 
+   *
    * @param dto - Contains Google ID token
    * @returns Authentication response with tokens and user info
    */
@@ -47,7 +47,7 @@ export class AuthController {
 
   /**
    * Authenticates a guest user by device ID.
-   * 
+   *
    * @param dto - Contains device ID
    * @returns Authentication response with access token
    */
@@ -61,7 +61,7 @@ export class AuthController {
   /**
    * Synchronizes offline data to the cloud.
    * Requires authentication.
-   * 
+   *
    * @param user - Current authenticated user
    * @param dto - Data to synchronize (lists, recipes, chores)
    * @returns Sync result with status and conflicts
@@ -77,7 +77,7 @@ export class AuthController {
 
   /**
    * Refreshes an access token using a refresh token.
-   * 
+   *
    * @param dto - Contains refresh token
    * @returns New access token
    */
