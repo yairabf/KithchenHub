@@ -1,16 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { createRecipeService, IRecipeService } from '../services/recipeService';
 import { Recipe } from '../../../mocks/recipes';
 import { config } from '../../../config';
 import { determineUserDataMode } from '../../../common/types/dataModes';
-import { validateUserAccessToMode } from '../../../common/validation/dataModeValidation';
+import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
+import { CacheAwareRecipeRepository } from '../../../common/repositories/cacheAwareRecipeRepository';
 
 export function useRecipes() {
     const { user, isLoading: isAuthLoading } = useAuth();
-    const [recipes, setRecipes] = useState<Recipe[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
 
     // Determine data mode based on user authentication state
     const userMode = useMemo(() => {
@@ -25,73 +23,40 @@ export function useRecipes() {
         return createRecipeService(userMode);
     }, [userMode]);
 
-    useEffect(() => {
-        if (isAuthLoading) return;
+    // For signed-in users, use cache-aware repository with reactive cache hook
+    // For guest users, use service directly (no cache)
+    const isSignedIn = userMode === 'signed-in';
+    
+    const { data: cachedRecipes, isLoading: isCacheLoading, error: cacheError } = useCachedEntities<Recipe>('recipes');
+    
+    const repository = useMemo(() => {
+        return isSignedIn ? new CacheAwareRecipeRepository(service) : null;
+    }, [service, isSignedIn]);
 
-        let isMounted = true;
-
-        const fetchRecipes = async () => {
-            setIsLoading(true);
-            try {
-                const data = await service.getRecipes();
-                if (isMounted) {
-                    setRecipes(data);
-                    setError(null);
-                }
-            } catch (err) {
-                console.error('Failed to fetch recipes:', err);
-                if (isMounted) {
-                    setError(err as Error);
-                    // Optional: If remote fails, fallback or keep empty?
-                    // for now just set empty
-                    setRecipes([]);
-                }
-            } finally {
-                if (isMounted) {
-                    setIsLoading(false);
-                }
-            }
-        };
-
-        fetchRecipes();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [service, isAuthLoading]);
+    // For guest mode, fall back to service-based approach
+    // For signed-in mode, use repository + cache hook
+    const recipes = isSignedIn ? cachedRecipes : [];
+    const isLoading = isAuthLoading || (isSignedIn ? isCacheLoading : false);
+    const error = isSignedIn ? cacheError : null;
 
     const addRecipe = async (recipeData: Partial<Recipe>) => {
-        try {
-            const newRecipe = await service.createRecipe(recipeData);
-            setRecipes(prev => [newRecipe, ...prev]);
-            return newRecipe;
-        } catch (err) {
-            console.error('Failed to create recipe:', err);
-            throw err;
+        if (!repository) {
+            // Guest mode: use service directly
+            return service.createRecipe(recipeData);
         }
+        
+        // Signed-in mode: use repository (cache events will trigger UI update)
+        return repository.create(recipeData);
     };
 
     const updateRecipe = async (recipeId: string, updates: Partial<Recipe>) => {
-        try {
-            const updatedRecipe = await service.updateRecipe(recipeId, updates);
-            setRecipes(prev =>
-                prev.map(recipe => {
-                    if (recipe.id !== recipeId) {
-                        return recipe;
-                    }
-
-                    return {
-                        ...recipe,
-                        ...updates,
-                        ...updatedRecipe,
-                    };
-                })
-            );
-            return updatedRecipe;
-        } catch (err) {
-            console.error('Failed to update recipe:', err);
-            throw err;
+        if (!repository) {
+            // Guest mode: use service directly
+            return service.updateRecipe(recipeId, updates);
         }
+        
+        // Signed-in mode: use repository (cache events will trigger UI update)
+        return repository.update(recipeId, updates);
     };
 
     return {
