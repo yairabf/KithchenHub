@@ -2,29 +2,81 @@ import {
   type ShoppingItem,
   type ShoppingList,
   type Category,
+  mockShoppingLists,
+  mockItems,
 } from '../../../mocks/shopping';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import { colors } from '../../../theme';
 import { guestStorage } from '../../../common/utils/guestStorage';
-import { withUpdatedAt, markDeleted } from '../../../common/utils/timestamps';
+import { withUpdatedAt, markDeleted, withCreatedAt } from '../../../common/utils/timestamps';
 import { findEntityIndex, updateEntityInStorage } from '../../../common/utils/entityOperations';
 import { createShoppingList, createShoppingItem } from '../utils/shoppingFactory';
 import { isEntityActive } from '../../../common/types/entityMetadata';
 import type { ShoppingData, IShoppingService } from './shoppingService';
 import { catalogService } from '../../../common/services/catalogService';
+import { isDevMode } from '../../../common/utils/devMode';
+import { config } from '../../../config';
 
 const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
 const DEFAULT_LIST_COLOR = colors.shopping;
 
 export class LocalShoppingService implements IShoppingService {
+  /**
+   * Seeds mock shopping lists and items into storage when empty (dev-only).
+   * 
+   * This method checks if the app is in development mode and if storage is truly empty
+   * (no records at all, including soft-deleted). If both conditions are met, it seeds
+   * mock shopping lists and items with proper timestamps and saves them to storage.
+   * 
+   * Note: guestStorage.getShoppingLists() returns ALL lists including soft-deleted ones.
+   * So lists.length === 0 means storage is truly empty (no records at all).
+   * 
+   * @param existingLists - Current shopping lists from storage
+   * @param existingItems - Current shopping items from storage
+   * @returns Object with seeded lists and items if seeding occurred, null otherwise
+   * @throws {Error} If seeding fails with a descriptive error message
+   * @private
+   */
+  private async seedShoppingDataIfEmpty(
+    existingLists: ShoppingList[],
+    existingItems: ShoppingItem[]
+  ): Promise<{ lists: ShoppingList[]; items: ShoppingItem[] } | null> {
+    // Only seed in dev mode or when mock data is enabled, and when storage is truly empty
+    const shouldSeed = (isDevMode() || config.mockData.enabled) && existingLists.length === 0 && existingItems.length === 0;
+    if (!shouldSeed) {
+      return null;
+    }
+
+    try {
+      // Ensure all mock lists and items have createdAt timestamps
+      // withCreatedAt() is safe - it won't overwrite existing timestamps
+      const seededLists = mockShoppingLists.map(list => withCreatedAt(list));
+      const seededItems = mockItems.map(item => withCreatedAt(item));
+      
+      // Save seeded data to storage
+      await guestStorage.saveShoppingLists(seededLists);
+      await guestStorage.saveShoppingItems(seededItems);
+      
+      return { lists: seededLists, items: seededItems };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to seed mock shopping data in dev mode: ${errorMessage}`);
+    }
+  }
+
   async getShoppingData(): Promise<ShoppingData> {
     // Read from real guest storage, return empty arrays if no data exists
     const guestLists = await guestStorage.getShoppingLists();
     const guestItems = await guestStorage.getShoppingItems();
 
+    // Seed mock data if storage is empty (dev mode only)
+    const seededData = await this.seedShoppingDataIfEmpty(guestLists, guestItems);
+    const listsToUse = seededData?.lists ?? guestLists;
+    const itemsToUse = seededData?.items ?? guestItems;
+
     // Filter out deleted items (soft-delete tombstone pattern)
-    const activeLists = guestLists.filter(isEntityActive);
-    const activeItems = guestItems.filter(isEntityActive);
+    const activeLists = listsToUse.filter(isEntityActive);
+    const activeItems = itemsToUse.filter(isEntityActive);
 
     // Fetch catalog data from API (with fallback to cache and mock)
     const catalogData = await catalogService.getCatalogData();

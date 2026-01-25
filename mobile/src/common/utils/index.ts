@@ -11,4 +11,5 @@ export {
 
 export { IMAGE_CONSTRAINTS } from './imageConstraints';
 export { resizeAndValidateImage, type ResizedImageResult } from './imageResize';
+export { isValidImageUrl } from './imageUtils';
 export { isMockDataEnabled } from './mockDataToggle';

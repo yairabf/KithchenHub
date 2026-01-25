@@ -4,7 +4,6 @@
  * Parameterized tests for catalog service with fallback strategy.
  */
 
-import { CatalogService } from '../catalogService';
 import { api, NetworkError } from '../../../services/api';
 import { mockGroceriesDB } from '../../../data/groceryDatabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -43,7 +42,22 @@ jest.mock('../../utils/catalogUtils', () => ({
   buildFrequentlyAddedItems: jest.fn((items, limit = 8) => items.slice(0, limit)),
 }));
 
+// Mock config module - must be before CatalogService import
+// Create a shared config object that can be mutated
+const mockConfigValue = {
+  mockData: {
+    enabled: false,
+  },
+};
+
+jest.mock('../../../config', () => ({
+  config: mockConfigValue,
+}));
+
 const mockApiGet = api.get as jest.MockedFunction<typeof api.get>;
+
+// Import CatalogService after mocks are set up
+import { CatalogService } from '../catalogService';
 
 describe('CatalogService', () => {
   let service: CatalogService;
@@ -54,6 +68,8 @@ describe('CatalogService', () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
+    // Reset mock data config to false by default
+    mockConfigValue.mockData.enabled = false;
   });
 
   describe('getGroceryItems', () => {
@@ -132,6 +148,51 @@ describe('CatalogService', () => {
       it(`should handle ${scenario} correctly`, async () => {
         const setupResult = await setup();
         await assertion(setupResult);
+      });
+    });
+
+    describe('with mock data enabled', () => {
+      beforeEach(() => {
+        // Update the shared mock config object
+        mockConfigValue.mockData.enabled = true;
+      });
+
+      afterEach(() => {
+        // Reset the mock config
+        mockConfigValue.mockData.enabled = false;
+      });
+
+      it('should return mock data directly without calling API', async () => {
+        const items = await service.getGroceryItems();
+
+        expect(items).toEqual(mockGroceriesDB);
+        expect(mockApiGet).not.toHaveBeenCalled();
+        expect(AsyncStorage.getItem).not.toHaveBeenCalled();
+        expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      });
+
+      it('should return mock data even if API would succeed', async () => {
+        const mockResponse = [
+          { id: '1', name: 'API Apple', category: 'Fruits', imageUrl: 'api-apple.jpg', defaultQuantity: 1 },
+        ];
+        mockApiGet.mockResolvedValue(mockResponse);
+
+        const items = await service.getGroceryItems();
+
+        expect(items).toEqual(mockGroceriesDB);
+        expect(mockApiGet).not.toHaveBeenCalled();
+      });
+
+      it('should return mock data even if cache exists', async () => {
+        const cachedItems: GroceryItem[] = [
+          { id: 'cached-1', name: 'Cached Apple', image: 'cached.jpg', category: 'Fruits', defaultQuantity: 1 },
+        ];
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(cachedItems));
+
+        const items = await service.getGroceryItems();
+
+        expect(items).toEqual(mockGroceriesDB);
+        expect(AsyncStorage.getItem).not.toHaveBeenCalled();
       });
     });
 
