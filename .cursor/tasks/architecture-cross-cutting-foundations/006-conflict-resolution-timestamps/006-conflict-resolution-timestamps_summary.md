@@ -223,12 +223,15 @@ The implementation addressed several code review feedback items:
 
 ## Success Criteria Met
 
-✅ Last-Write-Wins (LWW) implemented for scalar conflicts using `updatedAt`  
-✅ Soft-delete tombstones (`deletedAt`) respected during merges  
-✅ Concurrent modification scenarios resolve deterministically  
-✅ Automated tests cover representative conflict cases  
-✅ Realtime sync enhanced with conflict resolution  
+✅ LWW merge utility compares `updatedAt` and chooses most recent  
+✅ Tombstone handling respects `deletedAt` with proper ordering  
+✅ Concurrent modifications resolve deterministically  
+✅ Additions are never removed during merge  
+✅ Realtime sync uses conflict resolution  
+✅ Automated tests cover all representative conflict cases  
+✅ All tests passing with no regressions  
+✅ Sync application utility created (`applyRemoteUpdatesToLocal`)  
 ✅ Services remain focused on transport (conflict resolution in utilities)  
 ✅ Comprehensive test coverage with parameterized tests  
-✅ Documentation updated for all three features  
+✅ Documentation updated for all three features (shopping, recipes, chores)  
 ✅ Backend documentation updated with sync endpoint clarification

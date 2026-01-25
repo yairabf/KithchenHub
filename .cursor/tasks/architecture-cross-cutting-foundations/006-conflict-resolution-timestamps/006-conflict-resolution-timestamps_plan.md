@@ -441,6 +441,11 @@ describe.each([
 - ✅ Realtime sync uses conflict resolution
 - ✅ Automated tests cover all representative conflict cases
 - ✅ All tests passing with no regressions
+- ✅ Sync application utility created (`applyRemoteUpdatesToLocal`)
+- ✅ Services remain focused on transport (conflict resolution in utilities)
+- ✅ Comprehensive test coverage with parameterized tests
+- ✅ Documentation updated for all three features (shopping, recipes, chores)
+- ✅ Backend documentation updated with sync endpoint clarification
 
 ## Testing Strategy
 
