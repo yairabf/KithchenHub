@@ -1,0 +1,646 @@
+# Kitchen Hub Mobile 📱
+
+React Native mobile application built with Expo SDK 54 for household management (shopping lists, recipes, chores). Cross-platform support for iOS, Android, and Web.
+
+![iOS](https://img.shields.io/badge/iOS-supported-4CAF50) ![Android](https://img.shields.io/badge/Android-supported-4CAF50) ![Web](https://img.shields.io/badge/Web-supported-4CAF50) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020)
+
+## Overview
+
+Kitchen Hub Mobile is a comprehensive household management app that helps families organize shopping lists, discover recipes, track chores, and manage household tasks. The app supports both authenticated users (with Google sign-in) and guest mode for local-only usage.
+
+## Features
+
+### 🛒 Shopping Lists
+- Multi-list management with custom icons and colors
+- 111-item grocery database organized into 9 categories
+- Smart search with real-time dropdown results
+- Category browsing with visual tiles
+- Frequently added items grid for quick access
+- Swipeable items with gesture-based deletion
+- Quantity controls for items
+- Two-column responsive layout
+
+### 🍳 Recipes
+- Recipe grid view with category filtering
+- Recipe creation with ingredients and step-by-step instructions
+- Recipe detail view with responsive layout
+- Ingredient-to-shopping list integration
+- Step completion tracking
+- Search functionality
+
+### ✅ Chores
+- Animated progress ring showing completion percentage
+- Swipeable chore cards with delete functionality
+- Assignee management (Mom, Dad, Kids, All)
+- Today's chores and upcoming chores sections
+- Due date and time picker integration
+- Responsive layout (single-column on mobile, two-column on tablet)
+
+### 🏠 Dashboard
+- Time-based personalized greeting
+- Quick action widgets
+- Overview statistics
+- Recent activity feed
+- Household summary
+
+### 👤 Authentication
+- Google sign-in with OAuth
+- Guest mode for local-only usage
+- Profile management
+- Secure data persistence with AsyncStorage
+- Auth state persistence across app restarts
+
+### ⚙️ Settings
+- Profile management
+- Household member management
+- Notification preferences
+- Data import/export
+- App preferences
+
+## Tech Stack
+
+### Core Framework
+- **React Native**: 0.81.5 - Cross-platform mobile development
+- **Expo SDK**: 54 - Development toolchain and runtime
+- **TypeScript**: 5.9.2 - Static typing with strict mode enabled
+
+### Navigation
+- **React Navigation**: 7.1.26 - Routing and navigation
+- **Native Stack Navigator**: 7.9.0 - Stack-based navigation
+- **React Native Screens**: 4.16.0 - Native navigation optimization
+
+### State Management & Storage
+- **React Context API**: Built-in state management
+- **AsyncStorage**: 2.2.0 - Persistent local storage
+- **Custom Hooks**: Feature-specific and shared hooks
+
+### UI Libraries
+- **React Native Paper**: 5.14.5 - Material Design components
+- **Expo Vector Icons**: 15.0.3 - Icon library
+- **Lucide React**: 0.562.0 - Modern icon set
+- **React Native SVG**: 15.12.1 - SVG rendering support
+
+### Animations & Gestures
+- **React Native Reanimated**: 4.1.1 - High-performance animations
+- **React Native Gesture Handler**: 2.28.0 - Native gesture support
+- **React Native Portal**: 1.3.0 - Modal and overlay management
+
+### Utilities
+- **DayJS**: 1.11.19 - Date manipulation and formatting
+- **React Native Paper Dates**: 0.22.57 - Date picker components
+- **React Native DateTimePicker**: 8.6.0 - Native date/time pickers
+
+### Backend Integration
+- **Supabase**: 2.91.0 - Backend API client
+- **Expo Auth Session**: 7.0.10 - OAuth flow handling
+- **Expo Web Browser**: 15.0.10 - In-app browser for auth
+- **Expo Crypto**: 15.0.8 - Cryptographic utilities
+
+### Development Tools
+- **Babel Preset Expo**: 54.0.9 - Babel configuration
+- **TypeScript**: 5.9.2 - Type checking
+- **Jest**: 29.7.0 - Testing framework
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js**: Version 18 or higher ([Download](https://nodejs.org/))
+- **npm or yarn**: Package manager (comes with Node.js)
+- **Expo CLI**: Install globally with `npm install -g expo-cli`
+
+### Platform-Specific Requirements
+
+#### iOS Development
+- **macOS**: Required for iOS development
+- **Xcode**: Latest version from Mac App Store
+- **iOS Simulator**: Included with Xcode
+- **CocoaPods**: Install with `sudo gem install cocoapods`
+
+#### Android Development
+- **Android Studio**: [Download](https://developer.android.com/studio)
+- **Android SDK**: Version 33 or higher
+- **Android Emulator**: Configure via Android Studio AVD Manager
+- **Java Development Kit (JDK)**: Version 11 or higher
+
+#### Testing on Physical Device
+- **Expo Go App**: Available on [iOS App Store](https://apps.apple.com/app/expo-go/id982107779) and [Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+cd mobile
+npm install
+```
+
+### 2. Start Development Server
+
+```bash
+npm start
+```
+
+This will start the Expo development server and open Expo DevTools in your browser.
+
+### 3. Run on Platform
+
+#### Option 1: Expo Go (Easiest)
+1. Install Expo Go on your iOS or Android device
+2. Run `npm start`
+3. Scan the QR code with:
+   - **iOS**: Camera app
+   - **Android**: Expo Go app
+4. The app will load on your device
+
+#### Option 2: iOS Simulator (macOS only)
+```bash
+npm run ios
+```
+
+#### Option 3: Android Emulator
+```bash
+npm run android
+```
+
+**Prerequisites:**
+- Android Studio installed
+- An Android Virtual Device (AVD) created
+- Android emulator running
+
+#### Option 4: Web Browser
+```bash
+npm run web
+```
+
+This will open Kitchen Hub in your default web browser at `http://localhost:8081`.
+
+**Note**: Some native features may have limited functionality on web.
+
+## Available Scripts
+
+```bash
+# Development
+npm start              # Start Expo dev server
+npm run ios            # Run on iOS simulator
+npm run android        # Run on Android emulator
+npm run web            # Run in web browser
+
+# Testing
+npm test               # Run tests with Jest
+
+# Utilities
+npx expo install       # Install compatible versions of packages
+npx expo doctor        # Diagnose project issues
+npx expo prebuild      # Generate native projects
+```
+
+## Project Structure
+
+Kitchen Hub Mobile follows a **feature-based architecture** for better organization and scalability:
+
+```
+mobile/
+├── src/
+│   ├── features/                 # Feature modules (main code)
+│   │   ├── shopping/             # Shopping lists feature
+│   │   │   ├── components/       # Shopping-specific components
+│   │   │   ├── screens/          # Shopping screens
+│   │   │   ├── services/         # Shopping services
+│   │   │   ├── utils/            # Shopping utilities
+│   │   │   └── index.ts          # Barrel export
+│   │   ├── recipes/              # Recipes feature
+│   │   │   ├── components/
+│   │   │   ├── screens/
+│   │   │   ├── hooks/
+│   │   │   ├── services/
+│   │   │   ├── utils/
+│   │   │   └── index.ts
+│   │   ├── chores/               # Chores feature
+│   │   │   ├── components/
+│   │   │   ├── screens/
+│   │   │   ├── services/
+│   │   │   ├── utils/
+│   │   │   └── index.ts
+│   │   ├── auth/                 # Authentication feature
+│   │   │   ├── components/
+│   │   │   └── screens/
+│   │   ├── dashboard/            # Dashboard feature
+│   │   │   └── screens/
+│   │   └── settings/             # Settings feature
+│   │       ├── components/
+│   │       └── screens/
+│   ├── common/                   # Shared/reusable code
+│   │   ├── components/           # Shared components
+│   │   │   ├── FloatingActionButton.tsx
+│   │   │   ├── CenteredModal.tsx
+│   │   │   ├── BottomPillNav/
+│   │   │   ├── OfflineBanner.tsx
+│   │   │   └── ...
+│   │   ├── hooks/                # Shared hooks
+│   │   │   ├── useCachedEntities.ts
+│   │   │   ├── useSyncQueue.ts
+│   │   │   ├── useSyncStatus.ts
+│   │   │   ├── useResponsive.ts
+│   │   │   └── ...
+│   │   ├── repositories/         # Cache-aware repositories
+│   │   ├── storage/             # Storage utilities
+│   │   ├── types/               # Shared types
+│   │   ├── utils/               # Shared utilities
+│   │   ├── guards/              # Guardrails (guest mode)
+│   │   └── index.ts              # Barrel export
+│   ├── navigation/               # Navigation configuration
+│   │   ├── RootNavigator.tsx     # Root navigation logic
+│   │   ├── MainNavigator.tsx     # Main app navigation
+│   │   ├── MainTabsScreen.tsx    # Tab-based navigation
+│   │   ├── AuthStackNavigator.tsx
+│   │   └── types.ts              # Navigation types
+│   ├── contexts/                 # React contexts
+│   │   ├── AuthContext.tsx       # Authentication state
+│   │   ├── HouseholdContext.tsx # Household data
+│   │   ├── NetworkContext.tsx    # Network status
+│   │   └── AppLifecycleContext.tsx # App lifecycle
+│   ├── services/                 # External service integrations
+│   │   ├── api.ts                # API client
+│   │   ├── auth.ts               # Auth service
+│   │   ├── supabase.ts           # Supabase client
+│   │   ├── imageUploadService.ts # Image upload
+│   │   └── import/               # Data import service
+│   ├── theme/                    # Design system tokens
+│   │   ├── colors.ts             # Color palette
+│   │   ├── spacing.ts            # Spacing scale
+│   │   ├── typography.ts         # Typography styles
+│   │   └── shadows.ts            # Shadow styles
+│   ├── data/                     # Static data
+│   │   └── groceryDatabase.ts   # 111-item grocery database
+│   ├── mocks/                    # Mock data for development
+│   │   ├── shopping/
+│   │   ├── recipes/
+│   │   └── chores/
+│   ├── config/                   # Configuration
+│   │   └── index.ts              # App configuration
+│   └── hooks/                    # Root-level hooks
+│       └── useSupabaseAuth.ts    # Supabase auth hook
+├── assets/                       # Static assets
+│   ├── icon.png                  # App icon
+│   ├── splash-icon.png           # Splash screen
+│   ├── adaptive-icon.png         # Android adaptive icon
+│   └── favicon.png               # Web favicon
+├── app.json                      # Expo configuration
+├── babel.config.js               # Babel configuration
+├── package.json                   # Dependencies and scripts
+├── tsconfig.json                 # TypeScript configuration
+├── jest.config.js                # Jest configuration
+└── index.ts                      # Entry point
+```
+
+## Architecture
+
+### Feature-Based Organization
+
+Kitchen Hub Mobile uses a **feature-based architecture** rather than a traditional layers architecture. Each feature is a self-contained module with its own:
+
+- **Components**: UI components specific to the feature
+- **Screens**: Top-level screen components
+- **Services**: Business logic and API integration
+- **Utils**: Feature-specific utilities
+- **Hooks**: Custom React hooks for feature logic
+- **Barrel Exports**: `index.ts` files for clean imports
+
+#### Benefits of Feature-Based Architecture
+
+1. **Scalability**: Easy to add new features without affecting existing ones
+2. **Maintainability**: All related code is co-located
+3. **Team Collaboration**: Multiple developers can work on different features simultaneously
+4. **Code Discovery**: Clear where to find feature-specific code
+5. **Testability**: Features can be tested in isolation
+
+### Navigation Structure
+
+```
+RootNavigator (AuthContext check)
+├── AuthStackNavigator (if not authenticated)
+│   └── LoginScreen
+└── MainNavigator (if authenticated)
+    └── MainTabsScreen
+        ├── Dashboard
+        ├── Shopping
+        ├── Chores
+        ├── Recipes
+        └── Settings
+```
+
+**Key Navigation Concepts:**
+
+- **Conditional Auth Flow**: `RootNavigator` checks authentication state and renders appropriate navigator
+- **Tab Navigation**: Main app uses bottom tab navigation with 5 sections
+- **Type-Safe Routes**: Navigation params are fully typed with TypeScript
+
+### State Management
+
+Kitchen Hub Mobile uses **React Context API** for state management:
+
+#### AuthContext
+- Manages authentication state (logged in, guest, signed out)
+- Provides user information (name, email, profile)
+- Handles Google OAuth flow
+- Persists auth state to AsyncStorage
+
+#### HouseholdContext
+- Manages household members
+- Provides household-wide settings
+- Shares data across features
+
+#### NetworkContext
+- Monitors network connectivity
+- Provides online/offline status
+- Triggers sync when network comes back online
+
+#### AppLifecycleContext
+- Tracks app state (foreground/background)
+- Triggers sync when app comes to foreground
+
+#### Local Component State
+- Feature-specific state managed with `useState` and `useReducer`
+- Custom hooks encapsulate complex state logic
+
+### Data Persistence
+
+- **AsyncStorage**: User preferences, auth tokens, and cached data
+- **Storage Keys**: Prefixed with `@kitchen_hub_` for namespace isolation
+- **Persistence Strategy**: Critical data (auth state) persisted on change
+- **Cache-Aware Repositories**: Handle local caching and sync with backend
+
+### Data Modes
+
+The app supports multiple data modes:
+
+- **Guest Mode**: Local-only storage, no backend sync
+- **Signed-In Mode**: Full backend sync with offline support
+- **Offline Mode**: Automatic caching and sync queue when offline
+
+### Component Patterns
+
+#### Shared Components (common/components/)
+Reusable across multiple features:
+- `FloatingActionButton`: Circular action button with icon
+- `CenteredModal`: Full-screen centered modal wrapper
+- `BottomPillNav`: Bottom tab navigation
+- `OfflineBanner`: Network status indicator
+- `GrocerySearchBar`: Intelligent grocery search
+
+#### Feature Components (features/[feature]/components/)
+Specific to a single feature:
+- `ShoppingListPanel`: Shopping list display
+- `RecipeCard`: Recipe grid item
+- `ChoreCard`: Swipeable chore task card
+- `ProgressRing`: Animated progress indicator
+
+### Theme System
+
+Centralized design tokens in `src/theme/`:
+
+```typescript
+// src/theme/colors.ts
+export const colors = {
+  primary: '#FF6B35',      // Warm orange
+  shopping: '#4CAF50',     // Green
+  recipes: '#FF6B35',      // Orange
+  chores: '#9C27B0',       // Purple
+  // ... more colors
+};
+
+// src/theme/spacing.ts
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+};
+
+// src/theme/typography.ts
+export const typography = {
+  h1: { fontSize: 32, fontWeight: 'bold' },
+  h2: { fontSize: 24, fontWeight: 'bold' },
+  body: { fontSize: 16, fontWeight: 'normal' },
+  // ... more styles
+};
+```
+
+**Usage:**
+```typescript
+import { colors, spacing, typography } from '../../../theme';
+
+const styles = StyleSheet.create({
+  container: {
+    padding: spacing.md,
+    backgroundColor: colors.background,
+  },
+  title: {
+    ...typography.h1,
+    color: colors.primary,
+  },
+});
+```
+
+## Development Guidelines
+
+### Code Organization Principles
+
+Follow these rules when adding new code:
+
+#### 1. Creating a New Feature
+
+```bash
+src/features/[feature-name]/
+├── components/    # Feature-specific components
+├── screens/       # Feature screens
+├── services/      # Feature services
+├── utils/         # Feature utilities
+├── hooks/         # Feature-specific hooks (optional)
+└── index.ts       # Barrel export
+```
+
+#### 2. Deciding Component Location
+
+**Ask yourself: Is it reusable across features?**
+- **Yes** → `src/common/components/`
+- **No** → `src/features/[feature]/components/`
+
+#### 3. Adding Screens
+
+All screens go in `src/features/[feature]/screens/`
+
+#### 4. Custom Hooks
+
+- **Feature-specific** → `src/features/[feature]/hooks/`
+- **Shared** → `src/common/hooks/`
+
+#### 5. Import Path Conventions
+
+```typescript
+// From a feature screen, import feature components:
+import { ShoppingListCard } from '../components/ShoppingListCard';
+
+// Import shared components:
+import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
+
+// Import theme:
+import { colors, spacing } from '../../../theme';
+
+// Import navigation types:
+import { MainStackParamList } from '../../../navigation/types';
+```
+
+#### 6. Barrel Exports
+
+Each feature should export its public API:
+
+```typescript
+// src/features/shopping/index.ts
+export { ShoppingListsScreen } from './screens/ShoppingListsScreen';
+export { ShoppingListPanel } from './components/ShoppingListPanel';
+```
+
+### TypeScript Configuration
+
+Kitchen Hub Mobile uses **TypeScript strict mode** for maximum type safety:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true
+  }
+}
+```
+
+**Benefits:**
+- Catch errors at compile time
+- Better IDE autocomplete
+- Safer refactoring
+- Improved code documentation
+
+### Testing
+
+The app uses Jest for testing:
+
+```bash
+npm test               # Run all tests
+npm test -- --watch    # Watch mode
+npm test -- --coverage # Coverage report
+```
+
+Test files should be co-located with the code they test:
+- `Component.test.tsx` next to `Component.tsx`
+- `service.spec.ts` next to `service.ts`
+
+## Backend Integration
+
+The mobile app communicates with the Kitchen Hub Backend API:
+
+- **Base URL**: Configured in `src/config/index.ts`
+- **Authentication**: JWT tokens stored in AsyncStorage
+- **Sync**: Automatic sync queue when online
+- **Offline Support**: Local caching with sync on reconnect
+
+See [Backend README](../backend/README.md) for API documentation.
+
+## Troubleshooting
+
+### Metro Bundler Won't Start
+
+**Problem**: Metro bundler fails to start or shows port conflict
+
+**Solution**:
+```bash
+# Kill existing Metro process
+npx react-native start --reset-cache
+
+# Or manually kill the process
+lsof -ti:8081 | xargs kill
+
+# Restart
+npm start
+```
+
+### iOS Simulator Not Starting
+
+**Problem**: `npm run ios` fails or simulator doesn't appear
+
+**Solution**:
+```bash
+# Reset Expo cache
+npx expo start -c
+
+# Ensure Xcode is installed and simulators are available
+xcodebuild -version
+xcrun simctl list devices
+
+# Try opening simulator first, then run
+open -a Simulator
+npm run ios
+```
+
+### Android Build Errors
+
+**Problem**: Android build fails with Gradle or SDK errors
+
+**Solution**:
+```bash
+# Clean Android build
+cd android
+./gradlew clean
+cd ..
+
+# Ensure ANDROID_HOME is set
+echo $ANDROID_HOME
+
+# Reinstall dependencies
+rm -rf node_modules
+npm install
+npm run android
+```
+
+### Reanimated Plugin Not Working
+
+**Problem**: Animations don't work or build fails with reanimated errors
+
+**Solution**:
+1. Ensure `react-native-reanimated/plugin` is last in `babel.config.js`
+2. Clear Metro cache: `npx expo start -c`
+3. Reinstall: `npx expo install react-native-reanimated`
+
+### TypeScript Errors
+
+**Problem**: Type errors in IDE or during build
+
+**Solution**:
+```bash
+# Regenerate TypeScript types
+npx expo customize tsconfig.json
+
+# Check for errors
+npx tsc --noEmit
+
+# Restart TypeScript server in VSCode
+Cmd+Shift+P → "TypeScript: Restart TS Server"
+```
+
+## Documentation
+
+- **[Root README](../README.md)** - Monorepo overview
+- **[Backend API](../backend/README.md)** - Backend documentation
+- **[Detailed Docs](../README-DETAILED.md)** - Comprehensive project documentation
+- **[CLAUDE.md](../CLAUDE.md)** - AI assistant development guidance
+
+## License
+
+Private repository - All rights reserved.
+
+---
+
+Built with ❤️ using React Native and Expo

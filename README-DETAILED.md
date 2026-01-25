@@ -1,8 +1,8 @@
 # Kitchen Hub 🏠 - Detailed Documentation
 
-> A comprehensive household management application for iOS, Android, and Web
+> A comprehensive full-stack household management application
 
-![iOS](https://img.shields.io/badge/iOS-supported-4CAF50) ![Android](https://img.shields.io/badge/Android-supported-4CAF50) ![Web](https://img.shields.io/badge/Web-supported-4CAF50) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020)
+![iOS](https://img.shields.io/badge/iOS-supported-4CAF50) ![Android](https://img.shields.io/badge/Android-supported-4CAF50) ![Web](https://img.shields.io/badge/Web-supported-4CAF50) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![NestJS](https://img.shields.io/badge/NestJS-10.0.0-E0234E) ![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020)
 
 ---
 
@@ -31,7 +31,7 @@
 
 ### What is Kitchen Hub?
 
-Kitchen Hub is a modern, cross-platform mobile application designed to streamline household management. Built with React Native and Expo, it provides a unified solution for managing shopping lists, organizing recipes, tracking chores, and maintaining household organization.
+Kitchen Hub is a modern, full-stack household management application consisting of a React Native/Expo mobile app and a NestJS REST API. It provides a unified solution for managing shopping lists, organizing recipes, tracking chores, and maintaining household organization across iOS, Android, and Web platforms.
 
 ### Problem It Solves
 
@@ -324,7 +324,7 @@ Before you begin, ensure you have the following installed:
 
 ## 🚀 Installation
 
-Follow these steps to set up Kitchen Hub locally:
+Kitchen Hub is organized as a monorepo with separate mobile and backend applications. Follow these steps to set up both:
 
 ### 1. Clone the Repository
 
@@ -333,46 +333,88 @@ git clone https://github.com/yourusername/kitchen-hub.git
 cd kitchen-hub
 ```
 
-### 2. Install Dependencies
+### 2. Set Up Mobile App
 
 ```bash
+cd mobile
 npm install
 ```
 
-This will install all required packages defined in `package.json`, including React Native, Expo, and all UI libraries.
+This will install all required packages for the React Native/Expo mobile application.
 
-### 3. Configure Environment (Optional)
+### 3. Set Up Backend API
+
+```bash
+cd ../backend
+npm install
+```
+
+This will install all required packages for the NestJS backend API.
+
+### 4. Configure Environment
+
+#### Mobile App Configuration
 
 If you plan to use Google Sign-In:
 
 1. Set up Google OAuth credentials in [Google Cloud Console](https://console.cloud.google.com/)
 2. Add your OAuth client ID to the app configuration
-3. Update `app.json` with your credentials
+3. Update `mobile/app.json` with your credentials
 
-### 4. Start the Development Server
+#### Backend API Configuration
+
+1. Create a `.env` file in the `backend/` directory
+2. Copy the example environment variables (see [Backend README](backend/README.md))
+3. Configure database connection, JWT secrets, and Supabase credentials
+
+### 5. Set Up Database
 
 ```bash
+cd backend
+npm run prisma:generate   # Generate Prisma client
+npm run prisma:migrate    # Run database migrations
+```
+
+### 6. Start Development Servers
+
+#### Mobile App
+
+```bash
+cd mobile
 npm start
 ```
 
-This will start the Expo development server and open the Expo DevTools in your browser.
+This will start the Expo development server and open Expo DevTools in your browser.
+
+#### Backend API
+
+```bash
+cd backend
+npm run start:dev
+```
+
+The API will be available at `http://localhost:3000/api/v1` with Swagger docs at `http://localhost:3000/api/docs`.
 
 ---
 
-## 📱 Running the App
+## 📱 Running the Applications
 
-### Option 1: Expo Go (Easiest)
+### Mobile App
+
+#### Option 1: Expo Go (Easiest)
 
 1. Install Expo Go on your iOS or Android device
-2. Run `npm start`
-3. Scan the QR code with:
+2. Navigate to `mobile/` directory
+3. Run `npm start`
+4. Scan the QR code with:
    - **iOS**: Camera app
    - **Android**: Expo Go app
-4. The app will load on your device
+5. The app will load on your device
 
-### Option 2: iOS Simulator (macOS only)
+#### Option 2: iOS Simulator (macOS only)
 
 ```bash
+cd mobile
 npm run ios
 ```
 
@@ -383,9 +425,10 @@ This will:
 
 **Note**: First run may take several minutes while dependencies are built.
 
-### Option 3: Android Emulator
+#### Option 3: Android Emulator
 
 ```bash
+cd mobile
 npm run android
 ```
 
@@ -394,9 +437,10 @@ Prerequisites:
 - An Android Virtual Device (AVD) created
 - Android emulator running
 
-### Option 4: Web Browser
+#### Option 4: Web Browser
 
 ```bash
+cd mobile
 npm run web
 ```
 
@@ -404,7 +448,7 @@ This will open Kitchen Hub in your default web browser at `http://localhost:8081
 
 **Note**: Some native features may have limited functionality on web.
 
-### Development Server
+#### Development Server Commands
 
 The Expo development server runs on `http://localhost:8081` by default. You can:
 - Press `i` to open iOS simulator
@@ -413,102 +457,128 @@ The Expo development server runs on `http://localhost:8081` by default. You can:
 - Press `r` to reload the app
 - Press `m` to toggle menu
 
+### Backend API
+
+#### Development Mode
+
+```bash
+cd backend
+npm run start:dev
+```
+
+The API will be available at:
+- **API**: `http://localhost:3000/api/v1`
+- **Swagger Docs**: `http://localhost:3000/api/docs`
+
+#### Production Build
+
+```bash
+cd backend
+npm run build
+npm run start:prod
+```
+
+See [Backend README](backend/README.md) for more details.
+
 ---
 
 ## 📂 Project Structure
 
-Kitchen Hub follows a **feature-based architecture** for better organization and scalability:
+Kitchen Hub is organized as a **monorepo** with separate mobile and backend applications:
 
 ```
 kitchen-hub/
-├── src/                          # Source code
-│   ├── features/                 # Feature modules (main code)
-│   │   ├── shopping/             # Shopping lists feature
-│   │   │   ├── components/       # Shopping-specific components
-│   │   │   ├── screens/          # Shopping screens
-│   │   │   ├── styles/           # Shopping styles
-│   │   │   ├── hooks/            # Shopping hooks
-│   │   │   └── index.ts          # Barrel export
-│   │   ├── recipes/              # Recipes feature
-│   │   │   ├── components/
-│   │   │   ├── screens/
-│   │   │   ├── styles/
-│   │   │   └── index.ts
-│   │   ├── chores/               # Chores feature
-│   │   │   ├── components/
-│   │   │   ├── screens/
-│   │   │   ├── styles/
-│   │   │   └── index.ts
-│   │   ├── auth/                 # Authentication feature
-│   │   ├── dashboard/            # Dashboard feature
-│   │   └── settings/             # Settings feature
-│   ├── common/                   # Shared/reusable code
-│   │   ├── components/           # Shared components
-│   │   │   ├── FloatingActionButton.tsx
-│   │   │   ├── CenteredModal.tsx
-│   │   │   ├── ShareModal.tsx
-│   │   │   └── HeaderActions.tsx
-│   │   ├── hooks/                # Shared hooks
-│   │   ├── styles/               # Shared styles
-│   │   └── index.ts              # Barrel export
-│   ├── navigation/               # Navigation configuration
-│   │   ├── RootNavigator.tsx     # Root navigation logic
-│   │   ├── DrawerNavigator.tsx   # Main drawer navigation
-│   │   ├── AuthStackNavigator.tsx
-│   │   └── ShoppingStackNavigator.tsx
-│   ├── contexts/                 # React contexts
-│   │   ├── AuthContext.tsx       # Authentication state
-│   │   └── HouseholdContext.tsx  # Household data
-│   ├── services/                 # External service integrations
-│   │   └── auth.ts               # Google OAuth service
-│   ├── theme/                    # Design system tokens
-│   │   ├── colors.ts             # Color palette
-│   │   ├── spacing.ts            # Spacing scale
-│   │   └── typography.ts         # Typography styles
-│   ├── data/                     # Static data
-│   │   └── groceryDatabase.ts    # 111-item grocery database
-│   └── mocks/                    # Mock data for development
-│       ├── shoppingLists.ts
-│       ├── recipes.ts
-│       └── chores.ts
-├── docs/                         # Documentation
+├── mobile/                        # React Native/Expo mobile application
+│   ├── src/                      # Mobile app source code
+│   │   ├── features/             # Feature modules (main code)
+│   │   │   ├── shopping/         # Shopping lists feature
+│   │   │   │   ├── components/   # Shopping-specific components
+│   │   │   │   ├── screens/      # Shopping screens
+│   │   │   │   ├── services/     # Shopping services
+│   │   │   │   ├── utils/        # Shopping utilities
+│   │   │   │   └── index.ts      # Barrel export
+│   │   │   ├── recipes/          # Recipes feature
+│   │   │   ├── chores/           # Chores feature
+│   │   │   ├── auth/             # Authentication feature
+│   │   │   ├── dashboard/        # Dashboard feature
+│   │   │   └── settings/        # Settings feature
+│   │   ├── common/               # Shared/reusable code
+│   │   │   ├── components/       # Shared components
+│   │   │   ├── hooks/            # Shared hooks
+│   │   │   ├── repositories/     # Cache-aware repositories
+│   │   │   ├── storage/          # Storage utilities
+│   │   │   ├── types/            # Shared types
+│   │   │   └── utils/            # Shared utilities
+│   │   ├── navigation/           # Navigation configuration
+│   │   ├── contexts/             # React contexts
+│   │   ├── services/             # External service integrations
+│   │   ├── theme/                # Design system tokens
+│   │   ├── data/                 # Static data
+│   │   └── mocks/                # Mock data for development
+│   ├── assets/                   # Static assets
+│   ├── app.json                  # Expo configuration
+│   ├── package.json              # Mobile dependencies
+│   └── README.md                 # Mobile app documentation
+│
+├── backend/                      # NestJS REST API
+│   ├── src/                      # Backend source code
+│   │   ├── main.ts               # Bootstrap with Swagger
+│   │   ├── app.module.ts          # Root module
+│   │   ├── common/                # Shared code
+│   │   │   ├── decorators/        # Custom decorators
+│   │   │   ├── guards/            # Auth guards
+│   │   │   ├── filters/           # Exception filters
+│   │   │   ├── interceptors/       # Response transformation
+│   │   │   └── utils/             # Shared utilities
+│   │   ├── config/                # Configuration
+│   │   ├── infrastructure/       # Infrastructure layer
+│   │   │   ├── database/          # Prisma module and schema
+│   │   │   └── ...
+│   │   └── modules/               # Feature modules
+│   │       ├── auth/              # Authentication
+│   │       ├── households/        # Household management
+│   │       ├── shopping/          # Shopping lists
+│   │       ├── recipes/           # Recipes
+│   │       ├── chores/            # Chores
+│   │       ├── dashboard/         # Dashboard
+│   │       ├── import/            # Data import
+│   │       └── supabase/          # Supabase client
+│   ├── package.json               # Backend dependencies
+│   └── README.md                  # Backend API documentation
+│
+├── docs/                          # Documentation
 │   ├── features/                 # Feature documentation
-│   │   ├── shopping.md
-│   │   ├── recipes.md
-│   │   └── chores.md
-│   └── screenshots/              # App screenshots
-│       ├── dashboard/
-│       ├── shopping/
-│       ├── recipes/
-│       ├── chores/
-│       ├── settings/
-│       └── auth/
-├── assets/                       # Static assets
-│   ├── icon.png                  # App icon
-│   ├── splash-icon.png           # Splash screen
-│   ├── adaptive-icon.png         # Android adaptive icon
-│   └── favicon.png               # Web favicon
-├── app.json                      # Expo configuration
-├── babel.config.js               # Babel configuration
-├── package.json                  # Dependencies and scripts
-├── tsconfig.json                 # TypeScript configuration
-├── index.ts                      # Entry point
-├── CLAUDE.md                     # AI assistant guidance
-├── README.md                     # Concise documentation
-└── README-DETAILED.md            # This file
+│   ├── architecture/             # Architecture docs
+│   └── screenshots/               # App screenshots
+│
+├── .cursor/                       # Cursor IDE configuration
+├── README.md                      # Monorepo overview (this file)
+├── README-DETAILED.md            # This comprehensive documentation
+└── CLAUDE.md                     # AI assistant guidance
 ```
+
+### Mobile App Structure
+
+The mobile app follows a **feature-based architecture** where each feature is self-contained. See [Mobile README](mobile/README.md) for detailed structure.
+
+### Backend API Structure
+
+The backend follows **NestJS module-based architecture** where each module mirrors a mobile feature. See [Backend README](backend/README.md) for detailed structure.
 
 ---
 
 ## 🏗️ Architecture
 
-### Feature-Based Organization
+Kitchen Hub consists of two main applications with different architectural patterns:
 
-Kitchen Hub uses a **feature-based architecture** rather than a traditional layers architecture. Each feature is a self-contained module with its own:
+### Mobile App Architecture
+
+The mobile app uses a **feature-based architecture** rather than a traditional layers architecture. Each feature is a self-contained module with its own:
 
 - **Components**: UI components specific to the feature
 - **Screens**: Top-level screen components
-- **Styles**: Feature-specific styling
+- **Services**: Business logic and API integration
+- **Utils**: Feature-specific utilities
 - **Hooks**: Custom React hooks for business logic
 - **Barrel Exports**: `index.ts` files for clean imports
 
@@ -520,34 +590,58 @@ Kitchen Hub uses a **feature-based architecture** rather than a traditional laye
 4. **Code Discovery**: Clear where to find feature-specific code
 5. **Testability**: Features can be tested in isolation
 
-### Navigation Structure
+### Backend API Architecture
+
+The backend uses **NestJS module-based architecture** where each module mirrors a mobile feature:
+
+- **Modules**: Feature modules (auth, households, shopping, recipes, chores, dashboard, import)
+- **Controllers**: HTTP request handlers
+- **Services**: Business logic
+- **Repositories**: Data access layer
+- **DTOs**: Data Transfer Objects for validation
+
+#### Benefits of Module-Based Architecture
+
+1. **Separation of Concerns**: Clear boundaries between layers
+2. **Dependency Injection**: Loose coupling and testability
+3. **Scalability**: Easy to add new modules
+4. **Type Safety**: Full TypeScript support with DTOs
+5. **Testability**: Easy to mock dependencies
+
+### Mobile App Navigation Structure
 
 ```
 RootNavigator (AuthContext check)
 ├── AuthStackNavigator (if not authenticated)
 │   └── LoginScreen
-└── DrawerNavigator (if authenticated)
-    ├── Dashboard
-    ├── ShoppingStackNavigator
-    │   ├── ShoppingListsScreen
-    │   └── SingleShoppingListScreen
-    ├── RecipesStackNavigator
-    │   ├── RecipesScreen
-    │   └── RecipeDetailScreen
-    ├── ChoresScreen
-    └── SettingsScreen
+└── MainNavigator (if authenticated)
+    └── MainTabsScreen
+        ├── Dashboard
+        ├── Shopping
+        ├── Chores
+        ├── Recipes
+        └── Settings
 ```
 
 **Key Navigation Concepts:**
 
 - **Conditional Auth Flow**: `RootNavigator` checks authentication state and renders appropriate navigator
-- **Drawer Navigation**: Main app uses drawer for top-level navigation between features
-- **Stack Navigation**: Each feature can have its own stack navigator for nested screens
+- **Tab Navigation**: Main app uses bottom tab navigation with 5 sections
 - **Type-Safe Routes**: Navigation params are fully typed with TypeScript
 
-### State Management
+### Backend API Structure
 
-Kitchen Hub uses **React Context API** for state management:
+The backend API follows RESTful conventions with a global prefix `/api/v1`:
+
+- **Authentication**: JWT-based with refresh tokens
+- **Authorization**: Household-level access control
+- **Global Guards**: JWT authentication guard on all routes (opt-out with `@Public()`)
+- **Response Format**: Consistent `ApiResponse<T>` format
+- **Error Handling**: Global exception filter for consistent error responses
+
+### Mobile App State Management
+
+The mobile app uses **React Context API** for state management:
 
 #### AuthContext
 - Manages authentication state (logged in, guest, signed out)
@@ -560,15 +654,34 @@ Kitchen Hub uses **React Context API** for state management:
 - Provides household-wide settings
 - Shares data across features
 
+#### NetworkContext
+- Monitors network connectivity
+- Provides online/offline status
+- Triggers sync when network comes back online
+
+#### AppLifecycleContext
+- Tracks app state (foreground/background)
+- Triggers sync when app comes to foreground
+
 #### Local Component State
 - Feature-specific state managed with `useState` and `useReducer`
 - Custom hooks encapsulate complex state logic
 
-### Data Persistence
+### Mobile App Data Persistence
 
 - **AsyncStorage**: User preferences, auth tokens, and cached data
 - **Storage Keys**: Prefixed with `@kitchen_hub_` for namespace isolation
 - **Persistence Strategy**: Critical data (auth state) persisted on change
+- **Cache-Aware Repositories**: Handle local caching and sync with backend
+- **Offline Support**: Local caching with sync queue when offline
+
+### Backend Data Management
+
+- **PostgreSQL Database**: Prisma ORM with migrations
+- **Soft Deletes**: User-owned entities support soft-delete via `deleted_at` timestamp
+- **Automatic Timestamps**: `created_at` and `updated_at` maintained automatically
+- **Row Level Security**: Supabase RLS policies for multi-tenant isolation
+- **Master Grocery Catalog**: Centralized grocery database with categories
 
 ### Component Patterns
 
@@ -702,81 +815,55 @@ Powered by React Native Reanimated and Gesture Handler:
 
 ## 💻 Development
 
+### Mobile App Development
+
+See [Mobile README](mobile/README.md) for detailed mobile development guidelines including:
+
+- Feature-based structure rules
+- Component organization
+- Import path conventions
+- Theme system usage
+- Testing guidelines
+
+### Backend API Development
+
+See [Backend README](backend/README.md) for detailed backend development guidelines including:
+
+- Module structure patterns
+- Database patterns (soft-delete, timestamps)
+- API endpoint conventions
+- Testing guidelines
+- Security patterns
+
 ### Code Organization Principles
 
-Follow these rules when adding new code (from `CLAUDE.md`):
+Both mobile and backend follow consistent patterns:
 
-#### 1. Creating a New Feature
+#### Mobile App Structure
 
 ```bash
-src/features/[feature-name]/
+mobile/src/features/[feature-name]/
 ├── components/    # Feature-specific components
 ├── screens/       # Feature screens
-├── styles/        # Feature styles
-├── hooks/         # Feature-specific hooks
+├── services/      # Feature services
+├── utils/         # Feature utilities
 └── index.ts       # Barrel export
 ```
 
-#### 2. Deciding Component Location
-
-**Ask yourself: Is it reusable across features?**
-- **Yes** → `src/common/components/`
-- **No** → `src/features/[feature]/components/`
-
-#### 3. Adding Screens
-
-All screens go in `src/features/[feature]/screens/`
-
-#### 4. Custom Hooks
-
-- **Feature-specific** → `src/features/[feature]/hooks/`
-- **Shared** → `src/common/hooks/`
-
-#### 5. Import Path Conventions
-
-```typescript
-// From a feature screen, import feature components:
-import { ShoppingListCard } from '../components/ShoppingListCard';
-
-// Import shared components:
-import { FloatingActionButton } from '../../../common/components/FloatingActionButton';
-
-// Import theme:
-import { colors, spacing } from '../../../theme';
-
-// Import navigation types:
-import { DrawerParamList } from '../../../navigation/DrawerNavigator';
-```
-
-#### 6. Barrel Exports
-
-Each feature should export its public API:
-
-```typescript
-// src/features/shopping/index.ts
-export { ShoppingListsScreen } from './screens/ShoppingListsScreen';
-export { SingleShoppingListScreen } from './screens/SingleShoppingListScreen';
-export { ShoppingListCard } from './components/ShoppingListCard';
-```
-
-### Available Scripts
+#### Backend API Structure
 
 ```bash
-# Development
-npm start              # Start Expo dev server
-npm run ios            # Run on iOS simulator
-npm run android        # Run on Android emulator
-npm run web            # Run in web browser
-
-# Utilities
-npx expo install       # Install compatible versions of packages
-npx expo doctor        # Diagnose project issues
-npx expo prebuild      # Generate native projects
+backend/src/modules/[feature-name]/
+├── controllers/   # HTTP request handlers
+├── services/      # Business logic
+├── repositories/  # Data access layer
+├── dtos/          # Data Transfer Objects
+└── [feature].module.ts
 ```
 
 ### TypeScript Configuration
 
-Kitchen Hub uses **TypeScript strict mode** for maximum type safety:
+Both mobile and backend use **TypeScript strict mode** for maximum type safety:
 
 ```json
 {
@@ -795,14 +882,39 @@ Kitchen Hub uses **TypeScript strict mode** for maximum type safety:
 - Safer refactoring
 - Improved code documentation
 
+### Available Scripts
+
+#### Mobile App
+
+```bash
+cd mobile
+npm start              # Start Expo dev server
+npm run ios            # Run on iOS simulator
+npm run android        # Run on Android emulator
+npm run web            # Run in web browser
+npm test               # Run tests
+```
+
+#### Backend API
+
+```bash
+cd backend
+npm run start:dev      # Start development server
+npm run build          # Build for production
+npm run start:prod     # Start production server
+npm test               # Run tests
+npm run test:cov       # Run tests with coverage
+npm run prisma:generate # Generate Prisma client
+npm run prisma:migrate  # Run database migrations
+```
+
 ### Linting & Code Style
 
-- Use camelCase for variables and functions
-- Use PascalCase for components and types
+- Use TypeScript strict mode
+- Follow framework conventions (React Native for mobile, NestJS for backend)
 - Use meaningful variable names
-- Extract complex logic into custom hooks
-- Keep components small and focused
-- Prefer functional components with hooks
+- Keep components/modules small and focused
+- Comprehensive test coverage with parameterized tests
 
 ---
 
@@ -810,8 +922,10 @@ Kitchen Hub uses **TypeScript strict mode** for maximum type safety:
 
 ### Available Documentation
 
-- **[README.md](README.md)**: Concise quick-start guide
+- **[README.md](README.md)**: Monorepo overview and quick-start guide
 - **[README-DETAILED.md](README-DETAILED.md)**: This comprehensive documentation
+- **[Mobile README](mobile/README.md)**: Complete mobile app documentation
+- **[Backend README](backend/README.md)**: Complete backend API documentation
 - **[CLAUDE.md](CLAUDE.md)**: AI assistant development guidance
 - **[docs/features/](docs/features/)**: Feature-specific documentation
   - [shopping.md](docs/features/shopping.md): Shopping lists documentation
