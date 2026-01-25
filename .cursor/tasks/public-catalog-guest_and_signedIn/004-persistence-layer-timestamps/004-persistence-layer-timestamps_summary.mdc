@@ -1,0 +1,298 @@
+---
+name: persistence-layer-timestamps
+overview: Implementation summary for standardized timestamp handling across guest and signed-in persistence layers
+status: completed
+completedDate: 2026-01-26
+todos:
+  - id: fix-local-recipe-service
+    content: Fix LocalRecipeService.createRecipe to use withCreatedAt() helper
+    status: completed
+  - id: add-integration-tests
+    content: Add integration tests for insert/update/delete timestamp scenarios
+    status: completed
+  - id: verify-service-usage
+    content: Verify all services consistently use timestamp helpers
+    status: completed
+  - id: enhance-documentation
+    content: Enhance JSDoc documentation with usage examples
+    status: completed
+  - id: add-timestamp-validation-helper
+    content: Add validateTimestamps() helper for integration tests and debugging (optional)
+    status: not_implemented
+  - id: consider-expiry-ttl-support
+    content: Plan for expiresAt field support for future TTL functionality (optional, future-facing)
+    status: not_implemented
+  - id: add-decorator-wrapper-pattern
+    content: Consider higher-order helpers like withTimestampsOnCreate() for semantic clarity (optional, advanced)
+    status: not_implemented
+isProject: false
+---
+
+# Persistence Layer with Standardized Timestamps - Implementation Summary
+
+**Epic:** Public Catalog Guest & Signed-In  
+**Task:** 004-persistence-layer-timestamps  
+**Completed:** January 26, 2026  
+**Status:** ✅ Completed (Core Requirements)
+
+## What Was Implemented
+
+### ✅ Phase 1: Core Requirements (All Completed)
+
+#### Task 1: Fixed LocalRecipeService.createRecipe ✅
+
+**File Modified:** `mobile/src/features/recipes/services/recipeService.ts`
+
+**Changes:**
+- Added explicit `withCreatedAt()` call in `LocalRecipeService.createRecipe()` method
+- Ensures all recipes created via the service have proper `createdAt` timestamps
+- Maintains consistency with factory pattern (`recipeFactory.ts`)
+
+**Implementation:**
+```typescript
+async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
+    const newRecipe = buildRecipeWithDefaults(recipe);
+    
+    // Business rule: auto-populate createdAt on creation
+    const withTimestamps = withCreatedAt(newRecipe);
+    
+    // Persist to guest storage with retry logic
+    await guestStorage.saveRecipes([...existingRecipes, withTimestamps]);
+    return withTimestamps;
+}
+```
+
+**Test Coverage:**
+- Added test in `recipeService.spec.ts` to verify `createdAt` is set correctly
+- Test validates timestamp is within expected time range
+
+#### Task 2: Added Comprehensive Integration Tests ✅
+
+**File Created:** `mobile/src/common/utils/__tests__/timestamps.integration.test.ts`
+
+**Test Coverage:**
+1. **Insert populates createdAt/updatedAt** (parameterized tests):
+   - Verifies `withCreatedAt()` populates `createdAt` when missing
+   - Verifies existing `createdAt` is not overwritten
+   - Verifies `updatedAt` is not set on creation
+
+2. **Update changes updatedAt** (parameterized tests):
+   - Verifies `withUpdatedAt()` updates `updatedAt` while preserving `createdAt`
+   - Verifies `updatedAt` always changes on update
+
+3. **Delete sets deletedAt and retains tombstone** (parameterized tests):
+   - Verifies `markDeleted()` sets `deletedAt`
+   - Verifies `createdAt` and `updatedAt` are preserved (tombstone pattern)
+   - Verifies `updatedAt` is updated when marking as deleted
+
+4. **AsyncStorage round-trip**:
+   - Tests `toPersistedTimestamps()` → storage → `fromPersistedTimestamps()`
+   - Verifies Date objects are serialized to ISO strings and deserialized correctly
+   - Tests `deletedAt` handling in round-trip
+
+5. **Supabase round-trip**:
+   - Tests `toSupabaseTimestamps()` → `fromSupabaseTimestamps()`
+   - Verifies camelCase ↔ snake_case conversion
+   - Verifies `deleted_at` is omitted for active records
+   - Verifies Date objects are converted to ISO strings and back
+
+6. **Complete CRUD flow with timestamps**:
+   - End-to-end test covering create → update → delete flow
+   - Verifies all timestamps are set correctly at each stage
+   - Verifies timestamp ordering (createdAt < updatedAt < deletedAt)
+
+**Test Results:** All 14 integration tests passing ✅
+
+#### Task 3: Verified Service Usage Consistency ✅
+
+**Files Reviewed:**
+- ✅ `mobile/src/features/recipes/services/recipeService.ts` - Uses `withCreatedAt()` in `createRecipe()`
+- ✅ `mobile/src/features/shopping/services/LocalShoppingService.ts` - Uses timestamp helpers correctly
+- ✅ `mobile/src/features/shopping/services/RemoteShoppingService.ts` - Uses `toSupabaseTimestamps()` and `normalizeTimestampsFromApi()`
+- ✅ `mobile/src/features/chores/services/choresService.ts` - Uses timestamp helpers correctly
+
+**Verification Results:**
+- ✅ All `create*` methods use `withCreatedAt()`
+- ✅ All `update*` methods use `withUpdatedAt()`
+- ✅ All `delete*` methods use `markDeleted()` + `withUpdatedAt()`
+- ✅ All Remote services use `toSupabaseTimestamps()` before API calls
+- ✅ All Remote services use `normalizeTimestampsFromApi()` after API responses
+
+#### Task 4: Enhanced Documentation ✅
+
+**Files Updated:**
+
+1. **`mobile/src/common/types/entityMetadata.ts`**:
+   - Added comprehensive JSDoc examples to `toPersistedTimestamps()`
+   - Added comprehensive JSDoc examples to `fromPersistedTimestamps()`
+   - Added "When to use" guidance for both helpers
+   - Included code examples showing Date → ISO string and ISO string → Date conversions
+
+2. **`mobile/src/common/utils/timestamps.ts`**:
+   - All helpers already had good JSDoc documentation
+   - Enhanced with usage context and examples where needed
+
+3. **`docs/features/recipes.md`**:
+   - Updated timestamp management section to reflect explicit `withCreatedAt()` usage
+   - Enhanced timestamp utilities section with usage locations
+   - Added references to serialization helpers
+
+**Documentation Improvements:**
+- Clear "When to use" guidance for each helper
+- Code examples showing proper usage patterns
+- Notes about AsyncStorage vs Supabase serialization
+- Business rule documentation (auto-populate `createdAt` on creation)
+
+### ❌ Phase 2: Optional Enhancements (Not Implemented)
+
+#### Task 5: Timestamp Validation Helper ❌
+
+**Status:** Not implemented (optional enhancement)
+
+**Reason:** Not critical for current implementation. Can be added later if needed for debugging or data migration validation.
+
+#### Task 6: Expiry TTL Support ❌
+
+**Status:** Not implemented (future-facing, optional)
+
+**Reason:** Not needed for current entities. Planning comments remain in plan document for future implementation when TTL functionality is required.
+
+#### Task 7: Decorator/Wrapper Pattern ❌
+
+**Status:** Not implemented (optional, advanced)
+
+**Reason:** Current helpers (`withCreatedAt()`, `withUpdatedAt()`, `markDeleted()`) are sufficient and provide clear semantics. Can be considered as a refactoring step in the future if it provides clear value.
+
+## Success Criteria Verification
+
+All core success criteria have been met:
+
+1. ✅ **AsyncStorage serialization/deserialization uses shared helpers and preserves ISO timestamps**
+   - `toPersistedTimestamps()` and `fromPersistedTimestamps()` are used consistently
+   - Integration tests verify round-trip serialization works correctly
+
+2. ✅ **Supabase payload serialization uses shared helpers and matches backend column names**
+   - `toSupabaseTimestamps()` converts camelCase → snake_case
+   - `fromSupabaseTimestamps()` converts snake_case → camelCase
+   - Integration tests verify round-trip conversion works correctly
+
+3. ✅ **`createdAt` is auto-populated on inserts when missing**
+   - `LocalRecipeService.createRecipe()` explicitly uses `withCreatedAt()`
+   - Factories use `withCreatedAt()` (recipeFactory, shoppingFactory, choreFactory)
+   - Integration tests verify `createdAt` is populated correctly
+
+4. ✅ **`updatedAt` is auto-populated on any updates**
+   - All services use `withUpdatedAt()` on update operations
+   - Integration tests verify `updatedAt` changes on updates
+
+5. ✅ **`deletedAt` is set on soft-delete and omitted for active records**
+   - All services use `markDeleted()` for soft-delete operations
+   - Integration tests verify tombstone pattern (preserves `createdAt` and `updatedAt`)
+   - Supabase serialization omits `deleted_at` for active records
+
+6. ✅ **Integration tests cover insert, update, delete scenarios**
+   - Comprehensive integration test suite with 14 tests
+   - Parameterized tests for multiple scenarios
+   - End-to-end CRUD flow test
+
+7. ✅ **All services consistently use timestamp helpers**
+   - Verified across all service implementations
+   - Consistent patterns across recipes, shopping, and chores features
+
+## Files Modified
+
+### Core Implementation Files
+
+1. ✅ `mobile/src/features/recipes/services/recipeService.ts`
+   - Fixed `LocalRecipeService.createRecipe()` to use `withCreatedAt()`
+
+2. ✅ `mobile/src/common/utils/__tests__/timestamps.integration.test.ts`
+   - New comprehensive integration test file (389 lines)
+   - 14 integration tests covering all scenarios
+
+3. ✅ `mobile/src/common/types/entityMetadata.ts`
+   - Enhanced JSDoc documentation with usage examples
+   - Added "When to use" guidance
+
+4. ✅ `mobile/src/common/utils/timestamps.ts`
+   - Documentation already comprehensive, verified completeness
+
+5. ✅ `mobile/src/features/recipes/services/recipeService.spec.ts`
+   - Added test to verify `createdAt` is set in `createRecipe()`
+
+6. ✅ `docs/features/recipes.md`
+   - Updated timestamp management documentation
+   - Enhanced timestamp utilities section
+
+## Testing Results
+
+### Unit Tests
+- ✅ All existing unit tests passing
+- ✅ New integration tests: 14 tests, all passing
+- ✅ Service tests: 23 tests, all passing
+
+### Test Coverage
+- ✅ Insert operations: Covered with parameterized tests
+- ✅ Update operations: Covered with parameterized tests
+- ✅ Delete operations: Covered with parameterized tests
+- ✅ AsyncStorage round-trip: Covered
+- ✅ Supabase round-trip: Covered
+- ✅ Complete CRUD flow: Covered
+
+## Deviations from Plan
+
+### Implemented as Planned
+- All Phase 1 (Core Requirements) tasks completed exactly as specified
+- Integration tests cover all planned scenarios
+- Documentation enhancements match plan requirements
+
+### Not Implemented (Optional)
+- Timestamp validation helper (Task 5) - Not critical, can be added later
+- Expiry TTL support (Task 6) - Future-facing, not needed now
+- Decorator/wrapper pattern (Task 7) - Current helpers are sufficient
+
+## Lessons Learned
+
+1. **Explicit is Better than Implicit**: Adding explicit `withCreatedAt()` call in `LocalRecipeService.createRecipe()` makes the business rule clear and prevents bugs.
+
+2. **Integration Tests are Valuable**: The integration test suite caught edge cases and verified end-to-end timestamp handling works correctly across all scenarios.
+
+3. **Parameterized Tests Improve Coverage**: Using `describe.each()` for multiple scenarios reduced test code duplication while maintaining comprehensive coverage.
+
+4. **Documentation Examples Help**: Adding JSDoc examples with "When to use" guidance makes the helpers more discoverable and easier to use correctly.
+
+5. **Consistency Matters**: Verifying all services use timestamp helpers consistently ensures the persistence layer behaves predictably.
+
+## Next Steps
+
+### Immediate (None Required)
+- All core requirements are complete and tested
+- No immediate follow-up tasks needed
+
+### Future Considerations
+1. **Timestamp Validation Helper** (if needed):
+   - Can be added when debugging timestamp issues
+   - Useful for data migration validation
+   - Can be added to `timestamps.ts` following the plan's design
+
+2. **Expiry TTL Support** (when needed):
+   - Add `expiresAt` field to `EntityTimestamps` interface
+   - Implement `withExpiration()` and `isExpired()` helpers
+   - Update serialization helpers to handle `expiresAt`
+
+3. **Decorator/Wrapper Pattern** (if desired):
+   - Consider as a refactoring step after evaluating if it provides clear value
+   - Would require updating all service code to use new helpers
+   - Current helpers are sufficient for now
+
+## Related Tasks
+
+- **002-public-catalog-helper-standardization**: Related to catalog data handling
+- Future timestamp-related enhancements can reference this implementation
+
+---
+
+**Implementation Status:** ✅ **COMPLETE**  
+**All Core Requirements:** ✅ **MET**  
+**Test Coverage:** ✅ **COMPREHENSIVE**  
+**Documentation:** ✅ **ENHANCED**

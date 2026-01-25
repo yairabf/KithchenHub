@@ -1,12 +1,3 @@
-import {
-  createShoppingService,
-} from './shoppingService';
-import { LocalShoppingService } from './LocalShoppingService';
-import { RemoteShoppingService } from './RemoteShoppingService';
-import { guestStorage } from '../../../common/utils/guestStorage';
-import { mockShoppingLists, mockItems } from '../../../mocks/shopping';
-import { api } from '../../../services/api';
-
 // Mock expo-crypto
 jest.mock('expo-crypto', () => ({
     randomUUID: jest.fn(() => 'mock-uuid'),
@@ -26,6 +17,20 @@ jest.mock('../../../services/api', () => ({
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
+
+// Mock devMode to prevent seeding in tests (must be before LocalShoppingService import)
+jest.mock('../../../common/utils/devMode', () => ({
+  isDevMode: jest.fn(() => false),
+}));
+
+// Mock config to prevent seeding in tests (must be before LocalShoppingService import)
+jest.mock('../../../config', () => ({
+  config: {
+    mockData: {
+      enabled: false,
+    },
+  },
+}));
 
 // Mock catalogService (LocalShoppingService now uses it)
 jest.mock('../../../common/services/catalogService', () => ({
@@ -47,6 +52,16 @@ jest.mock('../../../common/utils/guestStorage', () => ({
         saveShoppingItems: jest.fn().mockResolvedValue(undefined),
     },
 }));
+
+// Import after mocks are set up
+import {
+  createShoppingService,
+} from './shoppingService';
+import { LocalShoppingService } from './LocalShoppingService';
+import { RemoteShoppingService } from './RemoteShoppingService';
+import { guestStorage } from '../../../common/utils/guestStorage';
+import { mockShoppingLists, mockItems } from '../../../mocks/shopping';
+import { api } from '../../../services/api';
 
 describe('createShoppingService', () => {
   describe.each([

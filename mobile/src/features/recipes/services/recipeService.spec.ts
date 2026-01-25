@@ -78,15 +78,21 @@ describe('Recipe Services', () => {
             expect(guestStorage.getRecipes).toHaveBeenCalled();
         });
 
-        it('createRecipe returns a new recipe object and persists to guestStorage', async () => {
+        it('createRecipe returns a new recipe object with createdAt and persists to guestStorage', async () => {
             (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
             const newRecipeData = { name: 'Test Recipe' };
+            const beforeCreation = Date.now();
             const recipe = await service.createRecipe(newRecipeData);
+            const afterCreation = Date.now();
 
             expect(recipe.id).toBeDefined();
             expect(recipe.localId).toBeDefined();
             expect(recipe.name).toBe('Test Recipe');
             expect(recipe.category).toBe('Dinner'); // Default
+            // Verify createdAt is set and is a valid Date
+            expect(recipe.createdAt).toBeInstanceOf(Date);
+            expect(recipe.createdAt!.getTime()).toBeGreaterThanOrEqual(beforeCreation);
+            expect(recipe.createdAt!.getTime()).toBeLessThanOrEqual(afterCreation);
             expect(guestStorage.getRecipes).toHaveBeenCalled();
             expect(guestStorage.saveRecipes).toHaveBeenCalledWith([recipe]);
         });

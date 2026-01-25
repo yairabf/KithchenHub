@@ -137,7 +137,19 @@ export function isEntityActive(entity: EntityTimestamps): boolean {
  * Returns a new object with timestamps serialized (immutable).
  * Optimized to avoid unnecessary object spread when no conversion is needed.
  * 
+ * **When to use**: Before saving entities to AsyncStorage (guest mode persistence).
+ * 
+ * @param entity - Entity with Date timestamp fields
  * @returns Object with timestamp fields as ISO strings (Date → string)
+ * 
+ * @example
+ * ```typescript
+ * // Before saving to AsyncStorage
+ * const entity = { id: '1', name: 'Recipe', createdAt: new Date() };
+ * const serialized = toPersistedTimestamps(entity);
+ * // serialized.createdAt is now an ISO string: "2026-01-25T12:34:56.789Z"
+ * await AsyncStorage.setItem('key', JSON.stringify(serialized));
+ * ```
  */
 export function toPersistedTimestamps<T extends EntityTimestamps>(entity: T): T {
   // Check if any conversion is needed
@@ -164,8 +176,20 @@ export function toPersistedTimestamps<T extends EntityTimestamps>(entity: T): T 
  * Helper to convert timestamp fields from ISO string to Date for in-memory use.
  * Validates timestamp strings and throws descriptive errors for invalid input.
  * 
+ * **When to use**: After reading entities from AsyncStorage (guest mode persistence).
+ * 
+ * @param entity - Entity with ISO string timestamp fields
  * @returns Object with timestamp fields as Date objects (string → Date)
  * @throws {Error} If any timestamp string is invalid ISO 8601 format
+ * 
+ * @example
+ * ```typescript
+ * // After reading from AsyncStorage
+ * const raw = await AsyncStorage.getItem('key');
+ * const parsed = JSON.parse(raw!);
+ * const deserialized = fromPersistedTimestamps(parsed);
+ * // deserialized.createdAt is now a Date object
+ * ```
  */
 export function fromPersistedTimestamps<T extends EntityTimestamps>(entity: T): T {
   return {

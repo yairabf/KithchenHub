@@ -392,7 +392,9 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
       - Idempotent: won't re-seed after user deletes all recipes (tombstones remain)
       - Production builds never seed (verified via `isDevMode()` check)
     - **Timestamp Management**: 
-      - `createRecipe()`: Automatically populates `createdAt` via `withCreatedAt()` helper
+      - `createRecipe()`: Explicitly populates `createdAt` via `withCreatedAt()` helper before persisting
+        - Business rule: auto-populate `createdAt` on creation
+        - Ensures all new recipes have proper creation timestamps
       - `updateRecipe()`: Automatically updates `updatedAt` via `withUpdatedAt()` helper
       - Timestamps are serialized to ISO strings when persisting to AsyncStorage
   - `RemoteRecipeService`: Calls backend via `api.ts` (`/recipes` endpoint)
@@ -440,12 +442,17 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Validates data format and filters invalid entities
   - **Internal Helpers**: Uses `readEntityEnvelope()` and `writeEntityEnvelope()` from `guestStorageHelpers.ts` for type-safe operations
 - **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
-  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `recipeFactory.ts`)
+  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation
+    - Used in `recipeFactory.ts` for factory-created recipes
+    - Used in `LocalRecipeService.createRecipe()` to ensure service-created recipes have timestamps
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification (used in `recipeService.ts`)
   - `markDeleted()`: Sets `deletedAt` for soft-delete operations
   - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)
   - `toSupabaseTimestamps()`: Converts camelCase timestamps to snake_case for API payloads
   - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
+    - `toPersistedTimestamps()`: Converts Date objects to ISO strings for AsyncStorage persistence
+    - `fromPersistedTimestamps()`: Converts ISO strings to Date objects when reading from AsyncStorage
+    - Both helpers include comprehensive JSDoc documentation with usage examples
 - **Development Mode Utility**: `mobile/src/common/utils/devMode.ts`
   - `isDevMode()`: Wrapper around React Native `__DEV__` constant for testability
   - Used by `LocalRecipeService` to determine if dev-only seeding should occur

@@ -140,13 +140,16 @@ export class LocalRecipeService implements IRecipeService {
             throw new Error('Invalid recipe data: missing required fields (localId, name)');
         }
 
+        // Business rule: auto-populate createdAt on creation
+        const withTimestamps = withCreatedAt(newRecipe);
+
         // Persist to guest storage with retry logic for concurrent writes
         let retries = MAX_RETRIES;
         while (retries > 0) {
             try {
                 const existingRecipes = await guestStorage.getRecipes();
-                await guestStorage.saveRecipes([...existingRecipes, newRecipe]);
-                return newRecipe;
+                await guestStorage.saveRecipes([...existingRecipes, withTimestamps]);
+                return withTimestamps;
             } catch (error) {
                 retries--;
                 if (retries === 0) {
