@@ -28,6 +28,9 @@ The Recipes feature allows users to browse, search, filter, and create recipes. 
   - Floating action button to add new recipes
   - Pastel colors for visual variety
   - **Catalog Integration**: Uses `useCatalog()` hook to fetch grocery items with API → Cache → Mock fallback strategy
+    - Hook delegates to centralized `CatalogService` for consistent catalog fetching across the app
+    - Provides loading states and error handling
+    - Works for both guest and signed-in users
   - **Image Upload**: Handles recipe image uploads with guest/authenticated user logic
 
 #### Code Snippet - Catalog Data Loading
@@ -496,8 +499,9 @@ Utility for applying remote updates to local cached state:
 
 ## Key Dependencies
 
-- `useCatalog` - Catalog hook (`mobile/src/common/hooks/useCatalog.ts`) - React hook for fetching catalog data with API → Cache → Mock fallback strategy
-- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Centralized service for catalog data fetching and caching
+- `useCatalog` - Catalog hook (`mobile/src/common/hooks/useCatalog.ts`) - React hook for fetching catalog data with API → Cache → Mock fallback strategy. Provides loading states, error handling, and refresh functionality
+- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Centralized service for catalog data fetching and caching. Used by all features for consistent catalog access with enhanced logging (tracks API/Cache/Mock source)
+- `GrocerySearchItemDto` - Shared type (`mobile/src/common/types/catalog.ts`) - Centralized DTO type for catalog API responses, preventing code duplication
 - `mockGroceriesDB` - Grocery database with images and categories (fallback data for catalog service)
 
 - `@expo/vector-icons` - Ionicons for icons

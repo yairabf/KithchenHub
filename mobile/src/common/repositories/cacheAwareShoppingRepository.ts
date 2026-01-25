@@ -25,17 +25,7 @@ import { NetworkError } from '../../services/api';
 import { syncQueueStorage, type SyncOp, type QueueTargetId } from '../utils/syncQueueStorage';
 import * as Crypto from 'expo-crypto';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
-
-/**
- * DTO types for API responses (matches RemoteShoppingService)
- */
-type GrocerySearchItemDto = {
-  id: string;
-  name: string;
-  category: string;
-  imageUrl?: string | null;
-  defaultQuantity?: number | null;
-};
+import { catalogService } from '../services/catalogService';
 
 type ShoppingListSummaryDto = {
   id: string;
@@ -91,18 +81,8 @@ export interface ICacheAwareShoppingRepository {
   invalidateAllCache(): Promise<void>;
 }
 
-/**
- * Helper function to map API DTO to GroceryItem
- */
-const mapGroceryItem = (item: GrocerySearchItemDto): GroceryItem => ({
-  id: item.id,
-  name: item.name,
-  image: item.imageUrl ?? '',
-  category: item.category,
-  defaultQuantity: item.defaultQuantity ?? 1,
-});
-
 // Note: Category building utilities are imported from common/utils/catalogUtils.ts
+// Catalog data fetching is handled by catalogService
 
 const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => ({
   id: list.id,
@@ -190,23 +170,16 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   }
   
   /**
-   * Fetches grocery items from API (not cached, always fresh)
-   * Returns empty array on network errors to allow app to continue functioning
+   * Fetches grocery items using CatalogService with fallback strategy.
+   * 
+   * Delegates to CatalogService which implements: API → Cache → Mock fallback.
+   * This ensures consistent behavior across all services and always returns data
+   * (never empty - always has mock fallback).
+   * 
+   * @returns Array of grocery items (never empty - always has mock fallback)
    */
   private async getGroceryItems(): Promise<GroceryItem[]> {
-    try {
-      const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
-      return results.map(mapGroceryItem);
-    } catch (error) {
-      // Handle network errors gracefully - return empty array instead of throwing
-      // This allows the app to continue working even when offline
-      if (error instanceof NetworkError) {
-        console.warn('Network unavailable: Unable to fetch grocery items. Returning empty list.');
-        return [];
-      }
-      // Re-throw non-network errors
-      throw error;
-    }
+    return catalogService.getGroceryItems();
   }
 
   /**

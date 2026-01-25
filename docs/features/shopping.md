@@ -255,6 +255,12 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
   - Loads all data via `shoppingService.getShoppingData()` on mount
   - Mode determined by `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
   - **Service handles mode internally**: Screen handlers always call service methods; service implementation (LocalShoppingService vs RemoteShoppingService) handles guest vs signed-in logic
+- **Cache-Aware Repository** (signed-in users only):
+  - `CacheAwareShoppingRepository` wraps `RemoteShoppingService` with cache-first reads and write-through caching
+  - Used by `ShoppingListsScreen` for signed-in users to provide reactive cache updates
+  - **Catalog Data**: Uses `catalogService.getGroceryItems()` with API → Cache → Mock fallback strategy
+    - Delegates to centralized `CatalogService` for consistent catalog fetching
+    - No duplicate type definitions or mapping functions (uses shared types from `common/types/catalog.ts`)
 - **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
 - **Optimistic Updates**: All CRUD operations use `executeWithOptimisticUpdate()` helper for responsive UX with automatic error revert
 
@@ -288,7 +294,10 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - **ID Matching**: Service methods accept both `id` and `localId` via `findEntityIndex()` which checks both identifiers
   - `RemoteShoppingService` (`mobile/src/features/shopping/services/RemoteShoppingService.ts`): 
     - Calls backend via `api.ts` (`/shopping-lists`, `/shopping-lists/{id}` endpoints)
-    - **Catalog Data**: Uses shared `catalogUtils` functions (`buildCategoriesFromGroceries`, `buildFrequentlyAddedItems`) for consistency
+    - **Catalog Data**: Uses `catalogService.getGroceryItems()` with API → Cache → Mock fallback strategy
+      - Delegates to centralized `CatalogService` for consistent catalog fetching
+      - Uses shared `catalogUtils` functions (`buildCategoriesFromGroceries`, `buildFrequentlyAddedItems`) for consistency
+      - No duplicate type definitions or mapping functions (uses shared types from `common/types/catalog.ts`)
     - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
     - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
     - All CRUD operations fetch existing entities before updating to prevent data loss
@@ -483,8 +492,9 @@ Utility for applying remote updates to local cached state:
 - `isEntityActive` - Utility to filter active entities (`mobile/src/common/types/entityMetadata.ts`) - used by `LocalShoppingService.getShoppingData()` to filter deleted items
 - `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
 - `getSelectedList`, `getActiveListId` - Selection utilities from `utils/selectionUtils.ts` for preventing stale list state
-- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Provides catalog data with API → Cache → Mock fallback strategy (used by LocalShoppingService)
-- `catalogUtils` - Catalog utilities (`mobile/src/common/utils/catalogUtils.ts`) - Shared functions for building categories and frequently added items (used by RemoteShoppingService)
+- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Provides catalog data with API → Cache → Mock fallback strategy. Used by all shopping services (LocalShoppingService, RemoteShoppingService, CacheAwareShoppingRepository) for consistent catalog fetching
+- `catalogUtils` - Catalog utilities (`mobile/src/common/utils/catalogUtils.ts`) - Shared functions for building categories and frequently added items. Used by all services for consistent data transformation
+- `GrocerySearchItemDto` - Shared type (`mobile/src/common/types/catalog.ts`) - Centralized DTO type for catalog API responses, preventing code duplication
 - `mockGroceriesDB` - Grocery database with images and categories (fallback data for catalog service)
 - `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService)
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
