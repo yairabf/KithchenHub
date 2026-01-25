@@ -475,6 +475,7 @@ Utility for applying remote updates to local cached state:
 - `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
 - `guestNoSyncGuardrails` - Guest mode sync guardrails (`mobile/src/common/guards/guestNoSyncGuardrails.ts`) - Runtime assertions preventing guest data from syncing remotely
 - `cacheAwareRepository` - Cache-first repository (`mobile/src/common/repositories/cacheAwareRepository.ts`) - Provides `getCached()` and `setCached()` for cache-first reads and write-through caching
+- `cacheStorage` - Cache storage utilities (`mobile/src/common/utils/cacheStorage.ts`) - Thin wrapper layer for safe cache access with TTL support. Provides `readCacheArray()`, `writeCacheArray()`, `getCacheState()`, and `shouldRefreshCache()` helpers. Used internally by `cacheAwareRepository`.
 - `networkStatus` - Network status singleton (`mobile/src/common/utils/networkStatus.ts`) - Provides `getIsOnline()` for checking network connectivity outside React components
 
 ## UI Flow
