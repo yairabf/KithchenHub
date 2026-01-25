@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ENTITY_TYPES, getSignedInCacheKey } from '../../storage/dataModeStorage';
+import { ENTITY_TYPES, getSignedInCacheKey, getGuestStorageKey } from '../../storage/dataModeStorage';
 import type { EntityTimestamps } from '../../types/entityMetadata';
 import { fromPersistedTimestamps, toPersistedTimestamps } from '../../types/entityMetadata';
 import { applyRemoteUpdatesToLocal } from '../syncApplication';
@@ -118,6 +118,62 @@ describe('applyRemoteUpdatesToLocal', () => {
       await applyRemoteUpdatesToLocal('shoppingItems', [remoteEntity], (entity) => entity.id);
       const cached = await readCache();
       expect(cached).toHaveLength(expectedLength);
+    });
+  });
+
+  describe('defense-in-depth guardrails', () => {
+    it('should throw error if storage key mode is guest', async () => {
+      // Mock getSignedInCacheKey to return a guest key (simulating programming error)
+      const dataModeStorage = require('../../storage/dataModeStorage');
+      
+      const getSignedInCacheKeySpy = jest.spyOn(dataModeStorage, 'getSignedInCacheKey').mockReturnValue(
+        getGuestStorageKey(ENTITY_TYPES.shoppingItems) // Guest key instead of signed-in
+      );
+
+      const remote = [buildEntity({ id: 'item-1', name: 'Remote' })];
+      
+      await expect(
+        applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id)
+      ).rejects.toThrow('guest storage key');
+      
+      // Restore only the spy we created
+      getSignedInCacheKeySpy.mockRestore();
+    });
+
+    it('should throw error if storage key mode is null (unknown key)', async () => {
+      // Mock getSignedInCacheKey to return an unknown key
+      const dataModeStorage = require('../../storage/dataModeStorage');
+      
+      const getSignedInCacheKeySpy = jest.spyOn(dataModeStorage, 'getSignedInCacheKey').mockReturnValue(
+        '@kitchen_hub_unknown_key' // Unknown key that doesn't match any prefix
+      );
+
+      const remote = [buildEntity({ id: 'item-1', name: 'Remote' })];
+      
+      await expect(
+        applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id)
+      ).rejects.toThrow('unknown storage key');
+      
+      // Restore only the spy we created
+      getSignedInCacheKeySpy.mockRestore();
+    });
+
+    it('should throw error if storage key mode is public-catalog', async () => {
+      // Mock getSignedInCacheKey to return a public-catalog key
+      const dataModeStorage = require('../../storage/dataModeStorage');
+      
+      const getSignedInCacheKeySpy = jest.spyOn(dataModeStorage, 'getSignedInCacheKey').mockReturnValue(
+        '@kitchen_hub_catalog_grocery_catalog' // Public catalog key
+      );
+
+      const remote = [buildEntity({ id: 'item-1', name: 'Remote' })];
+      
+      await expect(
+        applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id)
+      ).rejects.toThrow('public-catalog storage key');
+      
+      // Restore only the spy we created
+      getSignedInCacheKeySpy.mockRestore();
     });
   });
 });
