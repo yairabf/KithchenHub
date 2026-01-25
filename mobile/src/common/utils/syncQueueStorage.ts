@@ -18,6 +18,11 @@ import type { SyncEntityType } from './cacheMetadata';
 export type SyncOp = 'create' | 'update' | 'delete';
 
 /**
+ * Queued write status
+ */
+export type QueuedWriteStatus = 'PENDING' | 'RETRYING' | 'FAILED_PERMANENT';
+
+/**
  * Identifies an entity across offline period.
  * Always use localId for queue operations (serverId may not exist offline).
  */
@@ -37,6 +42,9 @@ export type QueuedWrite = {
   payload: unknown;            // Full entity data (can optimize to patch later)
   clientTimestamp: string;     // ISO timestamp for ordering + conflict resolution
   attemptCount: number;         // Retry counter (starts at 0)
+  lastAttemptAt?: string;       // ISO timestamp of last attempt (for backoff)
+  status: QueuedWriteStatus;    // Item status
+  lastError?: string;           // Last error message (for debugging)
 };
 
 /**
@@ -86,7 +94,19 @@ async function readQueue(): Promise<QueuedWrite[]> {
         typeof item.clientTimestamp === 'string' &&
         typeof item.attemptCount === 'number'
       ) {
-        valid.push(item as QueuedWrite);
+        // Migrate old items: add default status if missing, validate status value
+        const validStatuses: QueuedWriteStatus[] = ['PENDING', 'RETRYING', 'FAILED_PERMANENT'];
+        const status = validStatuses.includes(item.status as QueuedWriteStatus)
+          ? (item.status as QueuedWriteStatus)
+          : 'PENDING';
+        
+        const migratedItem: QueuedWrite = {
+          ...item,
+          status,
+          lastAttemptAt: item.lastAttemptAt,
+          lastError: item.lastError,
+        };
+        valid.push(migratedItem);
       } else {
         console.warn('Invalid queue item format, skipping:', item);
       }
@@ -247,6 +267,21 @@ export interface SyncQueueStorage {
   incrementRetry(id: string): Promise<void>;
   
   /**
+   * Update last attempt timestamp for a queued write.
+   */
+  updateLastAttempt(id: string): Promise<void>;
+  
+  /**
+   * Update status for a queued write.
+   */
+  updateStatus(id: string, status: QueuedWriteStatus): Promise<void>;
+  
+  /**
+   * Mark a queued write as permanently failed.
+   */
+  markAsFailedPermanent(id: string, error: string): Promise<void>;
+  
+  /**
    * Compact queue: merge operations for same entity to prevent thrash.
    * Called automatically on enqueue.
    */
@@ -302,6 +337,7 @@ class SyncQueueStorageImpl implements SyncQueueStorage {
         payload,
         clientTimestamp,
         attemptCount: 0,
+        status: 'PENDING',
       };
       
       // Add to queue
@@ -336,6 +372,7 @@ class SyncQueueStorageImpl implements SyncQueueStorage {
         payload,
         clientTimestamp,
         attemptCount: 0,
+        status: 'PENDING',
       };
     }
 
@@ -401,24 +438,77 @@ class SyncQueueStorageImpl implements SyncQueueStorage {
   }
   
   /**
-   * Increment retry count for a queued write.
+   * Updates a queued write item using a custom updater function.
+   * Centralizes the lock mechanism to prevent code duplication.
    * 
-   * Uses lock mechanism to prevent race conditions.
+   * @param id - ID of the item to update
+   * @param updater - Function that transforms the item
+   * @private
    */
-  async incrementRetry(id: string): Promise<void> {
+  private async updateQueueItem(
+    id: string,
+    updater: (item: QueuedWrite) => QueuedWrite
+  ): Promise<void> {
     this.operationLock = this.operationLock.then(async () => {
       const queue = await readQueue();
-      const updated = queue.map(item => {
-        if (item.id === id) {
-          return { ...item, attemptCount: item.attemptCount + 1 };
-        }
-        return item;
-      });
-      
+      const updated = queue.map(item => item.id === id ? updater(item) : item);
       await writeQueue(updated);
     });
 
     await this.operationLock;
+  }
+
+  /**
+   * Increment retry count for a queued write.
+   * Also updates lastAttemptAt timestamp and status.
+   * 
+   * Uses lock mechanism to prevent race conditions.
+   */
+  async incrementRetry(id: string): Promise<void> {
+    return this.updateQueueItem(id, item => ({
+      ...item,
+      attemptCount: item.attemptCount + 1,
+      lastAttemptAt: new Date().toISOString(),
+      status: 'RETRYING' as QueuedWriteStatus,
+    }));
+  }
+  
+  /**
+   * Update last attempt timestamp for a queued write.
+   * 
+   * Uses lock mechanism to prevent race conditions.
+   */
+  async updateLastAttempt(id: string): Promise<void> {
+    return this.updateQueueItem(id, item => ({
+      ...item,
+      lastAttemptAt: new Date().toISOString(),
+    }));
+  }
+  
+  /**
+   * Update status for a queued write.
+   * 
+   * Uses lock mechanism to prevent race conditions.
+   */
+  async updateStatus(id: string, status: QueuedWriteStatus): Promise<void> {
+    return this.updateQueueItem(id, item => ({
+      ...item,
+      status,
+    }));
+  }
+  
+  /**
+   * Mark a queued write as permanently failed.
+   * 
+   * Uses lock mechanism to prevent race conditions.
+   */
+  async markAsFailedPermanent(id: string, error: string): Promise<void> {
+    return this.updateQueueItem(id, item => ({
+      ...item,
+      status: 'FAILED_PERMANENT' as QueuedWriteStatus,
+      lastError: error,
+      lastAttemptAt: new Date().toISOString(),
+    }));
   }
   
   /**

@@ -7,8 +7,8 @@
  */
 
 import { api } from '../../services/api';
-import { NetworkError } from '../../services/api';
-import { syncQueueStorage, type QueuedWrite } from './syncQueueStorage';
+import { NetworkError, ApiError } from '../../services/api';
+import { syncQueueStorage, type QueuedWrite, type QueuedWriteStatus } from './syncQueueStorage';
 import { getIsOnline } from './networkStatus';
 import { cacheEvents } from './cacheEvents';
 import { invalidateCache } from '../repositories/cacheAwareRepository';
@@ -76,13 +76,91 @@ interface SyncDataDto {
 const MAX_RETRY_ATTEMPTS = 3;
 
 /**
+ * Base delay for exponential backoff (1 second)
+ */
+const BASE_BACKOFF_DELAY_MS = 1000;
+
+/**
+ * Maximum delay cap for exponential backoff (30 seconds)
+ */
+const MAX_BACKOFF_DELAY_MS = 30000;
+
+/**
+ * Calculate exponential backoff delay in milliseconds
+ * Formula: baseDelay * (2 ^ attemptCount)
+ * 
+ * @param attemptCount - Number of previous attempts (0-indexed)
+ * @param baseDelayMs - Base delay in milliseconds (default: 1000ms = 1s)
+ * @param maxDelayMs - Maximum delay cap (default: 30000ms = 30s)
+ * @returns Delay in milliseconds
+ */
+function calculateBackoffDelay(
+  attemptCount: number,
+  baseDelayMs: number = BASE_BACKOFF_DELAY_MS,
+  maxDelayMs: number = MAX_BACKOFF_DELAY_MS
+): number {
+  const delay = baseDelayMs * Math.pow(2, attemptCount);
+  return Math.min(delay, maxDelayMs);
+}
+
+/**
+ * Wait for specified delay (non-blocking for UI)
+ */
+function waitForDelay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Error classification result
+ */
+type ErrorClassification = 
+  | { type: 'RETRY'; shouldIncrement: boolean }  // Retry with/without incrementing attemptCount
+  | { type: 'STOP_WORKER'; reason: string }  // Stop worker (e.g., auth error)
+  | { type: 'DEAD_LETTER'; reason: string };  // Mark as permanently failed
+
+/**
+ * Classify sync error to determine retry strategy
+ */
+function classifySyncError(error: unknown): ErrorClassification {
+  // Network errors (offline, timeout, DNS)
+  if (error instanceof NetworkError) {
+    return { type: 'RETRY', shouldIncrement: false }; // Don't increment, just pause
+  }
+
+  // API errors
+  if (error instanceof ApiError) {
+    const status = error.statusCode;
+    
+    // Auth errors (401, 403) - stop worker, needs re-auth
+    if (status === 401 || status === 403) {
+      return { type: 'STOP_WORKER', reason: 'Authentication required' };
+    }
+    
+    // 4xx validation errors (400, 422) - increment and eventually dead-letter
+    if (status >= 400 && status < 500) {
+      return { type: 'RETRY', shouldIncrement: true };
+    }
+    
+    // 5xx server errors - increment and backoff
+    if (status >= 500) {
+      return { type: 'RETRY', shouldIncrement: true };
+    }
+  }
+
+  // Unknown errors - retry with increment
+  return { type: 'RETRY', shouldIncrement: true };
+}
+
+/**
  * Sync Queue Processor Interface
  */
 export interface SyncQueueProcessor {
-  start(): void;
-  stop(): void;
-  processQueue(): Promise<void>;
-  isProcessing(): boolean;
+  start(): void;  // Start worker loop
+  stop(): void;   // Stop worker loop
+  processQueue(): Promise<void>;  // Process all ready items (for backward compatibility)
+  processReadyItems(items: QueuedWrite[]): Promise<void>;  // Process specific items
+  isProcessing(): boolean;  // Check if currently processing
+  isRunning(): boolean;  // Check if worker loop is running
 }
 
 /**
@@ -91,20 +169,38 @@ export interface SyncQueueProcessor {
 class SyncQueueProcessorImpl implements SyncQueueProcessor {
   private processing = false;
   private processingPromise: Promise<void> | null = null;
+  private workerRunning = false;  // Worker loop state
+  private workerCancellationToken: { cancelled: boolean } = { cancelled: false };  // Cancellation token for race-free stopping
+  private workerPromise: Promise<void> | null = null;  // Worker loop promise
 
   /**
-   * Start the processor (no-op for now, processing happens on-demand)
+   * Start the worker loop
+   * Continuously processes queue until empty or stopped
    */
   start(): void {
-    // Processor runs on-demand when network comes back online
-    // No background polling needed
+    if (this.workerRunning) {
+      return; // Already running
+    }
+
+    this.workerRunning = true;
+    this.workerCancellationToken.cancelled = false;
+    this.workerPromise = this.runWorkerLoop();
   }
 
   /**
-   * Stop the processor (no-op for now)
+   * Stop the worker loop
+   * Uses cancellation token to ensure race-free stopping even when loop is in waitForDelay()
    */
   stop(): void {
-    // No background processing to stop
+    this.workerCancellationToken.cancelled = true;
+    this.workerRunning = false;
+  }
+
+  /**
+   * Check if worker loop is running
+   */
+  isRunning(): boolean {
+    return this.workerRunning;
   }
 
   /**
@@ -113,21 +209,225 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
   isProcessing(): boolean {
     return this.processing;
   }
+  
+  /**
+   * Worker loop that continuously processes queue
+   * Checks cancellation token to allow race-free stopping
+   */
+  private async runWorkerLoop(): Promise<void> {
+    while (this.workerRunning && !this.workerCancellationToken.cancelled) {
+      // Check if online
+      if (!getIsOnline()) {
+        // Wait and check again, but check cancellation during wait
+        await this.waitForDelayWithCancellation(5000);
+        if (this.workerCancellationToken.cancelled) {
+          break;
+        }
+        continue;
+      }
+
+      // Check cancellation before expensive operations
+      if (this.workerCancellationToken.cancelled) {
+        break;
+      }
+
+      // Check if queue has items
+      const queue = await syncQueueStorage.getAll();
+      
+      if (queue.length === 0) {
+        // Queue empty, stop worker
+        this.workerRunning = false;
+        break;
+      }
+
+      // Filter items that are ready for retry (respect backoff)
+      const readyItems = this.filterItemsReadyForRetry(queue);
+      
+      if (readyItems.length === 0) {
+        // All items are in backoff, compute time until next attempt
+        const nextAttemptTime = this.calculateEarliestNextAttempt(queue);
+        if (nextAttemptTime === null) {
+          // No items waiting, stop worker
+          this.workerRunning = false;
+          break;
+        }
+        
+        const now = Date.now();
+        const waitTime = Math.max(0, nextAttemptTime - now);
+        await this.waitForDelayWithCancellation(waitTime);
+        if (this.workerCancellationToken.cancelled) {
+          break;
+        }
+        continue;
+      }
+
+      // Process only ready items (pass filtered set to avoid re-reading queue)
+      try {
+        await this.processReadyItems(readyItems);
+      } catch (error) {
+        console.error('Worker loop error:', error);
+        // Continue loop even if processing fails
+      }
+
+      // If there are ready items, process immediately (no extra sleep)
+      // Loop will check again on next iteration
+    }
+
+    this.workerRunning = false;
+    this.workerPromise = null;
+  }
 
   /**
-   * Process the sync queue
+   * Wait for delay with cancellation support
+   * Checks cancellation token periodically to allow immediate stopping
    * 
-   * Implements batch-state sync:
-   * 1. Read all queued writes
-   * 2. Group by entity type and get latest state per localId
-   * 3. Build SyncDataDto payload
-   * 4. Call POST /auth/sync endpoint
-   * 5. Handle sync response (success/partial/failed)
-   * 6. Update cache with server-resolved entities
-   * 7. Remove successfully synced writes from queue
-   * 8. Handle conflicts and retries
+   * @param ms - Milliseconds to wait
+   * @private
    */
-  async processQueue(): Promise<void> {
+  private async waitForDelayWithCancellation(ms: number): Promise<void> {
+    const checkInterval = 100; // Check every 100ms
+    const endTime = Date.now() + ms;
+    
+    while (Date.now() < endTime) {
+      if (this.workerCancellationToken.cancelled) {
+        return;
+      }
+      const remaining = Math.min(checkInterval, endTime - Date.now());
+      await waitForDelay(remaining);
+    }
+  }
+
+  /**
+   * Calculates the earliest timestamp when any queued item will be ready for retry.
+   * 
+   * @param queue - Array of queued writes to analyze
+   * @returns Timestamp in milliseconds when next item will be ready, or null if no items waiting
+   * @private
+   */
+  private calculateEarliestNextAttempt(queue: QueuedWrite[]): number | null {
+    const now = Date.now();
+    let earliestNextAttempt: number | null = null;
+    
+    for (const item of queue) {
+      // Skip items that are permanently failed
+      if (item.status === 'FAILED_PERMANENT') {
+        continue;
+      }
+      
+      // Items with attemptCount === 0 are ready immediately
+      if (item.attemptCount === 0) {
+        return now; // Ready now
+      }
+      
+      // Calculate next attempt time with validation
+      const nextAttempt = this.calculateNextAttemptTime(item, now);
+      if (nextAttempt !== null) {
+        earliestNextAttempt = earliestNextAttempt === null 
+          ? nextAttempt 
+          : Math.min(earliestNextAttempt, nextAttempt);
+      }
+    }
+    
+    return earliestNextAttempt;
+  }
+
+  /**
+   * Calculates the next attempt time for a single queued item.
+   * Returns null if timestamp is invalid or missing.
+   * 
+   * @param item - Queued write item to calculate next attempt for
+   * @param now - Current timestamp in milliseconds (for consistency)
+   * @returns Next attempt timestamp in milliseconds, or null if invalid
+   * @private
+   */
+  private calculateNextAttemptTime(item: QueuedWrite, now: number): number | null {
+    if (!item.lastAttemptAt) {
+      return null;
+    }
+    
+    const lastAttempt = this.parseAttemptTimestamp(item.lastAttemptAt);
+    if (lastAttempt === null) {
+      console.warn(`Invalid lastAttemptAt timestamp for item ${item.id}: ${item.lastAttemptAt}`);
+      return null;
+    }
+    
+    const backoffDelay = calculateBackoffDelay(item.attemptCount);
+    return lastAttempt + backoffDelay;
+  }
+
+  /**
+   * Parses an ISO timestamp string to milliseconds, with validation.
+   * Returns null if timestamp is invalid or cannot be parsed.
+   * 
+   * @param timestamp - ISO timestamp string to parse
+   * @returns Timestamp in milliseconds, or null if invalid
+   * @private
+   */
+  private parseAttemptTimestamp(timestamp: string | undefined): number | null {
+    if (!timestamp) {
+      return null;
+    }
+    
+    try {
+      const parsed = new Date(timestamp).getTime();
+      return isNaN(parsed) ? null : parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Filters queued items that are ready for retry (backoff period has passed).
+   * Validates timestamps and handles invalid dates gracefully.
+   * 
+   * @param queue - Array of queued writes to filter
+   * @returns Array of items ready for retry
+   * @private
+   */
+  private filterItemsReadyForRetry(queue: QueuedWrite[]): QueuedWrite[] {
+    const now = Date.now();
+    
+    return queue.filter(item => {
+      // Skip permanently failed items
+      if (item.status === 'FAILED_PERMANENT') {
+        return false;
+      }
+      
+      // First attempt (attemptCount === 0) is always ready
+      if (item.attemptCount === 0) {
+        return true;
+      }
+      
+      // Check if backoff period has passed with validation
+      if (!item.lastAttemptAt) {
+        // No timestamp, assume ready (shouldn't happen but handle gracefully)
+        console.warn(`Item ${item.id} has attemptCount > 0 but no lastAttemptAt, treating as ready`);
+        return true;
+      }
+      
+      const lastAttempt = this.parseAttemptTimestamp(item.lastAttemptAt);
+      if (lastAttempt === null) {
+        // Invalid timestamp, treat as ready to retry (better than blocking forever)
+        console.warn(`Invalid lastAttemptAt for item ${item.id}, treating as ready`);
+        return true;
+      }
+      
+      const backoffDelay = calculateBackoffDelay(item.attemptCount);
+      const nextAttemptTime = lastAttempt + backoffDelay;
+      
+      return now >= nextAttemptTime;
+    });
+  }
+
+  /**
+   * Process specific ready items (called by worker loop with filtered set)
+   * This ensures we only process items that passed backoff check
+   */
+  async processReadyItems(readyItems: QueuedWrite[]): Promise<void> {
+    if (readyItems.length === 0) {
+      return;
+    }
+
     // Prevent concurrent processing
     if (this.processing) {
       if (this.processingPromise) {
@@ -136,7 +436,7 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     }
 
     this.processing = true;
-    this.processingPromise = this.doProcessQueue()
+    this.processingPromise = this.doProcessReadyItems(readyItems)
       .finally(() => {
         this.processing = false;
         this.processingPromise = null;
@@ -145,26 +445,27 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     return this.processingPromise;
   }
 
-  private async doProcessQueue(): Promise<void> {
+  /**
+   * Process queue (backward compatibility - filters ready items internally)
+   */
+  async processQueue(): Promise<void> {
+    const queue = await syncQueueStorage.getAll();
+    const readyItems = this.filterItemsReadyForRetry(queue);
+    return this.processReadyItems(readyItems);
+  }
+
+  private async doProcessReadyItems(readyItems: QueuedWrite[]): Promise<void> {
     // Check if online
     if (!getIsOnline()) {
       console.log('Sync queue processing skipped: device is offline');
       return;
     }
 
-    // Read queue
-    const queue = await syncQueueStorage.getAll();
-    
-    if (queue.length === 0) {
-      // Nothing to sync
-      return;
-    }
-
-    console.log(`Processing sync queue: ${queue.length} items`);
+    console.log(`Processing sync queue: ${readyItems.length} ready items`);
 
     try {
-      // Build sync payload (batch-state sync)
-      const syncPayload = await this.buildSyncPayload(queue);
+      // Build sync payload from ready items only
+      const syncPayload = await this.buildSyncPayload(readyItems);
       
       // Check if payload is empty (all items were compacted away)
       const hasData = 
@@ -173,9 +474,10 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         (syncPayload.chores && syncPayload.chores.length > 0);
       
       if (!hasData) {
-        // All items were compacted (e.g., create + delete), clear queue
-        await syncQueueStorage.clear();
-        console.log('Sync queue cleared: all items were compacted');
+        // All items were compacted, remove them
+        for (const item of readyItems) {
+          await syncQueueStorage.remove(item.id);
+        }
         return;
       }
 
@@ -183,29 +485,57 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
       const result = await api.post<SyncResult>('/auth/sync', syncPayload);
 
       // Handle sync result
-      await this.handleSyncResult(queue, result);
+      await this.handleSyncResult(readyItems, result);
 
-    } catch (error) {
-      if (error instanceof NetworkError) {
-        console.log('Sync queue processing failed: network error, will retry on next network change');
-        // Don't increment retries - network errors are transient
-        return;
+      // Update lastAttemptAt for all processed items (successful or not)
+      for (const item of readyItems) {
+        await syncQueueStorage.updateLastAttempt(item.id);
       }
 
-      // Other errors (API errors, etc.)
-      console.error('Sync queue processing failed:', error);
+    } catch (error) {
+      // Classify error to determine retry strategy
+      const classification = classifySyncError(error);
       
-      // Increment retry count for all items
-      for (const item of queue) {
-        if (item.attemptCount < MAX_RETRY_ATTEMPTS) {
-          await syncQueueStorage.incrementRetry(item.id);
-        } else {
-          // Max retries reached, remove from queue and log
-          console.warn(
-            `Sync queue item ${item.id} exceeded max retries, removing from queue. ` +
-            `Entity: ${item.entityType}:${item.target.localId}, Operation: ${item.op}`
+      if (classification.type === 'STOP_WORKER') {
+        // Stop worker (e.g., auth error)
+        this.stop();
+        console.error('Sync worker stopped:', classification.reason);
+        return;
+      }
+      
+      if (classification.type === 'DEAD_LETTER') {
+        // Mark items as permanently failed
+        for (const item of readyItems) {
+          await syncQueueStorage.markAsFailedPermanent(
+            item.id,
+            classification.reason
           );
-          await syncQueueStorage.remove(item.id);
+        }
+        return;
+      }
+      
+      // RETRY classification
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Sync queue processing failed:', errorMessage);
+      
+      // Update items based on classification
+      for (const item of readyItems) {
+        await syncQueueStorage.updateLastAttempt(item.id);
+        
+        if (classification.shouldIncrement) {
+          if (item.attemptCount < MAX_RETRY_ATTEMPTS) {
+            await syncQueueStorage.incrementRetry(item.id);
+            await syncQueueStorage.updateStatus(item.id, 'RETRYING');
+          } else {
+            // Max retries reached, mark as permanently failed
+            await syncQueueStorage.markAsFailedPermanent(
+              item.id,
+              `Max retries exceeded: ${errorMessage}`
+            );
+          }
+        } else {
+          // Don't increment, just update timestamp (network error)
+          await syncQueueStorage.updateStatus(item.id, 'RETRYING');
         }
       }
     }
@@ -570,17 +900,21 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         // Conflict: keep in queue, increment retry
         if (item.attemptCount < MAX_RETRY_ATTEMPTS) {
           await syncQueueStorage.incrementRetry(item.id);
+          await syncQueueStorage.updateStatus(item.id, 'RETRYING');
           console.warn(
             `Sync conflict for ${item.entityType}:${item.target.localId}, ` +
             `retry ${item.attemptCount + 1}/${MAX_RETRY_ATTEMPTS}`
           );
         } else {
-          // Max retries reached, remove from queue
+          // Max retries reached, mark as permanently failed
           console.error(
             `Sync conflict for ${item.entityType}:${item.target.localId} exceeded max retries, ` +
-            `removing from queue`
+            `marking as permanently failed`
           );
-          await syncQueueStorage.remove(item.id);
+          await syncQueueStorage.markAsFailedPermanent(
+            item.id,
+            `Sync conflict: max retries exceeded`
+          );
         }
       } else {
         // Success: remove from queue

@@ -502,6 +502,9 @@ Utility for applying remote updates to local cached state:
 - `cacheEvents` - Cache event bus (`mobile/src/common/utils/cacheEvents.ts`) - Event emitter for cache change notifications. Used to trigger UI updates when cache changes.
 - `cacheStorage` - Cache storage utilities (`mobile/src/common/utils/cacheStorage.ts`) - Thin wrapper layer for safe cache access with TTL support. Provides `readCacheArray()`, `writeCacheArray()`, `getCacheState()`, and `shouldRefreshCache()` helpers. Used internally by `cacheAwareRepository`.
 - `networkStatus` - Network status singleton (`mobile/src/common/utils/networkStatus.ts`) - Provides `getIsOnline()` for checking network connectivity outside React components
+- `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueueStorage.ts`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`)
+- `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors)
+- `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
 
 ## UI Flow
 

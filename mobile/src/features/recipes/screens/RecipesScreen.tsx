@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,13 +22,16 @@ import { recipeCategories, type Recipe } from '../../../mocks/recipes';
 import { useResponsive } from '../../../common/hooks';
 import { resizeAndValidateImage } from '../../../common/utils';
 import { uploadRecipeImage } from '../../../services/imageUploadService';
-import { api } from '../../../services/api';
+import { api, NetworkError } from '../../../services/api';
 import { config } from '../../../config';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
 import { createRecipe } from '../utils/recipeFactory';
 import { useRecipes } from '../hooks/useRecipes';
 import { useAuth } from '../../../contexts/AuthContext';
+import { determineUserDataMode } from '../../../common/types/dataModes';
+import { createShoppingService } from '../../shopping/services/shoppingService';
+import { CacheAwareShoppingRepository } from '../../../common/repositories/cacheAwareShoppingRepository';
 
 // Column gap constant - same for all screen sizes
 const COLUMN_GAP = spacing.md;
@@ -112,6 +115,26 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
   const isMockDataEnabled = config.mockData.enabled;
+  const hasLoggedNetworkError = useRef(false);
+
+  // Determine data mode and create repository/service
+  const userMode = useMemo(() => {
+    if (isMockDataEnabled) {
+      return 'guest' as const;
+    }
+    return determineUserDataMode(user);
+  }, [user, isMockDataEnabled]);
+
+  const isSignedIn = userMode === 'signed-in';
+  
+  const shoppingService = useMemo(
+    () => createShoppingService(userMode),
+    [userMode]
+  );
+  
+  const repository = useMemo(() => {
+    return isSignedIn ? new CacheAwareShoppingRepository(shoppingService) : null;
+  }, [shoppingService, isSignedIn]);
 
   useEffect(() => {
     let isMounted = true;
@@ -123,14 +146,51 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       }
 
       try {
-        const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
-        if (isMounted) {
-          setGroceryItems(results.map(mapGroceryItem));
+        if (isSignedIn && repository) {
+          // For signed-in users, use repository (better error handling)
+          const data = await repository.getShoppingData();
+          if (isMounted) {
+            // Repository now handles network errors gracefully and returns empty array
+            // Use mock data as fallback if network fails and we have no items
+            if (data.groceryItems.length === 0) {
+              if (!hasLoggedNetworkError.current) {
+                console.warn('Network unavailable: Using mock grocery data for recipe ingredients.');
+                hasLoggedNetworkError.current = true;
+              }
+              setGroceryItems(mockGroceriesDB);
+            } else {
+              setGroceryItems(data.groceryItems);
+            }
+          }
+        } else {
+          // For guest users or fallback, use direct API call
+          const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
+          if (isMounted) {
+            setGroceryItems(results.map(mapGroceryItem));
+          }
         }
       } catch (error) {
-        if (isMounted) {
+        if (!isMounted) return;
+        
+        // Check if it's a network error (check both instanceof and name property)
+        const isNetworkError = 
+          error instanceof NetworkError || 
+          (error instanceof Error && error.name === 'NetworkError') ||
+          (typeof error === 'object' && error !== null && 'name' in error && error.name === 'NetworkError');
+        
+        if (isNetworkError) {
+          // Only log once to prevent spam (don't reset the ref)
+          if (!hasLoggedNetworkError.current) {
+            console.warn('Network unavailable: Using mock grocery data for recipe ingredients.');
+            hasLoggedNetworkError.current = true;
+          }
+          // Use mock data as fallback so recipe ingredients still work
+          setGroceryItems(mockGroceriesDB);
+        } else {
+          // Log other errors normally (but only once per error type)
           console.error('Failed to load grocery items:', error);
-          setGroceryItems([]);
+          // For non-network errors, use mock data as fallback
+          setGroceryItems(mockGroceriesDB);
         }
       }
     };
@@ -140,7 +200,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     return () => {
       isMounted = false;
     };
-  }, [isMockDataEnabled]);
+  }, [isMockDataEnabled, isSignedIn, repository, shoppingService]);
 
   // Calculate card width dynamically based on screen size
   // Account for container padding and gap between columns
