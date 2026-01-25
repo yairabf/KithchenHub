@@ -75,8 +75,10 @@ function isValidISOString(dateString: string): boolean {
 
 /**
  * Safely converts a string to Date, throwing descriptive error on invalid input.
+ * 
+ * @internal Exported for use in timestamp serialization helpers
  */
-function parseTimestampSafely(
+export function parseTimestampSafely(
   timestamp: string | Date | undefined,
   fieldName: string
 ): Date | undefined {
@@ -134,8 +136,10 @@ export function isEntityActive(entity: EntityTimestamps): boolean {
  * Helper to convert timestamp fields from Date to ISO string for persistence.
  * Returns a new object with timestamps serialized (immutable).
  * Optimized to avoid unnecessary object spread when no conversion is needed.
+ * 
+ * @returns Object with timestamp fields as ISO strings (Date → string)
  */
-export function serializeTimestamps<T extends EntityTimestamps>(entity: T): T {
+export function toPersistedTimestamps<T extends EntityTimestamps>(entity: T): T {
   // Check if any conversion is needed
   const needsConversion =
     entity.createdAt instanceof Date ||
@@ -160,9 +164,10 @@ export function serializeTimestamps<T extends EntityTimestamps>(entity: T): T {
  * Helper to convert timestamp fields from ISO string to Date for in-memory use.
  * Validates timestamp strings and throws descriptive errors for invalid input.
  * 
+ * @returns Object with timestamp fields as Date objects (string → Date)
  * @throws {Error} If any timestamp string is invalid ISO 8601 format
  */
-export function deserializeTimestamps<T extends EntityTimestamps>(entity: T): T {
+export function fromPersistedTimestamps<T extends EntityTimestamps>(entity: T): T {
   return {
     ...entity,
     createdAt: parseTimestampSafely(entity.createdAt, 'createdAt'),
@@ -170,3 +175,15 @@ export function deserializeTimestamps<T extends EntityTimestamps>(entity: T): T 
     deletedAt: parseTimestampSafely(entity.deletedAt, 'deletedAt'),
   };
 }
+
+/**
+ * @deprecated Use toPersistedTimestamps instead
+ * @alias toPersistedTimestamps
+ */
+export const serializeTimestamps = toPersistedTimestamps;
+
+/**
+ * @deprecated Use fromPersistedTimestamps instead
+ * @alias fromPersistedTimestamps
+ */
+export const deserializeTimestamps = fromPersistedTimestamps;
