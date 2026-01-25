@@ -3,6 +3,7 @@ import { api } from '../../../services/api';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
+import { withUpdatedAt, markDeleted } from '../../../common/utils/timestamps';
 
 export interface IRecipeService {
     getRecipes(): Promise<Recipe[]>;
@@ -106,11 +107,14 @@ export class LocalRecipeService implements IRecipeService {
                     throw new Error('Invalid recipe update: missing required fields after update');
                 }
 
+                // Business rule: always update updatedAt on modification
+                const withTimestamps = withUpdatedAt(updatedRecipe);
+
                 const updatedRecipes = [...existingRecipes];
-                updatedRecipes[recipeIndex] = updatedRecipe;
+                updatedRecipes[recipeIndex] = withTimestamps;
                 await guestStorage.saveRecipes(updatedRecipes);
 
-                return updatedRecipe;
+                return withTimestamps;
             } catch (error) {
                 // Don't retry if it's a validation error or not found error
                 if (error instanceof Error && (error.message.includes('not found') || error.message.includes('Invalid'))) {

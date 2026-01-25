@@ -1,9 +1,10 @@
 import * as Crypto from 'expo-crypto';
 import type { Recipe } from '../../../mocks/recipes';
 import type { NewRecipeData } from '../components/AddRecipeModal';
+import { withCreatedAt } from '../../../common/utils/timestamps';
 
 export const createRecipe = (data: NewRecipeData): Recipe => {
-    return {
+    const recipe = {
         id: String(Date.now()),
         localId: Crypto.randomUUID(),
         name: data.title,
@@ -14,4 +15,6 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
         instructions: data.instructions,
         imageUrl: data.imageUrl,
     };
+    // Business rule: auto-populate createdAt on creation
+    return withCreatedAt(recipe);
 };
