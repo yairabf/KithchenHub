@@ -20,7 +20,11 @@ import { getIsOnline } from '../utils/networkStatus';
 import { api } from '../../services/api';
 import { pastelColors, colors } from '../../theme';
 import { v5 as uuidv5 } from 'uuid';
-import { markDeleted } from '../utils/timestamps';
+import { markDeleted, withCreatedAt, withUpdatedAt } from '../utils/timestamps';
+import { cacheEvents } from '../utils/cacheEvents';
+import { NetworkError } from '../../services/api';
+import { syncQueueStorage, type SyncOp, type QueueTargetId } from '../utils/syncQueueStorage';
+import * as Crypto from 'expo-crypto';
 
 /**
  * DTO types for API responses (matches RemoteShoppingService)
@@ -219,6 +223,83 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
     const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
     return results.map(mapGroceryItem);
   }
+
+  /**
+   * Creates an optimistic shopping list entity with localId for offline operations
+   */
+  private createOptimisticList(data: Partial<ShoppingList>): ShoppingList {
+    const localId = Crypto.randomUUID();
+    const now = new Date().toISOString();
+    
+    return withCreatedAt({
+      id: localId,
+      localId: localId,
+      name: data.name ?? '',
+      itemCount: data.itemCount ?? 0,
+      icon: data.icon ?? DEFAULT_LIST_ICON,
+      color: data.color ?? DEFAULT_LIST_COLOR,
+      createdAt: now,
+      updatedAt: now,
+    } as ShoppingList);
+  }
+
+  /**
+   * Creates an optimistic shopping item entity with localId for offline operations
+   */
+  private createOptimisticItem(data: Partial<ShoppingItem>): ShoppingItem {
+    const localId = Crypto.randomUUID();
+    const now = new Date().toISOString();
+    
+    return withCreatedAt({
+      id: localId,
+      localId: localId,
+      name: data.name ?? '',
+      image: data.image ?? '',
+      quantity: data.quantity ?? 1,
+      unit: data.unit,
+      isChecked: data.isChecked ?? false,
+      category: data.category ?? 'Other',
+      listId: data.listId ?? '',
+      createdAt: now,
+      updatedAt: now,
+    } as ShoppingItem);
+  }
+
+  /**
+   * Ensures localId exists on entity (for updates of existing entities)
+   */
+  private ensureLocalId<T extends { id: string; localId?: string }>(entity: T): T {
+    if (!entity.localId) {
+      return { ...entity, localId: entity.id };
+    }
+    return entity;
+  }
+
+  /**
+   * Helper method for enqueueing writes to the sync queue.
+   * 
+   * Extracts localId and serverId from the entity and enqueues the write
+   * operation for later sync when network is available.
+   * 
+   * @param entityType - Type of entity (shoppingLists or shoppingItems)
+   * @param op - Sync operation type (create, update, delete)
+   * @param entity - Entity to enqueue
+   */
+  private async enqueueWrite(
+    entityType: 'shoppingLists' | 'shoppingItems',
+    op: SyncOp,
+    entity: ShoppingList | ShoppingItem
+  ): Promise<void> {
+    const localId = entity.localId ?? entity.id;
+    const serverId = entity.id !== localId ? entity.id : undefined;
+    
+    await syncQueueStorage.enqueue(
+      entityType,
+      op,
+      { localId, serverId },
+      entity // Full entity payload
+    );
+  }
   
   // Lists operations
   
@@ -246,109 +327,145 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   }
   
   /**
-   * Creates a shopping list with write-through caching
+   * Creates a shopping list with write-through caching and offline queueing
    * 
-   * Implements write-through caching:
-   * 1. Creates list on server via service
-   * 2. Reads current cache
-   * 3. Adds created list to cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param list - Partial shopping list data to create
-   * @returns The created shopping list with server timestamps
-   * @throws {Error} If service call fails
+   * Critical Write Ordering Rule (Non-negotiable):
+   * UI action → Update cache immediately → Emit cache event → Handle sync (enqueue if offline, call service if online)
    */
   async createList(list: Partial<ShoppingList>): Promise<ShoppingList> {
-    const created = await this.service.createList(list);
+    // Step 1: Create optimistic entity
+    const optimisticEntity = this.createOptimisticList(list);
     
-    // Update cache (with error handling)
+    // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
     await addEntityToCache(
       'shoppingLists',
-      created,
+      optimisticEntity,
       (l) => this.getListId(l)
     );
     
-    return created;
+    // Step 3: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange('shoppingLists');
+    
+    // Step 4: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      try {
+        const created = await this.service.createList(list);
+        await addEntityToCache(
+          'shoppingLists',
+          created,
+          (l) => this.getListId(l)
+        );
+        cacheEvents.emitCacheChange('shoppingLists');
+        return created;
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('shoppingLists', 'create', optimisticEntity);
+        }
+        throw error;
+      }
+    } else {
+      await this.enqueueWrite('shoppingLists', 'create', optimisticEntity);
+      return optimisticEntity;
+    }
   }
   
   /**
-   * Updates a shopping list with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Updates list on server via service
-   * 2. Reads current cache
-   * 3. Updates list in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Shopping list ID to update
-   * @param updates - Partial shopping list data to update
-   * @returns The updated shopping list with server timestamps
-   * @throws {Error} If service call fails
+   * Updates a shopping list with write-through caching and offline queueing
    */
   async updateList(id: string, updates: Partial<ShoppingList>): Promise<ShoppingList> {
-    const updated = await this.service.updateList(id, updates);
+    // Step 1: Read current cache
+    const current = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
+    const existing = current.find(l => l.id === id || l.localId === id);
     
-    // Update cache (with error handling)
+    if (!existing) {
+      throw new Error(`Shopping list with id ${id} not found in cache`);
+    }
+    
+    // Step 2: Create optimistic updated entity
+    const optimisticEntity = this.ensureLocalId(withUpdatedAt({
+      ...existing,
+      ...updates,
+    } as ShoppingList));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
     await updateEntityInCache(
       'shoppingLists',
-      updated,
+      optimisticEntity,
       (l) => this.getListId(l),
       (l) => l.id === id || l.localId === id
     );
     
-    return updated;
-  }
-  
-  /**
-   * Deletes a shopping list (soft-delete) with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Deletes list on server via service (soft-delete)
-   * 2. Reads current cache
-   * 3. Marks list as deleted in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Shopping list ID to delete
-   * @throws {Error} If service call fails
-   */
-  async deleteList(id: string): Promise<void> {
-    await this.service.deleteList(id);
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange('shoppingLists');
     
-    // Update cache (soft-delete) with error handling
-    try {
-      const current = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
-      const list = current.find(l => l.id === id || l.localId === id);
-      if (list) {
-        const deleted = markDeleted(list);
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      try {
+        const updated = await this.service.updateList(id, updates);
         await updateEntityInCache(
           'shoppingLists',
-          deleted,
+          updated,
           (l) => this.getListId(l),
           (l) => l.id === id || l.localId === id
         );
+        cacheEvents.emitCacheChange('shoppingLists');
+        return updated;
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('shoppingLists', 'update', optimisticEntity);
+        }
+        throw error;
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`Failed to update cache after delete for shoppingLists:`, errorMessage);
-      // Don't throw - server operation succeeded
+    } else {
+      await this.enqueueWrite('shoppingLists', 'update', optimisticEntity);
+      return optimisticEntity;
+    }
+  }
+  
+  /**
+   * Deletes a shopping list (soft-delete) with write-through caching and offline queueing
+   */
+  async deleteList(id: string): Promise<void> {
+    // Step 1: Read current cache
+    const current = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
+    const existing = current.find(l => l.id === id || l.localId === id);
+    
+    if (!existing) {
+      return;
+    }
+    
+    // Step 2: Create optimistic deleted entity
+    const optimisticEntity = this.ensureLocalId(markDeleted(existing));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
+    await updateEntityInCache(
+      'shoppingLists',
+      optimisticEntity,
+      (l) => this.getListId(l),
+      (l) => l.id === id || l.localId === id
+    );
+    
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange('shoppingLists');
+    
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
       try {
-        await invalidateCache('shoppingLists');
-      } catch (invalidateError) {
-        // Ignore invalidation errors
-        console.error(`Failed to invalidate cache after delete error:`, invalidateError);
+        await this.service.deleteList(id);
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('shoppingLists', 'delete', optimisticEntity);
+        }
+        throw error;
       }
+    } else {
+      await this.enqueueWrite('shoppingLists', 'delete', optimisticEntity);
     }
   }
   
@@ -369,141 +486,198 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   }
   
   /**
-   * Creates a shopping item with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Creates item on server via service
-   * 2. Reads current cache
-   * 3. Adds created item to cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param item - Partial shopping item data to create
-   * @returns The created shopping item with server timestamps
-   * @throws {Error} If service call fails
+   * Creates a shopping item with write-through caching and offline queueing
    */
   async createItem(item: Partial<ShoppingItem>): Promise<ShoppingItem> {
-    const created = await this.service.createItem(item);
+    // Step 1: Create optimistic entity
+    const optimisticEntity = this.createOptimisticItem(item);
     
-    // Update cache (with error handling)
+    // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
     await addEntityToCache(
       'shoppingItems',
-      created,
+      optimisticEntity,
       (i) => this.getItemId(i)
     );
     
-    return created;
-  }
-  
-  /**
-   * Updates a shopping item with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Updates item on server via service
-   * 2. Reads current cache
-   * 3. Updates item in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Shopping item ID to update
-   * @param updates - Partial shopping item data to update
-   * @returns The updated shopping item with server timestamps
-   * @throws {Error} If service call fails
-   */
-  async updateItem(id: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem> {
-    const updated = await this.service.updateItem(id, updates);
+    // Step 3: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange('shoppingItems');
     
-    // Update cache (with error handling)
-    await updateEntityInCache(
-      'shoppingItems',
-      updated,
-      (i) => this.getItemId(i),
-      (i) => i.id === id || i.localId === id
-    );
+    // Step 4: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
     
-    return updated;
-  }
-  
-  /**
-   * Deletes a shopping item (soft-delete) with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Deletes item on server via service (soft-delete)
-   * 2. Reads current cache
-   * 3. Marks item as deleted in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Shopping item ID to delete
-   * @throws {Error} If service call fails
-   */
-  async deleteItem(id: string): Promise<void> {
-    await this.service.deleteItem(id);
-    
-    // Update cache (soft-delete) with error handling
-    try {
-      const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
-      const item = current.find(i => i.id === id || i.localId === id);
-      if (item) {
-        const deleted = markDeleted(item);
-        await updateEntityInCache(
-          'shoppingItems',
-          deleted,
-          (i) => this.getItemId(i),
-          (i) => i.id === id || i.localId === id
-        );
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`Failed to update cache after delete for shoppingItems:`, errorMessage);
-      // Don't throw - server operation succeeded
+    if (isOnline) {
       try {
-        await invalidateCache('shoppingItems');
-      } catch (invalidateError) {
-        // Ignore invalidation errors
-        console.error(`Failed to invalidate cache after delete error:`, invalidateError);
+        const created = await this.service.createItem(item);
+        await addEntityToCache(
+          'shoppingItems',
+          created,
+          (i) => this.getItemId(i)
+        );
+        cacheEvents.emitCacheChange('shoppingItems');
+        return created;
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('shoppingItems', 'create', optimisticEntity);
+        }
+        throw error;
       }
+    } else {
+      await this.enqueueWrite('shoppingItems', 'create', optimisticEntity);
+      return optimisticEntity;
     }
   }
   
   /**
-   * Toggles shopping item checked state with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Toggles item on server via service
-   * 2. Reads current cache
-   * 3. Updates item in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Shopping item ID to toggle
-   * @returns The updated shopping item with server timestamps
-   * @throws {Error} If service call fails
+   * Updates a shopping item with write-through caching and offline queueing
    */
-  async toggleItem(id: string): Promise<ShoppingItem> {
-    const updated = await this.service.toggleItem(id);
+  async updateItem(id: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem> {
+    // Step 1: Read current cache
+    const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+    const existing = current.find(i => i.id === id || i.localId === id);
     
-    // Update cache (with error handling)
+    if (!existing) {
+      throw new Error(`Shopping item with id ${id} not found in cache`);
+    }
+    
+    // Step 2: Create optimistic updated entity
+    const optimisticEntity = this.ensureLocalId(withUpdatedAt({
+      ...existing,
+      ...updates,
+    } as ShoppingItem));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
     await updateEntityInCache(
       'shoppingItems',
-      updated,
+      optimisticEntity,
       (i) => this.getItemId(i),
       (i) => i.id === id || i.localId === id
     );
     
-    return updated;
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange('shoppingItems');
+    
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      try {
+        const updated = await this.service.updateItem(id, updates);
+        await updateEntityInCache(
+          'shoppingItems',
+          updated,
+          (i) => this.getItemId(i),
+          (i) => i.id === id || i.localId === id
+        );
+        cacheEvents.emitCacheChange('shoppingItems');
+        return updated;
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('shoppingItems', 'update', optimisticEntity);
+        }
+        throw error;
+      }
+    } else {
+      await this.enqueueWrite('shoppingItems', 'update', optimisticEntity);
+      return optimisticEntity;
+    }
+  }
+  
+  /**
+   * Deletes a shopping item (soft-delete) with write-through caching and offline queueing
+   */
+  async deleteItem(id: string): Promise<void> {
+    // Step 1: Read current cache
+    const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+    const existing = current.find(i => i.id === id || i.localId === id);
+    
+    if (!existing) {
+      return;
+    }
+    
+    // Step 2: Create optimistic deleted entity
+    const optimisticEntity = this.ensureLocalId(markDeleted(existing));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
+    await updateEntityInCache(
+      'shoppingItems',
+      optimisticEntity,
+      (i) => this.getItemId(i),
+      (i) => i.id === id || i.localId === id
+    );
+    
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange('shoppingItems');
+    
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      try {
+        await this.service.deleteItem(id);
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('shoppingItems', 'delete', optimisticEntity);
+        }
+        throw error;
+      }
+    } else {
+      await this.enqueueWrite('shoppingItems', 'delete', optimisticEntity);
+    }
+  }
+  
+  /**
+   * Toggles shopping item checked state with write-through caching and offline queueing
+   */
+  async toggleItem(id: string): Promise<ShoppingItem> {
+    // Step 1: Read current cache
+    const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+    const existing = current.find(i => i.id === id || i.localId === id);
+    
+    if (!existing) {
+      throw new Error(`Shopping item with id ${id} not found in cache`);
+    }
+    
+    // Step 2: Create optimistic toggled entity
+    const optimisticEntity = this.ensureLocalId(withUpdatedAt({
+      ...existing,
+      isChecked: !existing.isChecked,
+    } as ShoppingItem));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
+    await updateEntityInCache(
+      'shoppingItems',
+      optimisticEntity,
+      (i) => this.getItemId(i),
+      (i) => i.id === id || i.localId === id
+    );
+    
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange('shoppingItems');
+    
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      try {
+        const updated = await this.service.toggleItem(id);
+        await updateEntityInCache(
+          'shoppingItems',
+          updated,
+          (i) => this.getItemId(i),
+          (i) => i.id === id || i.localId === id
+        );
+        cacheEvents.emitCacheChange('shoppingItems');
+        return updated;
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('shoppingItems', 'update', optimisticEntity);
+        }
+        throw error;
+      }
+    } else {
+      await this.enqueueWrite('shoppingItems', 'update', optimisticEntity);
+      return optimisticEntity;
+    }
   }
   
   // Aggregated data

@@ -14,11 +14,17 @@ import {
   invalidateCache,
   readCachedEntitiesForUpdate,
   addEntityToCache,
-  updateEntityInCache
+  updateEntityInCache,
+  setCached
 } from './cacheAwareRepository';
 import { getIsOnline } from '../utils/networkStatus';
 import { api } from '../../services/api';
 import { normalizeTimestampsFromApi } from '../utils/timestamps';
+import { cacheEvents } from '../utils/cacheEvents';
+import { NetworkError } from '../../services/api';
+import { syncQueueStorage, type SyncOp, type QueueTargetId } from '../utils/syncQueueStorage';
+import * as Crypto from 'expo-crypto';
+import { withCreatedAt, withUpdatedAt, markDeleted } from '../utils/timestamps';
 
 /**
  * DTO type for API responses (matches RemoteRecipeService)
@@ -101,112 +107,246 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
   }
   
   /**
-   * Creates a recipe with write-through caching
+   * Creates an optimistic recipe entity with localId for offline operations.
    * 
-   * Implements write-through caching:
-   * 1. Creates recipe on server via service
-   * 2. Reads current cache
-   * 3. Adds created recipe to cache
-   * 4. Emits cache change event to trigger UI updates
+   * Generates a temporary UUID as localId and sets initial timestamps.
+   * The entity will be updated with server-assigned ID after successful sync.
    * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
+   * @param data - Partial recipe data from user input
+   * @returns Complete Recipe entity with generated localId and timestamps
+   */
+  private createOptimisticRecipe(data: Partial<Recipe>): Recipe {
+    const localId = Crypto.randomUUID();
+    const now = new Date().toISOString();
+    
+    return withCreatedAt({
+      id: localId, // Use localId as id initially (will be replaced by server id after sync)
+      localId: localId,
+      name: data.name ?? '',
+      cookTime: data.cookTime ?? '',
+      prepTime: data.prepTime,
+      category: data.category ?? '',
+      imageUrl: data.imageUrl,
+      description: data.description,
+      calories: data.calories,
+      servings: data.servings,
+      ingredients: data.ingredients ?? [],
+      instructions: data.instructions ?? [],
+      createdAt: now,
+      updatedAt: now,
+    } as Recipe);
+  }
+
+  /**
+   * Ensures localId exists on entity (for updates of existing entities)
+   */
+  private ensureLocalId(recipe: Recipe): Recipe {
+    if (!recipe.localId) {
+      // Entity from server may not have localId, use id as localId
+      return { ...recipe, localId: recipe.id };
+    }
+    return recipe;
+  }
+
+  /**
+   * Helper method for enqueueing writes to the sync queue.
+   * 
+   * Extracts localId and serverId from the entity and enqueues the write
+   * operation for later sync when network is available.
+   * 
+   * @param op - Sync operation type (create, update, delete)
+   * @param entity - Recipe entity to enqueue
+   */
+  private async enqueueWrite(
+    op: SyncOp,
+    entity: Recipe
+  ): Promise<void> {
+    const localId = entity.localId ?? entity.id;
+    const serverId = entity.id !== localId ? entity.id : undefined;
+    
+    await syncQueueStorage.enqueue(
+      this.entityType,
+      op,
+      { localId, serverId },
+      entity // Full entity payload
+    );
+  }
+
+  /**
+   * Creates a recipe with write-through caching and offline queueing
+   * 
+   * Critical Write Ordering Rule (Non-negotiable):
+   * UI action → Update cache immediately → Emit cache event → Handle sync (enqueue if offline, call service if online)
+   * 
+   * The cache must be updated BEFORE any network operations or queueing.
+   * This ensures UI updates instantly regardless of network status.
    * 
    * @param recipe - Partial recipe data to create
-   * @returns The created recipe with server timestamps
-   * @throws {Error} If service call fails
+   * @returns The created recipe (optimistic if offline, server response if online)
+   * @throws {Error} If service call fails (when online)
    */
   async create(recipe: Partial<Recipe>): Promise<Recipe> {
-    // 1. Call service to create on server
-    const created = await this.service.createRecipe(recipe);
+    // Step 1: Create optimistic entity (always, for consistent behavior)
+    const optimisticEntity = this.createOptimisticRecipe(recipe);
     
-    // 2. Update cache (with error handling)
+    // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
     await addEntityToCache(
       this.entityType,
-      created,
+      optimisticEntity,
       (r) => this.getId(r)
     );
     
-    return created;
+    // Step 3: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange(this.entityType);
+    
+    // Step 4: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      // Online: Call service, update cache with server response
+      try {
+        const created = await this.service.createRecipe(recipe);
+        // Update cache with server-assigned ID and timestamps
+        await addEntityToCache(
+          this.entityType,
+          created,
+          (r) => this.getId(r)
+        );
+        cacheEvents.emitCacheChange(this.entityType);
+        return created;
+      } catch (error) {
+        // Network error during service call → enqueue for retry
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('create', optimisticEntity);
+        }
+        throw error;
+      }
+    } else {
+      // Offline: Enqueue write for later sync
+      await this.enqueueWrite('create', optimisticEntity);
+      return optimisticEntity;
+    }
   }
   
   /**
-   * Updates a recipe with write-through caching
+   * Updates a recipe with write-through caching and offline queueing
    * 
-   * Implements write-through caching:
-   * 1. Updates recipe on server via service
-   * 2. Reads current cache
-   * 3. Updates recipe in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
+   * Critical Write Ordering Rule (Non-negotiable):
+   * UI action → Update cache immediately → Emit cache event → Handle sync (enqueue if offline, call service if online)
    * 
    * @param id - Recipe ID to update
    * @param updates - Partial recipe data to update
-   * @returns The updated recipe with server timestamps
-   * @throws {Error} If service call fails
+   * @returns The updated recipe (optimistic if offline, server response if online)
+   * @throws {Error} If service call fails (when online)
    */
   async update(id: string, updates: Partial<Recipe>): Promise<Recipe> {
-    // 1. Call service to update on server
-    const updated = await this.service.updateRecipe(id, updates);
+    // Step 1: Read current cache to get existing entity
+    const current = await readCachedEntitiesForUpdate<Recipe>(this.entityType);
+    const existing = current.find(r => r.id === id || r.localId === id);
     
-    // 2. Update cache (with error handling)
+    if (!existing) {
+      throw new Error(`Recipe with id ${id} not found in cache`);
+    }
+    
+    // Step 2: Create optimistic updated entity
+    const optimisticEntity = this.ensureLocalId(withUpdatedAt({
+      ...existing,
+      ...updates,
+    } as Recipe));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
     await updateEntityInCache(
       this.entityType,
-      updated,
+      optimisticEntity,
       (r) => this.getId(r),
       (r) => r.id === id || r.localId === id
     );
     
-    return updated;
-  }
-  
-  /**
-   * Deletes a recipe (soft-delete) with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Deletes recipe on server via service (soft-delete)
-   * 2. Reads current cache
-   * 3. Marks recipe as deleted in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Recipe ID to delete
-   * @throws {Error} If service call fails
-   */
-  async delete(id: string): Promise<void> {
-    // 1. Call service to delete on server
-    await this.service.deleteRecipe(id);
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange(this.entityType);
     
-    // 2. Read current cache and mark as deleted
-    try {
-      const current = await readCachedEntitiesForUpdate<Recipe>(this.entityType);
-      const recipe = current.find(r => r.id === id || r.localId === id);
-      if (recipe) {
-        const deleted = { ...recipe, deletedAt: new Date().toISOString() };
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      // Online: Call service, update cache with server response
+      try {
+        const updated = await this.service.updateRecipe(id, updates);
+        // Update cache with server timestamps
         await updateEntityInCache(
           this.entityType,
-          deleted,
+          updated,
           (r) => this.getId(r),
           (r) => r.id === id || r.localId === id
         );
+        cacheEvents.emitCacheChange(this.entityType);
+        return updated;
+      } catch (error) {
+        // Network error during service call → enqueue for retry
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('update', optimisticEntity);
+        }
+        throw error;
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`Failed to update cache after delete for ${this.entityType}:`, errorMessage);
-      // Don't throw - server operation succeeded
+    } else {
+      // Offline: Enqueue write for later sync
+      await this.enqueueWrite('update', optimisticEntity);
+      return optimisticEntity;
+    }
+  }
+  
+  /**
+   * Deletes a recipe (soft-delete) with write-through caching and offline queueing
+   * 
+   * Critical Write Ordering Rule (Non-negotiable):
+   * UI action → Update cache immediately → Emit cache event → Handle sync (enqueue if offline, call service if online)
+   * 
+   * @param id - Recipe ID to delete
+   * @throws {Error} If service call fails (when online)
+   */
+  async delete(id: string): Promise<void> {
+    // Step 1: Read current cache to get existing entity
+    const current = await readCachedEntitiesForUpdate<Recipe>(this.entityType);
+    const existing = current.find(r => r.id === id || r.localId === id);
+    
+    if (!existing) {
+      // Entity not found, nothing to delete
+      return;
+    }
+    
+    // Step 2: Create optimistic deleted entity
+    const optimisticEntity = this.ensureLocalId(markDeleted(existing));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
+    await updateEntityInCache(
+      this.entityType,
+      optimisticEntity,
+      (r) => this.getId(r),
+      (r) => r.id === id || r.localId === id
+    );
+    
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange(this.entityType);
+    
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      // Online: Call service, update cache with server response
       try {
-        await invalidateCache(this.entityType);
-      } catch (invalidateError) {
-        // Ignore invalidation errors
-        console.error(`Failed to invalidate cache after delete error:`, invalidateError);
+        await this.service.deleteRecipe(id);
+        // Cache already updated optimistically, no need to update again
+        // Server response confirms deletion
+      } catch (error) {
+        // Network error during service call → enqueue for retry
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('delete', optimisticEntity);
+        }
+        throw error;
       }
+    } else {
+      // Offline: Enqueue write for later sync
+      await this.enqueueWrite('delete', optimisticEntity);
     }
   }
   
