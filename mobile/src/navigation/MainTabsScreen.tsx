@@ -16,6 +16,7 @@ import { ShoppingQuickActionModal } from '../features/shopping/components/Shoppi
 import { ChoresQuickActionModal } from '../features/chores/components/ChoresQuickActionModal';
 import { RecipeDetailScreen } from '../features/recipes/screens/RecipeDetailScreen';
 import type { Recipe } from '../mocks/recipes';
+import { OfflineBanner } from '../common/components/OfflineBanner';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -143,6 +144,7 @@ export function MainTabsScreen() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner />
       <View style={styles.screenContainer}>
         <Animated.View style={[styles.screen, animatedStyle]}>
           {renderScreen(activeTab)}
