@@ -352,6 +352,12 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Persists recipes to AsyncStorage via `guestStorage.saveRecipes()` on create/update
     - Includes retry logic for concurrent write operations
     - Validates recipe data before saving
+    - **Dev-Only Seeding**: Automatically seeds mock recipes when storage is empty (development mode only)
+      - Only seeds when storage is truly empty (no records, including soft-deleted)
+      - Uses `isDevMode()` utility to detect development mode (`__DEV__` constant)
+      - Seeds `mockRecipes` with proper `createdAt` timestamps via `withCreatedAt()`
+      - Idempotent: won't re-seed after user deletes all recipes (tombstones remain)
+      - Production builds never seed (verified via `isDevMode()` check)
     - **Timestamp Management**: 
       - `createRecipe()`: Automatically populates `createdAt` via `withCreatedAt()` helper
       - `updateRecipe()`: Automatically updates `updatedAt` via `withUpdatedAt()` helper
@@ -380,6 +386,10 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)
   - `toSupabaseTimestamps()`: Converts camelCase timestamps to snake_case for API payloads
   - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
+- **Development Mode Utility**: `mobile/src/common/utils/devMode.ts`
+  - `isDevMode()`: Wrapper around React Native `__DEV__` constant for testability
+  - Used by `LocalRecipeService` to determine if dev-only seeding should occur
+  - Separated into utility module for easy mocking in tests
 - **DTO Types**: `RecipeApiResponse` type defined in `recipeService.ts`
   - Replaces `any` types for improved type safety
   - Supports both camelCase and snake_case timestamp formats from API
@@ -437,7 +447,8 @@ Utility for applying remote updates to local cached state:
 - `guestStorage` - Guest data persistence utilities (`mobile/src/common/utils/guestStorage.ts`)
 - `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
 - `mockGroceriesDB` - For ingredient search in add modal (when mock enabled)
-- `mockRecipes` - Initial recipe data (used by LocalRecipeService)
+- `mockRecipes` - Initial recipe data (used by LocalRecipeService for dev-only seeding)
+- `isDevMode` - Development mode detection utility (`mobile/src/common/utils/devMode.ts`)
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
 - `deleteRecipeImage` - Image cleanup utility (`mobile/src/services/imageUploadService.ts`) for removing orphaned uploads
 - `pastelColors` - Theme colors for card backgrounds
