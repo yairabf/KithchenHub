@@ -9,6 +9,7 @@ import { v5 as uuidv5 } from 'uuid';
 import type { GroceryItem } from '../../features/shopping/components/GrocerySearchBar';
 import type { Category } from '../../mocks/shopping';
 import { pastelColors } from '../../theme';
+import { isValidImageUrl } from './imageUtils';
 
 // Fixed namespace UUID for generating deterministic category UUIDs
 const CATEGORY_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
@@ -28,7 +29,9 @@ export function buildCategoriesFromGroceries(items: GroceryItem[]): Category[] {
   }, {});
 
   return Object.entries(categoryMap).map(([categoryName, categoryItems], index) => {
-    const fallbackImage = categoryItems.find(item => item.image)?.image ?? '';
+    // Find first item with a valid image URL
+    const itemWithImage = categoryItems.find(item => isValidImageUrl(item.image));
+    const fallbackImage = itemWithImage?.image ?? '';
     const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
     
     // Generate deterministic UUID based on category name (stable across calls)

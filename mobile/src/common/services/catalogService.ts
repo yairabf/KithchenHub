@@ -16,6 +16,7 @@ import { api, NetworkError } from '../../services/api';
 import { getPublicCatalogCacheKey } from '../storage/dataModeStorage';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
 import { mockGroceriesDB } from '../../data/groceryDatabase';
+import { config } from '../../config';
 import type { GroceryItem } from '../../features/shopping/components/GrocerySearchBar';
 import type { Category } from '../../mocks/shopping';
 import type { GrocerySearchItemDto } from '../types/catalog';
@@ -91,6 +92,7 @@ function isValidGroceryItemsArray(items: unknown[]): items is GroceryItem[] {
  * Catalog Service
  * 
  * Provides methods to fetch catalog data with fallback strategy:
+ * 0. If mock data is enabled (config.mockData.enabled), return mock data directly
  * 1. Try API first
  * 2. Fallback to cache on network error
  * 3. Fallback to mock data if cache empty
@@ -165,6 +167,12 @@ export class CatalogService {
    * @returns Array of grocery items
    */
   private async fetchGroceryItemsWithFallback(): Promise<GroceryItem[]> {
+    // If mock data is enabled, skip API and use mock data directly
+    if (config.mockData.enabled) {
+      this.logCatalogEvent('log', 'Mock data enabled, using mock catalog data', { itemCount: mockGroceriesDB.length, source: CatalogSource.MOCK });
+      return mockGroceriesDB;
+    }
+
     // Try API first
     try {
       const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');

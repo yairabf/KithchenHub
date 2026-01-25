@@ -40,6 +40,17 @@ jest.mock('../../../common/utils/guestStorage', () => ({
   },
 }));
 
+// Mock devMode and config
+jest.mock('../../../common/utils/devMode', () => ({
+  isDevMode: jest.fn(() => false), // Default to false, can be overridden in tests
+}));
+
+jest.mock('../../../config', () => ({
+  config: {
+    mockData: { enabled: false }, // Default to false, can be overridden in tests
+  },
+}));
+
 // Mock grocery item for testing
 const mockGroceryItem = {
   id: 'grocery-1',
@@ -121,6 +132,35 @@ describe('LocalShoppingService', () => {
       expect(data.shoppingLists).toHaveLength(1);
       expect(data.shoppingLists[0].localId).toBe(activeList.localId);
       expect(data.shoppingLists.find((l) => l.localId === deletedList.localId)).toBeUndefined();
+    });
+
+    it('should handle seeding failure gracefully and return empty arrays', async () => {
+      // Mock storage to return empty arrays (triggers seeding)
+      (guestStorage.getShoppingLists as jest.Mock).mockResolvedValue([]);
+      (guestStorage.getShoppingItems as jest.Mock).mockResolvedValue([]);
+      
+      // Mock saveShoppingLists to throw error (simulating seeding failure)
+      (guestStorage.saveShoppingLists as jest.Mock).mockRejectedValue(new Error('Storage full'));
+      
+      // Enable dev mode and mock data to trigger seeding
+      const { isDevMode } = require('../../../common/utils/devMode');
+      const { config } = require('../../../config');
+      (isDevMode as jest.Mock).mockReturnValue(true);
+      config.mockData.enabled = true;
+
+      const data = await service.getShoppingData();
+      
+      // Should return empty arrays, not throw
+      expect(data.shoppingLists).toEqual([]);
+      expect(data.shoppingItems).toEqual([]);
+      
+      // Verify catalog data is still returned
+      expect(data.groceryItems).toBeDefined();
+      expect(data.categories).toBeDefined();
+      
+      // Reset mocks
+      (isDevMode as jest.Mock).mockReturnValue(false);
+      config.mockData.enabled = false;
     });
   });
 

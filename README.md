@@ -11,7 +11,7 @@ Kitchen Hub is a comprehensive full-stack application for household management. 
 - **Mobile App**: React Native/Expo cross-platform mobile application (iOS, Android, Web)
 - **Backend API**: NestJS REST API with PostgreSQL database
 
-The app helps families organize shopping lists with a 111-item grocery database, discover and create recipes, track chores, and get a unified dashboard view—all with support for Google sign-in or guest mode.
+The app helps families organize shopping lists with a comprehensive 111-item grocery catalog, discover and create recipes, track chores, and get a unified dashboard view—all with support for Google sign-in or guest mode, and intelligent offline capabilities with mock data seeding for development.
 
 ## Screenshots
 
@@ -25,14 +25,24 @@ The app helps families organize shopping lists with a 111-item grocery database,
 
 ## Features
 
-- **🛒 Shopping Lists** - Multi-list management with 111-item grocery database, smart search, and category browsing
-- **🍳 Recipes** - Discover, create, and organize recipes with ingredient-to-shopping list integration
-- **✅ Chores** - Task tracking with progress visualization and assignee management
-- **🏠 Dashboard** - Quick overview with time-based greeting and action widgets
-- **👤 Authentication** - Google sign-in and guest mode with profile management
-- **⚙️ Settings** - Manage notifications, household members, and app preferences
-- **🔄 Offline Support** - Local caching with automatic sync when online
-- **👥 Multi-User** - Household management with member invitations
+### Core Features
+
+- **🛒 Shopping Lists** - Multi-list management with comprehensive grocery catalog, smart search, category browsing with images, and frequently added items
+- **🍳 Recipes** - Discover, create, and organize recipes with ingredient-to-shopping list integration, step tracking, and category filtering
+- **✅ Chores** - Task tracking with animated progress visualization, assignee management, and due date tracking
+- **🏠 Dashboard** - Quick overview with time-based personalized greeting, action widgets, and household statistics
+- **👤 Authentication** - Google sign-in with OAuth and guest mode for local-only usage with data import/export
+- **⚙️ Settings** - Profile management, household member management, notification preferences, and app configuration
+
+### Advanced Features
+
+- **🔄 Offline Support** - Intelligent fallback strategy: API → Cache → Mock data for seamless offline experience
+- **👥 Multi-User** - Household management with member invitations and shared data synchronization
+- **📦 Public Grocery Catalog** - Centralized catalog service with 111+ categorized items, automatic category image assignment, and smart caching
+- **🎨 Category Images** - Visual category browsing with automatic image assignment from grocery items and graceful fallback rendering
+- **🧪 Mock Data Mode** - Development mode with automatic seeding of mock shopping lists, recipes, and grocery catalog when storage is empty
+- **🔄 Real-time Sync** - Automatic data synchronization for signed-in users with conflict resolution
+- **📱 Responsive Design** - Optimized layouts for phones and tablets with adaptive UI components
 
 ## Project Structure
 
@@ -94,6 +104,12 @@ cd mobile
 # Install dependencies
 npm install
 
+# Set up environment variables (optional)
+# Create .env file with:
+# EXPO_PUBLIC_SUPABASE_URL=your-supabase-url
+# EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+# EXPO_PUBLIC_USE_MOCK_DATA=true  # Enable mock data mode for development
+
 # Start development server
 npm start
 
@@ -101,7 +117,17 @@ npm start
 npm run ios       # iOS simulator
 npm run android   # Android emulator
 npm run web       # Web browser
+
+# Run tests
+npm test
 ```
+
+**Mock Data Mode**: Set `EXPO_PUBLIC_USE_MOCK_DATA=true` in `.env` to enable mock data mode. This will:
+- Use local mock grocery catalog instead of API calls
+- Automatically seed mock shopping lists and recipes when storage is empty
+- Skip API calls for faster development
+
+**Note**: Restart the development server after changing environment variables for changes to take effect.
 
 See [Mobile README](mobile/README.md) for detailed mobile app documentation.
 
@@ -145,7 +171,9 @@ The mobile app follows a **feature-based architecture**:
 - **Navigation**: Tab-based navigation with conditional auth flow
 - **State Management**: React Context for global state, local state for features
 - **Data Persistence**: AsyncStorage with cache-aware repositories
-- **Offline Support**: Local caching with sync queue
+- **Offline Support**: Intelligent fallback strategy (API → Cache → Mock) with local caching and sync queue
+- **Catalog Service**: Centralized grocery catalog with automatic category building, image assignment, and fallback rendering
+- **Mock Data Seeding**: Automatic seeding of mock data in development mode when storage is empty
 
 ### Backend API Architecture
 

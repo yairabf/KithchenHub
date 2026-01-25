@@ -355,6 +355,9 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
     - Cache events trigger automatic UI re-renders without manual refresh
   - **Guest Mode**:
     - Uses service directly (no cache layer)
+    - **Recipe Loading**: Uses `useEffect` to load recipes from `service.getRecipes()` when `!isSignedIn`
+    - Maintains separate state (`guestRecipes`, `isGuestLoading`, `guestError`) for guest mode
+    - Handles loading and error states for guest mode recipe fetching
     - `addRecipe` and `updateRecipe` automatically persist to guest storage
     - `updateRecipe` merges updates with existing recipe data to prevent data loss
 

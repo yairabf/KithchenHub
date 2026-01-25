@@ -17,7 +17,6 @@ import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
-import { mockGroceriesDB } from '../../../data/groceryDatabase';
 import { recipeCategories, type Recipe } from '../../../mocks/recipes';
 import { useResponsive } from '../../../common/hooks';
 import { resizeAndValidateImage } from '../../../common/utils';
