@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, shadows } from '../../../../theme';
+import { colors, shadows, spacing } from '../../../../theme';
 
 export const styles = StyleSheet.create({
   leftColumn: {
@@ -107,5 +107,10 @@ export const styles = StyleSheet.create({
   checkedTitle: {
     color: colors.textMuted,
     textDecorationLine: 'line-through',
+  },
+  syncStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
 });

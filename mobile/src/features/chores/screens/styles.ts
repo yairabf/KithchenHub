@@ -60,9 +60,18 @@ export const styles = StyleSheet.create({
   },
   choreCardIcon: {
     marginRight: spacing.sm,
+    position: 'relative',
   },
   choreCardIconText: {
     fontSize: 26,
+  },
+  syncStatusContainer: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: colors.transparent.white80,
+    borderRadius: 12,
+    padding: spacing.xs,
   },
   choreCardEditButton: {
     width: componentSize.button.sm,

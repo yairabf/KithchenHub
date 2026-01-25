@@ -11,11 +11,20 @@ export const styles = StyleSheet.create({
   recipeImageContainer: {
     height: 100,
     backgroundColor: colors.transparent.white50,
+    position: 'relative',
   },
   recipeImagePlaceholder: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  syncStatusContainer: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: colors.transparent.white80,
+    borderRadius: 12,
+    padding: spacing.xs,
   },
   recipeInfo: {
     padding: spacing.sm,
