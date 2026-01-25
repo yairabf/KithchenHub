@@ -29,7 +29,8 @@ export function toSupabaseTimestamps<T extends EntityTimestamps>(entity: T): Omi
   updated_at?: string;
   deleted_at?: string;
 } {
-  const result: Record<string, unknown> = { ...entity };
+  // Type assertion needed because T extends EntityTimestamps which doesn't have index signature
+  const result: Record<string, unknown> = { ...(entity as unknown as Record<string, unknown>) };
   
   // Convert and map createdAt → created_at
   if (entity.createdAt !== undefined && entity.createdAt !== null) {
