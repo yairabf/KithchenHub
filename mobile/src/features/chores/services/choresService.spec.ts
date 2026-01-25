@@ -4,6 +4,40 @@ import {
   LocalChoresService,
   RemoteChoresService,
 } from './choresService';
+import { guestStorage } from '../../../common/utils/guestStorage';
+import { api } from '../../../services/api';
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    default: {
+        getItem: jest.fn(),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+    },
+}));
+
+// Mock expo-crypto
+jest.mock('expo-crypto', () => ({
+    randomUUID: jest.fn(() => 'mock-uuid'),
+}));
+
+// Mock the api client
+jest.mock('../../../services/api', () => ({
+    api: {
+        get: jest.fn(),
+        post: jest.fn(),
+        put: jest.fn(),
+        patch: jest.fn(),
+    },
+}));
+
+// Mock guestStorage
+jest.mock('../../../common/utils/guestStorage', () => ({
+    guestStorage: {
+        getChores: jest.fn().mockResolvedValue([]),
+        saveChores: jest.fn().mockResolvedValue(undefined),
+    },
+}));
 
 describe('createChoresService', () => {
   describe.each([

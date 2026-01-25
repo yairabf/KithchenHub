@@ -182,3 +182,57 @@ export function markDeleted<T extends EntityTimestamps>(
     deletedAt: timestamp || new Date(),
   };
 }
+
+/**
+ * Normalizes timestamp fields from API responses.
+ * Handles both camelCase and snake_case formats, converting strings to Date objects.
+ * 
+ * This utility centralizes the logic for normalizing API responses that may come
+ * in different formats (camelCase with Date objects, camelCase with strings, or snake_case).
+ * 
+ * @param item - API response item that may have timestamps in various formats
+ * @returns Object with normalized camelCase Date timestamp fields
+ * @remarks
+ * - Checks if item already has camelCase timestamps (createdAt, updatedAt, deletedAt)
+ * - If camelCase: converts string timestamps to Date objects if needed
+ * - If snake_case: uses fromSupabaseTimestamps helper
+ * - Returns properly typed entity with Date objects
+ */
+export function normalizeTimestampsFromApi<T extends EntityTimestamps>(
+  item: unknown
+): T {
+  if (!item || typeof item !== 'object') {
+    throw new Error('normalizeTimestampsFromApi: item must be a valid object');
+  }
+
+  const itemRecord = item as Record<string, unknown>;
+
+  // Check if already camelCase (some APIs might transform)
+  if (itemRecord.createdAt || itemRecord.updatedAt || itemRecord.deletedAt) {
+    return {
+      ...itemRecord,
+      createdAt: normalizeTimestampField(itemRecord.createdAt),
+      updatedAt: normalizeTimestampField(itemRecord.updatedAt),
+      deletedAt: normalizeTimestampField(itemRecord.deletedAt),
+    } as T;
+  }
+
+  // Has snake_case, use helper
+  return fromSupabaseTimestamps(itemRecord as { created_at?: string; updated_at?: string; deleted_at?: string }) as T;
+}
+
+/**
+ * Normalizes a single timestamp field value to a Date object.
+ * 
+ * @param value - Timestamp value (Date, string, or undefined)
+ * @returns Date object or undefined
+ */
+function normalizeTimestampField(value: unknown): Date | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+  return undefined;
+}

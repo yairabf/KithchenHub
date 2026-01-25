@@ -186,7 +186,8 @@ describe('guestStorage', () => {
       expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_guest_recipes');
       expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_guest_shopping_lists');
       expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_guest_shopping_items');
-      expect(AsyncStorage.removeItem).toHaveBeenCalledTimes(3);
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_guest_chores');
+      expect(AsyncStorage.removeItem).toHaveBeenCalledTimes(4);
     });
 
     it('should throw error if storage operation fails', async () => {

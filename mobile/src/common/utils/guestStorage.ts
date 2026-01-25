@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Recipe } from '../../mocks/recipes';
 import { ShoppingList, ShoppingItem } from '../../mocks/shopping';
+import { Chore } from '../../mocks/chores';
 import { toPersistedTimestamps, fromPersistedTimestamps } from '../types/entityMetadata';
 
 const GUEST_RECIPES_KEY = '@kitchen_hub_guest_recipes';
 const GUEST_SHOPPING_LISTS_KEY = '@kitchen_hub_guest_shopping_lists';
 const GUEST_SHOPPING_ITEMS_KEY = '@kitchen_hub_guest_shopping_items';
+const GUEST_CHORES_KEY = '@kitchen_hub_guest_chores';
 
 /**
  * Validates that a recipe has required fields
@@ -70,6 +72,26 @@ function validateShoppingItem(item: unknown): item is ShoppingItem {
 }
 
 /**
+ * Validates that a chore has required fields
+ * @param chore - The chore object to validate
+ * @returns True if the chore is valid, false otherwise
+ */
+function validateChore(chore: unknown): chore is Chore {
+  if (!chore || typeof chore !== 'object') {
+    return false;
+  }
+  
+  const candidate = chore as Record<string, unknown>;
+  
+  return (
+    typeof candidate.localId === 'string' &&
+    candidate.localId.length > 0 &&
+    typeof candidate.name === 'string' &&
+    candidate.name.trim().length > 0
+  );
+}
+
+/**
  * Guest storage utilities for persisting and retrieving guest user data.
  * 
  * All methods return empty arrays when no data exists (not mock data).
@@ -99,11 +121,18 @@ export const guestStorage = {
         r !== null && typeof r === 'object'
       );
       // Shallow normalization: convert ISO strings to Date objects (top-level entities only)
-      const normalized = validItems.map(fromPersistedTimestamps);
+      const normalized = validItems.map(fromPersistedTimestamps) as unknown as Recipe[];
       // Validate each recipe has required fields
-      return normalized.filter((r): r is Recipe => 
-        r && typeof r === 'object' && r.localId && typeof r.localId === 'string' && r.name && typeof r.name === 'string'
-      );
+      return normalized.filter((r) => {
+        if (!r || typeof r !== 'object') return false;
+        const candidate = r as unknown as Record<string, unknown>;
+        return (
+          typeof candidate.localId === 'string' &&
+          candidate.localId.length > 0 &&
+          typeof candidate.name === 'string' &&
+          candidate.name.trim().length > 0
+        );
+      });
     } catch (error) {
       console.error(`Error reading guest recipes from ${GUEST_RECIPES_KEY}:`, error);
       return [];
@@ -161,11 +190,18 @@ export const guestStorage = {
         l !== null && typeof l === 'object'
       );
       // Shallow normalization: convert ISO strings to Date objects (top-level entities only)
-      const normalized = validItems.map(fromPersistedTimestamps);
+      const normalized = validItems.map(fromPersistedTimestamps) as unknown as ShoppingList[];
       // Validate each list has required fields
-      return normalized.filter((l): l is ShoppingList => 
-        l && typeof l === 'object' && l.localId && typeof l.localId === 'string' && l.name && typeof l.name === 'string'
-      );
+      return normalized.filter((l) => {
+        if (!l || typeof l !== 'object') return false;
+        const candidate = l as unknown as Record<string, unknown>;
+        return (
+          typeof candidate.localId === 'string' &&
+          candidate.localId.length > 0 &&
+          typeof candidate.name === 'string' &&
+          candidate.name.trim().length > 0
+        );
+      });
     } catch (error) {
       console.error(`Error reading guest shopping lists from ${GUEST_SHOPPING_LISTS_KEY}:`, error);
       return [];
@@ -213,11 +249,20 @@ export const guestStorage = {
         i !== null && typeof i === 'object'
       );
       // Shallow normalization: convert ISO strings to Date objects (top-level entities only)
-      const normalized = validItems.map(fromPersistedTimestamps);
+      const normalized = validItems.map(fromPersistedTimestamps) as unknown as ShoppingItem[];
       // Validate each item has required fields
-      return normalized.filter((i): i is ShoppingItem => 
-        i && typeof i === 'object' && i.localId && typeof i.localId === 'string' && i.name && typeof i.name === 'string' && i.listId && typeof i.listId === 'string'
-      );
+      return normalized.filter((i) => {
+        if (!i || typeof i !== 'object') return false;
+        const candidate = i as unknown as Record<string, unknown>;
+        return (
+          typeof candidate.localId === 'string' &&
+          candidate.localId.length > 0 &&
+          typeof candidate.name === 'string' &&
+          candidate.name.trim().length > 0 &&
+          typeof candidate.listId === 'string' &&
+          candidate.listId.length > 0
+        );
+      });
     } catch (error) {
       console.error(`Error reading guest shopping items from ${GUEST_SHOPPING_ITEMS_KEY}:`, error);
       return [];
@@ -253,6 +298,75 @@ export const guestStorage = {
   },
 
   /**
+   * Retrieves all guest chores from AsyncStorage.
+   * @returns Array of Chore objects, or empty array if none exist
+   * @remarks Returns empty array on error to prevent app crashes.
+   *          Errors are logged with storage key context for debugging.
+   *          Timestamps are normalized from ISO strings to Date objects (shallow normalization only).
+   */
+  async getChores(): Promise<Chore[]> {
+    try {
+      const data = await AsyncStorage.getItem(GUEST_CHORES_KEY);
+      if (!data) return [];
+      
+      const parsed = JSON.parse(data);
+      // Validate it's an array
+      if (!Array.isArray(parsed)) {
+        console.error(`Invalid chore data format in ${GUEST_CHORES_KEY}: expected array, got ${typeof parsed}`);
+        return [];
+      }
+      // Filter out null/invalid items before normalization
+      const validItems = parsed.filter((c): c is Record<string, unknown> => 
+        c !== null && typeof c === 'object'
+      );
+      // Shallow normalization: convert ISO strings to Date objects (top-level entities only)
+      const normalized = validItems.map(fromPersistedTimestamps) as unknown as Chore[];
+      // Validate each chore has required fields
+      return normalized.filter((c) => {
+        if (!c || typeof c !== 'object') return false;
+        const candidate = c as unknown as Record<string, unknown>;
+        return (
+          typeof candidate.localId === 'string' &&
+          candidate.localId.length > 0 &&
+          typeof candidate.name === 'string' &&
+          candidate.name.trim().length > 0
+        );
+      });
+    } catch (error) {
+      console.error(`Error reading guest chores from ${GUEST_CHORES_KEY}:`, error);
+      return [];
+    }
+  },
+
+  /**
+   * Saves guest chores to AsyncStorage.
+   * @param chores - Array of Chore objects to save
+   * @throws Error if storage operation fails or chores are invalid
+   * @remarks Timestamps are serialized from Date objects to ISO strings (shallow serialization only).
+   *          deletedAt is omitted (not null) for active records.
+   */
+  async saveChores(chores: Chore[]): Promise<void> {
+    // Validate input
+    if (!Array.isArray(chores)) {
+      throw new Error('Chores must be an array');
+    }
+    
+    const invalidChores = chores.filter(c => !validateChore(c));
+    if (invalidChores.length > 0) {
+      throw new Error(`Invalid chores detected: ${invalidChores.length} chores missing required fields (localId, name)`);
+    }
+    
+    try {
+      // Shallow serialization: convert Date objects to ISO strings (top-level entities only)
+      const serialized = chores.map(toPersistedTimestamps);
+      await AsyncStorage.setItem(GUEST_CHORES_KEY, JSON.stringify(serialized));
+    } catch (error) {
+      console.error(`Error saving guest chores to ${GUEST_CHORES_KEY}:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * Clears all guest data from AsyncStorage.
    * @throws Error if storage operation fails
    */
@@ -262,9 +376,10 @@ export const guestStorage = {
         AsyncStorage.removeItem(GUEST_RECIPES_KEY),
         AsyncStorage.removeItem(GUEST_SHOPPING_LISTS_KEY),
         AsyncStorage.removeItem(GUEST_SHOPPING_ITEMS_KEY),
+        AsyncStorage.removeItem(GUEST_CHORES_KEY),
       ]);
     } catch (error) {
-      console.error(`Error clearing guest data (keys: ${GUEST_RECIPES_KEY}, ${GUEST_SHOPPING_LISTS_KEY}, ${GUEST_SHOPPING_ITEMS_KEY}):`, error);
+      console.error(`Error clearing guest data (keys: ${GUEST_RECIPES_KEY}, ${GUEST_SHOPPING_LISTS_KEY}, ${GUEST_SHOPPING_ITEMS_KEY}, ${GUEST_CHORES_KEY}):`, error);
       throw error;
     }
   },

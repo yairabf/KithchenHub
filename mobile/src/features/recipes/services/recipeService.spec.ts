@@ -13,6 +13,7 @@ jest.mock('../../../services/api', () => ({
         get: jest.fn(),
         post: jest.fn(),
         put: jest.fn(),
+        patch: jest.fn(),
     },
 }));
 
@@ -112,6 +113,30 @@ describe('Recipe Services', () => {
             );
         });
 
+        it('deleteRecipe soft-deletes recipe and persists to guestStorage', async () => {
+            const existingRecipe = {
+                id: 'local-1',
+                localId: 'uuid-1',
+                name: 'Recipe to Delete',
+                cookTime: '30 min',
+                category: 'Dinner',
+                ingredients: [],
+                instructions: [],
+            };
+            (guestStorage.getRecipes as jest.Mock).mockResolvedValue([existingRecipe]);
+
+            await service.deleteRecipe('local-1');
+
+            expect(guestStorage.getRecipes).toHaveBeenCalled();
+            expect(guestStorage.saveRecipes).toHaveBeenCalled();
+            const savedRecipes = (guestStorage.saveRecipes as jest.Mock).mock.calls[0][0];
+            expect(savedRecipes[0]).toEqual(expect.objectContaining({
+                id: 'local-1',
+                deletedAt: expect.any(Date),
+                updatedAt: expect.any(Date),
+            }));
+        });
+
         it('should handle concurrent recipe creation', async () => {
             (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
             (guestStorage.saveRecipes as jest.Mock).mockResolvedValue(undefined);
@@ -146,40 +171,53 @@ describe('Recipe Services', () => {
             jest.clearAllMocks();
         });
 
-        it('getRecipes calls api.get', async () => {
-            const mockResult = [{ id: '1', name: 'Remote' }];
+        it('getRecipes calls api.get and normalizes timestamps', async () => {
+            const mockResult = [{ id: '1', name: 'Remote', created_at: '2026-01-25T10:00:00.000Z' }];
             (api.get as jest.Mock).mockResolvedValue(mockResult);
 
             const recipes = await service.getRecipes();
 
             expect(api.get).toHaveBeenCalledWith('/recipes');
-            expect(recipes).toEqual(mockResult);
+            expect(recipes).toHaveLength(1);
+            expect(recipes[0]).toEqual(expect.objectContaining({ id: '1', name: 'Remote' }));
         });
 
-        it('createRecipe calls api.post', async () => {
+        it('createRecipe calls api.post with timestamps', async () => {
             const newRecipeData = { name: 'New Remote' };
             const mockResult = { id: 'remote-1', ...newRecipeData };
             (api.post as jest.Mock).mockResolvedValue(mockResult);
 
             const recipe = await service.createRecipe(newRecipeData);
 
-            expect(api.post).toHaveBeenCalledWith('/recipes', newRecipeData);
-            expect(recipe).toEqual(mockResult);
+            // Verify api.post was called with payload containing timestamps
+            expect(api.post).toHaveBeenCalledWith('/recipes', expect.objectContaining({
+                name: 'New Remote',
+                created_at: expect.any(String),
+            }));
+            expect(recipe).toEqual(expect.objectContaining({ id: 'remote-1', name: 'New Remote' }));
         });
 
         describe.each([
             ['updates imageUrl', { imageUrl: 'https://example.com/image.jpg' }],
             ['updates name', { name: 'Updated Remote' }],
         ])('updateRecipe: %s', (_label, updates) => {
-            it('calls api.put with recipe id', async () => {
+            it('calls api.put with recipe id and timestamps', async () => {
                 const recipeId = 'remote-1';
-                const mockResult = { id: recipeId, ...updates };
+                const existingRecipe = { id: recipeId, name: 'Original', cookTime: '30 min', category: 'Dinner', ingredients: [], instructions: [] };
+                const mockResult = { id: recipeId, ...existingRecipe, ...updates };
+                
+                // Mock getRecipes to return the existing recipe
+                (api.get as jest.Mock).mockResolvedValue([existingRecipe]);
                 (api.put as jest.Mock).mockResolvedValue(mockResult);
 
                 const recipe = await service.updateRecipe(recipeId, updates);
 
-                expect(api.put).toHaveBeenCalledWith(`/recipes/${recipeId}`, updates);
-                expect(recipe).toEqual(mockResult);
+                // Verify api.put was called with payload containing timestamps
+                expect(api.put).toHaveBeenCalledWith(`/recipes/${recipeId}`, expect.objectContaining({
+                    ...updates,
+                    updated_at: expect.any(String),
+                }));
+                expect(recipe).toEqual(expect.objectContaining({ id: recipeId, ...updates }));
             });
         });
     });
