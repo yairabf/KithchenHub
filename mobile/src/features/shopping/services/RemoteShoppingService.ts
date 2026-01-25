@@ -1,10 +1,10 @@
 import { api } from '../../../services/api';
-import { pastelColors, colors } from '../../../theme';
-import { v5 as uuidv5 } from 'uuid';
+import { colors } from '../../../theme';
 import { withUpdatedAt, markDeleted, withCreatedAt, toSupabaseTimestamps } from '../../../common/utils/timestamps';
 import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingData, IShoppingService } from './shoppingService';
+import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../../../common/utils/catalogUtils';
 
 type GrocerySearchItemDto = {
   id: string;
@@ -47,41 +47,7 @@ const mapGroceryItem = (item: GrocerySearchItemDto): GroceryItem => ({
   defaultQuantity: item.defaultQuantity ?? 1,
 });
 
-// Fixed namespace UUID for generating deterministic category UUIDs
-const CATEGORY_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-
-/**
- * Builds category list from grocery items.
- * Generates deterministic localId based on category name for stable references.
- */
-const buildCategoriesFromGroceries = (items: GroceryItem[]): Category[] => {
-  const categoryMap = items.reduce<Record<string, GroceryItem[]>>((acc, item) => {
-    const key = item.category || 'Other';
-    const existing = acc[key] ?? [];
-    return { ...acc, [key]: [...existing, item] };
-  }, {});
-
-  return Object.entries(categoryMap).map(([categoryName, categoryItems], index) => {
-    const fallbackImage = categoryItems.find(item => item.image)?.image ?? '';
-    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
-    
-    // Generate deterministic UUID based on category name (stable across calls)
-    const localId = uuidv5(categoryName, CATEGORY_NAMESPACE);
-    
-    return {
-      id: categoryId,
-      localId,
-      name: categoryName,
-      itemCount: categoryItems.length,
-      image: fallbackImage,
-      backgroundColor: pastelColors[index % pastelColors.length],
-    };
-  });
-};
-
-const buildFrequentlyAddedItems = (items: GroceryItem[]): GroceryItem[] => {
-  return items.slice(0, FREQUENTLY_ADDED_ITEMS_LIMIT);
-};
+// Note: Category building utilities moved to common/utils/catalogUtils.ts
 
 const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => ({
   id: list.id,

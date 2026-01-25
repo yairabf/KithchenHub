@@ -27,8 +27,19 @@ The Recipes feature allows users to browse, search, filter, and create recipes. 
   - Grid layout displaying recipe cards (2 columns)
   - Floating action button to add new recipes
   - Pastel colors for visual variety
-  - **Mock Data Toggle**: Loads grocery items from `mockGroceriesDB` or API (`/groceries/search?q=`) based on `config.mockData.enabled`
+  - **Catalog Integration**: Uses `useCatalog()` hook to fetch grocery items with API → Cache → Mock fallback strategy
   - **Image Upload**: Handles recipe image uploads with guest/authenticated user logic
+
+#### Code Snippet - Catalog Data Loading
+
+```typescript
+import { useCatalog } from '../../../common/hooks/useCatalog';
+
+export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
+  const { groceryItems } = useCatalog(); // Uses API → Cache → Mock fallback
+  // ... rest of component
+}
+```
 
 #### Code Snippet - Filtering Logic
 
@@ -484,6 +495,10 @@ Utility for applying remote updates to local cached state:
 **Note**: Conflict resolution is client-side. The backend sync endpoint (`POST /auth/sync`) performs simple upsert operations and returns conflicts. Client-side utilities handle timestamp-based merging.
 
 ## Key Dependencies
+
+- `useCatalog` - Catalog hook (`mobile/src/common/hooks/useCatalog.ts`) - React hook for fetching catalog data with API → Cache → Mock fallback strategy
+- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Centralized service for catalog data fetching and caching
+- `mockGroceriesDB` - Grocery database with images and categories (fallback data for catalog service)
 
 - `@expo/vector-icons` - Ionicons for icons
 - `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle

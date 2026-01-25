@@ -1,12 +1,9 @@
 import {
-  mockCategories,
-  mockFrequentlyAddedItems,
   type ShoppingItem,
   type ShoppingList,
   type Category,
 } from '../../../mocks/shopping';
 import type { GroceryItem } from '../components/GrocerySearchBar';
-import { mockGroceriesDB } from '../../../data/groceryDatabase';
 import { colors } from '../../../theme';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import { withUpdatedAt, markDeleted } from '../../../common/utils/timestamps';
@@ -14,6 +11,7 @@ import { findEntityIndex, updateEntityInStorage } from '../../../common/utils/en
 import { createShoppingList, createShoppingItem } from '../utils/shoppingFactory';
 import { isEntityActive } from '../../../common/types/entityMetadata';
 import type { ShoppingData, IShoppingService } from './shoppingService';
+import { catalogService } from '../../../common/services/catalogService';
 
 const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
 const DEFAULT_LIST_COLOR = colors.shopping;
@@ -28,13 +26,16 @@ export class LocalShoppingService implements IShoppingService {
     const activeLists = guestLists.filter(isEntityActive);
     const activeItems = guestItems.filter(isEntityActive);
 
+    // Fetch catalog data from API (with fallback to cache and mock)
+    const catalogData = await catalogService.getCatalogData();
+
     return {
       shoppingLists: activeLists,
       shoppingItems: activeItems,
-      // Categories and grocery items are still from mocks (they're reference data, not user data)
-      categories: [...mockCategories],
-      groceryItems: [...mockGroceriesDB],
-      frequentlyAddedItems: [...mockFrequentlyAddedItems],
+      // Catalog data from API (with fallback)
+      categories: catalogData.categories,
+      groceryItems: catalogData.groceryItems,
+      frequentlyAddedItems: catalogData.frequentlyAddedItems,
     };
   }
 
