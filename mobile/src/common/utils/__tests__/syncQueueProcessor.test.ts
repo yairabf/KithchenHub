@@ -5,7 +5,7 @@
  */
 
 import { api } from '../../../services/api';
-import { NetworkError } from '../../../services/api';
+import { NetworkError, ApiError } from '../../../services/api';
 import { syncQueueStorage, type QueuedWrite } from '../syncQueueStorage';
 import { getSyncQueueProcessor } from '../syncQueueProcessor';
 import { getIsOnline } from '../networkStatus';
@@ -55,7 +55,16 @@ describe('SyncQueueProcessor', () => {
     (syncQueueStorage.getAll as jest.Mock).mockResolvedValue([]);
     (syncQueueStorage.remove as jest.Mock).mockResolvedValue(undefined);
     (syncQueueStorage.incrementRetry as jest.Mock).mockResolvedValue(undefined);
+    (syncQueueStorage.updateLastAttempt as jest.Mock).mockResolvedValue(undefined);
+    (syncQueueStorage.updateStatus as jest.Mock).mockResolvedValue(undefined);
+    (syncQueueStorage.markAsFailedPermanent as jest.Mock).mockResolvedValue(undefined);
     (syncQueueStorage.clear as jest.Mock).mockResolvedValue(undefined);
+    
+    // Reset worker state
+    if (processor) {
+      (processor as any).workerRunning = false;
+      (processor as any).workerCancellationToken = { cancelled: false };
+    }
     (invalidateCache as jest.Mock).mockResolvedValue(undefined);
     (cacheEvents.emitCacheChange as jest.Mock).mockReturnValue(undefined);
     
@@ -190,6 +199,111 @@ describe('SyncQueueProcessor', () => {
       await processor.processQueue();
 
       expect(syncQueueStorage.incrementRetry).toHaveBeenCalledWith('queue-1');
+    });
+  });
+
+  describe('worker loop', () => {
+    it('should start and stop worker loop', () => {
+      expect(processor.isRunning()).toBe(false);
+      
+      processor.start();
+      expect(processor.isRunning()).toBe(true);
+      
+      processor.stop();
+      expect(processor.isRunning()).toBe(false);
+    });
+
+    it('should not start worker if already running', () => {
+      processor.start();
+      const initialPromise = (processor as any).workerPromise;
+      
+      processor.start(); // Try to start again
+      
+      // Should not create new promise
+      expect((processor as any).workerPromise).toBe(initialPromise);
+    });
+  });
+
+  describe('backoff calculation', () => {
+    describe.each([
+      [0, 0],      // First attempt: no delay
+      [1, 2000],   // Second attempt: 2 seconds
+      [2, 4000],   // Third attempt: 4 seconds
+      [3, 8000],   // Fourth attempt: 8 seconds
+      [10, 30000], // Capped at max delay (30s)
+    ])('calculateBackoffDelay with attemptCount %d', (attemptCount, expectedDelay) => {
+      it(`should filter items based on backoff delay of ${expectedDelay}ms`, async () => {
+        const now = Date.now();
+        const lastAttemptTime = attemptCount > 0 
+          ? new Date(now - expectedDelay - 100).toISOString() // Past the backoff period
+          : undefined;
+        
+        const mockQueue: QueuedWrite[] = [
+          {
+            id: 'queue-1',
+            entityType: 'recipes',
+            op: 'create',
+            target: { localId: 'local-123' },
+            payload: { 
+              id: 'local-123', 
+              name: 'Test Recipe',
+              ingredients: [],
+              instructions: [],
+            },
+            clientTimestamp: new Date().toISOString(),
+            attemptCount,
+            status: attemptCount > 0 ? 'RETRYING' : 'PENDING',
+            lastAttemptAt: lastAttemptTime,
+          },
+        ];
+
+        (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+        (api.post as jest.Mock).mockResolvedValue({ status: 'synced', conflicts: [] });
+
+        // Process queue - items past backoff period should be processed
+        await processor.processQueue();
+        
+        // Should process items that are ready (past backoff period)
+        expect(api.post).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('error classification', () => {
+    it.each([
+      ['NetworkError', new NetworkError('Network error'), false],
+      ['401 ApiError', new ApiError('Unauthorized', 401), 'STOP_WORKER'],
+      ['403 ApiError', new ApiError('Forbidden', 403), 'STOP_WORKER'],
+      ['400 ApiError', new ApiError('Bad Request', 400), true],
+      ['500 ApiError', new ApiError('Server Error', 500), true],
+    ])('should classify %s correctly', async (description, error, expectedBehavior) => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'local-123' },
+          payload: { id: 'local-123', name: 'Test Recipe', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockRejectedValue(error);
+
+      await processor.processQueue();
+
+      if (expectedBehavior === 'STOP_WORKER') {
+        expect(processor.isRunning()).toBe(false);
+      } else if (expectedBehavior === false) {
+        // Network error: should not increment retry
+        expect(syncQueueStorage.incrementRetry).not.toHaveBeenCalled();
+      } else {
+        // API error: should increment retry
+        expect(syncQueueStorage.incrementRetry).toHaveBeenCalled();
+      }
     });
   });
 });

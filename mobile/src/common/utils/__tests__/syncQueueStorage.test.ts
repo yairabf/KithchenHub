@@ -5,9 +5,10 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { syncQueueStorage, type QueuedWrite, type QueueTargetId } from '../syncQueueStorage';
+import { syncQueueStorage, type QueuedWrite, type QueueTargetId, type QueuedWriteStatus } from '../syncQueueStorage';
 import type { SyncEntityType } from '../cacheMetadata';
 import * as Crypto from 'expo-crypto';
+import { getSignedInCacheKey } from '../../storage/dataModeStorage';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -174,18 +175,122 @@ describe('SyncQueueStorage', () => {
   });
 
   describe('incrementRetry', () => {
-    it('should increment attempt count', async () => {
+    it('should increment attempt count and update status', async () => {
       const target: QueueTargetId = { localId: 'local-123' };
       const payload = { id: 'local-123', name: 'Test' };
 
       const queued = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
       expect(queued.attemptCount).toBe(0);
+      expect(queued.status).toBe('PENDING');
 
       await syncQueueStorage.incrementRetry(queued.id);
       
       const queue = await syncQueueStorage.getAll();
       const updated = queue.find(item => item.id === queued.id);
       expect(updated?.attemptCount).toBe(1);
+      expect(updated?.status).toBe('RETRYING');
+      expect(updated?.lastAttemptAt).toBeDefined();
+    });
+  });
+
+  describe('updateLastAttempt', () => {
+    it('should update lastAttemptAt timestamp', async () => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload = { id: 'local-123', name: 'Test' };
+
+      const queued = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+      expect(queued.lastAttemptAt).toBeUndefined();
+
+      await syncQueueStorage.updateLastAttempt(queued.id);
+      
+      const queue = await syncQueueStorage.getAll();
+      const updated = queue.find(item => item.id === queued.id);
+      expect(updated?.lastAttemptAt).toBeDefined();
+      expect(new Date(updated!.lastAttemptAt!).getTime()).toBeLessThanOrEqual(Date.now());
+    });
+  });
+
+  describe('updateStatus', () => {
+    it.each([
+      ['PENDING', 'PENDING'],
+      ['RETRYING', 'RETRYING'],
+      ['FAILED_PERMANENT', 'FAILED_PERMANENT'],
+    ])('should update status to %s', async (description, status) => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload = { id: 'local-123', name: 'Test' };
+
+      const queued = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+      expect(queued.status).toBe('PENDING');
+
+      await syncQueueStorage.updateStatus(queued.id, status as QueuedWriteStatus);
+      
+      const queue = await syncQueueStorage.getAll();
+      const updated = queue.find(item => item.id === queued.id);
+      expect(updated?.status).toBe(status);
+    });
+  });
+
+  describe('markAsFailedPermanent', () => {
+    it('should mark item as permanently failed with error message', async () => {
+      const target: QueueTargetId = { localId: 'local-123' };
+      const payload = { id: 'local-123', name: 'Test' };
+      const errorMessage = 'Max retries exceeded: Test error';
+
+      const queued = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+      expect(queued.status).toBe('PENDING');
+      expect(queued.lastError).toBeUndefined();
+
+      await syncQueueStorage.markAsFailedPermanent(queued.id, errorMessage);
+      
+      const queue = await syncQueueStorage.getAll();
+      const updated = queue.find(item => item.id === queued.id);
+      expect(updated?.status).toBe('FAILED_PERMANENT');
+      expect(updated?.lastError).toBe(errorMessage);
+      expect(updated?.lastAttemptAt).toBeDefined();
+    });
+  });
+
+  describe('status migration', () => {
+    it('should migrate old items without status to PENDING', async () => {
+      // Manually create old-format item in storage
+      const oldItem = {
+        id: 'old-item',
+        entityType: 'recipes' as SyncEntityType,
+        op: 'create' as const,
+        target: { localId: 'local-123' },
+        payload: { id: 'local-123', name: 'Test' },
+        clientTimestamp: new Date().toISOString(),
+        attemptCount: 0,
+        // No status field (old format)
+      };
+
+      const storageKey = getSignedInCacheKey('sync_queue');
+      storageState[storageKey] = JSON.stringify([oldItem]);
+
+      const queue = await syncQueueStorage.getAll();
+      expect(queue).toHaveLength(1);
+      expect(queue[0].status).toBe('PENDING');
+    });
+
+    it('should validate and fix invalid status values', async () => {
+      // Manually create item with invalid status
+      const invalidItem = {
+        id: 'invalid-item',
+        entityType: 'recipes' as SyncEntityType,
+        op: 'create' as const,
+        target: { localId: 'local-123' },
+        payload: { id: 'local-123', name: 'Test' },
+        clientTimestamp: new Date().toISOString(),
+        attemptCount: 0,
+        status: 'INVALID_STATUS', // Invalid status
+      };
+
+      const storageKey = getSignedInCacheKey('sync_queue');
+      storageState[storageKey] = JSON.stringify([invalidItem]);
+
+      const queue = await syncQueueStorage.getAll();
+      expect(queue).toHaveLength(1);
+      expect(queue[0].status).toBe('PENDING'); // Should default to PENDING
     });
   });
 });
