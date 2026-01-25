@@ -5,6 +5,12 @@ import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
 import { withUpdatedAt, markDeleted, withCreatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
 import { isDevMode } from '../../../common/utils/devMode';
+import { getCached, setCached } from '../../../common/repositories/cacheAwareRepository';
+import { EntityTimestamps } from '../../../common/types/entityMetadata';
+import { getIsOnline } from '../../../common/utils/networkStatus';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ENTITY_TYPES, getSignedInCacheKey } from '../../../common/storage/dataModeStorage';
+import { normalizePersistedArray } from '../../../common/utils/storageHelpers';
 
 /**
  * DTO types for API responses
@@ -257,10 +263,25 @@ export class LocalRecipeService implements IRecipeService {
  * Guest users cannot provide valid JWT tokens, so API calls will fail at the backend.
  */
 export class RemoteRecipeService implements IRecipeService {
-    async getRecipes(): Promise<Recipe[]> {
+    /**
+     * Fetches recipes from API (used by cache layer)
+     * 
+     * @returns Array of recipes with normalized timestamps
+     */
+    private async fetchRecipesFromApi(): Promise<Recipe[]> {
         const response = await api.get<RecipeApiResponse[]>('/recipes');
         // Normalize timestamps from API response (server is authority)
         return response.map((item) => normalizeTimestampsFromApi<Recipe>(item));
+    }
+
+    async getRecipes(): Promise<Recipe[]> {
+        // Use cache-first strategy with background refresh
+        return getCached<Recipe>(
+            'recipes',
+            () => this.fetchRecipesFromApi(),
+            (recipe) => recipe.id,
+            getIsOnline()
+        );
     }
 
     async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
@@ -269,7 +290,15 @@ export class RemoteRecipeService implements IRecipeService {
         const payload = toSupabaseTimestamps(withTimestamps);
         const response = await api.post<RecipeApiResponse>('/recipes', payload);
         // Server is authority: overwrite with server timestamps
-        return normalizeTimestampsFromApi<Recipe>(response);
+        const created = normalizeTimestampsFromApi<Recipe>(response);
+        
+        // Write-through cache update: read cache directly (no network fetch)
+        const storageKey = getSignedInCacheKey(ENTITY_TYPES.recipes);
+        const raw = await AsyncStorage.getItem(storageKey);
+        const current = normalizePersistedArray<Recipe>(raw, storageKey);
+        await setCached('recipes', [...current, created], (r) => r.id);
+        
+        return created;
     }
 
     async updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe> {
@@ -287,7 +316,16 @@ export class RemoteRecipeService implements IRecipeService {
         const payload = toSupabaseTimestamps(withTimestamps);
         const response = await api.put<RecipeApiResponse>(`/recipes/${recipeId}`, payload);
         // Server is authority: overwrite with server timestamps
-        return normalizeTimestampsFromApi<Recipe>(response);
+        const updatedRecipe = normalizeTimestampsFromApi<Recipe>(response);
+        
+        // Write-through cache update: read cache directly (no network fetch)
+        const storageKey = getSignedInCacheKey(ENTITY_TYPES.recipes);
+        const raw = await AsyncStorage.getItem(storageKey);
+        const current = normalizePersistedArray<Recipe>(raw, storageKey);
+        const updatedCache = current.map(r => r.id === recipeId ? updatedRecipe : r);
+        await setCached('recipes', updatedCache, (r) => r.id);
+        
+        return updatedRecipe;
     }
 
     async deleteRecipe(recipeId: string): Promise<void> {
@@ -306,6 +344,13 @@ export class RemoteRecipeService implements IRecipeService {
         
         // Use PATCH instead of DELETE with body (more compatible)
         await api.patch(`/recipes/${recipeId}`, { deleted_at: payload.deleted_at });
+        
+        // Write-through cache update: read cache directly (no network fetch)
+        const storageKey = getSignedInCacheKey(ENTITY_TYPES.recipes);
+        const raw = await AsyncStorage.getItem(storageKey);
+        const current = normalizePersistedArray<Recipe>(raw, storageKey);
+        const updatedCache = current.map(r => r.id === recipeId ? withTimestamps : r);
+        await setCached('recipes', updatedCache, (r) => r.id);
     }
 }
 
