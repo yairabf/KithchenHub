@@ -30,7 +30,6 @@ export interface IShoppingService {
   toggleItem(itemId: string): Promise<ShoppingItem>;
 }
 
-
 /**
  * Creates a shopping service based on the data mode
  * 
@@ -38,6 +37,10 @@ export interface IShoppingService {
  * @param entityType - The type of entity being accessed (for validation)
  * @returns The appropriate shopping service implementation
  * @throws Error if the mode and service type are incompatible
+ * 
+ * @remarks
+ * Note: Conflict resolution (sync application) should be called in the sync pipeline/repository layer,
+ * NOT inside Remote*Service methods. This keeps services focused on transport.
  */
 export const createShoppingService = (
   mode: 'guest' | 'signed-in',

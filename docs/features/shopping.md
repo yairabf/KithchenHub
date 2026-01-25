@@ -351,6 +351,65 @@ To prevent stale list state when switching between mock and remote data sources,
 
 This ensures that when a user switches from guest (local) to signed-in (remote), the selected list remains valid or gracefully falls back to the first available list.
 
+## Conflict Resolution & Realtime Sync
+
+The shopping feature implements timestamp-based conflict resolution for offline-first sync scenarios using Last-Write-Wins (LWW) and tombstone handling.
+
+### Realtime Sync Enhancement
+
+**File**: `mobile/src/features/shopping/utils/shoppingRealtime.ts`
+
+The realtime sync handlers now use conflict resolution utilities to handle concurrent modifications:
+
+- **`applyShoppingListChange()`**: Merges realtime list updates using `mergeEntitiesWithTombstones()`
+  - Compares timestamps before applying changes
+  - Respects `deletedAt` tombstones (delete always wins unless recreate)
+  - Filters out deleted entities from results
+- **`applyShoppingItemChange()`**: Merges realtime item updates using `mergeEntitiesWithTombstones()`
+  - Same conflict resolution logic as lists
+  - Handles new items, updates, and deletions deterministically
+
+**Timestamp Normalization**:
+- Realtime payloads are normalized from snake_case (database) to camelCase Date objects
+- Uses `fromSupabaseTimestamps()` helper for consistent conversion
+- Handles both snake_case and camelCase formats for backward compatibility
+
+### Conflict Resolution Utilities
+
+**File**: `mobile/src/common/utils/conflictResolution.ts`
+
+Shared utilities for resolving conflicts between local and remote state:
+
+- **`compareTimestamps()`**: Compares two timestamps (Date or ISO string), normalizes to Date objects
+- **`determineConflictWinner()`**: Determines winner based on `updatedAt` (LWW strategy)
+  - Returns `'local'` if local is newer, `'remote'` if remote is newer or equal (tie-breaker)
+- **`mergeEntitiesLWW()`**: Merges two entities using Last-Write-Wins
+  - Winner record wins wholesale (entire entity, not partial field mixing)
+  - Preserves local-only fields (e.g., `localId`) from local side
+- **`mergeEntitiesWithTombstones()`**: Merges entities with tombstone awareness
+  - **Resurrection Policy**: Delete always wins unless recreate (new entity with new ID)
+  - Once deleted, always deleted (regardless of timestamp ordering)
+  - Returns `null` if both sides agree on deletion
+- **`mergeEntityArrays()`**: Merges arrays of entities using LWW + tombstone rules
+  - Handles additions (new entities are always added)
+  - Handles updates (merged using LWW)
+  - Handles deletions (filtered out from result)
+  - Time complexity: O(n + m)
+
+### Sync Application
+
+**File**: `mobile/src/common/utils/syncApplication.ts`
+
+Utility for applying remote updates to local cached state:
+
+- **`applyRemoteUpdatesToLocal()`**: Merges remote entities with local cache
+  - Reads from signed-in cache (AsyncStorage)
+  - Merges using `mergeEntityArrays()` with conflict resolution
+  - Persists merged result back to cache
+  - Should be called in sync pipeline/repository layer, NOT inside Remote*Service methods
+
+**Note**: Conflict resolution is client-side. The backend sync endpoint (`POST /auth/sync`) performs simple upsert operations and returns conflicts. Client-side utilities handle timestamp-based merging.
+
 ## Key Dependencies
 
 - `react-native-gesture-handler` - GestureDetector for swipe interactions
@@ -367,6 +426,8 @@ This ensures that when a user switches from guest (local) to signed-in (remote),
 - `CenteredModal` - Shared modal component
 - `ScreenHeader` - Shared header component
 - `useResponsive` - Responsive layout hook
+- `conflictResolution` - Conflict resolution utilities (`mobile/src/common/utils/conflictResolution.ts`)
+- `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
 
 ## UI Flow
 

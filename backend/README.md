@@ -92,12 +92,14 @@ To verify that Row Level Security is correctly isolating data between households
 ## API Conventions
 - Base URL: `http://localhost:3000/api/v1`
 - Docs: `http://localhost:3000/api/docs`
-- Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh`, `GET /groceries/search`, `GET /groceries/categories` (others use bearer JWT)
+- Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh`, `GET /groceries/search`, `GET /groceries/categories` (all other endpoints require bearer JWT)
 - Auth endpoints: `POST /auth/google`, `POST /auth/guest`, `POST /auth/sync`, `POST /auth/refresh`
+  - Sync endpoint (`POST /auth/sync`): Accepts offline data and performs simple upsert operations. Returns conflicts array for items that failed to sync. Client-side conflict resolution handles timestamp-based merging (LWW + tombstones).
 - Household endpoints: `GET /household`, `PUT /household`, `POST /household/invite`, `DELETE /household/members/:id`
 - Shopping endpoints: `GET /shopping-lists`, `POST /shopping-lists`, `GET /shopping-lists/:id`, `DELETE /shopping-lists/:id`, `POST /shopping-lists/:id/items`, `PATCH /shopping-items/:id`, `DELETE /shopping-items/:id`
-- Recipe endpoints: `GET /recipes`, `POST /recipes`, `GET /recipes/:id`, `PUT /recipes/:id`, `POST /recipes/:id/cook`
-- Chore endpoints: `GET /chores`, `POST /chores`, `PATCH /chores/:id`, `PATCH /chores/:id/status`, `GET /chores/stats`
+- Grocery catalog endpoints (public): `GET /groceries/search`, `GET /groceries/categories`
+- Recipe endpoints: `GET /recipes` (supports `?category=` and `?search=` query params), `POST /recipes`, `GET /recipes/:id`, `PUT /recipes/:id`, `POST /recipes/:id/cook`
+- Chore endpoints: `GET /chores` (supports `?start=` and `?end=` date query params), `POST /chores`, `PATCH /chores/:id`, `PATCH /chores/:id/status`, `GET /chores/stats` (supports `?date=` query param)
 - Dashboard endpoints: `GET /dashboard/summary`
 - Import endpoints: `POST /import`
 - Protected routes: Most endpoints require JWT authentication; household endpoints also require household membership
