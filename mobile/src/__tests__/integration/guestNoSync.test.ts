@@ -14,6 +14,17 @@ jest.mock('expo-crypto', () => ({
   randomUUID: jest.fn(() => 'mock-uuid'),
 }));
 
+// Mock catalogService to use cache/mock in guest mode (no API calls)
+jest.mock('../../common/services/catalogService', () => ({
+  catalogService: {
+    getCatalogData: jest.fn().mockResolvedValue({
+      groceryItems: [],
+      categories: [],
+      frequentlyAddedItems: [],
+    }),
+  },
+}));
+
 // Mock api methods
 jest.mock('../../services/api', () => {
   const mockRequest = jest.fn();
@@ -22,6 +33,14 @@ jest.mock('../../services/api', () => {
   const mockPut = jest.fn();
   const mockPatch = jest.fn();
   const mockDelete = jest.fn();
+
+  // Mock NetworkError class
+  class NetworkError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'NetworkError';
+    }
+  }
 
   return {
     api: {
@@ -32,6 +51,7 @@ jest.mock('../../services/api', () => {
       patch: mockPatch,
       delete: mockDelete,
     },
+    NetworkError,
   };
 });
 
@@ -53,10 +73,12 @@ describe('Guest Mode No-Sync Integration', () => {
       createService: createShoppingService,
       callMethod: (service) => service.getShoppingData(),
       mockApiResponse: () => {
+        // Note: LocalShoppingService now uses catalogService which calls /groceries/search
+        // But in guest mode, catalogService should use cache/mock, not API
+        // So we don't need to mock groceries/search for guest mode test
         (api.get as jest.Mock)
-          .mockResolvedValueOnce([]) // groceries/search
-          .mockResolvedValueOnce([]) // shopping-lists
-          .mockResolvedValueOnce([]); // shopping-lists/:id/items
+          .mockResolvedValueOnce([]) // shopping-lists (if called)
+          .mockResolvedValueOnce([]); // shopping-lists/:id/items (if called)
       },
     },
     {

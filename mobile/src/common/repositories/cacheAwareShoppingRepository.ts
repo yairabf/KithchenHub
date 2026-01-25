@@ -18,13 +18,13 @@ import {
 } from './cacheAwareRepository';
 import { getIsOnline } from '../utils/networkStatus';
 import { api } from '../../services/api';
-import { pastelColors, colors } from '../../theme';
-import { v5 as uuidv5 } from 'uuid';
+import { colors } from '../../theme';
 import { markDeleted, withCreatedAt, withUpdatedAt } from '../utils/timestamps';
 import { cacheEvents } from '../utils/cacheEvents';
 import { NetworkError } from '../../services/api';
 import { syncQueueStorage, type SyncOp, type QueueTargetId } from '../utils/syncQueueStorage';
 import * as Crypto from 'expo-crypto';
+import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
 
 /**
  * DTO types for API responses (matches RemoteShoppingService)
@@ -60,8 +60,6 @@ type ShoppingListDetailDto = {
 
 const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
 const DEFAULT_LIST_COLOR = colors.shopping;
-const FREQUENTLY_ADDED_ITEMS_LIMIT = 8;
-const CATEGORY_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
 /**
  * Dedicated interface for cache-aware shopping repository
@@ -94,7 +92,7 @@ export interface ICacheAwareShoppingRepository {
 }
 
 /**
- * Helper functions (duplicated from RemoteShoppingService for now)
+ * Helper function to map API DTO to GroceryItem
  */
 const mapGroceryItem = (item: GrocerySearchItemDto): GroceryItem => ({
   id: item.id,
@@ -104,32 +102,7 @@ const mapGroceryItem = (item: GrocerySearchItemDto): GroceryItem => ({
   defaultQuantity: item.defaultQuantity ?? 1,
 });
 
-const buildCategoriesFromGroceries = (items: GroceryItem[]): Category[] => {
-  const categoryMap = items.reduce<Record<string, GroceryItem[]>>((acc, item) => {
-    const key = item.category || 'Other';
-    const existing = acc[key] ?? [];
-    return { ...acc, [key]: [...existing, item] };
-  }, {});
-
-  return Object.entries(categoryMap).map(([categoryName, categoryItems], index) => {
-    const fallbackImage = categoryItems.find(item => item.image)?.image ?? '';
-    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
-    const localId = uuidv5(categoryName, CATEGORY_NAMESPACE);
-    
-    return {
-      id: categoryId,
-      localId,
-      name: categoryName,
-      itemCount: categoryItems.length,
-      image: fallbackImage,
-      backgroundColor: pastelColors[index % pastelColors.length],
-    };
-  });
-};
-
-const buildFrequentlyAddedItems = (items: GroceryItem[]): GroceryItem[] => {
-  return items.slice(0, FREQUENTLY_ADDED_ITEMS_LIMIT);
-};
+// Note: Category building utilities are imported from common/utils/catalogUtils.ts
 
 const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => ({
   id: list.id,

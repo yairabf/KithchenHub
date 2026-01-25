@@ -22,6 +22,22 @@ jest.mock('../../../services/api', () => ({
     },
 }));
 
+// Mock AsyncStorage (required by catalogService)
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
+// Mock catalogService (LocalShoppingService now uses it)
+jest.mock('../../../common/services/catalogService', () => ({
+  catalogService: {
+    getCatalogData: jest.fn().mockResolvedValue({
+      groceryItems: [],
+      categories: [],
+      frequentlyAddedItems: [],
+    }),
+  },
+}));
+
 // Mock guestStorage
 jest.mock('../../../common/utils/guestStorage', () => ({
     guestStorage: {
