@@ -1,0 +1,470 @@
+---
+name: persistence-layer-timestamps
+overview: Implement consistent timestamp handling and serialization for both guest persistence (AsyncStorage) and signed-in persistence/sync (Supabase), using shared helpers and conventions. This plan addresses gaps in timestamp population, ensures consistent usage across services, and adds comprehensive test coverage.
+todos:
+  - id: fix-local-recipe-service
+    content: Fix LocalRecipeService.createRecipe to use withCreatedAt() helper
+    status: pending
+  - id: add-integration-tests
+    content: Add integration tests for insert/update/delete timestamp scenarios
+    status: pending
+  - id: verify-service-usage
+    content: Verify all services consistently use timestamp helpers
+    status: pending
+  - id: enhance-documentation
+    content: Enhance JSDoc documentation with usage examples
+    status: pending
+  - id: add-timestamp-validation-helper
+    content: Add validateTimestamps() helper for integration tests and debugging (optional)
+    status: pending
+  - id: consider-expiry-ttl-support
+    content: Plan for expiresAt field support for future TTL functionality (optional, future-facing)
+    status: pending
+  - id: add-decorator-wrapper-pattern
+    content: Consider higher-order helpers like withTimestampsOnCreate() for semantic clarity (optional, advanced)
+    status: pending
+isProject: false
+---
+
+# Persistence Layer with Standardized Timestamps
+
+## Current Status Analysis
+
+### ✅ Already Implemented
+
+1. **Shared Serialization Helpers** (`mobile/src/common/types/entityMetadata.ts`):
+
+   - `toPersistedTimestamps(entity)` - Converts Date → ISO string for AsyncStorage
+   - `fromPersistedTimestamps(entity)` - Converts ISO string → Date from AsyncStorage
+   - Both are correctly used in `guestStorageHelpers.ts`
+
+2. **Supabase Serialization Helpers** (`mobile/src/common/utils/timestamps.ts`):
+
+   - `toSupabaseTimestamps(entity)` - Maps camelCase → snake_case + Date → ISO string
+   - `fromSupabaseTimestamps(entity)` - Maps snake_case → camelCase + ISO string → Date
+   - `normalizeTimestampsFromApi(item)` - Normalizes API responses
+   - All correctly used in Remote services
+
+3. **Service-Level Helpers** (`mobile/src/common/utils/timestamps.ts`):
+
+   - `withCreatedAt(entity)` - Auto-populates createdAt if missing
+   - `withUpdatedAt(entity)` - Always updates updatedAt
+   - `markDeleted(entity)` - Sets deletedAt for soft-delete
+   - All implemented and mostly used correctly
+
+4. **Usage Patterns**:
+
+   - ✅ Factories use `withCreatedAt` (recipeFactory, shoppingFactory, choreFactory)
+   - ✅ Services use `withUpdatedAt` on updates
+   - ✅ Services use `markDeleted` + `withUpdatedAt` on deletes
+   - ✅ Remote services use `toSupabaseTimestamps` before API calls
+   - ✅ Remote services use `normalizeTimestampsFromApi` after API responses
+
+5. **Test Coverage**:
+
+   - ✅ Comprehensive unit tests for all serialization helpers
+   - ✅ Comprehensive unit tests for service-level helpers
+
+### ❌ Gaps Identified
+
+1. **LocalRecipeService.createRecipe** - Missing `withCreatedAt`:
+
+   - `buildRecipeWithDefaults()` doesn't populate `createdAt`
+   - Should use `withCreatedAt()` before saving
+
+2. **Test Coverage Gaps**:
+
+   - Missing integration tests for:
+     - Insert populates createdAt/updatedAt
+     - Update changes updatedAt
+     - Delete sets deletedAt and retains tombstone (createdAt, updatedAt)
+
+3. **Documentation**:
+
+   - Need to ensure all helpers have clear JSDoc explaining when to use them
+   - Need usage examples in comments
+
+## Implementation Plan
+
+### Task 1: Fix LocalRecipeService.createRecipe
+
+**File**: `mobile/src/features/recipes/services/recipeService.ts`
+
+**Changes**:
+
+- Update `buildRecipeWithDefaults()` to use `withCreatedAt()` or
+- Update `createRecipe()` to apply `withCreatedAt()` after `buildRecipeWithDefaults()`
+
+**Recommendation**: Apply `withCreatedAt()` in `createRecipe()` after building defaults to keep the helper function focused on defaults only.
+
+```typescript
+async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
+    const newRecipe = buildRecipeWithDefaults(recipe);
+    
+    // Business rule: auto-populate createdAt on creation
+    const withTimestamps = withCreatedAt(newRecipe);
+    
+    // ... rest of the method
+    await guestStorage.saveRecipes([...existingRecipes, withTimestamps]);
+    return withTimestamps;
+}
+```
+
+### Task 2: Add Integration Tests
+
+**File**: `mobile/src/common/utils/__tests__/timestamps.integration.test.ts` (new file)
+
+**Test Cases**:
+
+1. **Insert populates createdAt/updatedAt**:
+
+   - Create entity without timestamps
+   - Apply `withCreatedAt()`
+   - Verify `createdAt` is populated
+   - Verify `updatedAt` is not set (only on updates)
+
+2. **Update changes updatedAt**:
+
+   - Create entity with timestamps
+   - Apply `withUpdatedAt()` on update
+   - Verify `updatedAt` changes
+   - Verify `createdAt` is preserved
+
+3. **Delete sets deletedAt and retains tombstone**:
+
+   - Create entity with timestamps
+   - Apply `markDeleted()` + `withUpdatedAt()`
+   - Verify `deletedAt` is set
+   - Verify `createdAt` and `updatedAt` are preserved
+
+4. **AsyncStorage round-trip**:
+
+   - Create entity with Date timestamps
+   - Serialize with `toPersistedTimestamps()`
+   - Store in mock AsyncStorage
+   - Read and deserialize with `fromPersistedTimestamps()`
+   - Verify timestamps are preserved
+
+5. **Supabase round-trip**:
+
+   - Create entity with Date timestamps
+   - Serialize with `toSupabaseTimestamps()`
+   - Verify snake_case format
+   - Deserialize with `fromSupabaseTimestamps()`
+   - Verify camelCase format and Date objects
+
+### Task 3: Verify Service Usage Consistency
+
+**Files to Review**:
+
+- `mobile/src/features/recipes/services/recipeService.ts`
+- `mobile/src/features/shopping/services/LocalShoppingService.ts`
+- `mobile/src/features/shopping/services/RemoteShoppingService.ts`
+- `mobile/src/features/chores/services/choresService.ts`
+
+**Verification Checklist**:
+
+- ✅ All `create*` methods use `withCreatedAt()`
+- ✅ All `update*` methods use `withUpdatedAt()`
+- ✅ All `delete*` methods use `markDeleted()` + `withUpdatedAt()`
+- ✅ All Remote services use `toSupabaseTimestamps()` before API calls
+- ✅ All Remote services use `normalizeTimestampsFromApi()` after API responses
+
+### Task 4: Enhance Documentation
+
+**Files to Update**:
+
+- `mobile/src/common/types/entityMetadata.ts` - Add usage examples
+- `mobile/src/common/utils/timestamps.ts` - Add usage examples
+
+**Documentation Additions**:
+
+- Add JSDoc examples showing when to use each helper
+- Add notes about AsyncStorage vs Supabase serialization
+- Add notes about when timestamps are auto-populated
+
+## Optional Enhancements
+
+### Task 5: Add Timestamp Validation Helper (Optional)
+
+**File**: `mobile/src/common/utils/timestamps.ts` (or `mobile/src/common/types/entityMetadata.ts`)
+
+**Purpose**: Assert that a given object conforms to timestamp expectations. Useful in integration tests and debugging.
+
+**Implementation**:
+
+```typescript
+/**
+ * Validates that an entity has proper timestamp structure.
+ * 
+ * @param entity - Entity to validate
+ * @param options - Validation options
+ * @returns Validation result with errors array
+ * 
+ * @example
+ * ```typescript
+ * const result = validateTimestamps(entity, {
+ *   requireCreatedAt: true,
+ *   requireUpdatedAt: false,
+ *   requireActive: true, // deletedAt must be undefined
+ * });
+ * 
+ * if (!result.isValid) {
+ *   console.error('Timestamp validation failed:', result.errors);
+ * }
+ * ```
+ */
+export function validateTimestamps<T extends EntityTimestamps>(
+  entity: T,
+  options?: {
+    requireCreatedAt?: boolean;
+    requireUpdatedAt?: boolean;
+    requireActive?: boolean; // If true, deletedAt must be undefined
+    allowFutureDates?: boolean;
+  }
+): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const opts = options || {};
+  
+  // Validate createdAt
+  if (opts.requireCreatedAt && !entity.createdAt) {
+    errors.push('createdAt is required but missing');
+  }
+  
+  if (entity.createdAt) {
+    if (entity.createdAt instanceof Date && isNaN(entity.createdAt.getTime())) {
+      errors.push('createdAt is an invalid Date object');
+    }
+    if (typeof entity.createdAt === 'string' && !isValidISOString(entity.createdAt)) {
+      errors.push('createdAt is not a valid ISO 8601 string');
+    }
+  }
+  
+  // Validate updatedAt
+  if (opts.requireUpdatedAt && !entity.updatedAt) {
+    errors.push('updatedAt is required but missing');
+  }
+  
+  // Validate active status
+  if (opts.requireActive && isEntityDeleted(entity)) {
+    errors.push('Entity is deleted but should be active');
+  }
+  
+  // Validate future dates
+  if (!opts.allowFutureDates) {
+    const now = new Date();
+    // Check createdAt
+    if (entity.createdAt) {
+      const createdAt = entity.createdAt instanceof Date 
+        ? entity.createdAt 
+        : new Date(entity.createdAt);
+      if (createdAt > now) {
+        errors.push('createdAt is in the future');
+      }
+    }
+    // Similar checks for updatedAt and deletedAt
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+```
+
+**Use Cases**:
+- Integration tests to verify timestamp correctness
+- Debugging timestamp-related issues
+- Data migration validation
+- API response validation
+
+### Task 6: Consider Expiry TTL Support (Future-Facing, Optional)
+
+**Purpose**: Plan for `expiresAt` field support for entities that should expire (e.g., temp data, cache entries).
+
+**Design Considerations**:
+
+1. **Add to EntityTimestamps interface** (when needed):
+   ```typescript
+   export interface EntityTimestamps {
+     createdAt?: Date | string;
+     updatedAt?: Date | string;
+     deletedAt?: Date | string;
+     expiresAt?: Date | string; // Future: for TTL support
+   }
+   ```
+
+2. **Helper Functions** (when needed):
+   ```typescript
+   /**
+    * Sets expiration timestamp on entity.
+    * 
+    * @param entity - Entity to set expiration on
+    * @param ttlSeconds - Time to live in seconds from now
+    * @returns New object with expiresAt set
+    */
+   export function withExpiration<T extends EntityTimestamps>(
+     entity: T,
+     ttlSeconds: number
+   ): T {
+     return {
+       ...entity,
+       expiresAt: new Date(Date.now() + ttlSeconds * 1000),
+     };
+   }
+   
+   /**
+    * Checks if entity has expired.
+    */
+   export function isExpired(entity: EntityTimestamps): boolean {
+     if (!entity.expiresAt) return false;
+     const expiresAt = entity.expiresAt instanceof Date 
+       ? entity.expiresAt 
+       : new Date(entity.expiresAt);
+     return expiresAt < new Date();
+   }
+   ```
+
+3. **Serialization Support**:
+   - `toPersistedTimestamps()` already handles optional fields
+   - `toSupabaseTimestamps()` would need to map `expiresAt` → `expires_at`
+
+**When to Implement**:
+- When temporary data entities are introduced
+- When cache entries need automatic expiration
+- When session data requires TTL
+
+**Note**: Not critical for current implementation, but planning the interface now makes future migration easier.
+
+### Task 7: Add Decorator/Wrapper Pattern (Advanced, Optional)
+
+**Purpose**: Provide higher-order helpers for semantic clarity and better IDE autocomplete.
+
+**Implementation**:
+
+```typescript
+/**
+ * Higher-order helper for entity creation with timestamps.
+ * 
+ * Semantically clearer than calling withCreatedAt() directly.
+ * Also helps with IDE autocomplete and linting.
+ * 
+ * @example
+ * ```typescript
+ * const newRecipe = withTimestampsOnCreate({
+ *   id: '123',
+ *   name: 'Pasta',
+ * });
+ * // newRecipe has createdAt populated
+ * ```
+ */
+export function withTimestampsOnCreate<T extends EntityTimestamps>(
+  entity: T
+): T {
+  return withCreatedAt(entity);
+}
+
+/**
+ * Higher-order helper for entity updates with timestamps.
+ * 
+ * @example
+ * ```typescript
+ * const updated = withTimestampsOnUpdate(existingRecipe, {
+ *   name: 'Updated Pasta',
+ * });
+ * // updated has updatedAt changed
+ * ```
+ */
+export function withTimestampsOnUpdate<T extends EntityTimestamps>(
+  entity: T,
+  updates: Partial<T>
+): T {
+  return withUpdatedAt({ ...entity, ...updates });
+}
+
+/**
+ * Higher-order helper for entity deletion with timestamps.
+ * 
+ * @example
+ * ```typescript
+ * const deleted = withTimestampsOnDelete(existingRecipe);
+ * // deleted has deletedAt set and updatedAt changed
+ * ```
+ */
+export function withTimestampsOnDelete<T extends EntityTimestamps>(
+  entity: T
+): T {
+  return withUpdatedAt(markDeleted(entity));
+}
+```
+
+**Benefits**:
+- Semantic clarity: `withTimestampsOnCreate()` is more descriptive than `withCreatedAt()`
+- Better IDE autocomplete in some IDEs
+- Can add additional logic in the future (e.g., validation, logging)
+- Consistent naming pattern
+
+**Trade-offs**:
+- Adds another layer of abstraction
+- May be overkill if current helpers are sufficient
+- Requires updating all service code to use new helpers
+
+**Recommendation**: Consider this as a refactoring step after core implementation is complete and tested. Start with current helpers, then optionally refactor to decorator pattern if it provides clear value.
+
+## Success Criteria
+
+1. ✅ AsyncStorage serialization/deserialization uses shared helpers and preserves ISO timestamps
+2. ✅ Supabase payload serialization uses shared helpers and matches backend column names
+3. ✅ `createdAt` is auto-populated on inserts when missing
+4. ✅ `updatedAt` is auto-populated on any updates
+5. ✅ `deletedAt` is set on soft-delete and omitted for active records
+6. ✅ Integration tests cover insert, update, delete scenarios
+7. ✅ All services consistently use timestamp helpers
+
+## Files to Modify
+
+### Core Implementation
+
+1. `mobile/src/features/recipes/services/recipeService.ts` - Fix `createRecipe()` to use `withCreatedAt()`
+2. `mobile/src/common/utils/__tests__/timestamps.integration.test.ts` - New integration test file
+3. `mobile/src/common/types/entityMetadata.ts` - Enhance documentation
+4. `mobile/src/common/utils/timestamps.ts` - Enhance documentation
+
+### Optional Enhancements
+
+5. `mobile/src/common/utils/timestamps.ts` - Add `validateTimestamps()` helper (optional)
+6. `mobile/src/common/types/entityMetadata.ts` - Add `expiresAt` field planning comments (optional, future)
+7. `mobile/src/common/utils/timestamps.ts` - Add decorator/wrapper helpers (optional, advanced)
+
+## Testing Strategy
+
+1. **Unit Tests**: Already comprehensive, verify they still pass
+2. **Integration Tests**: Add new test file for end-to-end timestamp handling
+3. **Manual Testing**: 
+
+   - Create recipe in guest mode, verify createdAt is set
+   - Update recipe, verify updatedAt changes
+   - Delete recipe, verify deletedAt is set and tombstone preserved
+   - Create recipe in signed-in mode, verify timestamps sync correctly
+
+## Notes
+
+- All helpers are already implemented and mostly used correctly
+- Main gap is missing `withCreatedAt()` in `LocalRecipeService.createRecipe()`
+- Test coverage is good for unit tests but missing integration tests
+- Backend already handles timestamps correctly (Prisma schema has `@default(now())` and `@updatedAt`)
+
+## Implementation Priority
+
+### Phase 1: Core Requirements (Required)
+- Task 1: Fix LocalRecipeService.createRecipe
+- Task 2: Add Integration Tests
+- Task 3: Verify Service Usage Consistency
+- Task 4: Enhance Documentation
+
+### Phase 2: Optional Enhancements (Recommended)
+- Task 5: Add Timestamp Validation Helper - Useful for testing and debugging
+
+### Phase 3: Future Considerations (Optional)
+- Task 6: Expiry TTL Support - Only implement when needed
+- Task 7: Decorator/Wrapper Pattern - Consider as refactoring after Phase 1 is complete
