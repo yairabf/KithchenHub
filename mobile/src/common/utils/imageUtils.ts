@@ -8,11 +8,17 @@
 /**
  * Validates if an image URL string is valid and non-empty.
  * 
+ * **Performance:** O(1) - single string operation, safe to call frequently.
+ * 
+ * **When to use:** Use this function instead of inline validation to ensure
+ * consistent validation logic across the codebase. Inline checks like
+ * `image && image.trim().length > 0` should be replaced with this function.
+ * 
  * Handles edge cases:
  * - Empty strings ('')
  * - Whitespace-only strings ('   ')
  * - Null or undefined values
- * - Valid image URLs
+ * - Valid image URLs (including those with leading/trailing whitespace)
  * 
  * @param image - Image URL string to validate (can be null, undefined, or string)
  * @returns True if image is a non-empty, non-whitespace string

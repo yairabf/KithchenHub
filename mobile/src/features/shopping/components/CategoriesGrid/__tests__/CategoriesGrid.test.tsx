@@ -27,48 +27,72 @@ describe('CategoriesGrid', () => {
     jest.clearAllMocks();
   });
 
-  describe.each([
-    [
-      'category with valid image',
-      [{ id: '1', localId: 'uuid-1', name: 'Fruits', image: 'https://example.com/fruits.jpg', itemCount: 5, backgroundColor: '#fff' }],
-      true,
-    ],
-    [
-      'category with empty image',
-      [{ id: '1', localId: 'uuid-1', name: 'Fruits', image: '', itemCount: 5, backgroundColor: '#fff' }],
-      false,
-    ],
-    [
-      'category with whitespace-only image',
-      [{ id: '1', localId: 'uuid-1', name: 'Fruits', image: '   ', itemCount: 5, backgroundColor: '#fff' }],
-      false,
-    ],
-    [
-      'multiple categories with mixed images',
-      [
-        { id: '1', localId: 'uuid-1', name: 'Fruits', image: 'fruits.jpg', itemCount: 5, backgroundColor: '#fff' },
-        { id: '2', localId: 'uuid-2', name: 'Vegetables', image: '', itemCount: 3, backgroundColor: '#f0f0f0' },
-      ],
-      true, // At least one has image
-    ],
-  ])('rendering with %s', (description, categories, shouldHaveImageBackground) => {
-    it(`should render correctly`, () => {
-      const { getByText, queryAllByTestId } = render(
-        <CategoriesGrid {...defaultProps} categories={categories as Category[]} />
-      );
+  it('should render ImageBackground when category has valid image', () => {
+    const categories: Category[] = [
+      { id: '1', localId: 'uuid-1', name: 'Fruits', image: 'https://example.com/fruits.jpg', itemCount: 5, backgroundColor: '#fff' },
+    ];
 
-      // Verify category names are rendered
-      categories.forEach((category) => {
-        expect(getByText(category.name)).toBeTruthy();
-        expect(getByText(category.itemCount.toString())).toBeTruthy();
-      });
+    const { getByTestId, queryByTestId, getByText } = render(
+      <CategoriesGrid {...defaultProps} categories={categories} />
+    );
 
-      // Note: ImageBackground doesn't have a testID by default, so we check for the presence
-      // of category names and counts which are always rendered
-      const categoryTiles = queryAllByTestId('category-tile');
-      // If we had testIDs, we could verify ImageBackground vs View rendering
-      // For now, we verify the component renders without errors
-    });
+    // Verify ImageBackground is rendered
+    expect(getByTestId('category-image-background-1')).toBeTruthy();
+    expect(queryByTestId('category-no-image-1')).toBeNull();
+    
+    // Verify content is rendered
+    expect(getByText('Fruits')).toBeTruthy();
+    expect(getByText('5')).toBeTruthy();
+  });
+
+  it('should render View without ImageBackground when category has empty image', () => {
+    const categories: Category[] = [
+      { id: '1', localId: 'uuid-1', name: 'Fruits', image: '', itemCount: 5, backgroundColor: '#fff' },
+    ];
+
+    const { getByTestId, queryByTestId, getByText } = render(
+      <CategoriesGrid {...defaultProps} categories={categories} />
+    );
+
+    // Verify View is rendered (no ImageBackground)
+    expect(getByTestId('category-no-image-1')).toBeTruthy();
+    expect(queryByTestId('category-image-background-1')).toBeNull();
+    
+    // Verify content is rendered
+    expect(getByText('Fruits')).toBeTruthy();
+    expect(getByText('5')).toBeTruthy();
+  });
+
+  it('should render View without ImageBackground when category has whitespace-only image', () => {
+    const categories: Category[] = [
+      { id: '1', localId: 'uuid-1', name: 'Fruits', image: '   ', itemCount: 5, backgroundColor: '#fff' },
+    ];
+
+    const { getByTestId, queryByTestId } = render(
+      <CategoriesGrid {...defaultProps} categories={categories} />
+    );
+
+    expect(getByTestId('category-no-image-1')).toBeTruthy();
+    expect(queryByTestId('category-image-background-1')).toBeNull();
+  });
+
+  it('should handle multiple categories with mixed images correctly', () => {
+    const categories: Category[] = [
+      { id: '1', localId: 'uuid-1', name: 'Fruits', image: 'fruits.jpg', itemCount: 5, backgroundColor: '#fff' },
+      { id: '2', localId: 'uuid-2', name: 'Vegetables', image: '', itemCount: 3, backgroundColor: '#f0f0f0' },
+    ];
+
+    const { getByTestId, queryByTestId } = render(
+      <CategoriesGrid {...defaultProps} categories={categories} />
+    );
+
+    // First category has image
+    expect(getByTestId('category-image-background-1')).toBeTruthy();
+    expect(queryByTestId('category-no-image-1')).toBeNull();
+
+    // Second category has no image
+    expect(getByTestId('category-no-image-2')).toBeTruthy();
+    expect(queryByTestId('category-image-background-2')).toBeNull();
   });
 
   it('should call onCategoryPress when category is pressed', () => {

@@ -36,6 +36,7 @@ export function CategoriesGrid({
             >
               {hasImage ? (
                 <ImageBackground
+                  testID={`category-image-background-${category.id}`}
                   source={{ uri: category.image }}
                   style={styles.categoryBg}
                   imageStyle={styles.categoryBgImage}
@@ -46,7 +47,10 @@ export function CategoriesGrid({
                   </View>
                 </ImageBackground>
               ) : (
-                <View style={[styles.categoryBg, { backgroundColor: category.backgroundColor }]}>
+                <View 
+                  testID={`category-no-image-${category.id}`}
+                  style={[styles.categoryBg, { backgroundColor: category.backgroundColor }]}
+                >
                   <View style={styles.categoryOverlay}>
                     <Text style={styles.categoryCount}>{category.itemCount}</Text>
                     <Text style={styles.categoryName}>{category.name}</Text>

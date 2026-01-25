@@ -70,7 +70,18 @@ export class LocalShoppingService implements IShoppingService {
     const guestItems = await guestStorage.getShoppingItems();
 
     // Seed mock data if storage is empty (dev mode only)
-    const seededData = await this.seedShoppingDataIfEmpty(guestLists, guestItems);
+    // Handle seeding failures gracefully - fall back to empty arrays
+    let seededData: { lists: ShoppingList[]; items: ShoppingItem[] } | null = null;
+    try {
+      seededData = await this.seedShoppingDataIfEmpty(guestLists, guestItems);
+    } catch (error) {
+      // Log error but don't fail the entire operation
+      // Seeding is a convenience feature, not critical for app functionality
+      if (__DEV__) {
+        console.error('[LocalShoppingService] Failed to seed mock data, continuing with empty storage:', error);
+      }
+    }
+    
     const listsToUse = seededData?.lists ?? guestLists;
     const itemsToUse = seededData?.items ?? guestItems;
 
