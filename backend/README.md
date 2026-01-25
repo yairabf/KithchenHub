@@ -94,7 +94,7 @@ To verify that Row Level Security is correctly isolating data between households
 - Docs: `http://localhost:3000/api/docs`
 - Public routes: `POST /auth/google`, `POST /auth/guest`, `POST /auth/refresh`, `GET /groceries/search`, `GET /groceries/categories` (all other endpoints require bearer JWT)
 - Auth endpoints: `POST /auth/google`, `POST /auth/guest`, `POST /auth/sync`, `POST /auth/refresh`
-  - Sync endpoint (`POST /auth/sync`): Accepts offline data and performs simple upsert operations. Returns conflicts array for items that failed to sync. Client-side conflict resolution handles timestamp-based merging (LWW + tombstones).
+  - Sync endpoint (`POST /auth/sync`): Accepts offline data (shopping lists, recipes, chores) and performs simple upsert operations. Returns sync result with status (`synced`, `partial`, or `failed`) and conflicts array for items that failed to sync. Client-side conflict resolution handles timestamp-based merging using Last-Write-Wins (LWW) with tombstone semantics.
 - Household endpoints: `GET /household`, `PUT /household`, `POST /household/invite`, `DELETE /household/members/:id`
 - Shopping endpoints: `GET /shopping-lists`, `POST /shopping-lists`, `GET /shopping-lists/:id`, `DELETE /shopping-lists/:id`, `POST /shopping-lists/:id/items`, `PATCH /shopping-items/:id`, `DELETE /shopping-items/:id`
 - Grocery catalog endpoints (public): `GET /groceries/search`, `GET /groceries/categories`
