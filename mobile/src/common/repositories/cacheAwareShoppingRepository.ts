@@ -218,10 +218,22 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   
   /**
    * Fetches grocery items from API (not cached, always fresh)
+   * Returns empty array on network errors to allow app to continue functioning
    */
   private async getGroceryItems(): Promise<GroceryItem[]> {
-    const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
-    return results.map(mapGroceryItem);
+    try {
+      const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
+      return results.map(mapGroceryItem);
+    } catch (error) {
+      // Handle network errors gracefully - return empty array instead of throwing
+      // This allows the app to continue working even when offline
+      if (error instanceof NetworkError) {
+        console.warn('Network unavailable: Unable to fetch grocery items. Returning empty list.');
+        return [];
+      }
+      // Re-throw non-network errors
+      throw error;
+    }
   }
 
   /**
