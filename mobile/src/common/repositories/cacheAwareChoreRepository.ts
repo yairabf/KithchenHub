@@ -19,7 +19,11 @@ import {
 import { getIsOnline } from '../utils/networkStatus';
 import { api } from '../../services/api';
 import { normalizeTimestampsFromApi } from '../utils/timestamps';
-import { markDeleted } from '../utils/timestamps';
+import { markDeleted, withCreatedAt, withUpdatedAt } from '../utils/timestamps';
+import { cacheEvents } from '../utils/cacheEvents';
+import { NetworkError } from '../../services/api';
+import { syncQueueStorage, type SyncOp } from '../utils/syncQueueStorage';
+import * as Crypto from 'expo-crypto';
 
 /**
  * DTO types for API responses (matches RemoteChoresService)
@@ -104,6 +108,70 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
   private getId(chore: Chore): string {
     return chore.id;
   }
+
+  /**
+   * Creates an optimistic chore entity with localId for offline operations.
+   * 
+   * Generates a temporary UUID as localId and sets initial timestamps.
+   * The entity will be updated with server-assigned ID after successful sync.
+   * 
+   * @param data - Partial chore data from user input
+   * @returns Complete Chore entity with generated localId and timestamps
+   */
+  private createOptimisticChore(data: Partial<Chore>): Chore {
+    const localId = Crypto.randomUUID();
+    const now = new Date().toISOString();
+    
+    return withCreatedAt({
+      id: localId,
+      localId: localId,
+      name: data.name ?? '',
+      assignee: data.assignee,
+      dueDate: data.dueDate,
+      dueTime: data.dueTime,
+      reminder: data.reminder,
+      isRecurring: data.isRecurring ?? false,
+      completed: data.completed ?? false,
+      section: data.section ?? 'today',
+      icon: data.icon ?? DEFAULT_CHORE_ICON,
+      createdAt: now,
+      updatedAt: now,
+    } as Chore);
+  }
+
+  /**
+   * Ensures localId exists on entity (for updates of existing entities)
+   */
+  private ensureLocalId(chore: Chore): Chore {
+    if (!chore.localId) {
+      return { ...chore, localId: chore.id };
+    }
+    return chore;
+  }
+
+  /**
+   * Helper method for enqueueing writes to the sync queue.
+   * 
+   * Extracts localId and serverId from the entity and enqueues the write
+   * operation for later sync when network is available.
+   * 
+   * @param op - Sync operation type (create, update, delete)
+   * @param entity - Chore entity to enqueue
+   */
+  private async enqueueWrite(
+    op: SyncOp,
+    entity: Chore
+  ): Promise<void> {
+    const localId = entity.localId ?? entity.id;
+    const serverId = entity.id !== localId ? entity.id : undefined;
+    
+    await syncQueueStorage.enqueue(
+      this.entityType,
+      op,
+      { localId, serverId },
+      entity // Full entity payload
+    );
+  }
   
   /**
    * Fetches chores from API (used by cache layer)
@@ -149,145 +217,201 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
   }
   
   /**
-   * Creates a chore with write-through caching
+   * Creates a chore with write-through caching and offline queueing
    * 
-   * Implements write-through caching:
-   * 1. Creates chore on server via service
-   * 2. Reads current cache
-   * 3. Adds created chore to cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param chore - Partial chore data to create
-   * @returns The created chore with server timestamps
-   * @throws {Error} If service call fails
+   * Critical Write Ordering Rule (Non-negotiable):
+   * UI action → Update cache immediately → Emit cache event → Handle sync (enqueue if offline, call service if online)
    */
   async create(chore: Partial<Chore>): Promise<Chore> {
-    // 1. Call service to create on server
-    const created = await this.service.createChore(chore);
+    // Step 1: Create optimistic entity
+    const optimisticEntity = this.createOptimisticChore(chore);
     
-    // 2. Update cache (with error handling)
+    // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
     await addEntityToCache(
       this.entityType,
-      created,
+      optimisticEntity,
       (c) => this.getId(c)
     );
     
-    return created;
-  }
-  
-  /**
-   * Updates a chore with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Updates chore on server via service
-   * 2. Reads current cache
-   * 3. Updates chore in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Chore ID to update
-   * @param updates - Partial chore data to update
-   * @returns The updated chore with server timestamps
-   * @throws {Error} If service call fails
-   */
-  async update(id: string, updates: Partial<Chore>): Promise<Chore> {
-    // 1. Call service to update on server
-    const updated = await this.service.updateChore(id, updates);
+    // Step 3: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange(this.entityType);
     
-    // 2. Update cache (with error handling)
-    await updateEntityInCache(
-      this.entityType,
-      updated,
-      (c) => this.getId(c),
-      (c) => c.id === id || c.localId === id
-    );
+    // Step 4: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
     
-    return updated;
-  }
-  
-  /**
-   * Deletes a chore (soft-delete) with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Deletes chore on server via service (soft-delete)
-   * 2. Reads current cache
-   * 3. Marks chore as deleted in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Chore ID to delete
-   * @throws {Error} If service call fails
-   */
-  async delete(id: string): Promise<void> {
-    // 1. Call service to delete on server
-    await this.service.deleteChore(id);
-    
-    // 2. Read current cache and mark as deleted
-    try {
-      const current = await readCachedEntitiesForUpdate<Chore>(this.entityType);
-      const chore = current.find(c => c.id === id || c.localId === id);
-      if (chore) {
-        const deleted = markDeleted(chore);
-        await updateEntityInCache(
-          this.entityType,
-          deleted,
-          (c) => this.getId(c),
-          (c) => c.id === id || c.localId === id
-        );
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`Failed to update cache after delete for ${this.entityType}:`, errorMessage);
-      // Don't throw - server operation succeeded
+    if (isOnline) {
       try {
-        await invalidateCache(this.entityType);
-      } catch (invalidateError) {
-        // Ignore invalidation errors
-        console.error(`Failed to invalidate cache after delete error:`, invalidateError);
+        const created = await this.service.createChore(chore);
+        await addEntityToCache(
+          this.entityType,
+          created,
+          (c) => this.getId(c)
+        );
+        cacheEvents.emitCacheChange(this.entityType);
+        return created;
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('create', optimisticEntity);
+        }
+        throw error;
       }
+    } else {
+      await this.enqueueWrite('create', optimisticEntity);
+      return optimisticEntity;
     }
   }
   
   /**
-   * Toggles chore completion with write-through caching
-   * 
-   * Implements write-through caching:
-   * 1. Toggles chore on server via service
-   * 2. Reads current cache
-   * 3. Updates chore in cache
-   * 4. Emits cache change event to trigger UI updates
-   * 
-   * If cache update fails, the error is logged but the operation
-   * still succeeds (server write completed). Cache is invalidated
-   * to force refresh on next read.
-   * 
-   * @param id - Chore ID to toggle
-   * @returns The updated chore with server timestamps
-   * @throws {Error} If service call fails
+   * Updates a chore with write-through caching and offline queueing
    */
-  async toggle(id: string): Promise<Chore> {
-    // 1. Call service to toggle on server
-    const updated = await this.service.toggleChore(id);
+  async update(id: string, updates: Partial<Chore>): Promise<Chore> {
+    // Step 1: Read current cache
+    const current = await readCachedEntitiesForUpdate<Chore>(this.entityType);
+    const existing = current.find(c => c.id === id || c.localId === id);
     
-    // 2. Update cache (with error handling)
+    if (!existing) {
+      throw new Error(`Chore with id ${id} not found in cache`);
+    }
+    
+    // Step 2: Create optimistic updated entity
+    const optimisticEntity = this.ensureLocalId(withUpdatedAt({
+      ...existing,
+      ...updates,
+    } as Chore));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
     await updateEntityInCache(
       this.entityType,
-      updated,
+      optimisticEntity,
       (c) => this.getId(c),
       (c) => c.id === id || c.localId === id
     );
     
-    return updated;
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange(this.entityType);
+    
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      try {
+        const updated = await this.service.updateChore(id, updates);
+        await updateEntityInCache(
+          this.entityType,
+          updated,
+          (c) => this.getId(c),
+          (c) => c.id === id || c.localId === id
+        );
+        cacheEvents.emitCacheChange(this.entityType);
+        return updated;
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('update', optimisticEntity);
+        }
+        throw error;
+      }
+    } else {
+      await this.enqueueWrite('update', optimisticEntity);
+      return optimisticEntity;
+    }
+  }
+  
+  /**
+   * Deletes a chore (soft-delete) with write-through caching and offline queueing
+   */
+  async delete(id: string): Promise<void> {
+    // Step 1: Read current cache
+    const current = await readCachedEntitiesForUpdate<Chore>(this.entityType);
+    const existing = current.find(c => c.id === id || c.localId === id);
+    
+    if (!existing) {
+      return;
+    }
+    
+    // Step 2: Create optimistic deleted entity
+    const optimisticEntity = this.ensureLocalId(markDeleted(existing));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
+    await updateEntityInCache(
+      this.entityType,
+      optimisticEntity,
+      (c) => this.getId(c),
+      (c) => c.id === id || c.localId === id
+    );
+    
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange(this.entityType);
+    
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      try {
+        await this.service.deleteChore(id);
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('delete', optimisticEntity);
+        }
+        throw error;
+      }
+    } else {
+      await this.enqueueWrite('delete', optimisticEntity);
+    }
+  }
+  
+  /**
+   * Toggles chore completion with write-through caching and offline queueing
+   */
+  async toggle(id: string): Promise<Chore> {
+    // Step 1: Read current cache
+    const current = await readCachedEntitiesForUpdate<Chore>(this.entityType);
+    const existing = current.find(c => c.id === id || c.localId === id);
+    
+    if (!existing) {
+      throw new Error(`Chore with id ${id} not found in cache`);
+    }
+    
+    // Step 2: Create optimistic toggled entity
+    const optimisticEntity = this.ensureLocalId(withUpdatedAt({
+      ...existing,
+      completed: !existing.completed,
+    } as Chore));
+    
+    // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
+    await updateEntityInCache(
+      this.entityType,
+      optimisticEntity,
+      (c) => this.getId(c),
+      (c) => c.id === id || c.localId === id
+    );
+    
+    // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    cacheEvents.emitCacheChange(this.entityType);
+    
+    // Step 5: Handle sync (online vs offline) - AFTER cache update
+    const isOnline = getIsOnline();
+    
+    if (isOnline) {
+      try {
+        const updated = await this.service.toggleChore(id);
+        await updateEntityInCache(
+          this.entityType,
+          updated,
+          (c) => this.getId(c),
+          (c) => c.id === id || c.localId === id
+        );
+        cacheEvents.emitCacheChange(this.entityType);
+        return updated;
+      } catch (error) {
+        if (error instanceof NetworkError) {
+          await this.enqueueWrite('update', optimisticEntity);
+        }
+        throw error;
+      }
+    } else {
+      await this.enqueueWrite('update', optimisticEntity);
+      return optimisticEntity;
+    }
   }
   
   /**
