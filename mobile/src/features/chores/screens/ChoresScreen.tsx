@@ -7,15 +7,19 @@ import {
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
+  GestureResponderEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, pastelColors } from '../../../theme';
+import { colors, pastelColors, spacing } from '../../../theme';
 import { ProgressRing } from '../components/ProgressRing';
 import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatChoresText } from '../../../common/utils/shareUtils';
+import { useEntitySyncStatusWithEntity } from '../../../common/hooks/useSyncStatus';
+import { SyncStatusIndicator } from '../../../common/components/SyncStatusIndicator';
+import { determineIndicatorStatus } from '../../../common/utils/syncStatusUtils';
 import { type Chore } from '../../../mocks/chores';
 import { styles } from './styles';
 import type { ChoresScreenProps } from './types';
@@ -220,10 +224,16 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     return progressValue;
   }, [todayChores]);
 
-  const renderChoreCard = (chore: Chore, index: number) => {
-    const bgColor = pastelColors[index % pastelColors.length];
+  /**
+   * Chore Card Component
+   * Separate component to allow hook usage
+   */
+  const ChoreCard = React.memo(({ chore, index, bgColor }: { chore: Chore; index: number; bgColor: string }) => {
+    // Check sync status for signed-in users
+    const syncStatus = useEntitySyncStatusWithEntity('chores', chore);
+    const indicatorStatus = determineIndicatorStatus(syncStatus);
 
-    const handleEditPress = (e: any) => {
+    const handleEditPress = (e: GestureResponderEvent) => {
       e.stopPropagation();
       handleChorePress(chore);
     };
@@ -248,6 +258,12 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           </TouchableOpacity>
           <View style={styles.choreCardIcon}>
             <Text style={styles.choreCardIconText}>{chore.icon || '📋'}</Text>
+            {/* Sync status indicator in icon area */}
+            {(syncStatus.isPending || syncStatus.isFailed) && (
+              <View style={styles.syncStatusContainer}>
+                <SyncStatusIndicator status={indicatorStatus} size="small" />
+              </View>
+            )}
           </View>
           <View style={styles.choreCardContent}>
             <Text
@@ -279,6 +295,11 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
         </TouchableOpacity>
       </SwipeableWrapper>
     );
+  });
+
+  const renderChoreCard = (chore: Chore, index: number) => {
+    const bgColor = pastelColors[index % pastelColors.length];
+    return <ChoreCard key={chore.id} chore={chore} index={index} bgColor={bgColor} />;
   };
 
   return (

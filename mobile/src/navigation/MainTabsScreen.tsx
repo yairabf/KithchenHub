@@ -17,6 +17,7 @@ import { ChoresQuickActionModal } from '../features/chores/components/ChoresQuic
 import { RecipeDetailScreen } from '../features/recipes/screens/RecipeDetailScreen';
 import type { Recipe } from '../mocks/recipes';
 import { OfflineBanner } from '../common/components/OfflineBanner';
+import { OfflinePill } from '../common/components/OfflinePill';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -151,6 +152,7 @@ export function MainTabsScreen() {
         </Animated.View>
       </View>
 
+      <OfflinePill position="bottom-right" />
       <BottomPillNav activeTab={activeTab} onTabPress={handleTabPress} />
 
       <ShoppingQuickActionModal

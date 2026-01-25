@@ -9,9 +9,72 @@ import { Ionicons } from '@expo/vector-icons';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
 import { GroceryCard, GroceryCardContent, QuantityControls } from '../../../../common/components/GroceryCard';
 import { GrocerySearchBar } from '../GrocerySearchBar';
+import { useEntitySyncStatusWithEntity } from '../../../../common/hooks/useSyncStatus';
+import { SyncStatusIndicator } from '../../../../common/components/SyncStatusIndicator';
+import { determineIndicatorStatus } from '../../../../common/utils/syncStatusUtils';
 import { colors, borderRadius, pastelColors } from '../../../../theme';
 import { styles } from './styles';
 import { ShoppingListPanelProps } from './types';
+import type { ShoppingItem } from '../../../../mocks/shopping';
+
+/**
+ * Shopping Item Card Component
+ * Separate component to allow hook usage
+ */
+function ShoppingItemCard({
+  item,
+  index,
+  bgColor,
+  onDeleteItem,
+  onQuantityChange,
+  onToggleItemChecked,
+}: {
+  item: ShoppingItem;
+  index: number;
+  bgColor: string;
+  onDeleteItem: (id: string) => void;
+  onQuantityChange: (id: string, delta: number) => void;
+  onToggleItemChecked: (id: string) => void;
+}) {
+  const isChecked = item.isChecked;
+  
+  // Check sync status for signed-in users
+  const syncStatus = useEntitySyncStatusWithEntity('shoppingItems', item);
+  const indicatorStatus = determineIndicatorStatus(syncStatus);
+
+  return (
+    <SwipeableWrapper
+      key={item.id}
+      onSwipeDelete={() => onDeleteItem(item.id)}
+      backgroundColor={bgColor}
+      borderRadius={borderRadius.xxl}
+    >
+      <GroceryCard backgroundColor={bgColor} style={isChecked ? styles.checkedCard : undefined}>
+        <GroceryCardContent
+          image={item.image}
+          title={item.name}
+          subtitle={item.category}
+          titleStyle={isChecked ? styles.checkedTitle : undefined}
+          onPress={() => onToggleItemChecked(item.id)}
+          rightElement={
+            <View style={styles.syncStatusRow}>
+              {/* Sync status indicator */}
+              {(syncStatus.isPending || syncStatus.isFailed) && (
+                <SyncStatusIndicator status={indicatorStatus} size="small" />
+              )}
+              <QuantityControls
+                quantity={item.quantity}
+                onIncrement={() => onQuantityChange(item.id, 1)}
+                onDecrement={() => onQuantityChange(item.id, -1)}
+                minQuantity={1}
+              />
+            </View>
+          }
+        />
+      </GroceryCard>
+    </SwipeableWrapper>
+  );
+}
 
 export function ShoppingListPanel({
   shoppingLists,
@@ -29,33 +92,16 @@ export function ShoppingListPanel({
   // Memoize the render function to prevent unnecessary re-renders
   const renderShoppingItem = useCallback((item: typeof filteredItems[0], index: number) => {
     const bgColor = pastelColors[index % pastelColors.length];
-    const isChecked = item.isChecked;
 
     return (
-      <SwipeableWrapper
-        key={item.id}
-        onSwipeDelete={() => onDeleteItem(item.id)}
-        backgroundColor={bgColor}
-        borderRadius={borderRadius.xxl}
-      >
-        <GroceryCard backgroundColor={bgColor} style={isChecked ? styles.checkedCard : undefined}>
-          <GroceryCardContent
-            image={item.image}
-            title={item.name}
-            subtitle={item.category}
-            titleStyle={isChecked ? styles.checkedTitle : undefined}
-            onPress={() => onToggleItemChecked(item.id)}
-            rightElement={
-              <QuantityControls
-                quantity={item.quantity}
-                onIncrement={() => onQuantityChange(item.id, 1)}
-                onDecrement={() => onQuantityChange(item.id, -1)}
-                minQuantity={1}
-              />
-            }
-          />
-        </GroceryCard>
-      </SwipeableWrapper>
+      <ShoppingItemCard
+        item={item}
+        index={index}
+        bgColor={bgColor}
+        onDeleteItem={onDeleteItem}
+        onQuantityChange={onQuantityChange}
+        onToggleItemChecked={onToggleItemChecked}
+      />
     );
   }, [onDeleteItem, onQuantityChange, onToggleItemChecked]);
 
