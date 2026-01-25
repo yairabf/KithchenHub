@@ -12,6 +12,7 @@ import { guestStorage } from '../../../common/utils/guestStorage';
 import { withUpdatedAt, markDeleted } from '../../../common/utils/timestamps';
 import { findEntityIndex, updateEntityInStorage } from '../../../common/utils/entityOperations';
 import { createShoppingList, createShoppingItem } from '../utils/shoppingFactory';
+import { isEntityActive } from '../../../common/types/entityMetadata';
 import type { ShoppingData, IShoppingService } from './shoppingService';
 
 const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
@@ -23,9 +24,13 @@ export class LocalShoppingService implements IShoppingService {
     const guestLists = await guestStorage.getShoppingLists();
     const guestItems = await guestStorage.getShoppingItems();
 
+    // Filter out deleted items (soft-delete tombstone pattern)
+    const activeLists = guestLists.filter(isEntityActive);
+    const activeItems = guestItems.filter(isEntityActive);
+
     return {
-      shoppingLists: guestLists,
-      shoppingItems: guestItems,
+      shoppingLists: activeLists,
+      shoppingItems: activeItems,
       // Categories and grocery items are still from mocks (they're reference data, not user data)
       categories: [...mockCategories],
       groceryItems: [...mockGroceriesDB],
