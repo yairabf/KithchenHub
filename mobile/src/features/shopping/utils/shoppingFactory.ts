@@ -3,7 +3,7 @@ import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping/shoppin
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { withCreatedAt } from '../../../common/utils/timestamps';
+import { withCreatedAtAndUpdatedAt } from '../../../common/utils/timestamps';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
@@ -22,8 +22,8 @@ export const createShoppingItem = (
         listId: listId,
         isChecked: false,
     };
-    // Business rule: auto-populate createdAt on creation
-    return withCreatedAt(item);
+    // Business rule: auto-populate createdAt and updatedAt on creation
+    return withCreatedAtAndUpdatedAt(item);
 };
 
 export const createShoppingList = (
@@ -39,6 +39,6 @@ export const createShoppingList = (
         icon: icon,
         color: color,
     };
-    // Business rule: auto-populate createdAt on creation
-    return withCreatedAt(list);
+    // Business rule: auto-populate createdAt and updatedAt on creation
+    return withCreatedAtAndUpdatedAt(list);
 };
