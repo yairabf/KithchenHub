@@ -309,7 +309,11 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
       - Idempotent: won't re-seed after user deletes all lists/items (tombstones remain)
     - **Catalog Data**: Uses `catalogService.getCatalogData()` to fetch reference data (categories, groceryItems, frequentlyAddedItems) with API → Cache → Mock fallback strategy
     - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
-    - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
+    - **Timestamp Management**:
+      - `createList()` and `createItem()`: Set both `createdAt` and `updatedAt` (via factory functions using `withCreatedAtAndUpdatedAt()`)
+      - `updateList()` and `updateItem()`: Update `updatedAt` using `withUpdatedAt()` helper
+      - `deleteList()` and `deleteItem()`: Set `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
+      - `toggleItem()`: Updates `updatedAt` using `withUpdatedAt()` helper
     - **ID Matching**: Service methods accept both `id` and `localId` via `findEntityIndex()` which checks both identifiers
   - `RemoteShoppingService` (`mobile/src/features/shopping/services/RemoteShoppingService.ts`): 
     - Calls backend via `api.ts` (`/shopping-lists`, `/shopping-lists/{id}` endpoints)
@@ -321,6 +325,15 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
     - All CRUD operations fetch existing entities before updating to prevent data loss
     - Server timestamps are authoritative and overwrite client timestamps on response
+    - **Timestamp Management**:
+      - `createList()` and `createItem()`: Set both `createdAt` and `updatedAt` using `withCreatedAtAndUpdatedAt()` helper
+      - `updateList()`, `updateItem()`, `toggleItem()`: Update `updatedAt` using `withUpdatedAt()` helper
+      - `deleteList()` and `deleteItem()`: Set `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
+      - Handles missing server timestamps gracefully (falls back to optimistic timestamps if API doesn't return them)
+    - **Cache Updates**: All CRUD operations update local cache after successful API calls
+      - Uses `addEntityToCache()` for create operations
+      - Uses `updateEntityInCache()` for update/delete/toggle operations
+      - Cache updates are best-effort (failures are logged but don't throw)
     - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
   - Storage keys are centrally managed via `getGuestStorageKey(ENTITY_TYPES.*)` from `dataModeStorage.ts`
@@ -342,11 +355,14 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - **Internal Helpers**: Uses `readEntityEnvelope()` and `writeEntityEnvelope()` from `guestStorageHelpers.ts` for type-safe operations
 - **Entity Factories**: `mobile/src/features/shopping/utils/shoppingFactory.ts`
   - `createShoppingList()`: Creates new shopping list objects
-    - **Automatically populates `createdAt`** using `withCreatedAt()` helper
+    - **Automatically populates `createdAt` and `updatedAt`** using `withCreatedAtAndUpdatedAt()` helper
   - `createShoppingItem()`: Creates new shopping item objects
-    - **Automatically populates `createdAt`** using `withCreatedAt()` helper
+    - **Automatically populates `createdAt` and `updatedAt`** using `withCreatedAtAndUpdatedAt()` helper
 - **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
-  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation
+  - `withCreatedAtAndUpdatedAt()`: Auto-populates `createdAt` (if missing) and always sets `updatedAt` on entity creation
+    - Recommended helper for all create operations
+    - Preserves existing `createdAt` if provided, always sets `updatedAt` to current time
+  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (legacy, use `withCreatedAtAndUpdatedAt()` for new code)
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
   - `markDeleted()`: Sets `deletedAt` for soft-delete operations
   - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)
