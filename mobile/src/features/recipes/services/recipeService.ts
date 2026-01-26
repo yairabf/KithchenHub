@@ -3,7 +3,7 @@ import { api } from '../../../services/api';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
-import { withUpdatedAt, markDeleted, withCreatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
+import { withUpdatedAt, markDeleted, withCreatedAtAndUpdatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
 import { isDevMode } from '../../../common/utils/devMode';
 import { getCached, setCached } from '../../../common/repositories/cacheAwareRepository';
 import { EntityTimestamps } from '../../../common/types/entityMetadata';
@@ -101,10 +101,10 @@ export class LocalRecipeService implements IRecipeService {
         }
 
         try {
-            // Ensure all mock recipes have createdAt timestamps
-            // withCreatedAt() is safe - it won't overwrite existing timestamps
+            // Ensure all mock recipes have createdAt and updatedAt timestamps
+            // withCreatedAtAndUpdatedAt() is safe - it won't overwrite existing timestamps
             const seededRecipes = mockRecipes.map(recipe => 
-                withCreatedAt(recipe)
+                withCreatedAtAndUpdatedAt(recipe)
             );
             
             // Save seeded recipes to storage
@@ -140,8 +140,8 @@ export class LocalRecipeService implements IRecipeService {
             throw new Error('Invalid recipe data: missing required fields (localId, name)');
         }
 
-        // Business rule: auto-populate createdAt on creation
-        const withTimestamps = withCreatedAt(newRecipe);
+        // Business rule: auto-populate createdAt and updatedAt on creation
+        const withTimestamps = withCreatedAtAndUpdatedAt(newRecipe);
 
         // Persist to guest storage with retry logic for concurrent writes
         let retries = MAX_RETRIES;
@@ -289,13 +289,14 @@ export class RemoteRecipeService implements IRecipeService {
 
     async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
         // Apply timestamp for optimistic UI and offline queue
-        const withTimestamps = withCreatedAt(recipe as Recipe);
+        const withTimestamps = withCreatedAtAndUpdatedAt(recipe as Recipe);
         const payload = toSupabaseTimestamps(withTimestamps);
         const response = await api.post<RecipeApiResponse>('/recipes', payload);
         // Server is authority: overwrite with server timestamps
         const created = normalizeTimestampsFromApi<Recipe>(response);
         
         // Write-through cache update: read cache directly (no network fetch)
+        // Note: Cache updates are best-effort; failures are logged but don't throw
         const storageKey = getSignedInCacheKey(ENTITY_TYPES.recipes);
         const raw = await AsyncStorage.getItem(storageKey);
         const current = normalizePersistedArray<Recipe>(raw, storageKey);
@@ -322,6 +323,7 @@ export class RemoteRecipeService implements IRecipeService {
         const updatedRecipe = normalizeTimestampsFromApi<Recipe>(response);
         
         // Write-through cache update: read cache directly (no network fetch)
+        // Note: Cache updates are best-effort; failures are logged but don't throw
         const storageKey = getSignedInCacheKey(ENTITY_TYPES.recipes);
         const raw = await AsyncStorage.getItem(storageKey);
         const current = normalizePersistedArray<Recipe>(raw, storageKey);
@@ -349,6 +351,7 @@ export class RemoteRecipeService implements IRecipeService {
         await api.patch(`/recipes/${recipeId}`, { deleted_at: payload.deleted_at });
         
         // Write-through cache update: read cache directly (no network fetch)
+        // Note: Cache updates are best-effort; failures are logged but don't throw
         const storageKey = getSignedInCacheKey(ENTITY_TYPES.recipes);
         const raw = await AsyncStorage.getItem(storageKey);
         const current = normalizePersistedArray<Recipe>(raw, storageKey);

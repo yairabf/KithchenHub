@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import type { Chore } from '../../../mocks/chores';
-import { withCreatedAt } from '../../../common/utils/timestamps';
+import { withCreatedAtAndUpdatedAt } from '../../../common/utils/timestamps';
 
 interface NewChoreData {
     name: string;
@@ -23,6 +23,6 @@ export const createChore = (data: NewChoreData): Chore => {
         section: data.section,
         icon: data.icon,
     };
-    // Business rule: auto-populate createdAt on creation
-    return withCreatedAt(chore);
+    // Business rule: auto-populate createdAt and updatedAt on creation
+    return withCreatedAtAndUpdatedAt(chore);
 };

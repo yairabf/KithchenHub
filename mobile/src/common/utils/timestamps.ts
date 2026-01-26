@@ -161,6 +161,48 @@ export function withUpdatedAt<T extends EntityTimestamps>(
 }
 
 /**
+ * Business Logic Helper: Auto-populates createdAt (if missing) and always sets updatedAt.
+ * 
+ * This applies a business rule: entities should have both createdAt and updatedAt
+ * populated on creation. This is the recommended helper for create operations.
+ * 
+ * - Does NOT modify existing createdAt if already present
+ * - Always sets updatedAt to current time (even if already present)
+ * 
+ * @param entity - Entity to populate timestamps for
+ * @param timestamp - Optional timestamp to use for both fields (defaults to current time)
+ * @returns New object with createdAt and updatedAt populated (immutable)
+ * 
+ * @example
+ * ```typescript
+ * const newRecipe = withCreatedAtAndUpdatedAt({
+ *   id: '123',
+ *   name: 'Pasta',
+ * });
+ * // newRecipe.createdAt is set to current time
+ * // newRecipe.updatedAt is set to current time
+ * ```
+ */
+export function withCreatedAtAndUpdatedAt<T extends EntityTimestamps>(
+  entity: T,
+  timestamp?: Date
+): T {
+  if (!entity || typeof entity !== 'object') {
+    throw new Error('withCreatedAtAndUpdatedAt: entity must be a valid object');
+  }
+  
+  const now = timestamp || new Date();
+  
+  return {
+    ...entity,
+    createdAt: entity.createdAt !== undefined && entity.createdAt !== null 
+      ? entity.createdAt 
+      : now,
+    updatedAt: now,
+  };
+}
+
+/**
  * Business Logic Helper: Marks entity as soft-deleted by setting deletedAt.
  * 
  * This applies a business rule: soft-delete preserves tombstone (createdAt, updatedAt).

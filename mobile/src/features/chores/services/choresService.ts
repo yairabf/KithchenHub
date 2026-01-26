@@ -2,10 +2,11 @@ import { api } from '../../../services/api';
 import { mockChores, type Chore } from '../../../mocks/chores';
 import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
-import { withUpdatedAt, markDeleted, withCreatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
+import { withUpdatedAt, markDeleted, withCreatedAtAndUpdatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
 import { findEntityIndex, updateEntityInStorage } from '../../../common/utils/entityOperations';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import { createChore } from '../utils/choreFactory';
+import { addEntityToCache, updateEntityInCache } from '../../../common/repositories/cacheAwareRepository';
 
 /**
  * Provides chore data sources (mock vs remote) for the chores feature.
@@ -169,7 +170,7 @@ export class RemoteChoresService implements IChoresService {
     }
     
     // Apply timestamp for optimistic UI and offline queue
-    const withTimestamps = withCreatedAt(chore as Chore);
+    const withTimestamps = withCreatedAtAndUpdatedAt(chore as Chore);
     const payload = toSupabaseTimestamps(withTimestamps);
     // Map to backend DTO format
     const dto = {
@@ -180,10 +181,17 @@ export class RemoteChoresService implements IChoresService {
     };
     const response = await api.post<{ id: string }>('/chores', dto);
     // Server is authority: fetch the created chore to get server timestamps
+    // Note: API returns only { id }, so we fetch the full entity to get server-assigned timestamps
+    // This ensures we have the complete entity with correct timestamps from the server
     const created = await this.getChores().then(chores => chores.find(c => c.id === response.id));
     if (!created) {
       throw new Error(`Failed to retrieve created chore with id: ${response.id}`);
     }
+    
+    // Write-through cache update: add new entity to cache
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await addEntityToCache('chores', created, (c) => c.id);
+    
     return created;
   }
 
@@ -212,6 +220,11 @@ export class RemoteChoresService implements IChoresService {
     if (!updatedChore) {
       throw new Error(`Failed to retrieve updated chore with id: ${choreId}`);
     }
+    
+    // Write-through cache update: update entity in cache
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await updateEntityInCache('chores', updatedChore, (c) => c.id, (c) => c.id === choreId);
+    
     return updatedChore;
   }
 
@@ -231,6 +244,10 @@ export class RemoteChoresService implements IChoresService {
     
     // Use PATCH instead of DELETE with body (more compatible)
     await api.patch(`/chores/${choreId}`, { deleted_at: payload.deleted_at });
+    
+    // Write-through cache update: update entity in cache with deleted timestamp
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await updateEntityInCache('chores', withTimestamps, (c) => c.id, (c) => c.id === choreId);
   }
 
   async toggleChore(choreId: string): Promise<Chore> {
@@ -259,6 +276,11 @@ export class RemoteChoresService implements IChoresService {
     if (!updatedChore) {
       throw new Error(`Failed to retrieve updated chore with id: ${choreId}`);
     }
+    
+    // Write-through cache update: update entity in cache
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await updateEntityInCache('chores', updatedChore, (c) => c.id, (c) => c.id === choreId);
+    
     return updatedChore;
   }
 }

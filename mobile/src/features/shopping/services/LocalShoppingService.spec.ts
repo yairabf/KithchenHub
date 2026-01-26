@@ -3,7 +3,7 @@ import { guestStorage } from '../../../common/utils/guestStorage';
 import { createShoppingItem } from '../utils/shoppingFactory';
 import { markDeleted } from '../../../common/utils/timestamps';
 import { isEntityActive } from '../../../common/types/entityMetadata';
-import type { ShoppingItem } from '../../../mocks/shopping';
+import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping';
 
 // Mock expo-crypto to return unique UUIDs
 let uuidCounter = 0;
@@ -428,6 +428,215 @@ describe('LocalShoppingService', () => {
       expect(persistedItem).toBeDefined();
       expect(persistedItem?.name).toBe('Test Item');
       expect(persistedItem?.quantity).toBe(2);
+    });
+  });
+
+  describe('Timestamp Management', () => {
+    beforeEach(() => {
+      // Reset all mocks before each test
+      jest.clearAllMocks();
+      (guestStorage.getShoppingLists as jest.Mock).mockResolvedValue([]);
+      (guestStorage.getShoppingItems as jest.Mock).mockResolvedValue([]);
+      (guestStorage.saveShoppingLists as jest.Mock).mockResolvedValue(undefined);
+      (guestStorage.saveShoppingItems as jest.Mock).mockResolvedValue(undefined);
+    });
+
+    describe.each([
+      [
+        'createList',
+        async () => {
+          return await service.createList({ name: 'Test List' });
+        },
+      ],
+      [
+        'createItem',
+        async () => {
+          return await service.createItem({ name: 'Test Item', listId: 'list-1' });
+        },
+      ],
+    ])('Create Operations - %s', (operationName, createOperation) => {
+      it('should set both createdAt and updatedAt when creating entity', async () => {
+        const beforeCreate = new Date();
+        const entity = await createOperation();
+        const afterCreate = new Date();
+
+        expect(entity.createdAt).toBeInstanceOf(Date);
+        expect(entity.updatedAt).toBeInstanceOf(Date);
+        expect(entity.createdAt!.getTime()).toBeGreaterThanOrEqual(beforeCreate.getTime());
+        expect(entity.createdAt!.getTime()).toBeLessThanOrEqual(afterCreate.getTime());
+        expect(entity.updatedAt!.getTime()).toBeGreaterThanOrEqual(beforeCreate.getTime());
+        expect(entity.updatedAt!.getTime()).toBeLessThanOrEqual(afterCreate.getTime());
+        
+        // Timestamp ordering: createdAt <= updatedAt
+        expect(entity.createdAt!.getTime()).toBeLessThanOrEqual(entity.updatedAt!.getTime());
+      });
+    });
+
+    describe('updateList', () => {
+      it('should update updatedAt while preserving createdAt', async () => {
+        const originalCreatedAt = new Date('2026-01-01T00:00:00.000Z');
+        const originalUpdatedAt = new Date('2026-01-02T00:00:00.000Z');
+        const existingList: ShoppingList = {
+          id: 'list-1',
+          localId: 'list-1',
+          name: 'Original List',
+          itemCount: 0,
+          icon: 'cart-outline',
+          color: '#10B981',
+          createdAt: originalCreatedAt,
+          updatedAt: originalUpdatedAt,
+        };
+
+        (guestStorage.getShoppingLists as jest.Mock).mockResolvedValue([existingList]);
+        
+        const beforeUpdate = new Date();
+        const updated = await service.updateList('list-1', { name: 'Updated List' });
+        const afterUpdate = new Date();
+
+        expect(updated.createdAt).toEqual(originalCreatedAt);
+        expect(updated.updatedAt).toBeInstanceOf(Date);
+        expect(updated.updatedAt!.getTime()).toBeGreaterThanOrEqual(beforeUpdate.getTime());
+        expect(updated.updatedAt!.getTime()).toBeLessThanOrEqual(afterUpdate.getTime());
+        expect(updated.updatedAt!.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+        
+        // Timestamp ordering: createdAt <= updatedAt
+        expect(updated.createdAt!.getTime()).toBeLessThanOrEqual(updated.updatedAt!.getTime());
+      });
+    });
+
+    describe('updateItem', () => {
+      it('should update updatedAt while preserving createdAt', async () => {
+        const originalCreatedAt = new Date('2026-01-01T00:00:00.000Z');
+        const originalUpdatedAt = new Date('2026-01-02T00:00:00.000Z');
+        const existingItem: ShoppingItem = {
+          id: 'item-1',
+          localId: 'item-1',
+          name: 'Original Item',
+          listId: 'list-1',
+          quantity: 1,
+          isChecked: false,
+          category: 'Other',
+          createdAt: originalCreatedAt,
+          updatedAt: originalUpdatedAt,
+        };
+
+        (guestStorage.getShoppingItems as jest.Mock).mockResolvedValue([existingItem]);
+        
+        const beforeUpdate = new Date();
+        const updated = await service.updateItem('item-1', { name: 'Updated Item' });
+        const afterUpdate = new Date();
+
+        expect(updated.createdAt).toEqual(originalCreatedAt);
+        expect(updated.updatedAt).toBeInstanceOf(Date);
+        expect(updated.updatedAt!.getTime()).toBeGreaterThanOrEqual(beforeUpdate.getTime());
+        expect(updated.updatedAt!.getTime()).toBeLessThanOrEqual(afterUpdate.getTime());
+        expect(updated.updatedAt!.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+        
+        // Timestamp ordering: createdAt <= updatedAt
+        expect(updated.createdAt!.getTime()).toBeLessThanOrEqual(updated.updatedAt!.getTime());
+      });
+    });
+
+    describe('deleteList', () => {
+      it('should set deletedAt and updatedAt while preserving createdAt', async () => {
+        const originalCreatedAt = new Date('2026-01-01T00:00:00.000Z');
+        const existingList: ShoppingList = {
+          id: 'list-1',
+          localId: 'list-1',
+          name: 'List to Delete',
+          itemCount: 0,
+          icon: 'cart-outline',
+          color: '#10B981',
+          createdAt: originalCreatedAt,
+        };
+
+        (guestStorage.getShoppingLists as jest.Mock).mockResolvedValue([existingList]);
+        
+        const beforeDelete = new Date();
+        await service.deleteList('list-1');
+        const afterDelete = new Date();
+
+        const savedLists = (guestStorage.saveShoppingLists as jest.Mock).mock.calls[0][0];
+        const deletedList = savedLists.find((l: ShoppingList) => l.id === 'list-1');
+
+        expect(deletedList.createdAt).toEqual(originalCreatedAt);
+        expect(deletedList.deletedAt).toBeInstanceOf(Date);
+        expect(deletedList.updatedAt).toBeInstanceOf(Date);
+        expect(deletedList.deletedAt!.getTime()).toBeGreaterThanOrEqual(beforeDelete.getTime());
+        expect(deletedList.deletedAt!.getTime()).toBeLessThanOrEqual(afterDelete.getTime());
+        
+        // Timestamp ordering: createdAt <= deletedAt and createdAt <= updatedAt
+        expect(deletedList.createdAt!.getTime()).toBeLessThanOrEqual(deletedList.deletedAt!.getTime());
+        expect(deletedList.createdAt!.getTime()).toBeLessThanOrEqual(deletedList.updatedAt!.getTime());
+      });
+    });
+
+    describe('deleteItem', () => {
+      it('should set deletedAt and updatedAt while preserving createdAt', async () => {
+        const originalCreatedAt = new Date('2026-01-01T00:00:00.000Z');
+        const existingItem: ShoppingItem = {
+          id: 'item-1',
+          localId: 'item-1',
+          name: 'Item to Delete',
+          listId: 'list-1',
+          quantity: 1,
+          isChecked: false,
+          category: 'Other',
+          createdAt: originalCreatedAt,
+        };
+
+        (guestStorage.getShoppingItems as jest.Mock).mockResolvedValue([existingItem]);
+        
+        const beforeDelete = new Date();
+        await service.deleteItem('item-1');
+        const afterDelete = new Date();
+
+        const savedItems = (guestStorage.saveShoppingItems as jest.Mock).mock.calls[0][0];
+        const deletedItem = savedItems.find((i: ShoppingItem) => i.id === 'item-1');
+
+        expect(deletedItem.createdAt).toEqual(originalCreatedAt);
+        expect(deletedItem.deletedAt).toBeInstanceOf(Date);
+        expect(deletedItem.updatedAt).toBeInstanceOf(Date);
+        expect(deletedItem.deletedAt!.getTime()).toBeGreaterThanOrEqual(beforeDelete.getTime());
+        expect(deletedItem.deletedAt!.getTime()).toBeLessThanOrEqual(afterDelete.getTime());
+        
+        // Timestamp ordering: createdAt <= deletedAt and createdAt <= updatedAt
+        expect(deletedItem.createdAt!.getTime()).toBeLessThanOrEqual(deletedItem.deletedAt!.getTime());
+        expect(deletedItem.createdAt!.getTime()).toBeLessThanOrEqual(deletedItem.updatedAt!.getTime());
+      });
+    });
+
+    describe('toggleItem', () => {
+      it('should update updatedAt while preserving createdAt', async () => {
+        const originalCreatedAt = new Date('2026-01-01T00:00:00.000Z');
+        const originalUpdatedAt = new Date('2026-01-02T00:00:00.000Z');
+        const existingItem: ShoppingItem = {
+          id: 'item-1',
+          localId: 'item-1',
+          name: 'Test Item',
+          listId: 'list-1',
+          quantity: 1,
+          isChecked: false,
+          category: 'Other',
+          createdAt: originalCreatedAt,
+          updatedAt: originalUpdatedAt,
+        };
+
+        (guestStorage.getShoppingItems as jest.Mock).mockResolvedValue([existingItem]);
+        
+        const beforeToggle = new Date();
+        const toggled = await service.toggleItem('item-1');
+        const afterToggle = new Date();
+
+        expect(toggled.createdAt).toEqual(originalCreatedAt);
+        expect(toggled.updatedAt).toBeInstanceOf(Date);
+        expect(toggled.updatedAt!.getTime()).toBeGreaterThanOrEqual(beforeToggle.getTime());
+        expect(toggled.updatedAt!.getTime()).toBeLessThanOrEqual(afterToggle.getTime());
+        expect(toggled.updatedAt!.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
+        
+        // Timestamp ordering: createdAt <= updatedAt
+        expect(toggled.createdAt!.getTime()).toBeLessThanOrEqual(toggled.updatedAt!.getTime());
+      });
     });
   });
 });

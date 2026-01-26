@@ -283,7 +283,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Validates service compatibility with data mode
 - **Entity Factory**: `createChore()` (`mobile/src/features/chores/utils/choreFactory.ts`)
   - Creates new chore objects with required fields
-  - **Automatically populates `createdAt`** using `withCreatedAt()` helper
+  - **Automatically populates `createdAt` and `updatedAt`** using `withCreatedAtAndUpdatedAt()` helper
 - **Interface**: `IChoresService`
   - `getChores(): Promise<Chore[]>` - Returns all chores
   - **CRUD Methods**:
@@ -298,7 +298,10 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
       - Returns empty arrays when no guest data exists (not mock data)
       - Persists chores to AsyncStorage via `guestStorage.saveChores()` on create/update/delete
       - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
-      - All CRUD operations apply timestamps using `withCreatedAt()`, `withUpdatedAt()`, and `markDeleted()` helpers
+      - **Timestamp Management**:
+        - `createChore()`: Set both `createdAt` and `updatedAt` (via factory function using `withCreatedAtAndUpdatedAt()`)
+        - `updateChore()` and `toggleChore()`: Update `updatedAt` using `withUpdatedAt()` helper
+        - `deleteChore()`: Set `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
       - **ID Matching**: Service methods accept both `id` and `localId` via `findEntityIndex()` which checks both identifiers
     - `RemoteChoresService`: 
       - Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
@@ -306,9 +309,23 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
       - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
       - All CRUD operations fetch existing entities before updating to prevent data loss
       - Server timestamps are authoritative and overwrite client timestamps on response
+      - **Timestamp Management**:
+        - `createChore()`: Set both `createdAt` and `updatedAt` using `withCreatedAtAndUpdatedAt()` helper
+        - `updateChore()` and `toggleChore()`: Update `updatedAt` using `withUpdatedAt()` helper
+        - `deleteChore()`: Sets `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
+        - **Note**: After create/update operations, fetches full entity from API to get server-assigned timestamps (API returns only `{ id }` on create)
+      - **Cache Updates**: All CRUD operations update local cache after successful API calls
+        - Uses `addEntityToCache()` for create operations
+        - Uses `updateEntityInCache()` for update/delete/toggle operations
+        - Cache updates are best-effort (failures are logged but don't throw)
       - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
 - **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
-  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (used in `choreFactory.ts`)
+  - `withCreatedAtAndUpdatedAt()`: Auto-populates `createdAt` (if missing) and always sets `updatedAt` on entity creation
+    - Recommended helper for all create operations
+    - Used in `choreFactory.ts` for factory-created chores
+    - Used in `LocalChoresService.createChore()` and `RemoteChoresService.createChore()` to ensure service-created chores have timestamps
+    - Preserves existing `createdAt` if provided, always sets `updatedAt` to current time
+  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (legacy, use `withCreatedAtAndUpdatedAt()` for new code)
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
   - `markDeleted()`: Sets `deletedAt` for soft-delete operations
   - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)

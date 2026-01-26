@@ -371,7 +371,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Validates service compatibility with data mode
 - **Entity Factory**: `createRecipe()` (`mobile/src/features/recipes/utils/recipeFactory.ts`)
   - Creates new recipe objects with required fields
-  - **Automatically populates `createdAt`** using `withCreatedAt()` helper
+  - **Automatically populates `createdAt` and `updatedAt`** using `withCreatedAtAndUpdatedAt()` helper
 - **Interface**: `IRecipeService`
   - `getRecipes(): Promise<Recipe[]>`
   - `createRecipe(recipe: Partial<Recipe>): Promise<Recipe>`
@@ -388,20 +388,28 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - **Dev-Only Seeding**: Automatically seeds mock recipes when storage is empty (development mode only)
       - Only seeds when storage is truly empty (no records, including soft-deleted)
       - Uses `isDevMode()` utility to detect development mode (`__DEV__` constant)
-      - Seeds `mockRecipes` with proper `createdAt` timestamps via `withCreatedAt()`
+      - Seeds `mockRecipes` with proper `createdAt` and `updatedAt` timestamps via `withCreatedAtAndUpdatedAt()`
       - Idempotent: won't re-seed after user deletes all recipes (tombstones remain)
       - Production builds never seed (verified via `isDevMode()` check)
     - **Timestamp Management**: 
-      - `createRecipe()`: Explicitly populates `createdAt` via `withCreatedAt()` helper before persisting
-        - Business rule: auto-populate `createdAt` on creation
-        - Ensures all new recipes have proper creation timestamps
+      - `createRecipe()`: Explicitly populates both `createdAt` and `updatedAt` via `withCreatedAtAndUpdatedAt()` helper before persisting
+        - Business rule: auto-populate both `createdAt` and `updatedAt` on creation
+        - Ensures all new recipes have proper creation and modification timestamps
       - `updateRecipe()`: Automatically updates `updatedAt` via `withUpdatedAt()` helper
+      - `deleteRecipe()`: Sets `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
       - Timestamps are serialized to ISO strings when persisting to AsyncStorage
   - `RemoteRecipeService`: Calls backend via `api.ts` (`/recipes` endpoint)
     - Uses `RecipeApiResponse` DTO type instead of `any` for type safety
     - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
     - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
     - Server timestamps are authoritative and overwrite client timestamps on response
+    - **Timestamp Management**:
+      - `createRecipe()`: Set both `createdAt` and `updatedAt` using `withCreatedAtAndUpdatedAt()` helper
+      - `updateRecipe()`: Updates `updatedAt` using `withUpdatedAt()` helper
+      - `deleteRecipe()`: Sets `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
+    - **Cache Updates**: All CRUD operations update local cache after successful API calls
+      - Uses `setCached()` for write-through cache updates
+      - Cache updates are best-effort (failures are logged but don't throw)
     - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
 - **Cache-Aware Repository Layer** (signed-in users only):
   - **Repository**: `CacheAwareRecipeRepository` (`mobile/src/common/repositories/cacheAwareRecipeRepository.ts`)
@@ -442,9 +450,12 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - Validates data format and filters invalid entities
   - **Internal Helpers**: Uses `readEntityEnvelope()` and `writeEntityEnvelope()` from `guestStorageHelpers.ts` for type-safe operations
 - **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
-  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation
+  - `withCreatedAtAndUpdatedAt()`: Auto-populates `createdAt` (if missing) and always sets `updatedAt` on entity creation
+    - Recommended helper for all create operations
     - Used in `recipeFactory.ts` for factory-created recipes
-    - Used in `LocalRecipeService.createRecipe()` to ensure service-created recipes have timestamps
+    - Used in `LocalRecipeService.createRecipe()` and `RemoteRecipeService.createRecipe()` to ensure service-created recipes have timestamps
+    - Preserves existing `createdAt` if provided, always sets `updatedAt` to current time
+  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (legacy, use `withCreatedAtAndUpdatedAt()` for new code)
   - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification (used in `recipeService.ts`)
   - `markDeleted()`: Sets `deletedAt` for soft-delete operations
   - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)
