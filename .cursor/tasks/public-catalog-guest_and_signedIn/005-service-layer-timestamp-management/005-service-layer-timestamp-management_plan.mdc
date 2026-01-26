@@ -1,0 +1,262 @@
+---
+name: service-layer-timestamp-management
+overview: Update all domain services (shoppingService, recipeService, choresService) to consistently set and update timestamps (createdAt/updatedAt/deletedAt) across guest and signed-in modes, ensuring no timestamp logic is duplicated inconsistently.
+todos:
+  - id: add-created-at-updated-at-helper
+    content: Add withCreatedAtAndUpdatedAt() helper to timestamps.ts for create operations
+    status: pending
+  - id: update-shopping-local-create
+    content: Update LocalShoppingService.createList and createItem to set both createdAt and updatedAt
+    status: pending
+  - id: update-shopping-remote-create
+    content: Update RemoteShoppingService.createList and createItem to set both createdAt and updatedAt
+    status: pending
+  - id: update-shopping-remote-cache
+    content: Add cache updates to RemoteShoppingService after create/update/delete operations
+    status: pending
+  - id: update-recipe-local-create
+    content: Update LocalRecipeService.createRecipe to set both createdAt and updatedAt
+    status: pending
+  - id: update-recipe-remote-create
+    content: Update RemoteRecipeService.createRecipe to set both createdAt and updatedAt
+    status: pending
+  - id: update-chores-local-create
+    content: Update LocalChoresService.createChore to set both createdAt and updatedAt
+    status: pending
+  - id: update-chores-remote-create
+    content: Update RemoteChoresService.createChore to set both createdAt and updatedAt
+    status: pending
+  - id: update-chores-remote-cache
+    content: Add cache updates to RemoteChoresService after create/update/delete operations
+    status: pending
+  - id: add-shopping-timestamp-tests
+    content: Add parameterized unit tests for timestamp behavior in shopping services
+    status: pending
+  - id: add-recipe-timestamp-tests
+    content: Add parameterized unit tests for timestamp behavior in recipe services
+    status: pending
+  - id: add-chores-timestamp-tests
+    content: Add parameterized unit tests for timestamp behavior in chores services
+    status: pending
+  - id: update-factories-for-timestamps
+    content: Update recipe/shopping/chores factories to use withCreatedAtAndUpdatedAt helper
+    status: pending
+isProject: false
+---
+
+# Service Layer Timestamp Management (Shopping/Recipes/Chores)
+
+## Current Status Analysis
+
+### ✅ Already Implemented
+
+1. **Timestamp Helpers** (`mobile/src/common/utils/timestamps.ts`):
+
+   - `withCreatedAt()` - Auto-populates createdAt if missing
+   - `withUpdatedAt()` - Always updates updatedAt to current time
+   - `markDeleted()` - Sets deletedAt for soft-delete
+   - `toSupabaseTimestamps()` - Converts for API calls
+   - `normalizeTimestampsFromApi()` - Normalizes API responses
+
+2. **Shopping Service** - MOSTLY COMPLETE:
+
+   - ✅ LocalShoppingService: All CRUD operations use timestamp helpers
+   - ✅ RemoteShoppingService: All CRUD operations use timestamp helpers
+   - ✅ Factory functions (`shoppingFactory.ts`) use `withCreatedAt()`
+
+3. **Recipe Service** - MOSTLY COMPLETE:
+
+   - ✅ LocalRecipeService: All CRUD operations use timestamp helpers
+   - ✅ RemoteRecipeService: All CRUD operations use timestamp helpers
+   - ✅ Factory function (`recipeFactory.ts`) uses `withCreatedAt()`
+
+4. **Chores Service** - MOSTLY COMPLETE:
+
+   - ✅ LocalChoresService: All CRUD operations use timestamp helpers
+   - ✅ RemoteChoresService: All CRUD operations use timestamp helpers
+   - ✅ Factory function (`choreFactory.ts`) uses `withCreatedAt()`
+
+### ⚠️ Gaps and Inconsistencies
+
+1. **Missing updatedAt on Create Operations**:
+
+   - Current behavior: `withCreatedAt()` only sets `createdAt`, not `updatedAt`
+   - Requirement: On create, should set both `createdAt` AND `updatedAt`
+   - Impact: All three services (shopping, recipes, chores) in both guest and signed-in modes
+
+2. **Inconsistent Cache Updates in Remote Services**:
+
+   - RemoteRecipeService: Updates cache with server response (correct)
+   - RemoteShoppingService: Does NOT update cache after create/update/delete
+   - RemoteChoresService: Does NOT update cache after create/update/delete
+   - Impact: Cache may become stale in signed-in mode
+
+3. **Missing Unit Tests**:
+
+   - No dedicated tests for timestamp behavior in service layer
+   - Existing tests don't verify timestamp values
+   - Need parameterized tests for create/update/delete timestamp scenarios
+
+4. **Backend Timestamp Handling**:
+
+   - Backend uses Prisma `@default(now())` and `@updatedAt` directives
+   - Backend automatically sets timestamps on create/update
+   - No issues identified in backend
+
+## Implementation Plan
+
+### Phase 1: Fix Create Operations (Set createdAt + updatedAt)
+
+**Files to Update:**
+
+- `mobile/src/common/utils/timestamps.ts` - Enhance `withCreatedAt()` or create new helper
+- `mobile/src/features/shopping/services/LocalShoppingService.ts`
+- `mobile/src/features/shopping/services/RemoteShoppingService.ts`
+- `mobile/src/features/recipes/services/recipeService.ts` (both Local and Remote)
+- `mobile/src/features/chores/services/choresService.ts` (both Local and Remote)
+
+**Approach:**
+
+- Option A: Modify `withCreatedAt()` to also set `updatedAt` (breaking change)
+- Option B: Create `withCreatedAtAndUpdatedAt()` helper (safer, explicit)
+- Option C: Chain `withCreatedAt()` + `withUpdatedAt()` in services (explicit but verbose)
+
+**Recommendation:** Option B - Create new helper `withCreatedAtAndUpdatedAt()` for clarity, keep `withCreatedAt()` for backward compatibility.
+
+### Phase 2: Fix Cache Updates in Remote Services
+
+**Files to Update:**
+
+- `mobile/src/features/shopping/services/RemoteShoppingService.ts`
+  - Add cache updates after createList, updateList, deleteList, createItem, updateItem, deleteItem, toggleItem
+- `mobile/src/features/chores/services/choresService.ts` (RemoteChoresService)
+  - Add cache updates after createChore, updateChore, deleteChore, toggleChore
+
+**Pattern to Follow:**
+
+```typescript
+// After API call, update cache
+const storageKey = getSignedInCacheKey(ENTITY_TYPES.shoppingLists);
+const raw = await AsyncStorage.getItem(storageKey);
+const current = normalizePersistedArray<ShoppingList>(raw, storageKey);
+// Apply update (create/update/delete)
+await setCached('shoppingLists', updatedCache, (l) => l.id);
+```
+
+### Phase 3: Add Comprehensive Unit Tests
+
+**Test Files to Create/Update:**
+
+- `mobile/src/features/shopping/services/LocalShoppingService.spec.ts` - Add timestamp tests
+- `mobile/src/features/shopping/services/RemoteShoppingService.spec.ts` - Add timestamp tests
+- `mobile/src/features/recipes/services/recipeService.spec.ts` - Add timestamp tests
+- `mobile/src/features/chores/services/choresService.spec.ts` - Add timestamp tests
+
+**Test Scenarios (Parameterized):**
+
+1. **Create Operations:**
+
+   - Sets createdAt when entity created without timestamps
+   - Sets updatedAt when entity created (NEW)
+   - Does not overwrite existing createdAt if provided
+   - Persists timestamps correctly in guest mode (AsyncStorage)
+   - Applies timestamps before cache update in signed-in mode
+
+2. **Update Operations:**
+
+   - Updates updatedAt on modification
+   - Preserves createdAt on update
+   - Persists updatedAt correctly in guest mode
+   - Applies timestamps before cache update in signed-in mode
+
+3. **Delete Operations:**
+
+   - Sets deletedAt on soft-delete
+   - Sets updatedAt on delete (tombstone pattern)
+   - Preserves createdAt on delete
+   - Persists deletedAt correctly in guest mode
+   - Applies timestamps before cache update in signed-in mode
+
+4. **Toggle Operations (Shopping/Chores):**
+
+   - Updates updatedAt on toggle
+   - Preserves createdAt on toggle
+   - Persists updatedAt correctly in guest mode
+   - Applies timestamps before cache update in signed-in mode
+
+5. **Timestamp Ordering Validation (Optional but Recommended):**
+
+   - Verify createdAt <= updatedAt holds true after create operations
+   - Verify createdAt <= updatedAt holds true after update operations
+   - Verify createdAt <= deletedAt holds true after delete operations (when both exist)
+   - Helps detect bugs where updatedAt might be set earlier than createdAt
+   - Can be added as helper assertion in test utilities
+
+### Phase 4: Verify Consistency
+
+**Verification Checklist:**
+
+- [ ] All create operations set both createdAt and updatedAt
+- [ ] All update operations set updatedAt
+- [ ] All delete operations set deletedAt and updatedAt
+- [ ] Guest mode writes timestamps to AsyncStorage correctly
+- [ ] Signed-in mode applies timestamps before cache update
+- [ ] Signed-in mode applies timestamps before API call (for offline queue)
+- [ ] No duplicate timestamp logic across services
+- [ ] All services use shared helpers from `timestamps.ts`
+
+## Files to Modify
+
+### Core Utilities
+
+- `mobile/src/common/utils/timestamps.ts` - Add `withCreatedAtAndUpdatedAt()` helper
+
+### Factory Functions
+
+- `mobile/src/features/shopping/utils/shoppingFactory.ts` - Update `createShoppingList` and `createShoppingItem` to use `withCreatedAtAndUpdatedAt()`
+- `mobile/src/features/recipes/utils/recipeFactory.ts` - Update `createRecipe` to use `withCreatedAtAndUpdatedAt()`
+- `mobile/src/features/chores/utils/choreFactory.ts` - Update `createChore` to use `withCreatedAtAndUpdatedAt()`
+
+### Shopping Service
+
+- `mobile/src/features/shopping/services/LocalShoppingService.ts` - Update createList, createItem
+- `mobile/src/features/shopping/services/RemoteShoppingService.ts` - Update createList, createItem, add cache updates
+- `mobile/src/features/shopping/services/LocalShoppingService.spec.ts` - Add timestamp tests
+- `mobile/src/features/shopping/services/RemoteShoppingService.spec.ts` - Add timestamp tests (if exists)
+
+### Recipe Service
+
+- `mobile/src/features/recipes/services/recipeService.ts` - Update LocalRecipeService.createRecipe, RemoteRecipeService.createRecipe
+- `mobile/src/features/recipes/services/recipeService.spec.ts` - Add timestamp tests
+
+### Chores Service
+
+- `mobile/src/features/chores/services/choresService.ts` - Update LocalChoresService.createChore, RemoteChoresService.createChore, add cache updates
+- `mobile/src/features/chores/services/choresService.spec.ts` - Add timestamp tests
+
+## Success Criteria
+
+1. ✅ All create operations set both `createdAt` and `updatedAt`
+2. ✅ All update/toggle operations set `updatedAt`
+3. ✅ All delete operations set `deletedAt` and `updatedAt`
+4. ✅ Guest mode writes timestamps to AsyncStorage correctly
+5. ✅ Signed-in mode applies timestamps before cache update
+6. ✅ Signed-in mode applies timestamps before API call (for offline queue)
+7. ✅ No timestamp logic is duplicated across services
+8. ✅ Comprehensive unit tests cover all timestamp scenarios
+9. ✅ All services use shared helpers consistently
+
+## Testing Strategy
+
+1. **Unit Tests:** Parameterized tests for each service method (create/update/delete/toggle)
+2. **Integration Tests:** Verify timestamp persistence in AsyncStorage (guest mode)
+3. **Integration Tests:** Verify timestamp application before cache updates (signed-in mode)
+4. **Manual Testing:** Verify timestamps appear correctly in UI after operations
+
+## Notes
+
+- Backend automatically handles timestamps via Prisma directives - no changes needed
+- Factory functions already use `withCreatedAt()` - should be updated to use `withCreatedAtAndUpdatedAt()` for consistency
+- Existing timestamp helpers are well-designed - extend rather than replace
+- Cache updates in RemoteShoppingService and RemoteChoresService are missing - need to add
+- Timestamp ordering validation (createdAt <= updatedAt) helps catch subtle bugs and should be included in test assertions
