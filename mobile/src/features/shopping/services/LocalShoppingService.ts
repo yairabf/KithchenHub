@@ -8,7 +8,7 @@ import {
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import { colors } from '../../../theme';
 import { guestStorage } from '../../../common/utils/guestStorage';
-import { withUpdatedAt, markDeleted, withCreatedAt } from '../../../common/utils/timestamps';
+import { withUpdatedAt, markDeleted, withCreatedAtAndUpdatedAt } from '../../../common/utils/timestamps';
 import { findEntityIndex, updateEntityInStorage } from '../../../common/utils/entityOperations';
 import { createShoppingList, createShoppingItem } from '../utils/shoppingFactory';
 import { isEntityActive } from '../../../common/types/entityMetadata';
@@ -48,10 +48,10 @@ export class LocalShoppingService implements IShoppingService {
     }
 
     try {
-      // Ensure all mock lists and items have createdAt timestamps
-      // withCreatedAt() is safe - it won't overwrite existing timestamps
-      const seededLists = mockShoppingLists.map(list => withCreatedAt(list));
-      const seededItems = mockItems.map(item => withCreatedAt(item));
+      // Ensure all mock lists and items have createdAt and updatedAt timestamps
+      // withCreatedAtAndUpdatedAt() is safe - it won't overwrite existing timestamps
+      const seededLists = mockShoppingLists.map(list => withCreatedAtAndUpdatedAt(list));
+      const seededItems = mockItems.map(item => withCreatedAtAndUpdatedAt(item));
       
       // Save seeded data to storage
       await guestStorage.saveShoppingLists(seededLists);

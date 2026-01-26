@@ -1,11 +1,12 @@
 import { api } from '../../../services/api';
 import { colors } from '../../../theme';
-import { withUpdatedAt, markDeleted, withCreatedAt, toSupabaseTimestamps } from '../../../common/utils/timestamps';
+import { withUpdatedAt, markDeleted, withCreatedAtAndUpdatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
 import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingData, IShoppingService } from './shoppingService';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../../../common/utils/catalogUtils';
 import { catalogService } from '../../../common/services/catalogService';
+import { addEntityToCache, updateEntityInCache } from '../../../common/repositories/cacheAwareRepository';
 
 type ShoppingListSummaryDto = {
   id: string;
@@ -69,6 +70,35 @@ const buildShoppingItemsFromDetails = (
 };
 
 /**
+ * Maps API response item to ShoppingItem format.
+ * 
+ * Centralizes the mapping logic used in createItem, updateItem, and toggleItem
+ * to ensure consistency and reduce duplication.
+ * 
+ * @param response - API response item from ShoppingListDetailDto
+ * @param listId - The shopping list ID this item belongs to
+ * @param existingImage - Optional existing image URL to preserve
+ * @returns Mapped ShoppingItem
+ */
+const mapItemResponseToShoppingItem = (
+  response: ShoppingListDetailDto['items'][0],
+  listId: string,
+  existingImage?: string
+): ShoppingItem => {
+  return {
+    id: response.id,
+    localId: response.id,
+    name: response.name,
+    quantity: response.quantity ?? 1,
+    unit: response.unit ?? undefined,
+    isChecked: response.isChecked ?? false,
+    category: response.category ?? 'Other',
+    listId,
+    image: existingImage ?? '',
+  };
+};
+
+/**
  * Remote shopping service for signed-in users.
  * 
  * This service should only be instantiated for signed-in users.
@@ -97,12 +127,24 @@ export class RemoteShoppingService implements IShoppingService {
 
   async createList(list: Partial<ShoppingList>): Promise<ShoppingList> {
     // Apply timestamp for optimistic UI and offline queue
-    const withTimestamps = withCreatedAt(list as ShoppingList);
+    const withTimestamps = withCreatedAtAndUpdatedAt(list as ShoppingList);
     const payload = toSupabaseTimestamps(withTimestamps);
     const response = await api.post<ShoppingListSummaryDto>('/shopping-lists', payload);
     const mapped = mapShoppingListSummary(response);
+    
     // Server is authority: overwrite with server timestamps (if available in response)
-    return mapped;
+    // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
+    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
+                                 'createdAt' in response || 'updatedAt' in response;
+    const created = hasServerTimestamps
+      ? normalizeTimestampsFromApi<ShoppingList>({ ...mapped, ...response })
+      : { ...mapped, createdAt: withTimestamps.createdAt, updatedAt: withTimestamps.updatedAt };
+    
+    // Write-through cache update: add new entity to cache
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await addEntityToCache('shoppingLists', created, (l) => l.id);
+    
+    return created;
   }
 
   async updateList(listId: string, updates: Partial<ShoppingList>): Promise<ShoppingList> {
@@ -120,8 +162,19 @@ export class RemoteShoppingService implements IShoppingService {
     const payload = toSupabaseTimestamps(withTimestamps);
     const response = await api.put<ShoppingListSummaryDto>(`/shopping-lists/${listId}`, payload);
     const mapped = mapShoppingListSummary(response);
-    // Server is authority: overwrite with server timestamps
-    return mapped;
+    // Server is authority: overwrite with server timestamps (if available in response)
+    // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
+    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
+                                 'createdAt' in response || 'updatedAt' in response;
+    const updatedList = hasServerTimestamps
+      ? normalizeTimestampsFromApi<ShoppingList>({ ...mapped, ...response })
+      : { ...mapped, createdAt: existing.createdAt, updatedAt: withTimestamps.updatedAt };
+    
+    // Write-through cache update: update entity in cache
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await updateEntityInCache('shoppingLists', updatedList, (l) => l.id, (l) => l.id === listId);
+    
+    return updatedList;
   }
 
   async deleteList(listId: string): Promise<void> {
@@ -140,6 +193,10 @@ export class RemoteShoppingService implements IShoppingService {
     
     // Use PATCH instead of DELETE with body (more compatible)
     await api.patch(`/shopping-lists/${listId}`, { deleted_at: payload.deleted_at });
+    
+    // Write-through cache update: update entity in cache with deleted timestamp
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await updateEntityInCache('shoppingLists', withTimestamps, (l) => l.id, (l) => l.id === listId);
   }
 
   async createItem(item: Partial<ShoppingItem>): Promise<ShoppingItem> {
@@ -148,23 +205,24 @@ export class RemoteShoppingService implements IShoppingService {
     }
     
     // Apply timestamp for optimistic UI and offline queue
-    const withTimestamps = withCreatedAt(item as ShoppingItem);
+    const withTimestamps = withCreatedAtAndUpdatedAt(item as ShoppingItem);
     const payload = toSupabaseTimestamps(withTimestamps);
     const response = await api.post<ShoppingListDetailDto['items'][0]>(`/shopping-lists/${item.listId}/items`, payload);
     // Map response to ShoppingItem format
-    const mapped: ShoppingItem = {
-      id: response.id,
-      localId: response.id,
-      name: response.name,
-      quantity: response.quantity ?? 1,
-      unit: response.unit ?? undefined,
-      isChecked: response.isChecked ?? false,
-      category: response.category ?? 'Other',
-      listId: item.listId,
-      image: '',
-    };
+    const mapped = mapItemResponseToShoppingItem(response, item.listId);
     // Server is authority: overwrite with server timestamps (if available in response)
-    return mapped;
+    // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
+    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
+                                 'createdAt' in response || 'updatedAt' in response;
+    const created = hasServerTimestamps
+      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...response })
+      : { ...mapped, createdAt: withTimestamps.createdAt, updatedAt: withTimestamps.updatedAt };
+    
+    // Write-through cache update: add new entity to cache
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await addEntityToCache('shoppingItems', created, (i) => i.id);
+    
+    return created;
   }
 
   async updateItem(itemId: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem> {
@@ -184,19 +242,20 @@ export class RemoteShoppingService implements IShoppingService {
     const payload = toSupabaseTimestamps(withTimestamps);
     const response = await api.patch<ShoppingListDetailDto['items'][0]>(`/shopping-items/${itemId}`, payload);
     // Map response to ShoppingItem format
-    const mapped: ShoppingItem = {
-      id: response.id,
-      localId: response.id,
-      name: response.name,
-      quantity: response.quantity ?? 1,
-      unit: response.unit ?? undefined,
-      isChecked: response.isChecked ?? false,
-      category: response.category ?? 'Other',
-      listId: existing.listId,
-      image: existing.image,
-    };
-    // Server is authority: overwrite with server timestamps
-    return mapped;
+    const mapped = mapItemResponseToShoppingItem(response, existing.listId, existing.image);
+    // Server is authority: overwrite with server timestamps (if available in response)
+    // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
+    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
+                                 'createdAt' in response || 'updatedAt' in response;
+    const updatedItem = hasServerTimestamps
+      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...response })
+      : { ...mapped, createdAt: existing.createdAt, updatedAt: withTimestamps.updatedAt };
+    
+    // Write-through cache update: update entity in cache
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await updateEntityInCache('shoppingItems', updatedItem, (i) => i.id, (i) => i.id === itemId);
+    
+    return updatedItem;
   }
 
   async deleteItem(itemId: string): Promise<void> {
@@ -217,6 +276,10 @@ export class RemoteShoppingService implements IShoppingService {
     
     // Use PATCH instead of DELETE with body (more compatible)
     await api.patch(`/shopping-items/${itemId}`, { deleted_at: payload.deleted_at });
+    
+    // Write-through cache update: update entity in cache with deleted timestamp
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await updateEntityInCache('shoppingItems', withTimestamps, (i) => i.id, (i) => i.id === itemId);
   }
 
   async toggleItem(itemId: string): Promise<ShoppingItem> {
@@ -242,19 +305,20 @@ export class RemoteShoppingService implements IShoppingService {
       updated_at: payload.updated_at 
     });
     // Map response to ShoppingItem format
-    const mapped: ShoppingItem = {
-      id: response.id,
-      localId: response.id,
-      name: response.name,
-      quantity: response.quantity ?? 1,
-      unit: response.unit ?? undefined,
-      isChecked: response.isChecked ?? false,
-      category: response.category ?? 'Other',
-      listId: existing.listId,
-      image: existing.image,
-    };
-    // Server is authority: overwrite with server timestamps
-    return mapped;
+    const mapped = mapItemResponseToShoppingItem(response, existing.listId, existing.image);
+    // Server is authority: overwrite with server timestamps (if available in response)
+    // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
+    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
+                                 'createdAt' in response || 'updatedAt' in response;
+    const toggledItem = hasServerTimestamps
+      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...response })
+      : { ...mapped, createdAt: existing.createdAt, updatedAt: withTimestamps.updatedAt };
+    
+    // Write-through cache update: update entity in cache
+    // Note: Cache updates are best-effort; failures are logged but don't throw
+    await updateEntityInCache('shoppingItems', toggledItem, (i) => i.id, (i) => i.id === itemId);
+    
+    return toggledItem;
   }
 
   /**
