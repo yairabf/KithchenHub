@@ -36,10 +36,15 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - Multiple modal interactions (quantity, create list, category, all items, quick add)
   - Floating action button for quick add
   - **Guest Support**: Loads private list data from local storage (AsyncStorage) for guest users while signed-in users use the API
-  - **Service Integration**: All CRUD operations (toggle, delete, update, create) always call service methods - no userMode branching in handlers
-  - **Optimistic UI Updates**: All operations use optimistic updates with automatic revert on error via `executeWithOptimisticUpdate` helper
+  - **Cache-Aware Repository** (signed-in users): Uses `CacheAwareShoppingRepository` wrapper with `useCachedEntities` hooks for reactive cache updates
+    - Cache updates automatically trigger UI re-renders via React hooks
+    - No manual state management needed for signed-in users
+    - Realtime updates handled through cache events
+  - **Service Integration**: All CRUD operations (toggle, delete, update, create) always call repository/service methods - no userMode branching in handlers
+  - **Optimistic UI Updates**: Guest mode operations use optimistic updates with automatic revert on error via `executeWithOptimisticUpdate` helper
+    - Signed-in mode relies on cache events for UI updates (no optimistic updates needed)
 
-#### Code Snippet - Service Initialization
+#### Code Snippet - Service and Repository Initialization
 
 ```typescript
 // Determine data mode based on user authentication state
@@ -50,22 +55,28 @@ const userMode = useMemo(() => {
   return determineUserDataMode(user);
 }, [user]);
 
+const isSignedIn = userMode === 'signed-in';
+
+// Create service and repository
 const shoppingService = useMemo(
   () => createShoppingService(userMode),
   [userMode]
 );
 
-useEffect(() => {
-  const loadShoppingData = async () => {
-    const data = await shoppingService.getShoppingData();
-    setShoppingLists(data.shoppingLists);
-    setAllItems(data.shoppingItems);
-    setGroceryItems(data.groceryItems);
-    setCategories(data.categories);
-    setFrequentlyAddedItems(data.frequentlyAddedItems);
-  };
-  loadShoppingData();
-}, [shoppingService]);
+const repository = useMemo(() => {
+  return isSignedIn ? new CacheAwareShoppingRepository(shoppingService) : null;
+}, [shoppingService, isSignedIn]);
+
+// Use cache hooks for signed-in users
+const { data: cachedLists, isLoading: isListsLoading } = useCachedEntities<ShoppingList>('shoppingLists');
+const { data: cachedItems, isLoading: isItemsLoading } = useCachedEntities<ShoppingItem>('shoppingItems');
+
+// For guest mode, use service directly
+const [guestLists, setGuestLists] = useState<ShoppingList[]>([]);
+const [guestItems, setGuestItems] = useState<ShoppingItem[]>([]);
+
+const shoppingLists = isSignedIn ? cachedLists : guestLists;
+const allItems = isSignedIn ? cachedItems : guestItems;
 ```
 
 ## Components
@@ -256,26 +267,35 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
 
 ## State Management
 
-- **Local state**: All state managed within ShoppingListsScreen via `useState`
-  - `shoppingLists` - All shopping lists (active only - deleted items filtered by service)
-  - `selectedList` - Currently active list
-  - `allItems` - All shopping items across lists (active only - deleted items filtered by service)
-  - `groceryItems` - Grocery database items
-  - `categories` - Category definitions
-  - `frequentlyAddedItems` - Frequently added grocery items
-  - Various modal visibility states
+- **Cache-Aware State** (signed-in users):
+  - Uses `useCachedEntities` hooks for reactive cache updates
+    - `useCachedEntities<ShoppingList>('shoppingLists')` - Provides cached lists with loading states
+    - `useCachedEntities<ShoppingItem>('shoppingItems')` - Provides cached items with loading states
+  - Cache updates automatically trigger UI re-renders via React hooks
+  - Realtime updates handled through cache events (no manual state updates needed)
+  - Repository pattern: `CacheAwareShoppingRepository` wraps `RemoteShoppingService` with cache-first reads and write-through caching
+- **Local state** (guest users):
+  - All state managed within ShoppingListsScreen via `useState`
+    - `guestLists` - All shopping lists (active only - deleted items filtered by service)
+    - `guestItems` - All shopping items across lists (active only - deleted items filtered by service)
+    - `selectedList` - Currently active list
+    - `groceryItems` - Grocery database items
+    - `categories` - Category definitions
+    - `frequentlyAddedItems` - Frequently added grocery items
+    - Various modal visibility states
 - **Service**: `createShoppingService(mode)` factory creates service instance based on data mode
-  - Loads all data via `shoppingService.getShoppingData()` on mount
+  - Loads all data via `shoppingService.getShoppingData()` on mount (guest mode)
   - Mode determined by `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
-  - **Service handles mode internally**: Screen handlers always call service methods; service implementation (LocalShoppingService vs RemoteShoppingService) handles guest vs signed-in logic
-- **Cache-Aware Repository** (signed-in users only):
+  - **Service handles mode internally**: Screen handlers always call repository/service methods; service implementation (LocalShoppingService vs RemoteShoppingService) handles guest vs signed-in logic
+- **Repository Pattern** (signed-in users):
   - `CacheAwareShoppingRepository` wraps `RemoteShoppingService` with cache-first reads and write-through caching
   - Used by `ShoppingListsScreen` for signed-in users to provide reactive cache updates
   - **Catalog Data**: Uses `catalogService.getGroceryItems()` with API → Cache → Mock fallback strategy
     - Delegates to centralized `CatalogService` for consistent catalog fetching
     - No duplicate type definitions or mapping functions (uses shared types from `common/types/catalog.ts`)
 - **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
-- **Optimistic Updates**: All CRUD operations use `executeWithOptimisticUpdate()` helper for responsive UX with automatic error revert
+- **Optimistic Updates**: Guest mode CRUD operations use `executeWithOptimisticUpdate()` helper for responsive UX with automatic error revert
+  - Signed-in mode relies on cache events for UI updates (no optimistic updates needed)
 
 ## Service Layer
 
@@ -583,6 +603,8 @@ Utility for applying remote updates to local cached state:
 - `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors)
 - `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
 - `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Used by ShoppingItemCard to display sync status indicators
+- `useCachedEntities` - Cache entities hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that provides reactive cache updates for signed-in users. Automatically triggers UI re-renders when cache changes. Used by ShoppingListsScreen for lists and items
+- `CacheAwareShoppingRepository` - Cache-aware repository (`mobile/src/common/repositories/cacheAwareShoppingRepository.ts`) - Wraps RemoteShoppingService with cache-first reads and write-through caching. Provides reactive cache updates via useCachedEntities hooks
 - `SyncStatusIndicator` - Sync status indicator component (`mobile/src/common/components/SyncStatusIndicator/`) - Visual indicator component showing pending, confirmed, or failed sync status. Displays clock icon for pending, warning icon for failed, checkmark for confirmed
 - `determineIndicatorStatus` - Status determination utility (`mobile/src/common/utils/syncStatusUtils.ts`) - Utility function that determines indicator status from sync status flags (failed > pending > confirmed priority)
 
