@@ -18,6 +18,21 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 // Mock expo-crypto
 jest.mock('expo-crypto', () => ({
   randomUUID: jest.fn(() => `uuid-${Math.random().toString(36).substr(2, 9)}`),
+  digestStringAsync: jest.fn(async (algorithm: string, data: string) => {
+    // Simple mock hash function for deterministic operationId generation
+    // In real implementation, this would use SHA-256
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    // Convert to hex string (32 chars for SHA-256)
+    return Math.abs(hash).toString(16).padStart(32, '0');
+  }),
+  CryptoDigestAlgorithm: {
+    SHA256: 'SHA256',
+  },
 }));
 
 describe('SyncQueueStorage', () => {
@@ -66,6 +81,51 @@ describe('SyncQueueStorage', () => {
       expect(savedQueue[0].op).toBe(op);
       expect(savedQueue[0].target.localId).toBe('local-123');
     });
+
+    describe('operationId generation', () => {
+      it('should generate operationId for new queue items', async () => {
+        const target: QueueTargetId = { localId: 'local-123' };
+        const payload = { id: 'local-123', name: 'Test' };
+
+        const queuedWrite = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+
+        expect(queuedWrite.operationId).toBeDefined();
+        expect(typeof queuedWrite.operationId).toBe('string');
+        expect(queuedWrite.operationId.length).toBeGreaterThan(0);
+      });
+
+      it('should generate unique operationId for each enqueue call', async () => {
+        const target: QueueTargetId = { localId: 'local-123' };
+        const payload = { id: 'local-123', name: 'Test' };
+
+        const write1 = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+        const write2 = await syncQueueStorage.enqueue('recipes', 'create', target, payload);
+
+        expect(write1.operationId).not.toBe(write2.operationId);
+      });
+
+      it('should preserve operationId through compaction', async () => {
+        const target: QueueTargetId = { localId: 'local-123' };
+        const payload1 = { id: 'local-123', name: 'Test 1' };
+        const payload2 = { id: 'local-123', name: 'Test 2' };
+
+        // Enqueue create operation
+        const createWrite = await syncQueueStorage.enqueue('recipes', 'create', target, payload1);
+        const createOperationId = createWrite.operationId;
+
+        // Wait to ensure different timestamp
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        // Enqueue update operation (should merge with create)
+        await syncQueueStorage.enqueue('recipes', 'update', target, payload2);
+
+        const queue = await syncQueueStorage.getAll();
+        expect(queue).toHaveLength(1);
+        // The surviving item should have the original create operationId
+        expect(queue[0].operationId).toBe(createOperationId);
+        expect(queue[0].op).toBe('create'); // Merged to create
+      });
+    });
   });
 
   describe('compaction rules', () => {
@@ -96,6 +156,40 @@ describe('SyncQueueStorage', () => {
         expect(queue).toHaveLength(1);
         expect(queue[0].op).toBe(expectedOp);
       }
+    });
+
+    describe('operationId persistence through compaction', () => {
+      it.each([
+        ['create + update', 'create', 'update', 'create'],
+        ['update + update', 'update', 'update', 'update'],
+        ['delete + delete', 'delete', 'delete', 'delete'],
+      ])('should preserve operationId from first operation when %s', async (description, op1, op2, expectedOp) => {
+        const target: QueueTargetId = { localId: 'local-123' };
+        const payload1 = { id: 'local-123', name: 'Test 1' };
+        const payload2 = { id: 'local-123', name: 'Test 2' };
+
+        // Enqueue first operation
+        const firstWrite = await syncQueueStorage.enqueue('recipes', op1 as 'create' | 'update' | 'delete', target, payload1);
+        const firstOperationId = firstWrite.operationId;
+
+        // Wait to ensure different timestamp
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        // Enqueue second operation
+        await syncQueueStorage.enqueue('recipes', op2 as 'create' | 'update' | 'delete', target, payload2);
+
+        const queue = await syncQueueStorage.getAll();
+        
+        if (expectedOp === 'delete' && op1 === 'create' && op2 === 'delete') {
+          // create + delete drops both
+          expect(queue).toHaveLength(0);
+        } else {
+          expect(queue).toHaveLength(1);
+          expect(queue[0].op).toBe(expectedOp);
+          // OperationId should be from the first operation (surviving item)
+          expect(queue[0].operationId).toBe(firstOperationId);
+        }
+      });
     });
 
     it('should handle delete + update (keeps delete)', async () => {
@@ -291,6 +385,41 @@ describe('SyncQueueStorage', () => {
       const queue = await syncQueueStorage.getAll();
       expect(queue).toHaveLength(1);
       expect(queue[0].status).toBe('PENDING'); // Should default to PENDING
+    });
+  });
+
+  describe('migration - deterministic operationId for old items', () => {
+    it('should generate deterministic operationId for items without operationId', async () => {
+      // Simulate old queue item without operationId
+      const oldItem: QueuedWrite = {
+        id: 'old-queue-id',
+        entityType: 'recipes',
+        op: 'create',
+        target: { localId: 'local-123' },
+        payload: { id: 'local-123', name: 'Test' },
+        clientTimestamp: '2024-01-01T00:00:00.000Z',
+        attemptCount: 0,
+        status: 'PENDING',
+        operationId: '', // Missing operationId (old format)
+      };
+
+      // Remove operationId to simulate old format
+      const { operationId, ...oldItemWithoutOperationId } = oldItem;
+
+      // Store old format item
+      storageState[getSignedInCacheKey('sync_queue')] = JSON.stringify([oldItemWithoutOperationId]);
+
+      // Read queue (should trigger migration)
+      const queue = await syncQueueStorage.getAll();
+
+      expect(queue).toHaveLength(1);
+      expect(queue[0].operationId).toBeDefined();
+      expect(typeof queue[0].operationId).toBe('string');
+      expect(queue[0].operationId.length).toBeGreaterThan(0);
+
+      // Same old item should get same deterministic operationId
+      const queue2 = await syncQueueStorage.getAll();
+      expect(queue2[0].operationId).toBe(queue[0].operationId);
     });
   });
 });
