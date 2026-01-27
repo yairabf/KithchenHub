@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -31,7 +31,6 @@ import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSelectedList } from '../utils/selectionUtils';
 import { determineUserDataMode } from '../../../common/types/dataModes';
-import { supabase } from '../../../services/supabase';
 import { api } from '../../../services/api';
 import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareShoppingRepository } from '../../../common/repositories/cacheAwareShoppingRepository';
@@ -41,24 +40,10 @@ import {
   buildListIdFilter,
   updateShoppingListItemCounts,
 } from '../utils/shoppingRealtime';
+import { useShoppingRealtime } from '../hooks/useShoppingRealtime';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
-type ShoppingListRealtimeRow = {
-  id: string;
-  name?: string | null;
-  color?: string | null;
-  household_id?: string | null;
-};
-
-type ShoppingItemRealtimeRow = {
-  id: string;
-  list_id?: string | null;
-  name?: string | null;
-  quantity?: number | null;
-  category?: string | null;
-  is_checked?: boolean | null;
-};
 
 
 export function ShoppingListsScreen() {
@@ -194,91 +179,45 @@ export function ShoppingListsScreen() {
     setSelectedList((currentSelected) => getSelectedList(shoppingLists, currentSelected?.id));
   }, [shoppingLists]);
 
-  useEffect(() => {
-    if (!isRealtimeEnabled || !user?.householdId) {
-      return;
+  // Memoize list IDs to avoid recalculating on every render
+  const listIds = useMemo(() => shoppingLists.map((list) => list.id), [shoppingLists]);
+
+  // Memoize callbacks to prevent unnecessary re-subscriptions
+  const handleRealtimeListChange = useCallback((lists: ShoppingList[]) => {
+    // Guest mode callback: update local state
+    if (!isSignedIn) {
+      setGuestLists(lists);
+      setSelectedList((currentSelected) =>
+        getSelectedList(lists, currentSelected?.id),
+      );
     }
+  }, [isSignedIn]);
 
-    const channel = supabase.channel(`shopping-lists-${user.householdId}`);
-
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'shopping_lists',
-        filter: `household_id=eq.${user.householdId}`,
-      },
-      (payload) => {
-        const typedPayload = payload as RealtimePostgresChangesPayload<ShoppingListRealtimeRow>;
-
-        // For signed-in users, realtime updates will be handled by cache refresh
-        // For guest mode, update local state
-        if (!isSignedIn) {
-          setGuestLists((currentLists: ShoppingList[]) => {
-            const nextLists = applyShoppingListChange(currentLists, typedPayload);
-            setSelectedList((currentSelected) =>
-              getSelectedList(nextLists, currentSelected?.id),
-            );
-            return nextLists;
-          });
-
-          if (typedPayload.eventType === 'DELETE') {
-            const deletedId = typedPayload.old?.id;
-            if (deletedId) {
-              setGuestItems((currentItems: ShoppingItem[]) =>
-                currentItems.filter((item) => item.listId !== deletedId),
-              );
-            }
-          }
-        }
-        // For signed-in: cache events will update UI via useCachedEntities
-      },
-    );
-
-    channel.subscribe();
-
-    return () => {
-      channel.unsubscribe();
-      supabase.removeChannel(channel);
-    };
-  }, [isRealtimeEnabled, user?.householdId]);
-
-  useEffect(() => {
-    if (!isRealtimeEnabled || !user?.householdId || !listIdFilter) {
-      return;
+  const handleRealtimeItemChange = useCallback((items: ShoppingItem[]) => {
+    // Guest mode callback: update local state
+    if (!isSignedIn) {
+      setGuestItems(items);
     }
+  }, [isSignedIn]);
 
-    const channel = supabase.channel(`shopping-items-${user.householdId}`);
+  // Use custom hook for realtime subscriptions
+  const { error: realtimeError } = useShoppingRealtime({
+    isRealtimeEnabled: isRealtimeEnabled,
+    householdId: user?.householdId ?? null,
+    isSignedIn,
+    repository,
+    groceryItems,
+    listIds,
+    onListChange: handleRealtimeListChange,
+    onItemChange: handleRealtimeItemChange,
+  });
 
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'shopping_items',
-        filter: listIdFilter,
-      },
-      (payload) => {
-        const typedPayload = payload as RealtimePostgresChangesPayload<ShoppingItemRealtimeRow>;
-        // For signed-in users, realtime updates will be handled by cache refresh
-        // For now, we still update local state for immediate UI feedback
-        // TODO: Integrate realtime updates with cache events
-        if (!isSignedIn) {
-          setGuestItems((currentItems) =>
-            applyShoppingItemChange(currentItems, typedPayload, groceryItems),
-          );
-        }
-      },
-    );
-
-    channel.subscribe();
-
-    return () => {
-      channel.unsubscribe();
-      supabase.removeChannel(channel);
-    };
-  }, [groceryItems, isRealtimeEnabled, listIdFilter, user?.householdId]);
+  // Log realtime errors if any
+  useEffect(() => {
+    if (realtimeError) {
+      console.error('Realtime subscription error:', realtimeError);
+    }
+  }, [realtimeError]);
 
   // Filter items based on selected list
   const filteredItems = allItems.filter(item => item.listId === activeList.id);
