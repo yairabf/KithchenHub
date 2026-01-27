@@ -1,0 +1,401 @@
+---
+name: add-idempotency-keys-sync
+overview: Add idempotency keys to sync payloads to prevent duplicate processing when sync requests are retried. Each entity in a sync request will have a unique idempotency key that the backend can use to detect and skip duplicate processing, enabling safe retries without backend duplication.
+todos:
+  - id: mobile-queue-operation-id
+    content: "Add operationId (UUID) field to QueuedWrite type - generated once per write item and persists through compaction"
+    status: pending
+  - id: mobile-queue-request-id
+    content: "Add optional requestId (UUID) field to QueuedWrite for per-request tracking and observability"
+    status: pending
+  - id: mobile-dto-idempotency-keys
+    content: "Extend sync DTOs with operationId (required) and optional requestId fields, include in payload building"
+    status: pending
+  - id: backend-dto-idempotency-keys
+    content: "Add operationId and optional requestId validation fields to backend DTOs (sync-data.dto.ts)"
+    status: pending
+  - id: backend-schema-idempotency-table
+    content: "Create SyncIdempotencyKey model in Prisma schema with unique constraint on [userId, key], status column, and processedAt for retention"
+    status: pending
+  - id: backend-service-atomic-idempotency
+    content: "Implement atomic idempotency checking using insert-first pattern (try insert key, if exists skip, if succeeds process then mark COMPLETED)"
+    status: pending
+  - id: backend-service-delete-semantics
+    content: "Ensure delete operations are idempotent (soft-delete safe if already deleted, handle missing entities gracefully)"
+    status: pending
+  - id: backend-cleanup-retention
+    content: "Add periodic cleanup job/cron to delete idempotency keys older than N days (e.g., 30 days)"
+    status: pending
+  - id: mobile-tests-idempotency-keys
+    content: "Add tests for operationId generation, persistence through compaction, and inclusion in sync payloads"
+    status: pending
+  - id: backend-tests-idempotency-logic
+    content: "Add tests for atomic idempotency checking, duplicate detection, concurrent requests, and delete idempotency"
+    status: pending
+isProject: false
+---
+
+# Add Idempotency Keys for Sync Payloads
+
+## Current State Analysis
+
+### ✅ Already Implemented
+
+1. **Sync Queue System** (`mobile/src/common/utils/syncQueueProcessor.ts`):
+   - Retry logic with exponential backoff (max 3 attempts)
+   - Queue compaction to prevent duplicate operations
+   - Error classification and retry strategies
+   - Batch-state sync payload building
+
+2. **Backend Sync Endpoint** (`backend/src/modules/auth/services/auth.service.ts`):
+   - Uses `upsert` operations based on entity `id` field
+   - Simple upsert strategy (no timestamp-based conflict resolution)
+   - Returns sync results with conflicts array
+
+3. **Entity Identification**:
+   - Entities have `id` field (used for upsert matching)
+   - Entities have `localId` field (stable UUID for tracking)
+   - Queue items track `target.localId` and optional `target.serverId`
+
+4. **Import Service Idempotency** (Reference Implementation):
+   - `ImportMapping` table with unique constraints for idempotency
+   - Database-level uniqueness: `@@unique([userId, sourceField, sourceType])`
+   - Handles concurrent requests via unique constraint violations
+   - Uses insert-first pattern for atomicity
+
+### ❌ Missing / Gaps
+
+1. **No Idempotency Keys in Sync Payloads**:
+   - Current sync DTOs (`SyncDataDto`, `SyncRecipeDto`, `SyncShoppingListDto`, etc.) have no idempotency key fields
+   - Backend cannot detect if the same sync request was already processed
+   - Retries will re-process the same entities even though upsert prevents duplicates
+
+2. **No Idempotency Key Storage**:
+   - `QueuedWrite` type doesn't store idempotency keys
+   - No backend storage for tracking processed idempotency keys
+   - No way to check if a sync request was already processed
+
+3. **No Atomic Processing**:
+   - Current backend flow: check → process → record (not atomic)
+   - Risk of duplicate processing if crash occurs between process and record
+
+4. **No Retention Strategy**:
+   - No cleanup mechanism for old idempotency keys
+   - Table will grow unbounded over time
+
+## Implementation Plan
+
+### Phase 1: Mobile - Add Operation ID to Queue
+
+**Key Design Decision: Operation Instance ID (UUID)**
+
+Instead of using timestamps or content hashes, we'll use a **stable UUID per queued write operation** that:
+- Is generated once when the write is first enqueued
+- Persists through queue compaction (the surviving item keeps its original UUID)
+- Represents the logical mutation instance, not when it was enqueued
+
+**Files to Modify:**
+
+1. **`mobile/src/common/utils/syncQueueStorage.ts`**:
+   - Add `operationId: string` field to `QueuedWrite` type (UUID, generated once)
+   - Add optional `requestId?: string` field for per-request tracking
+   - Generate `operationId` in `enqueue()` method using `Crypto.randomUUID()`
+   - Generate optional `requestId` at sync payload building time (same for all items in a batch)
+   - **Compaction rules**: When merging queue items, preserve the operationId from the surviving item (the one with latest clientTimestamp)
+   - Store both IDs with queue item
+
+2. **`mobile/src/common/utils/syncQueueProcessor.ts`**:
+   - Include `operationId` when building sync payload
+   - Generate `requestId` per sync batch (optional, for observability)
+   - Pass `operationId` through to DTO transformation methods
+   - Maintain `operationId`-to-entity mapping for result handling
+
+### Phase 2: Mobile - Extend Sync DTOs with Idempotency Keys
+
+**Files to Modify:**
+
+1. **`mobile/src/common/utils/syncQueueProcessor.ts`**:
+   - Extend `SyncRecipeDto`, `SyncShoppingListDto`, `SyncShoppingItemDto`, `SyncChoreDto` interfaces
+   - Add `operationId: string` field to each DTO (required)
+   - Add optional `requestId?: string` at `SyncDataDto` level (optional, for observability)
+   - Include `operationId` when transforming entities to DTOs
+
+### Phase 3: Backend - Add Idempotency Key Support
+
+**Files to Modify:**
+
+1. **`backend/src/modules/auth/dtos/sync-data.dto.ts`**:
+   - Add `@IsString()` `operationId: string` field to:
+     - `SyncRecipeDto`
+     - `SyncShoppingListDto`
+     - `SyncShoppingItemDto`
+     - `SyncChoreDto`
+   - Add optional `@IsString()` `@IsOptional()` `requestId?: string` field to `SyncDataDto`
+
+2. **`backend/src/infrastructure/database/prisma/schema.prisma`**:
+   - Create new `SyncIdempotencyKey` model:
+     ```prisma
+     model SyncIdempotencyKey {
+       id          String   @id @default(cuid())
+       userId      String   @map("user_id") @db.Uuid
+       user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+       key         String   // The operationId
+       entityType  String   // 'recipe' | 'shoppingList' | 'shoppingItem' | 'chore'
+       entityId    String   // The entity ID that was processed
+       requestId   String?  // Optional request ID for observability
+       status      String   @default("PENDING") // PENDING | COMPLETED | FAILED
+       processedAt DateTime? @map("processed_at") // Set when status becomes COMPLETED
+       createdAt   DateTime @default(now()) @map("created_at")
+       
+       @@unique([userId, key])
+       @@index([userId, entityType, entityId])
+       @@index([processedAt]) // For retention cleanup
+       @@map("sync_idempotency_keys")
+     }
+     ```
+   - Add relation to `User` model: `syncIdempotencyKeys SyncIdempotencyKey[]`
+
+3. **`backend/src/modules/auth/services/auth.service.ts`**:
+   - **Atomic Processing Pattern** (Insert-First):
+     ```typescript
+     async function processEntityWithIdempotency(
+       userId: string,
+       operationId: string,
+       entityType: string,
+       entityId: string,
+       requestId: string | undefined,
+       processFn: () => Promise<void>
+     ): Promise<void> {
+       // Try to insert idempotency key first (atomic check)
+       try {
+         await prisma.syncIdempotencyKey.create({
+           data: {
+             userId,
+             key: operationId,
+             entityType,
+             entityId,
+             requestId,
+             status: 'PENDING',
+           },
+         });
+       } catch (error) {
+         // Unique constraint violation = already processed
+         if (isPrismaUniqueConstraintError(error)) {
+           // Already processed, skip
+           return;
+         }
+         throw error;
+       }
+       
+       // We "own" this operation now, process it
+       try {
+         await processFn();
+         
+         // Mark as completed
+         await prisma.syncIdempotencyKey.update({
+           where: { userId_key: { userId, key: operationId } },
+           data: { status: 'COMPLETED', processedAt: new Date() },
+         });
+       } catch (error) {
+         // If processing fails, we can either:
+         // Option A: Delete the key row (allows retry)
+         // Option B: Mark as FAILED (prevents retry, requires manual cleanup)
+         // Recommendation: Delete for automatic retry capability
+         await prisma.syncIdempotencyKey.delete({
+           where: { userId_key: { userId, key: operationId } },
+         });
+         throw error;
+       }
+     }
+     ```
+   - Update `syncShoppingList()`, `syncRecipe()`, `syncChore()`, `syncShoppingItems()` to use atomic pattern
+   - Handle nested items (shopping items) with their own operationIds
+
+4. **`backend/src/modules/auth/repositories/auth.repository.ts`** (or create new):
+   - Add helper methods if needed (though direct Prisma calls in service may be sufficient)
+
+### Phase 4: Delete Operation Semantics
+
+**Files to Modify:**
+
+1. **`backend/src/modules/auth/services/auth.service.ts`**:
+   - Ensure delete operations are idempotent:
+     - **Soft-delete**: Setting `deletedAt` is idempotent (can be called multiple times)
+     - **Hard-delete**: Check if entity exists before deleting, or use safe delete pattern
+   - Handle missing entities gracefully (already deleted = success)
+
+### Phase 5: Retention and Cleanup
+
+**Files to Create/Modify:**
+
+1. **`backend/src/modules/auth/services/auth-cleanup.service.ts`** (new):
+   - Create cleanup service with method: `cleanupOldIdempotencyKeys(retentionDays: number)`
+   - Delete keys where `processedAt < (now - retentionDays)` and `status = 'COMPLETED'`
+   - Keep PENDING/FAILED keys for manual review (or implement separate retention)
+
+2. **`backend/src/modules/auth/controllers/auth.controller.ts`** (optional):
+   - Add admin endpoint for manual cleanup trigger (for testing/debugging)
+
+3. **Cron/Worker Setup**:
+   - Add scheduled job to run cleanup daily (e.g., using NestJS `@nestjs/schedule`)
+   - Default retention: 30 days
+   - Log cleanup statistics
+
+### Phase 6: Conflict Resolution vs Idempotency
+
+**Important Clarification:**
+
+- **Idempotency Keys**: Prevent duplicate processing of the same operation
+- **Conflict Resolution (LWW)**: Ensures correctness when different operations target the same entity
+- **Both are needed**: Idempotency prevents duplicates, LWW prevents stale overwrites
+
+**No Changes Needed:**
+- Existing conflict resolution logic remains unchanged
+- Idempotency keys work alongside LWW strategy
+- Backend still uses upsert (idempotent by design), but idempotency keys prevent re-processing
+
+## Key Design Decisions
+
+### Idempotency Key Format: Operation Instance ID (UUID)
+
+**Chosen Approach**: Generate a UUID once per queued write operation
+- ✅ Stable across retries (same operation = same UUID)
+- ✅ Survives queue compaction (preserve UUID from surviving item)
+- ✅ Represents logical mutation instance, not timing
+- ✅ Simple to implement and debug
+
+**Alternative Considered**: Deterministic hash of content
+- ❌ Requires canonicalization (field ordering, omit volatile fields)
+- ❌ More complex to maintain
+- ❌ Harder to debug
+
+### Atomic Processing: Insert-First Pattern
+
+**Chosen Approach**: Try to insert idempotency key first, then process
+- ✅ Atomic check (unique constraint violation = already processed)
+- ✅ Prevents race conditions in concurrent requests
+- ✅ Matches ImportMapping pattern (proven in codebase)
+- ✅ If processing fails, delete key to allow retry
+
+**Alternative Considered**: Transaction wrapping
+- ⚠️ More complex
+- ⚠️ Requires careful transaction boundaries
+- ✅ Could work but insert-first is simpler
+
+### Delete Idempotency
+
+**Approach**: 
+- Use soft-delete (`deletedAt`) which is naturally idempotent
+- If hard-delete needed, check existence first or use safe delete pattern
+- Include `op=delete` in operationId scope (already handled via operationId per write)
+
+### Retention Strategy
+
+**Approach**:
+- Default retention: 30 days
+- Cleanup only `COMPLETED` keys with `processedAt` older than retention period
+- Keep `PENDING`/`FAILED` keys longer (or separate retention policy)
+- Index on `processedAt` for efficient cleanup queries
+
+### Per-Request ID (Optional)
+
+**Approach**:
+- Generate `requestId` (UUID) per sync batch
+- Include in `SyncDataDto` (optional)
+- Store in idempotency key table for observability
+- Useful for debugging: "Show me all operations from request X"
+
+## Testing Strategy
+
+### Mobile Tests
+
+1. **`syncQueueStorage.spec.ts`**:
+   - Test `operationId` generation in `enqueue()` (UUID format)
+   - Verify `operationId` persists through queue compaction (surviving item keeps original UUID)
+   - Test `requestId` generation (optional, same for batch)
+   - Test compaction rules preserve operationId correctly
+
+2. **`syncQueueProcessor.spec.ts`**:
+   - Test `operationId` included in sync payload
+   - Test `requestId` included in sync payload (optional)
+   - Test operationId-to-entity mapping in result handling
+   - Test retry scenarios with same operationIds
+
+### Backend Tests
+
+1. **`auth.service.spec.ts`**:
+   - Test atomic idempotency checking (insert-first pattern)
+   - Test duplicate detection (unique constraint violation = skip)
+   - Test concurrent requests with same operationId (only one processes)
+   - Test processing failure (key deleted, allows retry)
+   - Test delete idempotency (soft-delete safe if already deleted)
+   - Test nested items (shopping items) with their own operationIds
+
+2. **Integration Tests**:
+   - Test full sync flow with operationIds
+   - Test retry scenario (same payload sent twice, second skipped)
+   - Test operationId uniqueness per user
+   - Test requestId observability
+
+3. **Cleanup Tests**:
+   - Test cleanup job removes old keys
+   - Test cleanup preserves recent keys
+   - Test cleanup handles edge cases (null processedAt, etc.)
+
+## Migration Strategy
+
+1. **Database Migration**:
+   - Create `SyncIdempotencyKey` table
+   - Add relation to `User` model
+   - Add indexes for performance
+   - Run migration before deploying backend changes
+
+2. **Backward Compatibility**:
+   - Make `operationId` required in DTOs (no gradual rollout needed if mobile deployed first)
+   - Backend rejects requests without operationId (400 error)
+   - Mobile generates operationIds for all new queue items
+
+3. **Rollout Order**:
+   - Deploy mobile first (generates and sends operationIds)
+   - Deploy backend (requires operationIds, processes them)
+   - Deploy cleanup job (after sufficient data collected)
+
+## Success Criteria
+
+1. ✅ Each entity in sync payload has unique `operationId` (UUID)
+2. ✅ `operationId` persists through queue compaction
+3. ✅ Backend detects and skips duplicate processing atomically
+4. ✅ Retries are safe (no duplicate entities created, no duplicate processing)
+5. ✅ Idempotency keys are stored per user (not globally)
+6. ✅ Delete operations are idempotent
+7. ✅ Cleanup job removes old keys (retention policy enforced)
+8. ✅ Performance impact is minimal (indexed lookups, atomic operations)
+9. ✅ Tests cover retry scenarios, concurrent requests, and delete idempotency
+10. ✅ Documentation updated with idempotency key behavior
+
+## Files to Create/Modify
+
+### Mobile
+- `mobile/src/common/utils/syncQueueStorage.ts` - Add operationId and requestId to QueuedWrite
+- `mobile/src/common/utils/syncQueueProcessor.ts` - Include operationIds in DTOs, generate requestId
+
+### Backend
+- `backend/src/modules/auth/dtos/sync-data.dto.ts` - Add operationId (required) and requestId (optional) fields
+- `backend/src/infrastructure/database/prisma/schema.prisma` - Add SyncIdempotencyKey model
+- `backend/src/modules/auth/services/auth.service.ts` - Implement atomic idempotency checking
+- `backend/src/modules/auth/services/auth-cleanup.service.ts` - Create cleanup service (new)
+- `backend/src/modules/auth/controllers/auth.controller.ts` - Add cleanup endpoint (optional)
+
+### Tests
+- `mobile/src/common/utils/__tests__/syncQueueStorage.spec.ts` - Test operationId generation and persistence
+- `mobile/src/common/utils/__tests__/syncQueueProcessor.spec.ts` - Test operationId inclusion
+- `backend/src/modules/auth/services/__tests__/auth.service.spec.ts` - Test atomic idempotency logic
+- `backend/src/modules/auth/services/__tests__/auth-cleanup.service.spec.ts` - Test cleanup logic (new)
+
+## Risk Mitigation
+
+1. **Key Stability**: Using UUID per operation ensures stability across compaction
+2. **Atomicity**: Insert-first pattern prevents race conditions
+3. **Table Growth**: Retention policy and cleanup job prevent unbounded growth
+4. **Delete Safety**: Soft-delete is naturally idempotent
+5. **Conflict Resolution**: Idempotency works alongside LWW (both needed)
