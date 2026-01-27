@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { User, RefreshToken, Household } from '@prisma/client';
+import { User, RefreshToken, Household, Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthRepository {
@@ -44,10 +44,25 @@ export class AuthRepository {
     isGuest: boolean;
     householdId?: string;
   }): Promise<User & { household: Household | null }> {
-    return this.prisma.user.create({
-      data,
+    // Use Prisma's generated type for type safety instead of 'any'
+    const createData: Prisma.UserUncheckedCreateInput = {
+      id: data.id,
+      email: data.email,
+      googleId: data.googleId,
+      name: data.name,
+      avatarUrl: data.avatarUrl,
+      deviceId: data.deviceId,
+      isGuest: data.isGuest,
+      householdId: data.householdId,
+    };
+
+    const result = await this.prisma.user.create({
+      data: createData,
       include: { household: true },
     });
+    
+    // Prisma returns the correct shape with include, but TypeScript needs help with the return type
+    return result as unknown as User & { household: Household | null };
   }
 
   async updateUser(

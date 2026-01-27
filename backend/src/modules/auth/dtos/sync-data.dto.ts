@@ -5,12 +5,16 @@ import {
   IsString,
   IsNumber,
   IsBoolean,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SyncShoppingItemDto {
   @IsString()
   id: string;
+
+  @IsUUID(4)
+  operationId: string; // Idempotency key for this operation (UUID v4)
 
   @IsString()
   name: string;
@@ -35,6 +39,9 @@ export class SyncShoppingItemDto {
 export class SyncShoppingListDto {
   @IsString()
   id: string;
+
+  @IsUUID(4)
+  operationId: string; // Idempotency key for this operation (UUID v4)
 
   @IsString()
   name: string;
@@ -75,6 +82,9 @@ export class SyncRecipeDto {
   @IsString()
   id: string;
 
+  @IsUUID(4)
+  operationId: string; // Idempotency key for this operation (UUID v4)
+
   @IsString()
   title: string;
 
@@ -93,6 +103,9 @@ export class SyncChoreDto {
   @IsString()
   id: string;
 
+  @IsUUID(4)
+  operationId: string; // Idempotency key for this operation (UUID v4)
+
   @IsString()
   title: string;
 
@@ -110,6 +123,10 @@ export class SyncChoreDto {
 }
 
 export class SyncDataDto {
+  @IsUUID(4)
+  @IsOptional()
+  requestId?: string; // Optional request ID for observability (same for all items in batch, UUID v4)
+
   @IsArray()
   @IsOptional()
   @ValidateNested({ each: true })
