@@ -136,10 +136,23 @@ To verify that Row Level Security is correctly isolating data between households
 
 **Sync Endpoint Details:**
 - Accepts offline data (shopping lists, recipes, chores)
-- Performs upsert operations with conflict detection
+- Maximum of 1000 items per sync request (combined total of lists, recipes, and chores)
+- Performs simple `upsert` operations (no timestamp-based conflict resolution on server)
 - Returns sync result with status (`synced`, `partial`, or `failed`)
-- Includes conflicts array for failed items
-- Client-side conflict resolution uses Last-Write-Wins (LWW) with tombstone semantics
+- Includes conflicts array for failed items (validation errors, not timestamp conflicts)
+
+**Conflict Resolution Strategy:**
+- **Server Behavior**: Simple upsert operations - no timestamp-based conflict resolution
+- **Client-Side Resolution**: All conflict resolution handled client-side using Last-Write-Wins (LWW) strategy
+- **Server Timestamp Authority**: Server timestamps are authoritative (Prisma auto-manages `updatedAt` via `@updatedAt` directive)
+- **Soft-Delete Handling**: `deletedAt` is handled via soft-delete in repositories
+- **Why Client-Side**: Prevents conflict resolution loops between client and server, allows offline-first architecture with local conflict resolution
+
+**Timestamp Management:**
+- Server timestamps are set correctly by Prisma (`@updatedAt` directive)
+- Soft-delete operations set `deletedAt` correctly
+- Sync endpoint returns entities with proper timestamps
+- No timestamp manipulation in sync endpoint (let Prisma handle it)
 
 ### Household Endpoints
 

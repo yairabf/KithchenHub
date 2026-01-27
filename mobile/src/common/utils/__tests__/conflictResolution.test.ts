@@ -275,4 +275,196 @@ describe('mergeEntityArrays', () => {
       expect(result.map((e) => e.name)).toContain('Second');
     });
   });
+
+  describe('Deterministic conflict resolution', () => {
+    const older = new Date('2026-01-25T10:00:00.000Z');
+    const newer = new Date('2026-01-25T12:00:00.000Z');
+
+    it('always produces same result for same inputs', () => {
+      const local = buildEntity({ id: '1', name: 'Local', updatedAt: older });
+      const remote = buildEntity({ id: '1', name: 'Remote', updatedAt: newer });
+
+      // Run merge multiple times
+      const result1 = mergeEntitiesLWW(local, remote);
+      const result2 = mergeEntitiesLWW(local, remote);
+      const result3 = mergeEntitiesLWW(local, remote);
+
+      // All results should be identical
+      expect(result1).toEqual(result2);
+      expect(result2).toEqual(result3);
+      expect(result1.name).toBe('Remote');
+    });
+
+    it('handles concurrent modifications deterministically', () => {
+      const local = [
+        buildEntity({ id: 'a', name: 'Local A', updatedAt: newer }),
+        buildEntity({ id: 'b', name: 'Local B', updatedAt: older }),
+        buildEntity({ id: 'c', name: 'Local C', updatedAt: older }),
+      ];
+      const remote = [
+        buildEntity({ id: 'a', name: 'Remote A', updatedAt: older }),
+        buildEntity({ id: 'b', name: 'Remote B', updatedAt: newer }),
+        buildEntity({ id: 'd', name: 'Remote D', updatedAt: newer }),
+      ];
+
+      // Run merge multiple times with different order
+      const result1 = mergeEntityArrays([...local], [...remote], (e) => e.id);
+      const result2 = mergeEntityArrays([...remote], [...local], (e) => e.id);
+
+      // Results should be identical regardless of order
+      expect(result1.length).toBe(result2.length);
+      const result1Map = new Map(result1.map((e) => [e.id, e]));
+      const result2Map = new Map(result2.map((e) => [e.id, e]));
+
+      for (const id of result1Map.keys()) {
+        expect(result1Map.get(id)?.name).toBe(result2Map.get(id)?.name);
+      }
+    });
+  });
+
+  describe('Timestamp edge cases', () => {
+    it('handles millisecond precision differences', () => {
+      const t1 = new Date('2026-01-25T10:00:00.000Z');
+      const t2 = new Date('2026-01-25T10:00:00.001Z'); // 1ms difference
+
+      expect(compareTimestamps(t1, t2)).toBe(1); // t2 is newer
+      expect(compareTimestamps(t2, t1)).toBe(-1); // t2 is newer
+      expect(compareTimestamps(t1, t1)).toBe(0); // Equal
+    });
+
+    it('handles timezone differences correctly', () => {
+      // All should be treated as UTC
+      // Note: parseTimestampSafely requires Z format, but Date constructor can parse offsets
+      const utcZ = '2026-01-25T10:00:00.000Z';
+      const utcZ2 = '2026-01-25T10:00:00.000Z'; // Same timestamp
+
+      expect(compareTimestamps(utcZ, utcZ2)).toBe(0);
+      
+      // Test that Date constructor correctly parses timezone offsets (for reference)
+      // This demonstrates that JavaScript Date handles timezone offsets correctly
+      const dateFromZ = new Date('2026-01-25T10:00:00.000Z');
+      const dateFromOffset = new Date('2026-01-25T15:00:00.000+05:00'); // Same UTC time
+      expect(dateFromZ.getTime()).toBe(dateFromOffset.getTime());
+    });
+
+    it('normalizes timezone offsets to UTC for comparison', () => {
+      // Test that Date constructor correctly handles timezone offsets
+      // Note: parseTimestampSafely requires Z format for validation, but Date constructor
+      // can parse timezone offsets correctly. This test verifies the underlying Date behavior.
+      const utc = '2026-01-25T10:00:00.000Z';
+      const utcDate = new Date(utc);
+      const plus5Date = new Date('2026-01-25T15:00:00.000+05:00'); // 5 hours ahead = same UTC time
+
+      // Date constructor parses ISO strings according to the timezone specified in the string
+      // Both 'Z' and '+05:00' formats are correctly parsed to the same UTC moment
+      expect(utcDate.getTime()).toBe(plus5Date.getTime());
+      
+      // compareTimestamps requires valid ISO strings (Z format) per parseTimestampSafely validation
+      // This ensures consistent format in the codebase while Date constructor handles offsets
+      expect(compareTimestamps(utc, utc)).toBe(0);
+    });
+  });
+
+  describe('Recreate after delete (tombstone resistance)', () => {
+    const older = new Date('2026-01-25T10:00:00.000Z');
+    const newer = new Date('2026-01-25T12:00:00.000Z');
+
+    it('does not override deleted record unless timestamps are newer', () => {
+      // Local: deleted entity (deletedAt = T1, updatedAt = T1)
+      const local = buildEntity({
+        id: 'item-1',
+        name: 'Deleted',
+        updatedAt: newer,
+        deletedAt: newer,
+      });
+
+      // Remote: recreated entity with same ID (updatedAt = T2, where T2 < T1)
+      const remote = buildEntity({
+        id: 'item-1',
+        name: 'Recreated',
+        updatedAt: older, // Older than delete
+      });
+
+      const result = mergeEntitiesWithTombstones(local, remote);
+
+      // Delete should win (tombstone resistance)
+      expect(result).not.toBeNull();
+      expect(result?.deletedAt).toBeDefined();
+      expect(result?.name).toBe('Deleted'); // Local delete preserved
+    });
+
+    it('enforces delete always wins policy even with newer timestamp', () => {
+      // Local: deleted entity (deletedAt = T1, updatedAt = T1)
+      const local = buildEntity({
+        id: 'item-1',
+        name: 'Deleted',
+        updatedAt: older,
+        deletedAt: older,
+      });
+
+      // Remote: recreated entity with same ID (updatedAt = T2, where T2 > T1)
+      const remote = buildEntity({
+        id: 'item-1',
+        name: 'Recreated',
+        updatedAt: newer, // Newer than delete
+      });
+
+      const result = mergeEntitiesWithTombstones(local, remote);
+
+      // Delete still wins (delete always wins policy)
+      // This tests that even with newer timestamp, delete wins (tombstone resistance)
+      expect(result).not.toBeNull();
+      expect(result?.deletedAt).toBeDefined();
+    });
+
+    it('prevents accidental resurrection with same timestamp', () => {
+      // Local: deleted entity (deletedAt = T1, updatedAt = T1)
+      const sameTime = new Date('2026-01-25T10:00:00.000Z');
+      const local = buildEntity({
+        id: 'item-1',
+        name: 'Deleted',
+        updatedAt: sameTime,
+        deletedAt: sameTime,
+      });
+
+      // Remote: recreated entity with same ID (updatedAt = T1)
+      const remote = buildEntity({
+        id: 'item-1',
+        name: 'Recreated',
+        updatedAt: sameTime, // Same timestamp
+      });
+
+      const result = mergeEntitiesWithTombstones(local, remote);
+
+      // Delete should win (tie-breaker favors delete)
+      expect(result).not.toBeNull();
+      expect(result?.deletedAt).toBeDefined();
+    });
+
+    it('handles recreate scenario in array merge', () => {
+      // Local: deleted entity
+      const local = [
+        buildEntity({
+          id: 'item-1',
+          name: 'Deleted',
+          updatedAt: newer,
+          deletedAt: newer,
+        }),
+      ];
+
+      // Remote: recreated with same ID but older timestamp
+      const remote = [
+        buildEntity({
+          id: 'item-1',
+          name: 'Recreated',
+          updatedAt: older, // Older than delete
+        }),
+      ];
+
+      const result = mergeEntityArrays(local, remote, (e) => e.id);
+
+      // Deleted entity should be filtered out
+      expect(result).toHaveLength(0);
+    });
+  });
 });

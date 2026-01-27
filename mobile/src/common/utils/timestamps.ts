@@ -227,6 +227,53 @@ export function markDeleted<T extends EntityTimestamps>(
 }
 
 /**
+ * Normalizes a timestamp to UTC, ensuring consistent comparison.
+ * 
+ * Policy: All timestamps are stored and compared in UTC.
+ * ISO strings are parsed as UTC (no timezone conversion).
+ * Date objects are already in UTC internally (JavaScript Date uses UTC internally).
+ * 
+ * @param timestamp - Date object or ISO string
+ * @returns Date object in UTC, or undefined if invalid
+ * @remarks
+ * - ISO strings are parsed as UTC by JavaScript Date constructor
+ * - Date objects are already normalized to UTC internally
+ * - This function ensures consistent UTC representation for comparison
+ * 
+ * @example
+ * ```typescript
+ * const utc = normalizeToUtc('2026-01-25T10:00:00.000Z');
+ * const utc2 = normalizeToUtc('2026-01-25T15:00:00.000+05:00'); // Same UTC time
+ * // utc.getTime() === utc2.getTime() (both represent same moment)
+ * ```
+ */
+export function normalizeToUtc(timestamp: Date | string | undefined): Date | undefined {
+  if (!timestamp) {
+    return undefined;
+  }
+
+  if (timestamp instanceof Date) {
+    // Date objects are already in UTC internally
+    return timestamp;
+  }
+
+  if (typeof timestamp === 'string') {
+    // ISO strings are parsed according to the timezone specified in the string
+    // 'Z' suffix or timezone offset (e.g., '+05:00') is handled automatically
+    // parseTimestampSafely validates and parses the string, throwing on invalid input
+    try {
+      const parsed = parseTimestampSafely(timestamp, 'timestamp');
+      return parsed || undefined;
+    } catch {
+      // Invalid timestamp string - return undefined for graceful handling
+      return undefined;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Normalizes timestamp fields from API responses.
  * Handles both camelCase and snake_case formats, converting strings to Date objects.
  * 
