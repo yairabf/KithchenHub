@@ -35,11 +35,14 @@ import { supabase } from '../../../services/supabase';
 import { api } from '../../../services/api';
 import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareShoppingRepository } from '../../../common/repositories/cacheAwareShoppingRepository';
+import { readCachedEntitiesForUpdate, setCached } from '../../../common/repositories/cacheAwareRepository';
 import {
   applyShoppingItemChange,
   applyShoppingListChange,
   buildListIdFilter,
   updateShoppingListItemCounts,
+  updateCacheFromRealtimeListEvent,
+  updateCacheFromRealtimeItemEvent,
 } from '../utils/shoppingRealtime';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
@@ -209,12 +212,26 @@ export function ShoppingListsScreen() {
         table: 'shopping_lists',
         filter: `household_id=eq.${user.householdId}`,
       },
-      (payload) => {
+      async (payload) => {
         const typedPayload = payload as RealtimePostgresChangesPayload<ShoppingListRealtimeRow>;
 
-        // For signed-in users, realtime updates will be handled by cache refresh
-        // For guest mode, update local state
-        if (!isSignedIn) {
+        if (isSignedIn) {
+          // For signed-in users: update cache from realtime event
+          // This will automatically emit cache events and trigger UI updates via useCachedEntities
+          await updateCacheFromRealtimeListEvent(typedPayload);
+          
+          // Also handle item cleanup if a list was deleted
+          if (typedPayload.eventType === 'DELETE') {
+            const deletedId = typedPayload.old?.id;
+            if (deletedId) {
+              // Update items cache to remove items from deleted list
+              const currentItems = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+              const updatedItems = currentItems.filter((item) => item.listId !== deletedId);
+              await setCached('shoppingItems', updatedItems, (item: ShoppingItem) => item.id);
+            }
+          }
+        } else {
+          // For guest mode: update local state directly
           setGuestLists((currentLists: ShoppingList[]) => {
             const nextLists = applyShoppingListChange(currentLists, typedPayload);
             setSelectedList((currentSelected) =>
@@ -232,7 +249,6 @@ export function ShoppingListsScreen() {
             }
           }
         }
-        // For signed-in: cache events will update UI via useCachedEntities
       },
     );
 
@@ -259,12 +275,15 @@ export function ShoppingListsScreen() {
         table: 'shopping_items',
         filter: listIdFilter,
       },
-      (payload) => {
+      async (payload) => {
         const typedPayload = payload as RealtimePostgresChangesPayload<ShoppingItemRealtimeRow>;
-        // For signed-in users, realtime updates will be handled by cache refresh
-        // For now, we still update local state for immediate UI feedback
-        // TODO: Integrate realtime updates with cache events
-        if (!isSignedIn) {
+        
+        if (isSignedIn) {
+          // For signed-in users: update cache from realtime event
+          // This will automatically emit cache events and trigger UI updates via useCachedEntities
+          await updateCacheFromRealtimeItemEvent(typedPayload, groceryItems);
+        } else {
+          // For guest mode: update local state directly
           setGuestItems((currentItems) =>
             applyShoppingItemChange(currentItems, typedPayload, groceryItems),
           );
