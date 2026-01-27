@@ -36,6 +36,7 @@ export type QueueTargetId = {
  */
 export type QueuedWrite = {
   id: string;                 // Queue item ID (UUID)
+  operationId: string;         // Idempotency key (UUID) - stable across retries and compaction
   entityType: SyncEntityType;
   op: SyncOp;
   target: QueueTargetId;       // Identifies the entity across offline period
@@ -45,6 +46,7 @@ export type QueuedWrite = {
   lastAttemptAt?: string;       // ISO timestamp of last attempt (for backoff)
   status: QueuedWriteStatus;    // Item status
   lastError?: string;           // Last error message (for debugging)
+  requestId?: string;           // Optional request ID for observability (same for all items in a batch)
 };
 
 /**
@@ -56,6 +58,82 @@ const SYNC_QUEUE_STORAGE_KEY = getSignedInCacheKey('sync_queue');
  * Maximum queue size to prevent unbounded growth
  */
 const MAX_QUEUE_SIZE = 100;
+
+/**
+ * Formats a hash string as a UUID-like format (8-4-4-4-12).
+ * 
+ * @param hash - Hash string (at least 32 characters)
+ * @returns UUID-formatted string
+ */
+function formatHashAsUuid(hash: string): string {
+  if (hash.length < 32) {
+    throw new Error(`Hash must be at least 32 characters, got ${hash.length}`);
+  }
+  return [
+    hash.substring(0, 8),
+    hash.substring(8, 12),
+    hash.substring(12, 16),
+    hash.substring(16, 20),
+    hash.substring(20, 32),
+  ].join('-');
+}
+
+/**
+ * Generates a fallback operationId using a simple hash of the content.
+ * Used when crypto operations fail.
+ * 
+ * @param content - Content to hash
+ * @returns UUID-like string
+ */
+function generateFallbackOperationId(content: string): string {
+  // Simple hash function for fallback
+  let hash = 0;
+  for (let i = 0; i < content.length; i++) {
+    const char = content.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Convert to positive hex string and pad to 32 characters
+  const hexString = Math.abs(hash).toString(16).padStart(32, '0');
+  return formatHashAsUuid(hexString);
+}
+
+/**
+ * Generates a deterministic operationId for old queue items that don't have one.
+ * Uses a hash of entity type, localId, operation, and timestamp to ensure
+ * the same entity always gets the same operationId, preserving idempotency.
+ * 
+ * @param entityType - Type of entity
+ * @param localId - Entity local ID
+ * @param op - Operation type
+ * @param clientTimestamp - Client timestamp
+ * @returns Deterministic UUID-like string
+ */
+async function generateDeterministicOperationId(
+  entityType: string,
+  localId: string,
+  op: string,
+  clientTimestamp: string
+): Promise<string> {
+  // Create a deterministic string from entity properties
+  const content = `${entityType}:${localId}:${op}:${clientTimestamp}`;
+  
+  try {
+    // Generate SHA-256 hash using crypto API
+    const hash = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      content
+    );
+    
+    // Convert hash to UUID-like format (8-4-4-4-12)
+    return formatHashAsUuid(hash);
+  } catch (error) {
+    // Fallback: use deterministic hash if crypto fails
+    // This ensures migration doesn't break even if crypto operations fail
+    console.error('Failed to generate deterministic operationId using crypto, using fallback:', error);
+    return generateFallbackOperationId(content);
+  }
+}
 
 /**
  * Reads all queued writes from storage
@@ -81,6 +159,8 @@ async function readQueue(): Promise<QueuedWrite[]> {
     
     // Validate each item
     const valid: QueuedWrite[] = [];
+    const migrationPromises: Promise<QueuedWrite>[] = [];
+    
     for (const item of parsed) {
       if (
         typeof item === 'object' &&
@@ -100,16 +180,46 @@ async function readQueue(): Promise<QueuedWrite[]> {
           ? (item.status as QueuedWriteStatus)
           : 'PENDING';
         
-        const migratedItem: QueuedWrite = {
-          ...item,
-          status,
-          lastAttemptAt: item.lastAttemptAt,
-          lastError: item.lastError,
-        };
-        valid.push(migratedItem);
+        // Migrate old items: generate deterministic operationId if missing (backward compatibility)
+        // Use hash of entity type, localId, operation, and timestamp to ensure same entity = same operationId
+        // This preserves idempotency even for items that were queued before operationId was added
+        if (typeof item.operationId === 'string') {
+          // Already has operationId, no migration needed
+          const migratedItem: QueuedWrite = {
+            ...item,
+            status,
+            lastAttemptAt: item.lastAttemptAt,
+            lastError: item.lastError,
+            requestId: typeof item.requestId === 'string' ? item.requestId : undefined,
+          };
+          valid.push(migratedItem);
+        } else {
+          // Need to generate deterministic operationId (async operation)
+          migrationPromises.push(
+            generateDeterministicOperationId(
+              item.entityType,
+              item.target.localId,
+              item.op,
+              item.clientTimestamp
+            ).then(operationId => ({
+              ...item,
+              operationId,
+              status,
+              lastAttemptAt: item.lastAttemptAt,
+              lastError: item.lastError,
+              requestId: typeof item.requestId === 'string' ? item.requestId : undefined,
+            }))
+          );
+        }
       } else {
         console.warn('Invalid queue item format, skipping:', item);
       }
+    }
+    
+    // Wait for all migration operations to complete
+    if (migrationPromises.length > 0) {
+      const migratedItems = await Promise.all(migrationPromises);
+      valid.push(...migratedItems);
     }
     
     // Sort by clientTimestamp for deterministic ordering
@@ -188,28 +298,35 @@ function compactQueue(queue: QueuedWrite[]): QueuedWrite[] {
     }
     
     // Apply compaction rules
+    // IMPORTANT: Preserve operationId from the surviving item (the one with latest clientTimestamp)
     if (existing.op === 'create' && item.op === 'update') {
       // create + update → create with latest payload
+      // Preserve existing operationId (the original create operation)
       compacted.set(key, {
         ...existing,
         payload: item.payload,
         clientTimestamp: item.clientTimestamp, // Use latest timestamp
+        // operationId preserved from existing (original create)
       });
     } else if (existing.op === 'update' && item.op === 'update') {
       // update + update → update with latest payload
+      // Preserve existing operationId (the original update operation)
       compacted.set(key, {
         ...existing,
         payload: item.payload,
         clientTimestamp: item.clientTimestamp,
+        // operationId preserved from existing (original update)
       });
     } else if (existing.op === 'create' && item.op === 'delete') {
       // create + delete → drop both (remove from map)
       compacted.delete(key);
     } else if (existing.op === 'delete' && item.op === 'update') {
       // delete + update → keep delete (ignore update)
+      // Preserve existing operationId (the delete operation)
       // No change needed
     } else if (existing.op === 'delete' && item.op === 'delete') {
       // delete + delete → keep one delete
+      // Preserve existing operationId (the original delete)
       // No change needed
     } else {
       // Unknown combination, keep both (shouldn't happen)
@@ -316,8 +433,9 @@ class SyncQueueStorageImpl implements SyncQueueStorage {
     target: QueueTargetId,
     payload: unknown
   ): Promise<QueuedWrite> {
-    // Create the queue item first (before lock) to have its ID
+    // Create the queue item first (before lock) to have its ID and operationId
     const queuedWriteId = Crypto.randomUUID();
+    const operationId = Crypto.randomUUID(); // Generate stable UUID for idempotency
     const clientTimestamp = new Date().toISOString();
     
     // Chain operations to prevent concurrent modifications
@@ -331,6 +449,7 @@ class SyncQueueStorageImpl implements SyncQueueStorage {
       // Create new queue item
       const queuedWrite: QueuedWrite = {
         id: queuedWriteId,
+        operationId, // Stable UUID for idempotency - persists through compaction
         entityType,
         op,
         target,
@@ -366,6 +485,7 @@ class SyncQueueStorageImpl implements SyncQueueStorage {
       // Return a placeholder that represents the no-op
       return {
         id: queuedWriteId,
+        operationId, // Include operationId even for no-op placeholder
         entityType,
         op,
         target,

@@ -16,6 +16,7 @@ import type { SyncEntityType } from './cacheMetadata';
 import type { Recipe } from '../../mocks/recipes';
 import type { ShoppingList, ShoppingItem } from '../../mocks/shopping';
 import type { Chore } from '../../mocks/chores';
+import * as Crypto from 'expo-crypto';
 
 /**
  * Sync result from backend
@@ -35,6 +36,7 @@ interface SyncResult {
  */
 interface SyncRecipeDto {
   id: string;
+  operationId: string; // Idempotency key for this operation
   title: string;
   ingredients: Array<{ name: string; quantity?: number; unit?: string }>;
   instructions: Array<{ step: number; instruction: string }>;
@@ -42,6 +44,7 @@ interface SyncRecipeDto {
 
 interface SyncShoppingItemDto {
   id: string;
+  operationId: string; // Idempotency key for this operation
   name: string;
   quantity?: number;
   unit?: string;
@@ -51,6 +54,7 @@ interface SyncShoppingItemDto {
 
 interface SyncShoppingListDto {
   id: string;
+  operationId: string; // Idempotency key for this operation
   name: string;
   color?: string;
   items?: SyncShoppingItemDto[];
@@ -58,6 +62,7 @@ interface SyncShoppingListDto {
 
 interface SyncChoreDto {
   id: string;
+  operationId: string; // Idempotency key for this operation
   title: string;
   assigneeId?: string;
   dueDate?: string;
@@ -65,6 +70,7 @@ interface SyncChoreDto {
 }
 
 interface SyncDataDto {
+  requestId?: string; // Optional request ID for observability (same for all items in batch)
   recipes?: SyncRecipeDto[];
   lists?: SyncShoppingListDto[];
   chores?: SyncChoreDto[];
@@ -561,16 +567,18 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    * Transforms Recipe entity to SyncRecipeDto
    * 
    * @param recipe - Recipe entity to transform
+   * @param operationId - Idempotency key for this operation
    * @returns SyncRecipeDto for backend
    * @throws Error if recipe payload is invalid
    */
-  private transformRecipeToDto(recipe: unknown): SyncRecipeDto {
+  private transformRecipeToDto(recipe: unknown, operationId: string): SyncRecipeDto {
     if (!this.isValidRecipe(recipe)) {
       throw new Error('Invalid recipe payload in queue: missing required fields');
     }
 
     return {
       id: recipe.id, // Use id (may be localId or serverId)
+      operationId, // Include idempotency key
       title: recipe.name,
       ingredients: recipe.ingredients.map(ing => ({
         name: ing.name,
@@ -605,16 +613,18 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    * Transforms ShoppingItem entity to SyncShoppingItemDto
    * 
    * @param item - ShoppingItem entity to transform
+   * @param operationId - Idempotency key for this operation
    * @returns SyncShoppingItemDto for backend
    * @throws Error if item payload is invalid
    */
-  private transformShoppingItemToDto(item: unknown): SyncShoppingItemDto {
+  private transformShoppingItemToDto(item: unknown, operationId: string): SyncShoppingItemDto {
     if (!this.isValidShoppingItem(item)) {
       throw new Error('Invalid shopping item payload in queue: missing required fields');
     }
 
     return {
       id: item.id,
+      operationId, // Include idempotency key
       name: item.name,
       quantity: item.quantity || undefined,
       unit: item.unit || undefined,
@@ -640,22 +650,29 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
   /**
    * Transforms ShoppingList entity to SyncShoppingListDto
    * Includes nested items if available in queue
+   * 
+   * @param list - ShoppingList entity to transform
+   * @param allItems - Array of shopping items with their operationIds
+   * @param operationId - Idempotency key for this list operation
    */
   private transformShoppingListToDto(
     list: ShoppingList,
-    allItems: ShoppingItem[]
+    allItems: Array<{ entity: ShoppingItem; operationId: string }>,
+    operationId: string
   ): SyncShoppingListDto {
     // Find items for this list
     const listItems = allItems.filter(
-      item => item.listId === list.id || item.listId === list.localId
+      ({ entity: item }) => item.listId === list.id || item.listId === list.localId
     );
 
     return {
       id: list.id,
+      operationId, // Include idempotency key
       name: list.name,
       color: list.color || undefined,
       items: listItems.length > 0 
-        ? listItems.map(item => this.transformShoppingItemToDto(item))
+        ? listItems.map(({ entity: item, operationId: itemOperationId }) => 
+            this.transformShoppingItemToDto(item, itemOperationId))
         : undefined,
     };
   }
@@ -678,10 +695,11 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    * Transforms Chore entity to SyncChoreDto
    * 
    * @param chore - Chore entity to transform
+   * @param operationId - Idempotency key for this operation
    * @returns SyncChoreDto for backend
    * @throws Error if chore payload is invalid
    */
-  private transformChoreToDto(chore: unknown): SyncChoreDto {
+  private transformChoreToDto(chore: unknown, operationId: string): SyncChoreDto {
     if (!this.isValidChore(chore)) {
       throw new Error('Invalid chore payload in queue: missing required fields');
     }
@@ -697,6 +715,7 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
 
     return {
       id: chore.id,
+      operationId, // Include idempotency key
       title: chore.name,
       assigneeId: undefined, // TODO: Map assignee name to ID if needed
       dueDate: dueDate,
@@ -727,29 +746,30 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
   }
 
   /**
-   * Separates entities by type from grouped writes.
+   * Separates entities by type from grouped writes, maintaining operationId mapping.
    * 
    * @param entityMap - Map of entity key to queued write
-   * @returns Object with separated entities by type
+   * @returns Object with separated entities by type, each with their operationId
    */
   private separateEntitiesByType(entityMap: Map<string, QueuedWrite>): {
-    recipes: Recipe[];
-    lists: ShoppingList[];
-    items: ShoppingItem[];
-    chores: Chore[];
+    recipes: Array<{ entity: Recipe; operationId: string }>;
+    lists: Array<{ entity: ShoppingList; operationId: string }>;
+    items: Array<{ entity: ShoppingItem; operationId: string }>;
+    chores: Array<{ entity: Chore; operationId: string }>;
   } {
-    const recipes: Recipe[] = [];
-    const lists: ShoppingList[] = [];
-    const items: ShoppingItem[] = [];
-    const chores: Chore[] = [];
+    const recipes: Array<{ entity: Recipe; operationId: string }> = [];
+    const lists: Array<{ entity: ShoppingList; operationId: string }> = [];
+    const items: Array<{ entity: ShoppingItem; operationId: string }> = [];
+    const chores: Array<{ entity: Chore; operationId: string }> = [];
     
     for (const item of entityMap.values()) {
       const payload = item.payload;
+      const operationId = item.operationId;
       
       switch (item.entityType) {
         case 'recipes':
           if (this.isValidRecipe(payload)) {
-            recipes.push(payload);
+            recipes.push({ entity: payload, operationId });
           } else {
             console.warn(`Skipping invalid recipe payload for ${item.target.localId}`);
           }
@@ -757,21 +777,21 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         case 'shoppingLists':
           // Validate shopping list payload
           if (this.isValidShoppingListPayload(payload)) {
-            lists.push(payload as ShoppingList);
+            lists.push({ entity: payload as ShoppingList, operationId });
           } else {
             console.warn(`Skipping invalid shopping list payload for ${item.target.localId}`);
           }
           break;
         case 'shoppingItems':
           if (this.isValidShoppingItem(payload)) {
-            items.push(payload);
+            items.push({ entity: payload, operationId });
           } else {
             console.warn(`Skipping invalid shopping item payload for ${item.target.localId}`);
           }
           break;
         case 'chores':
           if (this.isValidChore(payload)) {
-            chores.push(payload);
+            chores.push({ entity: payload, operationId });
           } else {
             console.warn(`Skipping invalid chore payload for ${item.target.localId}`);
           }
@@ -785,54 +805,58 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
   /**
    * Transforms separated entities to DTO format and handles orphaned items.
    * 
-   * @param separated - Separated entities by type
+   * @param separated - Separated entities by type with operationIds
+   * @param requestId - Optional request ID for observability
    * @returns SyncDataDto for backend
    */
-  private transformToDto(separated: {
-    recipes: Recipe[];
-    lists: ShoppingList[];
-    items: ShoppingItem[];
-    chores: Chore[];
-  }): SyncDataDto {
+  private transformToDto(
+    separated: {
+      recipes: Array<{ entity: Recipe; operationId: string }>;
+      lists: Array<{ entity: ShoppingList; operationId: string }>;
+      items: Array<{ entity: ShoppingItem; operationId: string }>;
+      chores: Array<{ entity: Chore; operationId: string }>;
+    },
+    requestId?: string
+  ): SyncDataDto {
     const recipes: SyncRecipeDto[] = [];
     const lists: SyncShoppingListDto[] = [];
     const chores: SyncChoreDto[] = [];
-    const orphanedItems: ShoppingItem[] = [];
+    const orphanedItems: Array<{ entity: ShoppingItem; operationId: string }> = [];
 
     // Transform recipes
-    for (const recipe of separated.recipes) {
+    for (const { entity: recipe, operationId } of separated.recipes) {
       try {
-        recipes.push(this.transformRecipeToDto(recipe));
+        recipes.push(this.transformRecipeToDto(recipe, operationId));
       } catch (error) {
         console.error('Failed to transform recipe:', error);
       }
     }
 
     // Transform chores
-    for (const chore of separated.chores) {
+    for (const { entity: chore, operationId } of separated.chores) {
       try {
-        chores.push(this.transformChoreToDto(chore));
+        chores.push(this.transformChoreToDto(chore, operationId));
       } catch (error) {
         console.error('Failed to transform chore:', error);
       }
     }
 
     // Transform shopping lists with nested items
-    for (const list of separated.lists) {
+    for (const { entity: list, operationId } of separated.lists) {
       try {
-        lists.push(this.transformShoppingListToDto(list, separated.items));
+        lists.push(this.transformShoppingListToDto(list, separated.items, operationId));
       } catch (error) {
         console.error('Failed to transform shopping list:', error);
       }
     }
 
     // Check for orphaned items (items without their list in queue)
-    for (const item of separated.items) {
+    for (const { entity: item, operationId } of separated.items) {
       const hasParentList = separated.lists.some(
-        list => list.id === item.listId || list.localId === item.listId
+        ({ entity: list }) => list.id === item.listId || list.localId === item.listId
       );
       if (!hasParentList) {
-        orphanedItems.push(item);
+        orphanedItems.push({ entity: item, operationId });
       }
     }
 
@@ -840,11 +864,12 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
       console.warn(
         `${orphanedItems.length} orphaned shopping items found. ` +
         `They will be synced when their parent list is synced. ` +
-        `Orphaned item IDs: ${orphanedItems.map(i => i.id).join(', ')}`
+        `Orphaned item IDs: ${orphanedItems.map(({ entity }) => entity.id).join(', ')}`
       );
     }
     
     return {
+      requestId, // Include optional request ID
       recipes: recipes.length > 0 ? recipes : undefined,
       lists: lists.length > 0 ? lists : undefined,
       chores: chores.length > 0 ? chores : undefined,
@@ -864,7 +889,11 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
   private async buildSyncPayload(queue: QueuedWrite[]): Promise<SyncDataDto> {
     const entityMap = this.groupWritesByEntity(queue);
     const separated = this.separateEntitiesByType(entityMap);
-    return this.transformToDto(separated);
+    
+    // Generate requestId for this sync batch (optional, for observability)
+    const requestId = Crypto.randomUUID();
+    
+    return this.transformToDto(separated, requestId);
   }
 
   /**

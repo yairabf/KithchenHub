@@ -33,6 +33,27 @@ import {
   MAX_SYNC_ITEMS,
 } from '../../../common/constants/token-expiry.constants';
 
+import { SYNC_ENTITY_TYPES, type SyncEntityType } from '../constants/sync-entity-types';
+
+/**
+ * Type guard for Prisma unique constraint violation errors
+ * @param error - The error to check
+ * @returns True if error is a Prisma unique constraint violation
+ */
+function isPrismaUniqueConstraintError(error: unknown): error is {
+  code: string;
+  meta?: {
+    target?: string[];
+  };
+} {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code: unknown }).code === 'P2002'
+  );
+}
+
 /**
  * Authentication service handling user authentication, token management, and data synchronization.
  *
@@ -166,24 +187,30 @@ export class AuthService {
 
     if (syncData.lists) {
       const listConflicts = await this.syncShoppingLists(
+        userId,
         user.householdId!,
         syncData.lists,
+        syncData.requestId,
       );
       conflicts.push(...listConflicts);
     }
 
     if (syncData.recipes) {
       const recipeConflicts = await this.syncRecipes(
+        userId,
         user.householdId!,
         syncData.recipes,
+        syncData.requestId,
       );
       conflicts.push(...recipeConflicts);
     }
 
     if (syncData.chores) {
       const choreConflicts = await this.syncChores(
+        userId,
         user.householdId!,
         syncData.chores,
+        syncData.requestId,
       );
       conflicts.push(...choreConflicts);
     }
@@ -318,17 +345,119 @@ export class AuthService {
   }
 
   /**
+   * Processes an entity with idempotency checking using insert-first pattern.
+   * 
+   * Atomic processing flow:
+   * 1. Try to insert idempotency key (unique constraint = already processed → skip)
+   * 2. If insert succeeds, we "own" this operation → process entity
+   * 3. If processing succeeds, mark key as COMPLETED
+   * 4. If processing fails, delete key to allow retry
+   * 
+   * @param userId - User ID performing the operation
+   * @param operationId - Idempotency key (operationId from client)
+   * @param entityType - Type of entity (from SYNC_ENTITY_TYPES constant)
+   * @param entityId - Entity ID being processed
+   * @param requestId - Optional request ID for observability
+   * @param processFn - Function to process the entity (upsert, etc.)
+   * @throws Error if processing fails (after deleting key to allow retry)
+   */
+  private async processEntityWithIdempotency(
+    userId: string,
+    operationId: string,
+    entityType: SyncEntityType,
+    entityId: string,
+    requestId: string | undefined,
+    processFn: () => Promise<void>,
+  ): Promise<void> {
+    // Try to insert idempotency key first (atomic check)
+    // Store the created key's ID to avoid redundant queries later
+    let idempotencyKeyId: string | null = null;
+    
+    try {
+      const created = await this.prisma.syncIdempotencyKey.create({
+        data: {
+          userId,
+          key: operationId,
+          entityType,
+          entityId,
+          requestId,
+          status: 'PENDING',
+        },
+      });
+      idempotencyKeyId = created.id;
+    } catch (error) {
+      // Unique constraint violation = already processed
+      if (isPrismaUniqueConstraintError(error)) {
+        // Already processed, skip
+        this.logger.debug('Skipping duplicate operation', {
+          userId,
+          operationId,
+          entityType,
+          entityId,
+        });
+        return;
+      }
+      // Other error, re-throw
+      throw error;
+    }
+
+    // We "own" this operation now, process it
+    try {
+      await processFn();
+
+      // Mark as completed using stored ID (no query needed)
+      if (!idempotencyKeyId) {
+        // This should never happen, but handle gracefully
+        this.logger.error('Idempotency key ID missing after creation', {
+          userId,
+          operationId,
+        });
+        throw new Error(
+          `Idempotency key ID missing after creation: ${operationId}`,
+        );
+      }
+
+      await this.prisma.syncIdempotencyKey.update({
+        where: { id: idempotencyKeyId },
+        data: {
+          status: 'COMPLETED',
+          processedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      // If processing fails, delete the key row to allow retry using stored ID
+      if (idempotencyKeyId) {
+        try {
+          await this.prisma.syncIdempotencyKey.delete({
+            where: { id: idempotencyKeyId },
+          });
+        } catch (deleteError) {
+          // Log but don't throw - original error is more important
+          this.logger.warn('Failed to delete idempotency key after processing failure', {
+            idempotencyKeyId,
+            error: deleteError,
+          });
+        }
+      }
+      // Re-throw original error
+      throw error;
+    }
+  }
+
+  /**
    * Synchronizes shopping lists and their items.
    */
   private async syncShoppingLists(
+    userId: string,
     householdId: string,
     lists: SyncShoppingListDto[],
+    requestId: string | undefined,
   ): Promise<SyncConflict[]> {
     const conflicts: SyncConflict[] = [];
 
     for (const list of lists) {
       try {
-        await this.syncShoppingList(householdId, list);
+        await this.syncShoppingList(userId, householdId, list, requestId);
       } catch (error) {
         conflicts.push({
           type: 'list',
@@ -347,59 +476,84 @@ export class AuthService {
    * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
    * Client-side conflict resolution handles all conflicts using LWW strategy.
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
+   * 
+   * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
    */
   private async syncShoppingList(
+    userId: string,
     householdId: string,
     list: SyncShoppingListDto,
+    requestId: string | undefined,
   ): Promise<void> {
-    await this.prisma.shoppingList.upsert({
-      where: { id: list.id },
-      create: {
-        id: list.id,
-        householdId,
-        name: list.name,
-        color: list.color,
-      },
-      update: {
-        name: list.name,
-        color: list.color,
-      },
-    });
+    await this.processEntityWithIdempotency(
+      userId,
+      list.operationId,
+      SYNC_ENTITY_TYPES.SHOPPING_LIST,
+      list.id,
+      requestId,
+      async () => {
+        await this.prisma.shoppingList.upsert({
+          where: { id: list.id },
+          create: {
+            id: list.id,
+            householdId,
+            name: list.name,
+            color: list.color,
+          },
+          update: {
+            name: list.name,
+            color: list.color,
+          },
+        });
 
-    if (list.items) {
-      await this.syncShoppingItems(list.id, list.items);
-    }
+        if (list.items) {
+          await this.syncShoppingItems(userId, list.id, list.items, requestId);
+        }
+      },
+    );
   }
 
   /**
    * Synchronizes shopping items for a list.
+   * Each item has its own operationId for idempotency.
    */
   private async syncShoppingItems(
+    userId: string,
     listId: string,
     items: SyncShoppingListDto['items'],
+    requestId: string | undefined,
   ): Promise<void> {
     if (!items) return;
 
     for (const item of items) {
-      await this.prisma.shoppingItem.upsert({
-        where: { id: item.id },
-        create: {
-          id: item.id,
-          listId,
-          name: item.name,
-          quantity: item.quantity || 1,
-          unit: item.unit,
-          isChecked: item.isChecked || false,
-          category: item.category,
+      await this.processEntityWithIdempotency(
+        userId,
+        item.operationId,
+        SYNC_ENTITY_TYPES.SHOPPING_ITEM,
+        item.id,
+        requestId,
+        async () => {
+          await this.prisma.shoppingItem.upsert({
+            where: { id: item.id },
+            create: {
+              id: item.id,
+              listId,
+              name: item.name,
+              quantity: item.quantity || 1,
+              unit: item.unit,
+              isChecked: item.isChecked || false,
+              category: item.category,
+            },
+            update: {
+              name: item.name,
+              quantity: item.quantity,
+              unit: item.unit,
+              isChecked: item.isChecked,
+              category: item.category,
+            },
+          });
         },
-        update: {
-          name: item.name,
-          quantity: item.quantity,
-          unit: item.unit,
-          isChecked: item.isChecked,
-          category: item.category,
-        },
-      });
+      );
     }
   }
 
@@ -409,33 +563,46 @@ export class AuthService {
    * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
    * Client-side conflict resolution handles all conflicts using LWW strategy.
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
+   * 
+   * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
    */
   private async syncRecipes(
+    userId: string,
     householdId: string,
     recipes: SyncRecipeDto[],
+    requestId: string | undefined,
   ): Promise<SyncConflict[]> {
     const conflicts: SyncConflict[] = [];
 
     for (const recipe of recipes) {
       try {
-        await this.prisma.recipe.upsert({
-          where: { id: recipe.id },
-          create: {
-            id: recipe.id,
-            householdId,
-            title: recipe.title,
-            ingredients: JSON.parse(JSON.stringify(recipe.ingredients)),
-            instructions: JSON.parse(JSON.stringify(recipe.instructions)),
+        await this.processEntityWithIdempotency(
+          userId,
+          recipe.operationId,
+          SYNC_ENTITY_TYPES.RECIPE,
+          recipe.id,
+          requestId,
+          async () => {
+            await this.prisma.recipe.upsert({
+              where: { id: recipe.id },
+              create: {
+                id: recipe.id,
+                householdId,
+                title: recipe.title,
+                ingredients: JSON.parse(JSON.stringify(recipe.ingredients)),
+                instructions: JSON.parse(JSON.stringify(recipe.instructions)),
+              },
+              update: {
+                title: recipe.title,
+                ingredients: JSON.parse(JSON.stringify(recipe.ingredients)),
+                instructions: JSON.parse(JSON.stringify(recipe.instructions)),
+              },
+            });
           },
-          update: {
-            title: recipe.title,
-            ingredients: JSON.parse(JSON.stringify(recipe.ingredients)),
-            instructions: JSON.parse(JSON.stringify(recipe.instructions)),
-          },
-        });
+        );
       } catch (error) {
         conflicts.push({
-          type: 'recipe',
+          type: SYNC_ENTITY_TYPES.RECIPE,
           id: recipe.id,
           reason: error instanceof Error ? error.message : 'Unknown error',
         });
@@ -451,35 +618,48 @@ export class AuthService {
    * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
    * Client-side conflict resolution handles all conflicts using LWW strategy.
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
+   * 
+   * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
    */
   private async syncChores(
+    userId: string,
     householdId: string,
     chores: SyncChoreDto[],
+    requestId: string | undefined,
   ): Promise<SyncConflict[]> {
     const conflicts: SyncConflict[] = [];
 
     for (const chore of chores) {
       try {
-        await this.prisma.chore.upsert({
-          where: { id: chore.id },
-          create: {
-            id: chore.id,
-            householdId,
-            title: chore.title,
-            assigneeId: chore.assigneeId,
-            dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
-            isCompleted: chore.isCompleted || false,
+        await this.processEntityWithIdempotency(
+          userId,
+          chore.operationId,
+          SYNC_ENTITY_TYPES.CHORE,
+          chore.id,
+          requestId,
+          async () => {
+            await this.prisma.chore.upsert({
+              where: { id: chore.id },
+              create: {
+                id: chore.id,
+                householdId,
+                title: chore.title,
+                assigneeId: chore.assigneeId,
+                dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
+                isCompleted: chore.isCompleted || false,
+              },
+              update: {
+                title: chore.title,
+                assigneeId: chore.assigneeId,
+                dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
+                isCompleted: chore.isCompleted,
+              },
+            });
           },
-          update: {
-            title: chore.title,
-            assigneeId: chore.assigneeId,
-            dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
-            isCompleted: chore.isCompleted,
-          },
-        });
+        );
       } catch (error) {
         conflicts.push({
-          type: 'chore',
+          type: SYNC_ENTITY_TYPES.CHORE,
           id: chore.id,
           reason: error instanceof Error ? error.message : 'Unknown error',
         });

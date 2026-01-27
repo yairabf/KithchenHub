@@ -29,6 +29,11 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
   - `updated_at` automatically maintained by Prisma
 - **Master Grocery Catalog**: Centralized grocery database with categories and search
 - **Data Import**: Import from guest mode to household accounts with fingerprinting and idempotency
+- **Sync Idempotency**: Sync operations use idempotency keys to prevent duplicate processing
+  - Each entity includes a unique `operationId` (UUID) for idempotent retries
+  - Optional `requestId` for batch observability
+  - Atomic insert-first pattern ensures exactly-once processing
+  - Automatic cleanup of old idempotency keys (configurable retention period)
 
 ### Household Management
 - Multi-user household support
@@ -96,6 +101,14 @@ npm run start:dev         # start API with watch mode
 - Inspect data: `npm run prisma:studio`
 - Supabase: prefer a direct connection string in `DIRECT_URL` for migrations; use the session pooler in `DATABASE_URL` if your network is IPv4-only.
 
+### Idempotency Key Management
+- **Table**: `sync_idempotency_keys` tracks processed sync operations
+- **Retention**: Old completed keys are cleaned up automatically (default: 30 days)
+- **Cleanup Service**: `AuthCleanupService` provides manual and scheduled cleanup
+  - Manual cleanup: `cleanupOldIdempotencyKeys(retentionDays)`
+  - Scheduled cleanup: Requires `@nestjs/schedule` package (optional)
+  - Stats: `getIdempotencyKeyStats()` for monitoring
+
 ## Supabase Setup
 - **Config**: Supabase client is initialized in `src/modules/supabase/supabase.service.ts`.
 - **Environment**: Requires `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env`. Optionally include `SUPABASE_SERVICE_ROLE_KEY` for admin operations.
@@ -137,6 +150,10 @@ To verify that Row Level Security is correctly isolating data between households
 **Sync Endpoint Details:**
 - Accepts offline data (shopping lists, recipes, chores)
 - Maximum of 1000 items per sync request (combined total of lists, recipes, and chores)
+- **Idempotency Keys**: Each entity must include a unique `operationId` (UUID v4) to prevent duplicate processing
+  - Safe retries: Same `operationId` will be processed only once
+  - Atomic processing: Insert-first pattern ensures exactly-once semantics
+  - Optional `requestId` for batch observability (same for all items in a sync request)
 - Performs simple `upsert` operations (no timestamp-based conflict resolution on server)
 - Returns sync result with status (`synced`, `partial`, or `failed`)
 - Includes conflicts array for failed items (validation errors, not timestamp conflicts)
@@ -280,9 +297,10 @@ backend/
 │   ├── modules/                     # Feature modules (mirror mobile features)
 │   │   ├── auth/                   # Authentication module
 │   │   │   ├── controllers/        # AuthController
-│   │   │   ├── services/           # AuthService
+│   │   │   ├── services/           # AuthService, AuthCleanupService (idempotency key cleanup)
 │   │   │   ├── repositories/       # AuthRepository
 │   │   │   ├── dtos/               # Auth DTOs
+│   │   │   ├── constants/          # Sync entity type constants
 │   │   │   └── auth.module.ts
 │   │   ├── households/             # Household management
 │   │   │   ├── controllers/        # HouseholdsController

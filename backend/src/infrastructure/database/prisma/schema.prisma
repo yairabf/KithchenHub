@@ -39,11 +39,12 @@ model User {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  household      Household?     @relation(fields: [householdId], references: [id], onDelete: SetNull)
-  refreshTokens  RefreshToken[]
-  assignedChores Chore[]        @relation("ChoreAssignee")
-  importBatches  ImportBatch[]
-  importMappings ImportMapping[]
+  household           Household?            @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  refreshTokens       RefreshToken[]
+  assignedChores      Chore[]              @relation("ChoreAssignee")
+  importBatches        ImportBatch[]
+  importMappings      ImportMapping[]
+  syncIdempotencyKeys SyncIdempotencyKey[]
 
   @@index([householdId])
   @@map("users")
@@ -191,4 +192,23 @@ model ImportMapping {
   @@unique([batchId, sourceField, sourceType])
   @@unique([userId, sourceField, sourceType])
   @@map("import_mappings")
+}
+
+model SyncIdempotencyKey {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id") @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key         String    // The operationId (idempotency key)
+  entityType  String    @map("entity_type") // 'recipe' | 'shoppingList' | 'shoppingItem' | 'chore'
+  entityId    String    @map("entity_id") // The entity ID that was processed
+  requestId   String?   @map("request_id") // Optional request ID for observability
+  status      String    @default("PENDING") // PENDING | COMPLETED | FAILED
+  processedAt DateTime? @map("processed_at") // Set when status becomes COMPLETED
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Unique constraint ensures idempotency: same user + same operationId = already processed
+  @@unique([userId, key])
+  @@index([userId, entityType, entityId])
+  @@index([processedAt]) // For retention cleanup
+  @@map("sync_idempotency_keys")
 }

@@ -18,9 +18,28 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 // Mock expo-crypto (must be before any imports that use it)
-jest.mock('expo-crypto', () => ({
-  randomUUID: jest.fn(() => `uuid-${Math.random().toString(36).substr(2, 9)}`),
-}));
+jest.mock('expo-crypto', () => {
+  let mockUuidCounter = 0;
+  return {
+    randomUUID: jest.fn(() => {
+      mockUuidCounter++;
+      return `test-uuid-${mockUuidCounter}`;
+    }),
+    digestStringAsync: jest.fn(async (algorithm: string, data: string) => {
+      // Simple mock hash function for deterministic operationId generation
+      let hash = 0;
+      for (let i = 0; i < data.length; i++) {
+        const char = data.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(16).padStart(32, '0');
+    }),
+    CryptoDigestAlgorithm: {
+      SHA256: 'SHA256',
+    },
+  };
+});
 
 // Mock dependencies
 jest.mock('../../../services/api');
@@ -304,6 +323,238 @@ describe('SyncQueueProcessor', () => {
         // API error: should increment retry
         expect(syncQueueStorage.incrementRetry).toHaveBeenCalled();
       }
+    });
+  });
+
+  describe('idempotency keys in sync payloads', () => {
+    it('should include operationId in recipe sync payload', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'test-operation-id-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'local-123' },
+          payload: {
+            id: 'local-123',
+            name: 'Test Recipe',
+            ingredients: [{ name: 'Flour', quantity: 1, unit: 'cup' }],
+            instructions: [{ text: 'Mix ingredients' }],
+          },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'synced',
+        conflicts: [],
+      });
+
+      await processor.processQueue();
+
+      expect(api.post).toHaveBeenCalledWith(
+        '/auth/sync',
+        expect.objectContaining({
+          recipes: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'local-123',
+              operationId: 'test-operation-id-1',
+              title: 'Test Recipe',
+            }),
+          ]),
+        }),
+      );
+    });
+
+    it('should include operationId in shopping list sync payload', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'test-operation-id-2',
+          entityType: 'shoppingLists',
+          op: 'create',
+          target: { localId: 'local-456' },
+          payload: {
+            id: 'local-456',
+            name: 'Grocery List',
+            color: '#FF0000',
+          },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'synced',
+        conflicts: [],
+      });
+
+      await processor.processQueue();
+
+      expect(api.post).toHaveBeenCalledWith(
+        '/auth/sync',
+        expect.objectContaining({
+          lists: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'local-456',
+              operationId: 'test-operation-id-2',
+              name: 'Grocery List',
+            }),
+          ]),
+        }),
+      );
+    });
+
+    it('should include operationId for nested shopping items', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'test-list-operation-id',
+          entityType: 'shoppingLists',
+          op: 'create',
+          target: { localId: 'local-list-1' },
+          payload: {
+            id: 'local-list-1',
+            name: 'Grocery List',
+          },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+        {
+          id: 'queue-2',
+          operationId: 'test-item-operation-id',
+          entityType: 'shoppingItems',
+          op: 'create',
+          target: { localId: 'local-item-1' },
+          payload: {
+            id: 'local-item-1',
+            listId: 'local-list-1',
+            name: 'Milk',
+            quantity: 1,
+            unit: 'gallon',
+          },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'synced',
+        conflicts: [],
+      });
+
+      await processor.processQueue();
+
+      // Verify API was called
+      expect(api.post).toHaveBeenCalled();
+      
+      // Get the sync payload from the API call
+      const syncCalls = (api.post as jest.Mock).mock.calls;
+      if (syncCalls.length === 0) {
+        // Debug: check if queue was filtered out
+        const allQueue = await syncQueueStorage.getAll();
+        console.log('Queue after processing:', JSON.stringify(allQueue, null, 2));
+        throw new Error('API was not called - queue may have been filtered out');
+      }
+      
+      const syncCall = syncCalls[0];
+      expect(syncCall).toBeDefined();
+      expect(syncCall.length).toBeGreaterThanOrEqual(2);
+      
+      const syncPayload = syncCall[1];
+      expect(syncPayload).toBeDefined();
+      expect(syncPayload.lists).toBeDefined();
+      expect(syncPayload.lists.length).toBeGreaterThan(0);
+      expect(syncPayload.lists[0].operationId).toBe('test-list-operation-id');
+      expect(syncPayload.lists[0].items).toBeDefined();
+      if (syncPayload.lists[0].items && syncPayload.lists[0].items.length > 0) {
+        expect(syncPayload.lists[0].items[0].operationId).toBe('test-item-operation-id');
+      }
+    });
+
+    it('should include requestId in sync payload', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'test-operation-id-3',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'local-123' },
+          payload: {
+            id: 'local-123',
+            name: 'Test Recipe',
+            ingredients: [],
+            instructions: [],
+          },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'synced',
+        conflicts: [],
+      });
+
+      await processor.processQueue();
+
+      const syncCall = (api.post as jest.Mock).mock.calls[0];
+      const syncPayload = syncCall[1];
+
+      expect(syncPayload.requestId).toBeDefined();
+      expect(typeof syncPayload.requestId).toBe('string');
+      expect(syncPayload.requestId.length).toBeGreaterThan(0);
+    });
+
+    it('should include operationId in chore sync payload', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'test-operation-id-4',
+          entityType: 'chores',
+          op: 'create',
+          target: { localId: 'local-chore-1' },
+          payload: {
+            id: 'local-chore-1',
+            name: 'Clean kitchen',
+            completed: false,
+          },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'synced',
+        conflicts: [],
+      });
+
+      await processor.processQueue();
+
+      expect(api.post).toHaveBeenCalledWith(
+        '/auth/sync',
+        expect.objectContaining({
+          chores: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'local-chore-1',
+              operationId: 'test-operation-id-4',
+              title: 'Clean kitchen',
+            }),
+          ]),
+        }),
+      );
     });
   });
 });

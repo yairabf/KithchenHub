@@ -168,7 +168,7 @@ export class CatalogService {
    */
   private async fetchGroceryItemsWithFallback(): Promise<GroceryItem[]> {
     // If mock data is enabled, skip API and use mock data directly
-    if (config.mockData.enabled) {
+    if (config?.mockData?.enabled) {
       this.logCatalogEvent('log', 'Mock data enabled, using mock catalog data', { itemCount: mockGroceriesDB.length, source: CatalogSource.MOCK });
       return mockGroceriesDB;
     }
