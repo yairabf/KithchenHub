@@ -14,7 +14,8 @@ import {
   invalidateCache,
   readCachedEntitiesForUpdate,
   addEntityToCache,
-  updateEntityInCache
+  updateEntityInCache,
+  setCached
 } from './cacheAwareRepository';
 import { getIsOnline } from '../utils/networkStatus';
 import { api } from '../../services/api';
@@ -26,6 +27,8 @@ import { syncQueueStorage, type SyncOp, type QueueTargetId } from '../utils/sync
 import * as Crypto from 'expo-crypto';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
 import { catalogService } from '../services/catalogService';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { applyShoppingListChange, applyShoppingItemChange } from '../../features/shopping/utils/shoppingRealtime';
 
 type ShoppingListSummaryDto = {
   id: string;
@@ -79,6 +82,22 @@ export interface ICacheAwareShoppingRepository {
   invalidateListsCache(): Promise<void>;
   invalidateItemsCache(): Promise<void>;
   invalidateAllCache(): Promise<void>;
+  
+  // Realtime update methods
+  applyRealtimeListChange(payload: RealtimePostgresChangesPayload<{
+    id: string;
+    name?: string | null;
+    color?: string | null;
+    household_id?: string | null;
+  }>): Promise<void>;
+  applyRealtimeItemChange(payload: RealtimePostgresChangesPayload<{
+    id: string;
+    list_id?: string | null;
+    name?: string | null;
+    quantity?: number | null;
+    category?: string | null;
+    is_checked?: boolean | null;
+  }>, groceryItems: GroceryItem[]): Promise<void>;
 }
 
 // Note: Category building utilities are imported from common/utils/catalogUtils.ts
@@ -675,5 +694,94 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       this.invalidateListsCache(),
       this.invalidateItemsCache(),
     ]);
+  }
+
+  // Realtime update methods
+
+  /**
+   * Applies a realtime list change to cache
+   * 
+   * Used when realtime events arrive from Supabase. Updates the cache with the change
+   * and emits a cache event to trigger UI updates via useCachedEntities.
+   * 
+   * Handles errors gracefully (logs but doesn't throw) since realtime updates are best-effort.
+   * 
+   * @param payload - The realtime postgres changes payload for a shopping list
+   * @throws Never throws - errors are logged but not propagated
+   */
+  async applyRealtimeListChange(
+    payload: RealtimePostgresChangesPayload<{
+      id: string;
+      name?: string | null;
+      color?: string | null;
+      household_id?: string | null;
+    }>
+  ): Promise<void> {
+    try {
+      // Read current cache
+      const current = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
+      
+      // Apply change using existing utility
+      // Type assertion needed: utility expects ShoppingListRow (name?: string) but payload has name?: string | null
+      // This is safe because the utility handles null/undefined via normalizeListName
+      const updated = applyShoppingListChange(current, payload as RealtimePostgresChangesPayload<{
+        id: string;
+        name?: string;
+        color?: string | null;
+        household_id?: string | null;
+      }>);
+      
+      // Write back to cache
+      await setCached('shoppingLists', updated, (l) => this.getListId(l));
+      
+      // Emit cache event to trigger UI update
+      cacheEvents.emitCacheChange('shoppingLists');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to apply realtime list change to cache:', errorMessage, error);
+      // Don't throw - realtime updates are best-effort
+    }
+  }
+
+  /**
+   * Applies a realtime item change to cache
+   * 
+   * Used when realtime events arrive from Supabase. Updates the cache with the change
+   * and emits a cache event to trigger UI updates via useCachedEntities.
+   * 
+   * Handles errors gracefully (logs but doesn't throw) since realtime updates are best-effort.
+   * 
+   * @param payload - The realtime postgres changes payload for a shopping item
+   * @param groceryItems - Grocery items for matching item metadata (images, categories)
+   * @throws Never throws - errors are logged but not propagated
+   */
+  async applyRealtimeItemChange(
+    payload: RealtimePostgresChangesPayload<{
+      id: string;
+      list_id?: string | null;
+      name?: string | null;
+      quantity?: number | null;
+      category?: string | null;
+      is_checked?: boolean | null;
+    }>,
+    groceryItems: GroceryItem[]
+  ): Promise<void> {
+    try {
+      // Read current cache
+      const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+      
+      // Apply change using existing utility
+      const updated = applyShoppingItemChange(current, payload, groceryItems);
+      
+      // Write back to cache
+      await setCached('shoppingItems', updated, (i) => this.getItemId(i));
+      
+      // Emit cache event to trigger UI update
+      cacheEvents.emitCacheChange('shoppingItems');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to apply realtime item change to cache:', errorMessage, error);
+      // Don't throw - realtime updates are best-effort
+    }
   }
 }

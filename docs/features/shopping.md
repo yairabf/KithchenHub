@@ -39,7 +39,10 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - **Cache-Aware Repository** (signed-in users): Uses `CacheAwareShoppingRepository` wrapper with `useCachedEntities` hooks for reactive cache updates
     - Cache updates automatically trigger UI re-renders via React hooks
     - No manual state management needed for signed-in users
-    - Realtime updates handled through cache events
+    - **Realtime Sync**: Uses `useShoppingRealtime` hook for instant cross-device synchronization
+      - Hook manages Supabase subscriptions and updates cache via repository methods
+      - Cache events automatically trigger UI updates when realtime changes arrive
+      - Subscriptions are filtered by household ID for security (RLS)
   - **Service Integration**: All CRUD operations (toggle, delete, update, create) always call repository/service methods - no userMode branching in handlers
   - **Optimistic UI Updates**: Guest mode operations use optimistic updates with automatic revert on error via `executeWithOptimisticUpdate` helper
     - Signed-in mode relies on cache events for UI updates (no optimistic updates needed)
@@ -78,6 +81,21 @@ const [guestItems, setGuestItems] = useState<ShoppingItem[]>([]);
 const shoppingLists = isSignedIn ? cachedLists : guestLists;
 const allItems = isSignedIn ? cachedItems : guestItems;
 ```
+
+## Hooks
+
+### useShoppingRealtime
+
+- **File**: `mobile/src/features/shopping/hooks/useShoppingRealtime.ts`
+- **Purpose**: Custom hook for managing Supabase realtime subscriptions
+- **Features**:
+  - Sets up subscriptions for shopping lists and items
+  - Filters by household ID for RLS compliance
+  - Updates cache for signed-in users via repository
+  - Updates local state for guest users via callbacks
+  - Handles cleanup and error states
+  - Memoizes dependencies to prevent unnecessary re-subscriptions
+- **Usage**: Used by `ShoppingListsScreen` to enable instant cross-device synchronization
 
 ## Components
 
@@ -272,8 +290,12 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
     - `useCachedEntities<ShoppingList>('shoppingLists')` - Provides cached lists with loading states
     - `useCachedEntities<ShoppingItem>('shoppingItems')` - Provides cached items with loading states
   - Cache updates automatically trigger UI re-renders via React hooks
-  - Realtime updates handled through cache events (no manual state updates needed)
+  - **Realtime Sync**: Uses `useShoppingRealtime` hook for instant cross-device synchronization
+    - Hook manages Supabase subscriptions and updates cache via repository methods
+    - Cache events automatically trigger UI updates (no manual state management needed)
+    - Subscriptions filtered by household ID for RLS compliance
   - Repository pattern: `CacheAwareShoppingRepository` wraps `RemoteShoppingService` with cache-first reads and write-through caching
+    - Repository provides `applyRealtimeListChange()` and `applyRealtimeItemChange()` methods for realtime updates
 - **Local state** (guest users):
   - All state managed within ShoppingListsScreen via `useState`
     - `guestLists` - All shopping lists (active only - deleted items filtered by service)
@@ -479,13 +501,70 @@ This ensures that when a user switches from guest (local) to signed-in (remote),
 
 ## Conflict Resolution & Realtime Sync
 
-The shopping feature implements timestamp-based conflict resolution for offline-first sync scenarios using Last-Write-Wins (LWW) and tombstone handling.
+The shopping feature implements timestamp-based conflict resolution for offline-first sync scenarios using Last-Write-Wins (LWW) and tombstone handling, with instant realtime synchronization across devices.
 
-### Realtime Sync Enhancement
+### Realtime Sync Hook
+
+**File**: `mobile/src/features/shopping/hooks/useShoppingRealtime.ts`
+
+A custom React hook that manages Supabase realtime subscriptions for shopping lists and items, following composition patterns to decouple subscription logic from UI components.
+
+**Features**:
+- Sets up Supabase `postgres_changes` subscriptions for `shopping_lists` and `shopping_items` tables
+- Filters subscriptions by `household_id` for Row-Level Security (RLS) compliance
+- Updates cache for signed-in users via `CacheAwareShoppingRepository` methods
+- Updates local state for guest users via callbacks
+- Handles cleanup on unmount or dependency changes
+- Memoizes dependencies to prevent unnecessary re-subscriptions
+
+**Usage**:
+```typescript
+const { error: realtimeError } = useShoppingRealtime({
+  isRealtimeEnabled: isRealtimeEnabled,
+  householdId: user?.householdId ?? null,
+  isSignedIn,
+  repository,
+  groceryItems,
+  listIds: shoppingLists.map((list) => list.id),
+  onListChange: (lists) => {
+    // Guest mode callback: update local state
+    if (!isSignedIn) {
+      setGuestLists(lists);
+    }
+  },
+  onItemChange: (items) => {
+    // Guest mode callback: update local state
+    if (!isSignedIn) {
+      setGuestItems(items);
+    }
+  },
+});
+```
+
+**Interface**:
+```typescript
+interface UseShoppingRealtimeOptions {
+  isRealtimeEnabled: boolean;
+  householdId: string | null;
+  isSignedIn: boolean;
+  repository: ICacheAwareShoppingRepository | null;
+  groceryItems: GroceryItem[];
+  listIds: string[];
+  onListChange?: (lists: ShoppingList[]) => void;
+  onItemChange?: (items: ShoppingItem[]) => void;
+}
+
+interface UseShoppingRealtimeReturn {
+  isSubscribed: boolean;
+  error: Error | null;
+}
+```
+
+### Realtime Sync Utilities
 
 **File**: `mobile/src/features/shopping/utils/shoppingRealtime.ts`
 
-The realtime sync handlers now use conflict resolution utilities to handle concurrent modifications:
+Utility functions for applying realtime changes to local state:
 
 - **`applyShoppingListChange()`**: Merges realtime list updates using `mergeEntitiesWithTombstones()`
   - Compares timestamps before applying changes
@@ -494,11 +573,28 @@ The realtime sync handlers now use conflict resolution utilities to handle concu
 - **`applyShoppingItemChange()`**: Merges realtime item updates using `mergeEntitiesWithTombstones()`
   - Same conflict resolution logic as lists
   - Handles new items, updates, and deletions deterministically
+- **`buildListIdFilter()`**: Builds Supabase filter string for item subscriptions based on list IDs
 
 **Timestamp Normalization**:
 - Realtime payloads are normalized from snake_case (database) to camelCase Date objects
 - Uses `fromSupabaseTimestamps()` helper for consistent conversion
 - Handles both snake_case and camelCase formats for backward compatibility
+
+### Repository Realtime Methods
+
+**File**: `mobile/src/common/repositories/cacheAwareShoppingRepository.ts`
+
+The `CacheAwareShoppingRepository` provides methods to apply realtime changes to the cache:
+
+- **`applyRealtimeListChange()`**: Applies realtime list changes to cache
+  - Reads current cache state
+  - Applies change using `applyShoppingListChange()` utility
+  - Writes updated data back to cache
+  - Emits cache event to trigger UI updates via `useCachedEntities`
+  - Handles errors gracefully (logs but doesn't throw)
+- **`applyRealtimeItemChange()`**: Applies realtime item changes to cache
+  - Same pattern as list changes
+  - Includes grocery items for matching item metadata (images, categories)
 
 ### Conflict Resolution Utilities
 
@@ -604,6 +700,7 @@ Utility for applying remote updates to local cached state:
 - `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
 - `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Used by ShoppingItemCard to display sync status indicators
 - `useCachedEntities` - Cache entities hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that provides reactive cache updates for signed-in users. Automatically triggers UI re-renders when cache changes. Used by ShoppingListsScreen for lists and items
+- `useShoppingRealtime` - Realtime sync hook (`mobile/src/features/shopping/hooks/useShoppingRealtime.ts`) - Custom hook that manages Supabase realtime subscriptions for shopping lists and items. Handles both signed-in (cache-based) and guest (state-based) modes. Used by ShoppingListsScreen for instant cross-device synchronization
 - `CacheAwareShoppingRepository` - Cache-aware repository (`mobile/src/common/repositories/cacheAwareShoppingRepository.ts`) - Wraps RemoteShoppingService with cache-first reads and write-through caching. Provides reactive cache updates via useCachedEntities hooks
 - `SyncStatusIndicator` - Sync status indicator component (`mobile/src/common/components/SyncStatusIndicator/`) - Visual indicator component showing pending, confirmed, or failed sync status. Displays clock icon for pending, warning icon for failed, checkmark for confirmed
 - `determineIndicatorStatus` - Status determination utility (`mobile/src/common/utils/syncStatusUtils.ts`) - Utility function that determines indicator status from sync status flags (failed > pending > confirmed priority)

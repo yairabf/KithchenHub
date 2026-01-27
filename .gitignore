@@ -82,3 +82,6 @@ Thumbs.db
 .jest/
 
 .playwright-mcp/
+.cursor/skills/*
+.codex*
+.agent*
