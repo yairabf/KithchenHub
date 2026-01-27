@@ -121,6 +121,175 @@ describe('applyRemoteUpdatesToLocal', () => {
     });
   });
 
+  describe('Offline rename vs online rename', () => {
+    const older = new Date('2026-01-25T10:00:00.000Z');
+    const newer = new Date('2026-01-25T12:00:00.000Z');
+
+    describe.each([
+      [
+        'local rename newer',
+        'Local Name',
+        'Remote Name',
+        newer, // localTime (newer)
+        older, // remoteTime (older)
+        'Local Name', // Expected: local wins (newer timestamp)
+      ],
+      [
+        'remote rename newer',
+        'Local Name',
+        'Remote Name',
+        older, // localTime (older)
+        newer, // remoteTime (newer)
+        'Remote Name', // Expected: remote wins (newer timestamp)
+      ],
+      [
+        'equal timestamps (remote wins)',
+        'Local Name',
+        'Remote Name',
+        newer, // localTime
+        newer, // remoteTime
+        'Remote Name', // Expected: remote wins (tie-breaker)
+      ],
+    ])('%s', (description, localName, remoteName, localTime, remoteTime, expectedName) => {
+      it(`should resolve rename conflicts using LWW: ${description}`, async () => {
+        await seedCache([buildEntity({ id: 'item-1', name: localName, updatedAt: localTime })]);
+
+        const remote = [buildEntity({ id: 'item-1', name: remoteName, updatedAt: remoteTime })];
+
+        await applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id);
+
+        const cached = await readCache();
+        expect(cached).toHaveLength(1);
+        expect(cached[0].name).toBe(expectedName);
+      });
+    });
+  });
+
+  describe('Additions never removed during merge', () => {
+    it('keeps local-only entities when remote is empty', async () => {
+      await seedCache([
+        buildEntity({ id: 'local-1', name: 'Local Entity 1' }),
+        buildEntity({ id: 'local-2', name: 'Local Entity 2' }),
+      ]);
+
+      await applyRemoteUpdatesToLocal('shoppingItems', [], (entity) => entity.id);
+
+      const cached = await readCache();
+      expect(cached).toHaveLength(2);
+      expect(cached.map((item) => item.id)).toEqual(['local-1', 'local-2']);
+    });
+
+    it('keeps remote-only entities when local is empty', async () => {
+      await seedCache([]);
+
+      const remote = [
+        buildEntity({ id: 'remote-1', name: 'Remote Entity 1' }),
+        buildEntity({ id: 'remote-2', name: 'Remote Entity 2' }),
+      ];
+
+      await applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id);
+
+      const cached = await readCache();
+      expect(cached).toHaveLength(2);
+      expect(cached.map((item) => item.id)).toEqual(['remote-1', 'remote-2']);
+    });
+
+    it('keeps both local-only and remote-only entities', async () => {
+      await seedCache([
+        buildEntity({ id: 'local-1', name: 'Local Entity' }),
+      ]);
+
+      const remote = [
+        buildEntity({ id: 'remote-1', name: 'Remote Entity' }),
+      ];
+
+      await applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id);
+
+      const cached = await readCache();
+      expect(cached).toHaveLength(2);
+      const ids = cached.map((item) => item.id).sort();
+      expect(ids).toEqual(['local-1', 'remote-1']);
+    });
+
+    it('preserves local additions even when remote has updates to other entities', async () => {
+      const t1 = new Date('2026-01-25T10:00:00.000Z');
+      const t2 = new Date('2026-01-25T12:00:00.000Z');
+
+      await seedCache([
+        buildEntity({ id: 'shared-1', name: 'Local Update', updatedAt: t1 }),
+        buildEntity({ id: 'local-only', name: 'Local Only Entity', updatedAt: t1 }),
+      ]);
+
+      const remote = [
+        buildEntity({ id: 'shared-1', name: 'Remote Update', updatedAt: t2 }),
+      ];
+
+      await applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id);
+
+      const cached = await readCache();
+      expect(cached).toHaveLength(2);
+      const sharedEntity = cached.find((item) => item.id === 'shared-1');
+      const localOnlyEntity = cached.find((item) => item.id === 'local-only');
+      expect(sharedEntity?.name).toBe('Remote Update'); // Remote wins due to newer timestamp
+      expect(localOnlyEntity?.name).toBe('Local Only Entity'); // Local-only preserved
+    });
+  });
+
+  describe('Concurrent modification scenarios', () => {
+    const older = new Date('2026-01-25T10:00:00.000Z');
+    const newer = new Date('2026-01-25T12:00:00.000Z');
+
+    it('resolves offline update vs online update (local newer)', async () => {
+      await seedCache([buildEntity({ id: 'item-1', name: 'Local Update', updatedAt: newer })]);
+
+      const remote = [buildEntity({ id: 'item-1', name: 'Remote Update', updatedAt: older })];
+
+      await applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id);
+
+      const cached = await readCache();
+      expect(cached).toHaveLength(1);
+      expect(cached[0].name).toBe('Local Update');
+    });
+
+    it('resolves offline update vs online update (remote newer)', async () => {
+      await seedCache([buildEntity({ id: 'item-1', name: 'Local Update', updatedAt: older })]);
+
+      const remote = [buildEntity({ id: 'item-1', name: 'Remote Update', updatedAt: newer })];
+
+      await applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id);
+
+      const cached = await readCache();
+      expect(cached).toHaveLength(1);
+      expect(cached[0].name).toBe('Remote Update');
+    });
+
+    it('resolves offline create vs online delete (delete wins)', async () => {
+      await seedCache([buildEntity({ id: 'item-1', name: 'Newly Created', updatedAt: newer })]);
+
+      const remote = [
+        buildEntity({ id: 'item-1', updatedAt: older, deletedAt: older }),
+      ];
+
+      await applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id);
+
+      const cached = await readCache();
+      expect(cached).toHaveLength(0); // Delete always wins
+    });
+
+    it('resolves offline delete vs online update (delete wins)', async () => {
+      await seedCache([
+        buildEntity({ id: 'item-1', updatedAt: older, deletedAt: older }),
+      ]);
+
+      const remote = [buildEntity({ id: 'item-1', name: 'Remote Update', updatedAt: newer })];
+
+      await applyRemoteUpdatesToLocal('shoppingItems', remote, (entity) => entity.id);
+
+      const cached = await readCache();
+      expect(cached).toHaveLength(0); // Delete always wins
+    });
+  });
+
   describe('defense-in-depth guardrails', () => {
     it('should throw error if storage key mode is guest', async () => {
       // Mock getSignedInCacheKey to return a guest key (simulating programming error)

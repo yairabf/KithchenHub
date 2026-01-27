@@ -126,6 +126,7 @@ interface RecipeCardProps {
   backgroundColor: string;
   onPress: () => void;
   width: number;
+  style?: ViewStyle;
 }
 
 interface Recipe {
@@ -517,6 +518,43 @@ Utility for applying remote updates to local cached state:
   - **Defense-in-Depth Guardrail**: Validates storage key mode to ensure only signed-in cache keys are used. Throws error if called with guest or unknown storage keys, preventing programming errors.
 
 **Note**: Conflict resolution is client-side. The backend sync endpoint (`POST /auth/sync`) performs simple upsert operations and returns conflicts. Client-side utilities handle timestamp-based merging.
+
+### Conflict Resolution Validation & Test Coverage
+
+**Comprehensive Test Coverage**:
+
+1. **Unit Tests** (`mobile/src/common/utils/__tests__/conflictResolution.test.ts`):
+   - LWW scalar conflicts (local newer, remote newer, equal timestamps)
+   - Tombstone handling (delete always wins policy)
+   - Recreate after delete scenarios (tombstone resistance)
+   - Deterministic outcome validation
+   - Timestamp edge cases (millisecond precision, timezone normalization)
+
+2. **Integration Tests** (`mobile/src/common/utils/__tests__/syncApplication.test.ts`):
+   - Offline rename vs online rename scenarios
+   - Additions never removed during merge
+   - Concurrent modification scenarios
+   - Offline toggle vs online delete
+   - Delete vs update ordering
+
+3. **Full Sync Flow Tests** (`mobile/src/common/utils/__tests__/syncApplication.integration.test.ts`):
+   - Complete sync flow with multiple conflict types
+   - Multiple entity types sync (recipes, shopping lists, chores)
+   - Cache state validation after complex merges
+
+**Deterministic Outcome Guarantees**:
+- All conflict scenarios resolve deterministically
+- Same inputs always produce same outputs
+- Order-independent merge results
+- UTC timezone normalization ensures consistent comparison
+
+**Timezone Normalization Policy**:
+- All timestamps stored and compared in UTC
+- ISO strings are parsed as UTC (no timezone conversion)
+- `compareTimestamps()` normalizes to UTC internally
+- Server timestamps are always UTC
+- Client timestamps generated in UTC
+- `normalizeToUtc()` helper ensures consistent UTC representation
 
 ## Key Dependencies
 

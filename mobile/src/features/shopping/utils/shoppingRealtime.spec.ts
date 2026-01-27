@@ -1,12 +1,21 @@
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   applyShoppingItemChange,
   applyShoppingListChange,
   buildListIdFilter,
   updateShoppingListItemCounts,
+  updateCacheFromRealtimeListEvent,
+  updateCacheFromRealtimeItemEvent,
 } from './shoppingRealtime';
+import { getSignedInCacheKey, ENTITY_TYPES } from '../../../common/storage/dataModeStorage';
+import { toPersistedTimestamps } from '../../../common/types/entityMetadata';
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
 
 type ShoppingListRow = {
   id: string;
@@ -210,5 +219,283 @@ describe('buildListIdFilter', () => {
     ['multiple ids', ['list-2', 'list-1'], 'list_id=in.(list-1,list-2)'],
   ])('when %s', (_label, listIds, expected) => {
     expect(buildListIdFilter(listIds)).toBe(expected);
+  });
+});
+
+describe('updateCacheFromRealtimeListEvent', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  it('updates cache when list is inserted', async () => {
+    // Seed initial cache
+    const initialLists: ShoppingList[] = [
+      {
+        id: 'list-1',
+        localId: 'list-1',
+        name: 'Weekly',
+        itemCount: 0,
+        icon: 'cart-outline',
+        color: '#10B981',
+        createdAt: new Date('2026-01-25T10:00:00Z'),
+        updatedAt: new Date('2026-01-25T10:00:00Z'),
+      },
+    ];
+    const storageKey = getSignedInCacheKey(ENTITY_TYPES.shoppingLists);
+    await AsyncStorage.setItem(
+      storageKey,
+      JSON.stringify(initialLists.map(toPersistedTimestamps))
+    );
+
+    // Simulate realtime INSERT event
+    const payload: RealtimePostgresChangesPayload<ShoppingListRow> = {
+      eventType: 'INSERT',
+      new: {
+        id: 'list-2',
+        name: 'Party',
+        color: '#F59E0B',
+        household_id: 'household-1',
+        created_at: '2026-01-25T11:00:00.000Z',
+        updated_at: '2026-01-25T11:00:00.000Z',
+      },
+    } as RealtimePostgresChangesPayload<ShoppingListRow>;
+
+    await updateCacheFromRealtimeListEvent(payload);
+
+    // Verify cache was updated
+    const cached = JSON.parse((await AsyncStorage.getItem(storageKey)) || '[]');
+    expect(cached).toHaveLength(2);
+    expect(cached.find((l: any) => l.id === 'list-2')?.name).toBe('Party');
+  });
+
+  it('updates cache when list is updated', async () => {
+    // Seed initial cache
+    const initialLists: ShoppingList[] = [
+      {
+        id: 'list-1',
+        localId: 'list-1',
+        name: 'Weekly',
+        itemCount: 0,
+        icon: 'cart-outline',
+        color: '#10B981',
+        createdAt: new Date('2026-01-25T10:00:00Z'),
+        updatedAt: new Date('2026-01-25T10:00:00Z'),
+      },
+    ];
+    const storageKey = getSignedInCacheKey(ENTITY_TYPES.shoppingLists);
+    await AsyncStorage.setItem(
+      storageKey,
+      JSON.stringify(initialLists.map(toPersistedTimestamps))
+    );
+
+    // Simulate realtime UPDATE event
+    const payload: RealtimePostgresChangesPayload<ShoppingListRow> = {
+      eventType: 'UPDATE',
+      new: {
+        id: 'list-1',
+        name: 'Updated Weekly',
+        color: '#123456',
+        household_id: 'household-1',
+        created_at: '2026-01-25T10:00:00.000Z',
+        updated_at: '2026-01-25T12:00:00.000Z',
+      },
+    } as RealtimePostgresChangesPayload<ShoppingListRow>;
+
+    await updateCacheFromRealtimeListEvent(payload);
+
+    // Verify cache was updated
+    const cached = JSON.parse((await AsyncStorage.getItem(storageKey)) || '[]');
+    expect(cached).toHaveLength(1);
+    expect(cached[0].name).toBe('Updated Weekly');
+  });
+
+  it('updates cache when list is deleted', async () => {
+    // Seed initial cache with multiple lists
+    const initialLists: ShoppingList[] = [
+      {
+        id: 'list-1',
+        localId: 'list-1',
+        name: 'Weekly',
+        itemCount: 0,
+        icon: 'cart-outline',
+        color: '#10B981',
+        createdAt: new Date('2026-01-25T10:00:00Z'),
+        updatedAt: new Date('2026-01-25T10:00:00Z'),
+      },
+      {
+        id: 'list-2',
+        localId: 'list-2',
+        name: 'Party',
+        itemCount: 0,
+        icon: 'cart-outline',
+        color: '#F59E0B',
+        createdAt: new Date('2026-01-25T11:00:00Z'),
+        updatedAt: new Date('2026-01-25T11:00:00Z'),
+      },
+    ];
+    const storageKey = getSignedInCacheKey(ENTITY_TYPES.shoppingLists);
+    await AsyncStorage.setItem(
+      storageKey,
+      JSON.stringify(initialLists.map(toPersistedTimestamps))
+    );
+
+    // Simulate realtime DELETE event
+    const payload: RealtimePostgresChangesPayload<ShoppingListRow> = {
+      eventType: 'DELETE',
+      old: { id: 'list-1' },
+    } as RealtimePostgresChangesPayload<ShoppingListRow>;
+
+    await updateCacheFromRealtimeListEvent(payload);
+
+    // Verify cache was updated (list-1 removed)
+    const cached = JSON.parse((await AsyncStorage.getItem(storageKey)) || '[]');
+    expect(cached).toHaveLength(1);
+    expect(cached[0].id).toBe('list-2');
+  });
+});
+
+describe('updateCacheFromRealtimeItemEvent', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+  });
+
+  it('updates cache when item is inserted', async () => {
+    // Seed initial cache
+    const initialItems: ShoppingItem[] = [
+      {
+        id: 'item-1',
+        localId: 'item-1',
+        name: 'Banana',
+        image: 'banana.png',
+        quantity: 2,
+        category: 'Fruits',
+        listId: 'list-1',
+        isChecked: false,
+        createdAt: new Date('2026-01-25T10:00:00Z'),
+        updatedAt: new Date('2026-01-25T10:00:00Z'),
+      },
+    ];
+    const storageKey = getSignedInCacheKey(ENTITY_TYPES.shoppingItems);
+    await AsyncStorage.setItem(
+      storageKey,
+      JSON.stringify(initialItems.map(toPersistedTimestamps))
+    );
+
+    // Simulate realtime INSERT event
+    const payload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+      eventType: 'INSERT',
+      new: {
+        id: 'item-2',
+        list_id: 'list-1',
+        name: 'Milk',
+        quantity: 1,
+        category: 'Dairy',
+        is_checked: false,
+        created_at: '2026-01-25T11:00:00.000Z',
+        updated_at: '2026-01-25T11:00:00.000Z',
+      },
+    } as RealtimePostgresChangesPayload<ShoppingItemRow>;
+
+    await updateCacheFromRealtimeItemEvent(payload, groceryItems);
+
+    // Verify cache was updated
+    const cached = JSON.parse((await AsyncStorage.getItem(storageKey)) || '[]');
+    expect(cached).toHaveLength(2);
+    const newItem = cached.find((i: any) => i.id === 'item-2');
+    expect(newItem?.name).toBe('Milk');
+    expect(newItem?.image).toBe('milk.png'); // Should match grocery item
+  });
+
+  it('updates cache when item is checked off (UPDATE)', async () => {
+    // Seed initial cache
+    const initialItems: ShoppingItem[] = [
+      {
+        id: 'item-1',
+        localId: 'item-1',
+        name: 'Banana',
+        image: 'banana.png',
+        quantity: 2,
+        category: 'Fruits',
+        listId: 'list-1',
+        isChecked: false,
+        createdAt: new Date('2026-01-25T10:00:00Z'),
+        updatedAt: new Date('2026-01-25T10:00:00Z'),
+      },
+    ];
+    const storageKey = getSignedInCacheKey(ENTITY_TYPES.shoppingItems);
+    await AsyncStorage.setItem(
+      storageKey,
+      JSON.stringify(initialItems.map(toPersistedTimestamps))
+    );
+
+    // Simulate realtime UPDATE event (item checked off)
+    const payload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+      eventType: 'UPDATE',
+      new: {
+        id: 'item-1',
+        list_id: 'list-1',
+        name: 'Banana',
+        quantity: 2,
+        category: 'Fruits',
+        is_checked: true, // Item checked off
+        created_at: '2026-01-25T10:00:00.000Z',
+        updated_at: '2026-01-25T12:00:00.000Z',
+      },
+    } as RealtimePostgresChangesPayload<ShoppingItemRow>;
+
+    await updateCacheFromRealtimeItemEvent(payload, groceryItems);
+
+    // Verify cache was updated
+    const cached = JSON.parse((await AsyncStorage.getItem(storageKey)) || '[]');
+    expect(cached).toHaveLength(1);
+    expect(cached[0].isChecked).toBe(true);
+  });
+
+  it('updates cache when item is deleted', async () => {
+    // Seed initial cache with multiple items
+    const initialItems: ShoppingItem[] = [
+      {
+        id: 'item-1',
+        localId: 'item-1',
+        name: 'Banana',
+        image: 'banana.png',
+        quantity: 2,
+        category: 'Fruits',
+        listId: 'list-1',
+        isChecked: false,
+        createdAt: new Date('2026-01-25T10:00:00Z'),
+        updatedAt: new Date('2026-01-25T10:00:00Z'),
+      },
+      {
+        id: 'item-2',
+        localId: 'item-2',
+        name: 'Milk',
+        image: 'milk.png',
+        quantity: 1,
+        category: 'Dairy',
+        listId: 'list-1',
+        isChecked: false,
+        createdAt: new Date('2026-01-25T11:00:00Z'),
+        updatedAt: new Date('2026-01-25T11:00:00Z'),
+      },
+    ];
+    const storageKey = getSignedInCacheKey(ENTITY_TYPES.shoppingItems);
+    await AsyncStorage.setItem(
+      storageKey,
+      JSON.stringify(initialItems.map(toPersistedTimestamps))
+    );
+
+    // Simulate realtime DELETE event
+    const payload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+      eventType: 'DELETE',
+      old: { id: 'item-1' },
+    } as RealtimePostgresChangesPayload<ShoppingItemRow>;
+
+    await updateCacheFromRealtimeItemEvent(payload, groceryItems);
+
+    // Verify cache was updated (item-1 removed)
+    const cached = JSON.parse((await AsyncStorage.getItem(storageKey)) || '[]');
+    expect(cached).toHaveLength(1);
+    expect(cached[0].id).toBe('item-2');
   });
 });

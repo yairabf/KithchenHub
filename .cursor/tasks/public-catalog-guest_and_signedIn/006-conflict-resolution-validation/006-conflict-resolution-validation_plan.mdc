@@ -1,0 +1,425 @@
+---
+name: conflict-resolution-validation-and-enhancement
+overview: Validate and enhance timestamp-based conflict resolution implementation with comprehensive test coverage for offline-first sync scenarios, ensuring LWW and tombstone handling work deterministically across all integration points.
+todos:
+  - id: extend-sync-application-tests
+    content: "Extend syncApplication.test.ts with comprehensive scenarios: offline rename vs online rename, additions never removed, concurrent modifications"
+    status: completed
+  - id: add-conflict-resolution-edge-cases
+    content: "Add edge case tests to conflictResolution.test.ts: deterministic outcomes, timestamp edge cases, recreate after delete"
+    status: completed
+  - id: create-integration-test-file
+    content: Create syncApplication.integration.test.ts for full sync flow validation with multiple entity types
+    status: completed
+  - id: document-backend-sync-behavior
+    content: Add documentation to backend auth.service.ts explaining simple upsert behavior and client-side conflict resolution
+    status: completed
+  - id: validate-backend-timestamps
+    content: Verify backend sync endpoint correctly handles timestamps (Prisma auto-management) and soft-deletes
+    status: completed
+  - id: verify-integration-points
+    content: Add validation tests to ensure all sync paths (cacheAwareRepository, backgroundRefresh, realtime) use conflict resolution
+    status: completed
+  - id: update-feature-docs
+    content: Update docs/features/*.md files with conflict resolution validation scenarios and test coverage summary
+    status: completed
+  - id: update-backend-docs
+    content: Update backend/README.md with sync endpoint behavior documentation
+    status: completed
+  - id: add-recreate-after-delete-test
+    content: Add test for "Recreate After Delete" scenario - item deleted then recreated with same ID, verifying tombstone resistance
+    status: completed
+  - id: add-lint-rule-merge-utilities
+    content: Add lint rule or runtime check to enforce merge utilities usage and prevent direct entity mutations during sync
+    status: pending
+  - id: clarify-timezone-policy
+    content: Document and test timezone normalization policy - timestamps always UTC, ISO strings parsed as UTC, consider normalizeToUtc() helper
+    status: completed
+isProject: false
+---
+
+# Conflict Resolution with Timestamps - Validation & Enhancement Plan
+
+## Current Status Analysis
+
+### ✅ Already Implemented (Task 006)
+
+1. **Core Conflict Resolution Utilities** (`mobile/src/common/utils/conflictResolution.ts`):
+   - ✅ `compareTimestamps()` - Normalizes and compares timestamps (Date or ISO string)
+   - ✅ `determineConflictWinner()` - LWW strategy with deterministic tie-breaker
+   - ✅ `mergeEntitiesLWW()` - Merges entities using Last-Write-Wins
+   - ✅ `mergeEntitiesWithTombstones()` - Handles deletedAt tombstones with "delete always wins" policy
+   - ✅ `mergeEntityArrays()` - Merges arrays with LWW + tombstone rules
+
+2. **Sync Application Utility** (`mobile/src/common/utils/syncApplication.ts`):
+   - ✅ `applyRemoteUpdatesToLocal()` - Applies remote updates to local cache with conflict resolution
+   - ✅ Integrated into cache-first read strategy (`cacheAwareRepository.ts`)
+   - ✅ Integrated into background refresh (`backgroundRefresh.ts`)
+
+3. **Realtime Sync Integration** (`mobile/src/features/shopping/utils/shoppingRealtime.ts`):
+   - ✅ Uses `mergeEntitiesWithTombstones()` for conflict resolution
+   - ✅ Handles timestamp normalization from Supabase
+
+4. **Basic Test Coverage**:
+   - ✅ Unit tests for conflict resolution utilities
+   - ✅ Integration tests for sync application
+   - ✅ Some conflict scenarios covered
+
+### ❌ Missing / Needs Enhancement
+
+1. **Comprehensive Integration Test Coverage**:
+   - ❌ Explicit test for "Offline rename vs online rename" scenario
+   - ❌ Explicit test for "Additions are additive and never removed" scenario
+   - ❌ More comprehensive offline/online conflict scenarios
+   - ❌ Deterministic outcome validation across all scenarios
+
+2. **Backend Sync Endpoint** (`backend/src/modules/auth/services/auth.service.ts`):
+   - ⚠️ Currently uses simple `upsert` without timestamp-based conflict resolution
+   - ⚠️ This is intentional (client-side resolution), but should be documented/validated
+   - ⚠️ Server timestamps are authoritative (Prisma auto-manages them)
+
+3. **Validation of Integration Points**:
+   - ⚠️ Need to verify all sync paths use conflict resolution correctly
+   - ⚠️ Need to validate deterministic outcomes in all scenarios
+
+## Implementation Plan
+
+### Phase 1: Comprehensive Test Coverage Enhancement
+
+#### 1.1 Extend Sync Application Integration Tests
+
+**File**: `mobile/src/common/utils/__tests__/syncApplication.test.ts`
+
+**Add test scenarios:**
+
+1. **Offline Rename vs Online Rename**:
+   ```typescript
+   describe.each([
+     ['local rename newer', 'Local Name', 'Remote Name', older, newer, 'Local Name'],
+     ['remote rename newer', 'Local Name', 'Remote Name', newer, older, 'Remote Name'],
+     ['equal timestamps (remote wins)', 'Local Name', 'Remote Name', newer, newer, 'Remote Name'],
+   ])('Offline rename vs online rename: %s', (description, localName, remoteName, localTime, remoteTime, expectedName) => {
+     // Test that rename conflicts resolve using LWW
+   });
+   ```
+
+2. **Additions Never Removed During Merge**:
+   ```typescript
+   it('keeps local-only entities when remote is empty', async () => {
+     // Local has entity X, remote is empty
+     // Expected: Entity X remains in cache
+   });
+   
+   it('keeps remote-only entities when local is empty', async () => {
+     // Local is empty, remote has entity Y
+     // Expected: Entity Y is added to cache
+   });
+   
+   it('keeps both local-only and remote-only entities', async () => {
+     // Local has X, remote has Y
+     // Expected: Both X and Y in cache
+   });
+   ```
+
+3. **Concurrent Modification Scenarios**:
+   ```typescript
+   describe.each([
+     ['offline update vs online update (local newer)', older, newer, 'Local'],
+     ['offline update vs online update (remote newer)', newer, older, 'Remote'],
+     ['offline create vs online delete', null, deleted, 'deleted'],
+     ['offline delete vs online update', deleted, updated, 'deleted'],
+   ])('Concurrent modifications: %s', (description, localState, remoteState, expected) => {
+     // Test deterministic resolution
+   });
+   ```
+
+
+#### 1.2 Add Conflict Resolution Edge Case Tests
+
+**File**: `mobile/src/common/utils/__tests__/conflictResolution.test.ts`
+
+**Add test scenarios:**
+
+1. **Deterministic Outcome Validation**:
+   ```typescript
+   describe('Deterministic conflict resolution', () => {
+     it('always produces same result for same inputs', () => {
+       // Run merge multiple times, verify identical results
+     });
+     
+     it('handles concurrent modifications deterministically', () => {
+       // Multiple entities with various conflicts
+       // Verify order-independent results
+     });
+   });
+   ```
+
+2. **Timestamp Edge Cases**:
+   ```typescript
+   describe('Timestamp edge cases', () => {
+     it('handles millisecond precision differences', () => {
+       // Test that millisecond differences are respected
+     });
+     
+     it('handles timezone differences correctly', () => {
+       // Ensure ISO strings are normalized correctly
+     });
+   });
+   ```
+
+3. **Recreate After Delete Scenario**:
+   ```typescript
+   describe('Recreate after delete (tombstone resistance)', () => {
+     it('does not override deleted record unless timestamps are newer', () => {
+       // Local: deleted entity (deletedAt = T1, updatedAt = T1)
+       // Remote: recreated entity with same ID (updatedAt = T2, where T2 < T1)
+       // Expected: Delete wins (tombstone resistance)
+     });
+     
+     it('allows resurrection only with explicitly newer updatedAt', () => {
+       // Local: deleted entity (deletedAt = T1, updatedAt = T1)
+       // Remote: recreated entity with same ID (updatedAt = T2, where T2 > T1)
+       // Expected: Recreated entity wins (newer timestamp)
+       // Note: This tests the edge case where manual recreation has newer timestamp
+     });
+     
+     it('prevents accidental resurrection with same timestamp', () => {
+       // Local: deleted entity (deletedAt = T1, updatedAt = T1)
+       // Remote: recreated entity with same ID (updatedAt = T1)
+       // Expected: Delete wins (tie-breaker favors delete)
+     });
+   });
+   ```
+
+
+### Phase 2: Backend Sync Endpoint Validation
+
+#### 2.1 Document Backend Sync Behavior
+
+**File**: `backend/src/modules/auth/services/auth.service.ts`
+
+**Add documentation:**
+
+- Document that backend uses simple `upsert` (no timestamp-based conflict resolution)
+- Explain that client-side conflict resolution handles all conflicts
+- Note that server timestamps are authoritative (Prisma auto-manages `updatedAt`)
+- Document that `deletedAt` is handled via soft-delete in repositories
+
+#### 2.2 Validate Backend Timestamp Handling
+
+**File**: `backend/src/modules/auth/services/auth.service.ts`
+
+**Verify:**
+
+- Server timestamps are set correctly by Prisma (`@updatedAt` directive)
+- Soft-delete operations set `deletedAt` correctly
+- Sync endpoint returns entities with proper timestamps
+- No timestamp manipulation in sync endpoint (let Prisma handle it)
+
+### Phase 3: Integration Point Validation
+
+#### 3.1 Verify All Sync Paths Use Conflict Resolution
+
+**Files to check:**
+
+- `mobile/src/common/repositories/cacheAwareRepository.ts` - ✅ Already uses `applyRemoteUpdatesToLocal()`
+- `mobile/src/common/utils/backgroundRefresh.ts` - ✅ Already uses `applyRemoteUpdatesToLocal()`
+- `mobile/src/features/shopping/utils/shoppingRealtime.ts` - ✅ Already uses `mergeEntitiesWithTombstones()`
+
+**Action**: Add validation tests to ensure all paths use conflict resolution correctly.
+
+#### 3.2 Add Integration Test for Full Sync Flow
+
+**File**: `mobile/src/common/utils/__tests__/syncApplication.integration.test.ts` (new file)
+
+**Test scenarios:**
+
+1. **Full sync flow with conflicts**:
+   - Simulate offline changes
+   - Simulate online changes
+   - Sync and verify deterministic resolution
+   - Verify cache state matches expected merged state
+
+2. **Multiple entity types sync**:
+   - Sync recipes, shopping lists, chores simultaneously
+   - Verify each entity type resolves conflicts independently
+   - Verify no cross-contamination between entity types
+
+### Phase 4: Lint/Test Rule Enforcement
+
+#### 4.1 Add Lint Rule to Enforce Merge Utilities
+
+**Goal**: Prevent future regressions by flagging direct mutations to entities during sync operations.
+
+**Options**:
+
+1. **ESLint Rule** (Recommended):
+   - Create custom ESLint rule that flags direct property assignments on entities in sync-related files
+   - Pattern to flag: `localEntity.field = remoteEntity.field` or `entity.field = value` in sync context
+   - Pattern to allow: `mergeEntitiesWithTombstones()`, `mergeEntitiesLWW()`, `mergeEntityArrays()`
+
+2. **Runtime Check** (Alternative):
+   - Add runtime validation in development mode
+   - Wrap entities in Proxy that detects direct mutations
+   - Log warnings when direct mutations detected during sync operations
+
+**Files to create/modify**:
+- `.eslintrc.js` or `eslint.config.js` - Add custom rule
+- `mobile/src/common/utils/conflictResolution.ts` - Add runtime check helper (optional)
+- `mobile/src/common/utils/__tests__/mergeUtilitiesEnforcement.test.ts` - Test lint rule effectiveness
+
+**Example lint rule pattern**:
+```typescript
+// Bad - should be flagged
+localChore.name = remoteChore.name;
+items[index] = remoteItem;
+
+// Good - should pass
+const merged = mergeEntitiesWithTombstones(localChore, remoteChore);
+const merged = mergeEntityArrays(localItems, remoteItems, getId);
+```
+
+#### 4.2 Add Test to Verify Lint Rule
+
+**File**: `mobile/src/common/utils/__tests__/mergeUtilitiesEnforcement.test.ts` (new file)
+
+**Test scenarios**:
+- Verify lint rule flags direct mutations
+- Verify lint rule allows merge utility usage
+- Test on actual sync code paths
+
+### Phase 5: Timezone Normalization Policy
+
+#### 5.1 Document Timezone Policy
+
+**Files**: `docs/features/shopping.md`, `docs/features/recipes.md`, `docs/features/chores.md`, `mobile/src/common/utils/timestamps.ts`
+
+**Add explicit documentation**:
+- All timestamps stored and compared in UTC
+- ISO strings are parsed as UTC (no timezone conversion)
+- `compareTimestamps()` normalizes to UTC internally
+- Server timestamps are always UTC
+- Client timestamps should be generated in UTC
+
+#### 5.2 Enhance Timestamp Utilities
+
+**File**: `mobile/src/common/utils/timestamps.ts`
+
+**Consider adding**:
+```typescript
+/**
+ * Normalizes a timestamp to UTC, ensuring consistent comparison.
+ * 
+ * Policy: All timestamps are stored and compared in UTC.
+ * ISO strings are parsed as UTC (no timezone conversion).
+ * 
+ * @param timestamp - Date object or ISO string
+ * @returns Date object in UTC, or undefined if invalid
+ */
+export function normalizeToUtc(timestamp: Date | string | undefined): Date | undefined {
+  // Implementation to ensure UTC normalization
+}
+```
+
+**Update `compareTimestamps()`**:
+- Add explicit UTC normalization
+- Document that it always compares in UTC
+- Add tests for timezone edge cases
+
+#### 5.3 Add Timezone Tests
+
+**File**: `mobile/src/common/utils/__tests__/timestamps.test.ts` or `conflictResolution.test.ts`
+
+**Test scenarios**:
+```typescript
+describe('Timezone normalization', () => {
+  it('parses ISO strings as UTC', () => {
+    // Test that '2026-01-25T10:00:00Z' and '2026-01-25T10:00:00+00:00' are equivalent
+  });
+  
+  it('compares timestamps in UTC regardless of input format', () => {
+    // Test that Date objects and ISO strings compare correctly
+  });
+  
+  it('handles timezone offsets correctly', () => {
+    // Test that '2026-01-25T10:00:00+05:00' is normalized to UTC equivalent
+  });
+});
+```
+
+### Phase 6: Documentation Updates
+
+#### 6.1 Update Feature Documentation
+
+**Files**: `docs/features/shopping.md`, `docs/features/recipes.md`, `docs/features/chores.md`
+
+**Add sections:**
+
+- Conflict resolution validation scenarios
+- Deterministic outcome guarantees
+- Test coverage summary
+- Timezone normalization policy
+
+#### 6.2 Update Backend Documentation
+
+**File**: `backend/README.md`
+
+**Add section:**
+
+- Sync endpoint behavior (simple upsert, client-side conflict resolution)
+- Server timestamp authority
+- Soft-delete handling
+
+## Success Criteria
+
+1. ✅ **LWW Implementation**: Verified working for scalar conflicts using `updatedAt`
+2. ✅ **Tombstone Handling**: Verified "delete always wins" policy with `deletedAt`
+3. ✅ **Deterministic Outcomes**: All concurrent modification scenarios resolve deterministically
+4. ✅ **Test Coverage**: Comprehensive tests cover all representative conflict cases:
+   - Offline toggle vs online delete
+   - Offline rename vs online rename
+   - Delete vs update ordering
+   - Additions are additive and never removed
+   - Recreate after delete (tombstone resistance)
+5. ✅ **Integration Validation**: All sync paths verified to use conflict resolution
+6. ✅ **Documentation**: All behavior documented and validated
+7. ✅ **Lint Enforcement**: Lint rule prevents direct entity mutations during sync
+8. ✅ **Timezone Policy**: UTC normalization policy documented and enforced
+
+## Files to Modify
+
+### Mobile
+
+- `mobile/src/common/utils/__tests__/syncApplication.test.ts` - Add comprehensive test scenarios
+- `mobile/src/common/utils/__tests__/conflictResolution.test.ts` - Add edge case tests (including recreate after delete)
+- `mobile/src/common/utils/__tests__/syncApplication.integration.test.ts` - New integration test file
+- `mobile/src/common/utils/__tests__/mergeUtilitiesEnforcement.test.ts` - New test file for lint rule validation
+- `mobile/src/common/utils/timestamps.ts` - Add `normalizeToUtc()` helper and enhance `compareTimestamps()`
+- `mobile/src/common/utils/__tests__/timestamps.test.ts` - Add timezone normalization tests
+- `.eslintrc.js` or `eslint.config.js` - Add custom lint rule for merge utilities enforcement
+- `docs/features/shopping.md` - Update conflict resolution documentation (including timezone policy)
+- `docs/features/recipes.md` - Update conflict resolution documentation (including timezone policy)
+- `docs/features/chores.md` - Update conflict resolution documentation (including timezone policy)
+
+### Backend
+
+- `backend/src/modules/auth/services/auth.service.ts` - Add documentation comments
+- `backend/README.md` - Document sync endpoint behavior
+
+## Testing Strategy
+
+1. **Unit Tests**: Extend existing test files with parameterized test cases
+2. **Integration Tests**: Create new integration test file for full sync flow
+3. **Validation Tests**: Add tests to verify deterministic outcomes
+4. **Edge Case Tests**: Test timestamp edge cases and concurrent modifications
+
+## Notes
+
+- Backend sync endpoint intentionally uses simple `upsert` - client handles all conflict resolution
+- Server timestamps are authoritative (Prisma auto-manages `updatedAt`)
+- All conflict resolution is client-side for offline-first architecture
+- Realtime sync already uses conflict resolution utilities
+- Cache-first read strategy already integrates conflict resolution
+- **Tombstone Policy**: Delete always wins unless explicit recreate with newer timestamp
+- **Timezone Policy**: All timestamps stored and compared in UTC, ISO strings parsed as UTC
+- **Lint Enforcement**: Prevents direct entity mutations, enforces merge utility usage

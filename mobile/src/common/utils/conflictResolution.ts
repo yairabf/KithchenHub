@@ -1,5 +1,8 @@
 import { EntityTimestamps, isEntityDeleted, parseTimestampSafely } from '../types/entityMetadata';
 
+// Re-export normalizeToUtc for convenience
+export { normalizeToUtc } from './timestamps';
+
 type ConflictWinner = 'local' | 'remote';
 
 const TIMESTAMP_FIELDS = new Set(['createdAt', 'updatedAt', 'deletedAt']);
@@ -27,16 +30,29 @@ const preserveLocalOnlyFields = <T extends EntityTimestamps>(winner: T, local: T
  * Compares two timestamps and returns the most recent one.
  * Normalizes both to Date objects using parseTimestampSafely() before comparison.
  * Handles both Date objects and ISO strings (in-memory vs persisted/transport).
+ * 
+ * **Timezone Policy**: All timestamps are compared in UTC.
+ * ISO strings are parsed as UTC (no timezone conversion).
+ * Date objects are already in UTC internally.
  *
  * @param timestamp1 - First timestamp (Date or ISO string)
  * @param timestamp2 - Second timestamp (Date or ISO string)
  * @returns -1 if first is newer, 0 if equal, 1 if second is newer
  * @throws Error if timestamp strings are invalid ISO 8601 format
+ * 
+ * @example
+ * ```typescript
+ * // All compare correctly in UTC
+ * compareTimestamps('2026-01-25T10:00:00.000Z', '2026-01-25T15:00:00.000+05:00'); // 0 (same UTC time)
+ * ```
  */
 export function compareTimestamps(
   timestamp1: Date | string | undefined,
   timestamp2: Date | string | undefined
 ): number {
+  // Normalize to UTC for consistent comparison
+  // parseTimestampSafely() handles UTC normalization for ISO strings and provides error handling
+  // ISO strings with timezone offsets (e.g., '+05:00') are correctly parsed to UTC
   const normalized1 = parseTimestampSafely(timestamp1, 'timestamp1');
   const normalized2 = parseTimestampSafely(timestamp2, 'timestamp2');
 

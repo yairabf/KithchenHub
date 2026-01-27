@@ -5,6 +5,7 @@ import { colors } from '../../../theme';
 import { isEntityDeleted } from '../../../common/types/entityMetadata';
 import { mergeEntitiesWithTombstones } from '../../../common/utils/conflictResolution';
 import { fromSupabaseTimestamps } from '../../../common/utils/timestamps';
+import { readCachedEntitiesForUpdate, setCached } from '../../../common/repositories/cacheAwareRepository';
 
 type ShoppingListRow = {
   id: string;
@@ -248,3 +249,71 @@ export const buildListIdFilter = (listIds: string[]): string | null => {
   const uniqueIds = Array.from(new Set(listIds)).sort();
   return `list_id=in.(${uniqueIds.join(',')})`;
 };
+
+/**
+ * Updates cache from realtime list events for signed-in users
+ * 
+ * This function handles realtime database changes by:
+ * 1. Reading current cache state
+ * 2. Applying the change using conflict resolution
+ * 3. Writing updated cache (which automatically emits cache events)
+ * 
+ * @param payload - The realtime payload from Supabase for shopping lists
+ */
+export async function updateCacheFromRealtimeListEvent(
+  payload: RealtimePostgresChangesPayload<ShoppingListRow>
+): Promise<void> {
+  try {
+    // Read current cache
+    const current = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
+    
+    // Apply the change
+    const updated = applyShoppingListChange(current, payload);
+    
+    // Write back to cache (setCached automatically emits cache events)
+    await setCached(
+      'shoppingLists',
+      updated,
+      (list: ShoppingList) => list.id
+    );
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Failed to update cache from realtime list event:', errorMessage);
+    // Don't throw - realtime updates are best-effort, cache will refresh on next read
+  }
+}
+
+/**
+ * Updates cache from realtime item events for signed-in users
+ * 
+ * This function handles realtime database changes by:
+ * 1. Reading current cache state
+ * 2. Applying the change using conflict resolution
+ * 3. Writing updated cache (which automatically emits cache events)
+ * 
+ * @param payload - The realtime payload from Supabase for shopping items
+ * @param groceryItems - Grocery items for mapping item names to images/categories
+ */
+export async function updateCacheFromRealtimeItemEvent(
+  payload: RealtimePostgresChangesPayload<ShoppingItemRow>,
+  groceryItems: GroceryItem[]
+): Promise<void> {
+  try {
+    // Read current cache
+    const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+    
+    // Apply the change
+    const updated = applyShoppingItemChange(current, payload, groceryItems);
+    
+    // Write back to cache (setCached automatically emits cache events)
+    await setCached(
+      'shoppingItems',
+      updated,
+      (item: ShoppingItem) => item.id
+    );
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Failed to update cache from realtime item event:', errorMessage);
+    // Don't throw - realtime updates are best-effort, cache will refresh on next read
+  }
+}

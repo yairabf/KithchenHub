@@ -138,6 +138,19 @@ export class AuthService {
    * Synchronizes offline data to the cloud for a user.
    * Validates input size and structure before processing.
    *
+   * **Conflict Resolution Strategy:**
+   * - Backend uses simple `upsert` operations (no timestamp-based conflict resolution)
+   * - All conflict resolution is handled client-side using Last-Write-Wins (LWW) strategy
+   * - Server timestamps are authoritative (Prisma auto-manages `updatedAt` via `@updatedAt` directive)
+   * - `deletedAt` is handled via soft-delete in repositories
+   * - Client-side conflict resolution ensures deterministic outcomes for offline-first architecture
+   *
+   * **Why Client-Side Resolution:**
+   * - Prevents conflict resolution loops between client and server
+   * - Allows offline-first architecture with local conflict resolution
+   * - Server remains simple (just upsert) while client handles all conflicts
+   * - Server timestamps are still authoritative (Prisma auto-manages them)
+   *
    * @param userId - The ID of the user performing the sync
    * @param syncData - The data to synchronize (lists, recipes, chores)
    * @returns Sync result with status and any conflicts encountered
@@ -330,6 +343,10 @@ export class AuthService {
 
   /**
    * Synchronizes a single shopping list and its items.
+   * 
+   * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
+   * Client-side conflict resolution handles all conflicts using LWW strategy.
+   * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
    */
   private async syncShoppingList(
     householdId: string,
@@ -388,6 +405,10 @@ export class AuthService {
 
   /**
    * Synchronizes recipes.
+   * 
+   * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
+   * Client-side conflict resolution handles all conflicts using LWW strategy.
+   * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
    */
   private async syncRecipes(
     householdId: string,
@@ -426,6 +447,10 @@ export class AuthService {
 
   /**
    * Synchronizes chores.
+   * 
+   * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
+   * Client-side conflict resolution handles all conflicts using LWW strategy.
+   * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
    */
   private async syncChores(
     householdId: string,
