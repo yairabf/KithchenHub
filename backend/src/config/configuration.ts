@@ -1,4 +1,4 @@
-import { validateEnv, type EnvConfig } from './env.validation';
+import { validateEnv } from './env.validation';
 
 export interface AppConfig {
   env: string;

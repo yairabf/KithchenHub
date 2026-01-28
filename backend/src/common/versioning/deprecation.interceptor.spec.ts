@@ -3,11 +3,7 @@ import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { of } from 'rxjs';
 import { DeprecationInterceptor } from './deprecation.interceptor';
-import { DEPRECATION_METADATA_KEY } from './deprecation.decorator';
-import {
-  SUPPORTED_API_VERSIONS,
-  DEPRECATED_API_VERSIONS,
-} from './api-version.constants';
+import { DEPRECATED_API_VERSIONS } from './api-version.constants';
 
 describe('DeprecationInterceptor', () => {
   let interceptor: DeprecationInterceptor;
@@ -78,28 +74,31 @@ describe('DeprecationInterceptor', () => {
       DEPRECATED_API_VERSIONS.length > 0
         ? DEPRECATED_API_VERSIONS.map((v) => [`/api/v${v}/auth/sync`, v])
         : [['/api/v999/auth/sync', '999']], // Dummy test when no deprecated versions
-    )(
-      'should add deprecation headers for deprecated version %s',
-      (url, version) => {
-        // Skip test if no deprecated versions exist
-        if (DEPRECATED_API_VERSIONS.length === 0) {
-          return;
-        }
-        const context = createMockExecutionContext(url);
-        const handler = createMockCallHandler();
+    )('should add deprecation headers for deprecated version %s', (url) => {
+      // Skip test if no deprecated versions exist
+      if (DEPRECATED_API_VERSIONS.length === 0) {
+        return;
+      }
+      const context = createMockExecutionContext(url);
+      const handler = createMockCallHandler();
 
-        interceptor.intercept(context, handler).subscribe(() => {
-          expect(mockResponse.setHeader).toHaveBeenCalledWith('Deprecation', 'true');
-        });
-      },
-    );
+      interceptor.intercept(context, handler).subscribe(() => {
+        expect(mockResponse.setHeader).toHaveBeenCalledWith(
+          'Deprecation',
+          'true',
+        );
+      });
+    });
 
     it('should add endpoint-level deprecation headers when route is deprecated', (done) => {
       const context = createMockExecutionContext('/api/v1/auth/sync', true);
       const handler = createMockCallHandler();
 
       interceptor.intercept(context, handler).subscribe(() => {
-        expect(mockResponse.setHeader).toHaveBeenCalledWith('Deprecation', 'true');
+        expect(mockResponse.setHeader).toHaveBeenCalledWith(
+          'Deprecation',
+          'true',
+        );
         expect(mockResponse.setHeader).toHaveBeenCalledWith(
           'Sunset',
           expect.any(String),
@@ -119,7 +118,10 @@ describe('DeprecationInterceptor', () => {
       const handler = createMockCallHandler();
 
       interceptor.intercept(context, handler).subscribe(() => {
-        expect(mockResponse.setHeader).toHaveBeenCalledWith('Deprecation', 'true');
+        expect(mockResponse.setHeader).toHaveBeenCalledWith(
+          'Deprecation',
+          'true',
+        );
         done();
       });
     });

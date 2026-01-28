@@ -60,7 +60,7 @@ export class AuthRepository {
       data: createData,
       include: { household: true },
     });
-    
+
     // Prisma returns the correct shape with include, but TypeScript needs help with the return type
     return result as unknown as User & { household: Household | null };
   }

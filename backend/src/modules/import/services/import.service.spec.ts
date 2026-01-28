@@ -6,7 +6,7 @@ import {
 import { ImportService } from './import.service';
 import { ImportRepository } from '../repositories/import.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { ImportRequestDto, ImportResponseDto } from '../dto/import.dto';
+import { ImportRequestDto } from '../dto/import.dto';
 import {
   ImportSource,
   ImportStatus,
@@ -15,8 +15,6 @@ import {
 
 describe('ImportService', () => {
   let service: ImportService;
-  let importRepository: ImportRepository;
-  let prismaService: PrismaService;
 
   const mockImportRepository = {
     findMappingsForUser: jest.fn(),
@@ -65,8 +63,8 @@ describe('ImportService', () => {
     }).compile();
 
     service = module.get<ImportService>(ImportService);
-    importRepository = module.get<ImportRepository>(ImportRepository);
-    prismaService = module.get<PrismaService>(PrismaService);
+    module.get<ImportRepository>(ImportRepository);
+    module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {

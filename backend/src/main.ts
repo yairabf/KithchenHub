@@ -56,8 +56,7 @@ async function bootstrap(): Promise<void> {
     .build();
 
   const documentV1 = SwaggerModule.createDocument(app, swaggerConfigV1, {
-    operationIdFactory: (controllerKey: string, methodKey: string) =>
-      methodKey,
+    operationIdFactory: (controllerKey: string, methodKey: string) => methodKey,
   });
 
   await SwaggerModule.setup('api/docs/v1', app, documentV1, {
@@ -74,9 +73,7 @@ async function bootstrap(): Promise<void> {
   console.log(
     `Swagger documentation (v1): http://localhost:${config.port}/api/docs/v1`,
   );
-  console.log(
-    `Version discovery: http://localhost:${config.port}/api/version`,
-  );
+  console.log(`Version discovery: http://localhost:${config.port}/api/version`);
 }
 
 void bootstrap();

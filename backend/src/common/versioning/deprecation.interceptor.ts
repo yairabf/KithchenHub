@@ -8,10 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Response, Request } from 'express';
-import {
-  isVersionDeprecated,
-  getVersionMetadata,
-} from './versioning.config';
+import { isVersionDeprecated, getVersionMetadata } from './versioning.config';
 import {
   DEPRECATION_METADATA_KEY,
   DeprecationOptions,

@@ -354,6 +354,7 @@ describe('Row Level Security (RLS) Integration Tests', () => {
           instructions: collection === 'recipe' ? [] : undefined,
         },
       });
+      void itemB;
 
       // 2. Verify RLS as User A
       await prisma.$transaction(async (tx) => {

@@ -23,7 +23,6 @@ import { SUPPORTED_API_VERSIONS } from './api-version.constants';
  */
 @Injectable()
 export class VersionGuard implements CanActivate {
-
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
     const version = extractVersionFromRequest(request);
