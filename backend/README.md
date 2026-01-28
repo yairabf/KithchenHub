@@ -155,6 +155,10 @@ To verify that Row Level Security is correctly isolating data between households
 **Sync Endpoint Details:**
 - Accepts offline data (shopping lists, recipes, chores)
 - Maximum of 1000 items per sync request (combined total of lists, recipes, and chores)
+- **Payload Versioning**: Optional `payloadVersion` field (positive integer, minimum 1) for API contract versioning
+  - Current version: `1` (default if omitted)
+  - Enables future payload evolution without breaking existing clients
+  - Backend treats missing or `payloadVersion = 1` identically
 - **Idempotency Keys**: Each entity must include a unique `operationId` (UUID v4) to prevent duplicate processing
   - Safe retries: Same `operationId` will be processed only once
   - Atomic processing: Insert-first pattern ensures exactly-once semantics

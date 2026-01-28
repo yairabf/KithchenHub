@@ -3,6 +3,7 @@ import type { QueueTargetId, QueuedWrite, QueuedWriteStatus, SyncCheckpoint } fr
 import { compactQueue, readQueue, writeQueue } from './syncQueueStorage.internal';
 import { clearCheckpoint, confirmCheckpointOperationIds, getCheckpoint, markCheckpointAttempt, saveCheckpoint } from './syncQueueStorage.checkpointStorage';
 import * as Crypto from 'expo-crypto';
+import { CURRENT_QUEUE_STORAGE_VERSION } from './syncQueueStorage.constants';
 
 export interface SyncQueueStorage {
   enqueue(
@@ -59,6 +60,9 @@ class SyncQueueStorageImpl implements SyncQueueStorage {
         clientTimestamp,
         attemptCount: 0,
         status: 'PENDING',
+        // New items always use the current storage schema version.
+        // Older records without a version are treated as version 1 via migrations.
+        version: CURRENT_QUEUE_STORAGE_VERSION,
       };
 
       queue.push(queuedWrite);

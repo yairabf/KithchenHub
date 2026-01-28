@@ -6,6 +6,8 @@ import {
   IsNumber,
   IsBoolean,
   IsUUID,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -123,6 +125,11 @@ export class SyncChoreDto {
 }
 
 export class SyncDataDto {
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  payloadVersion?: number;
+
   @IsUUID(4)
   @IsOptional()
   requestId?: string; // Optional request ID for observability (same for all items in batch, UUID v4)

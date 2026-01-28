@@ -62,6 +62,15 @@ export interface SyncChoreDto {
 }
 
 export interface SyncDataDto {
+  /**
+   * Version of the sync payload contract sent to the backend.
+   * - Omitted or 1: current v1 payload shape.
+   * - Higher values reserved for future evolution.
+   */
+  payloadVersion?: number;
+  /**
+   * Optional request ID for observability (same for all items in batch).
+   */
   requestId?: string;
   recipes?: SyncRecipeDto[];
   lists?: SyncShoppingListDto[];

@@ -1,0 +1,193 @@
+---
+name: 002-add-sync-queue-checkpointing
+overview: Add crash-safe, lightweight checkpointing for the signed-in offline sync queue. Checkpoints mark an in-flight batch so the worker can re-drive it after app restarts, apply backoff, expire stale checkpoints, and avoid scanning/re-sending the entire queue each loop iteration.
+todos:
+  - id: checkpoint-schema
+    content: "Define SyncCheckpoint schema (createdAt/lastAttemptAt/attemptCount/ttlMs, inFlightOperationIds, requestId, user-scoped storage key) and validation/pruning rules"
+  - id: checkpoint-storage
+    content: "Implement checkpoint persistence (get/save/update/clear) with schema validation and pruning of missing inFlightOperationIds"
+  - id: checkpoint-redrive
+    content: "Implement checkpoint re-drive: if checkpoint exists, load queue items matching inFlightOperationIds, apply per-item + checkpoint backoff, send batch, then update/clear checkpoint from response"
+  - id: checkpoint-ttl
+    content: "Implement TTL expiration: if checkpoint is stale (now - createdAt > ttlMs) or invalid/missing items, clear checkpoint and fall back to normal queue processing"
+  - id: processor-batching
+    content: "Add MAX_BATCH_SIZE (50) and process ready items in batches; each batch becomes a checkpointed transaction"
+  - id: compaction-interaction
+    content: "Ensure queue compaction/remove operations prune checkpoint opIds (or checkpoint logic prunes on read) to avoid stranded checkpoints"
+  - id: storage-key-scoping
+    content: "Scope checkpoint storage key by signed-in identity (userId and optionally householdId) to prevent cross-account leakage"
+  - id: tests-storage
+    content: "Add tests for checkpoint storage: schema validation, pruning, scoped keys, save/update/clear"
+  - id: tests-processor
+    content: "Add tests for checkpoint processing: re-drive after crash, backoff behavior, TTL expiry, partial confirmation, missing items"
+isProject: false
+---
+
+## Context / Current Status (Deep Research)
+
+### ✅ What already exists
+
+- **Signed-in offline write queue** stored in AsyncStorage via [`/Users/yairabramovitch/Documents/workspace/KithchenHub/mobile/src/common/utils/syncQueueStorage.ts`](mobile/src/common/utils/syncQueueStorage.ts)
+  - Queue items: `QueuedWrite` with `operationId` (idempotency), `attemptCount`, `lastAttemptAt`, `status`, `lastError`
+  - Queue compaction merges per `{entityType, target.localId}` and preserves the surviving item’s `operationId`
+  - Queue is read by `syncQueueStorage.getAll()` (full read) and written back as a whole
+  - Max queue size is currently `MAX_QUEUE_SIZE = 100`
+
+- **Sync worker loop + partial batch recovery** in [`/Users/yairabramovitch/Documents/workspace/KithchenHub/mobile/src/common/utils/syncQueueProcessor.ts`](mobile/src/common/utils/syncQueueProcessor.ts)
+  - Worker loop reads the entire queue each iteration, filters “ready” items by per-item backoff, and sends all ready items in a single `/auth/sync` call
+  - Mobile removes queue items only when explicitly confirmed by backend `succeeded[]` operationIds; keeps conflicts and “unknown” opIds for safety
+
+- **Backend sync endpoint size constraints + granular results** in [`/Users/yairabramovitch/Documents/workspace/KithchenHub/backend/src/modules/auth/services/auth.service.ts`](backend/src/modules/auth/services/auth.service.ts)
+  - Validates total items ≤ `MAX_SYNC_ITEMS = 1000` (constant in [`backend/src/common/constants/token-expiry.constants.ts`](backend/src/common/constants/token-expiry.constants.ts))
+  - Enforces invariant that every incoming `operationId` appears in either `succeeded[]` or `conflicts[]` (logs if violated)
+
+- **Known gap** explicitly documented in [`/Users/yairabramovitch/Documents/workspace/KithchenHub/kitchen_hub_project_context.md`](kitchen_hub_project_context.md): “No checkpointing for large queues”
+
+### ❌ What’s missing (and why it matters)
+
+- **No checkpointing**: if the app is killed/crashes mid-sync, the worker has no “in-flight batch marker” to re-drive. Any naive “filter in-flight items” approach can **deadlock** (checkpoint never clears because no response will ever arrive).
+- **No batch-size enforcement** beyond queue max: while current queue max is 100, batching is still useful to reduce payload size/latency/error surface.
+- **No user-scoped checkpoint key**: a device logout/login could strand a checkpoint belonging to a different account (cross-account leakage risk).
+- **No explicit interaction between compaction and checkpointing**: compaction can drop operations (create+delete). If a dropped opId remains in a checkpoint, recovery logic must prune or clear it.
+
+## Goals
+
+- **Crash-safe progress**: never get stuck after restart; checkpoints must be re-driven.
+- **Avoid full-queue reprocessing**: do not “start from zero” every loop iteration for large queues.
+- **Preserve safety-first invariants**: never delete queue entries unless the backend explicitly confirms.
+- **Prevent hot loops**: checkpoint re-drive needs its own backoff/attempt metadata.
+- **No cross-account leakage**: checkpoint storage must be scoped by user (and optionally household).
+
+## Proposed Design (Corrected)
+
+### Core rule
+
+**If a checkpoint exists, the worker must attempt to process the checkpoint batch first (re-drive).**
+
+Filtering “in-flight” items is fine **only** if we also guarantee forward progress by re-driving the in-flight batch. After an app crash, there is no pending response coming back later.
+
+### Checkpoint schema (batch-level metadata)
+
+We treat a checkpoint as a **single-batch transaction marker**.
+
+```typescript
+export type SyncCheckpoint = {
+  checkpointId: string; // UUID
+
+  // Identity scope (used to validate that this checkpoint belongs to current session)
+  userId: string;
+  householdId?: string;
+
+  // Lifecycle
+  createdAt: string; // ISO
+  lastAttemptAt?: string; // ISO
+  attemptCount: number; // starts at 0
+  ttlMs: number; // e.g. 5–30 minutes
+
+  // The exact batch we believe was sent (or needs to be re-sent)
+  requestId: string; // UUID for backend observability
+  inFlightOperationIds: string[]; // operationIds in this batch
+};
+```
+
+### Storage key scoping
+
+- Prefer a signed-in scoped key:
+  - `@kitchen_hub_sync_checkpoint:${userId}` (and optionally include `:${householdId}`)
+- This avoids a checkpoint from one account affecting another after logout/login.
+
+### Recovery algorithm (high-level)
+
+On each worker iteration:
+
+1. Read checkpoint.
+2. If checkpoint exists:
+   - If checkpoint is **stale** (`now - createdAt > ttlMs`): clear it and continue with normal processing.
+   - Load queue; find items whose `operationId` is in `checkpoint.inFlightOperationIds`.
+   - If **none found** (queue compacted/cleared): clear checkpoint and continue with normal processing.
+   - Else:
+     - Apply **checkpoint-level backoff** (based on `checkpoint.lastAttemptAt` + `checkpoint.attemptCount`).
+     - Also apply **per-item backoff** (existing `filterItemsReadyForRetry`) to avoid retrying items still in backoff.
+     - Send that batch (re-drive).
+     - Update checkpoint from response:
+       - Remove confirmed opIds (`succeeded` + `conflicts`) from checkpoint.
+       - If empty, clear checkpoint.
+     - Then continue loop (next iteration will either re-drive remaining opIds or process a new batch).
+3. If no checkpoint:
+   - Load queue, compute ready items, take first batch (`MAX_BATCH_SIZE`).
+   - Save checkpoint (with requestId) for that batch.
+   - Send batch.
+   - Update/clear checkpoint from response.
+
+This ensures forward progress even after crashes.
+
+### Interaction with compaction
+
+Compaction can remove operations entirely. Therefore:
+
+- `getCheckpoint()` (or a dedicated `validateAndPruneCheckpointAgainstQueue(queue)`) must prune `inFlightOperationIds` that are no longer present in the queue.
+- If pruning results in empty list, clear checkpoint.
+
+## Implementation Steps
+
+### 1) Add checkpoint storage + validation
+
+Files:
+- [`mobile/src/common/utils/syncQueueStorage.ts`](mobile/src/common/utils/syncQueueStorage.ts)
+- Potentially a small helper in `mobile/src/common/utils/` for key scoping / current user identity lookup (depending on where userId/householdId lives today).
+
+Work:
+- Add `SyncCheckpoint` type and validation (shape + UUID-ish strings + ISO timestamps).
+- Implement:
+  - `getCheckpoint(): Promise<SyncCheckpoint | null>`
+  - `saveCheckpoint(checkpoint: SyncCheckpoint): Promise<void>`
+  - `updateCheckpoint(patch: Partial<SyncCheckpoint>): Promise<void>`
+  - `removeOperationIdsFromCheckpoint(confirmedIds: string[]): Promise<void>` (or equivalent)
+  - `clearCheckpoint(): Promise<void>`
+- Ensure key scoping by userId/householdId.
+
+### 2) Add checkpoint re-drive to worker loop
+
+File:
+- [`mobile/src/common/utils/syncQueueProcessor.ts`](mobile/src/common/utils/syncQueueProcessor.ts)
+
+Work:
+- Implement `processCheckpointIfPresent()` that:
+  - Reads checkpoint
+  - TTL check
+  - Loads queue and selects matching items by `operationId`
+  - Applies checkpoint backoff + per-item backoff
+  - Sends batch with the checkpoint’s `requestId` (or generates a new requestId and updates checkpoint before sending; we’ll pick one approach and test it)
+  - Updates/clears checkpoint from response
+
+### 3) Add batching for normal processing
+
+- Add `MAX_BATCH_SIZE = 50`
+- When no checkpoint exists, select the first batch of ready items, save checkpoint for it, send it.
+
+### 4) Tests (TDD)
+
+Files (existing tests already present for sync processor; extend them):
+- `mobile/src/common/utils/__tests__/syncQueueStorage.spec.ts` (or create if missing)
+- `mobile/src/common/utils/__tests__/syncQueueProcessor.spec.ts` (or extend existing)
+
+Key scenarios:
+- Re-drive after crash: checkpoint exists, worker sends checkpoint batch.
+- TTL expiry clears checkpoint and proceeds.
+- Missing items (compaction removed) prunes/clears checkpoint.
+- Checkpoint backoff prevents hot loop.
+- Partial confirmations update checkpoint correctly.
+- Scoped keys: checkpoint from userA is not read/used for userB.
+
+## Success Criteria
+
+- Worker never deadlocks due to stale checkpoint.
+- After crash/restart, worker re-drives the checkpoint batch (safe via idempotency).
+- Checkpoint respects backoff and TTL, preventing hot loops.
+- Checkpoint storage is user-scoped; no cross-account leakage.
+- Compaction interactions don’t strand checkpoints (prune/clear works).
+
+## Notes on Follow-up
+
+After implementation, apply the `auto-code-review` skill: review diffs, validate `.cursor/rules/coding_rule.mdc` compliance, and address issues found.
+

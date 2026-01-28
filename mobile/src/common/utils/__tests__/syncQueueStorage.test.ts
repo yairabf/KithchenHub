@@ -6,6 +6,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncQueueStorage, type QueuedWrite, type QueueTargetId, type QueuedWriteStatus } from '../syncQueueStorage';
+import { syncQueueStorage as newSyncQueueStorage } from '../syncQueue/storage';
 import type { SyncEntityType } from '../cacheMetadata';
 import * as Crypto from 'expo-crypto';
 import { getSignedInCacheKey } from '../../storage/dataModeStorage';
@@ -420,6 +421,76 @@ describe('SyncQueueStorage', () => {
       // Same old item should get same deterministic operationId
       const queue2 = await syncQueueStorage.getAll();
       expect(queue2[0].operationId).toBe(queue[0].operationId);
+    });
+  });
+
+  describe('schema versioning', () => {
+    type VersioningScenario = {
+      description: string;
+      item: any;
+      expectedVersion: number;
+      expectedStatus: QueuedWriteStatus;
+      expectErrorSubstring?: string;
+    };
+
+    const scenarios: VersioningScenario[] = [
+      {
+        description: 'legacy item without version or status',
+        item: {
+          id: 'legacy-item',
+          entityType: 'recipes' as SyncEntityType,
+          op: 'create' as const,
+          target: { localId: 'local-123' },
+          payload: { id: 'local-123', name: 'Legacy Test' },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          // No status or version fields (old format)
+        },
+        expectedVersion: 1,
+        expectedStatus: 'PENDING',
+      },
+      {
+        description: 'future-version item is retained but marked non-processable',
+        item: {
+          id: 'future-item',
+          entityType: 'recipes' as SyncEntityType,
+          op: 'create' as const,
+          target: { localId: 'local-999' },
+          payload: { id: 'local-999', name: 'Future Test' },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING' as QueuedWriteStatus,
+          version: 999,
+        },
+        expectedVersion: 999,
+        expectedStatus: 'FAILED_PERMANENT',
+        expectErrorSubstring: 'Unsupported queue storage version',
+      },
+    ];
+
+    it.each(scenarios)('should handle schema versioning for %s', async scenario => {
+      const storageKey = getSignedInCacheKey('sync_queue');
+      storageState[storageKey] = JSON.stringify([scenario.item]);
+
+      const queue = await newSyncQueueStorage.getAll();
+      expect(queue).toHaveLength(1);
+
+      const [migrated] = queue as Array<QueuedWrite & { version?: number }>;
+      expect(migrated.version).toBe(scenario.expectedVersion);
+      expect(migrated.status).toBe(scenario.expectedStatus);
+
+      if (scenario.expectErrorSubstring) {
+        expect(typeof migrated.lastError).toBe('string');
+        expect(migrated.lastError).toContain(scenario.expectErrorSubstring);
+      }
+
+      if (!scenario.item.version) {
+        const persisted = JSON.parse(storageState[storageKey]) as Array<
+          QueuedWrite & { version?: number }
+        >;
+        expect(persisted).toHaveLength(1);
+        expect(persisted[0].version).toBe(scenario.expectedVersion);
+      }
     });
   });
 });

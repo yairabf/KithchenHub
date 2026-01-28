@@ -24,6 +24,25 @@ Key files:
 - `SyncQueueStorageImpl.ts` – implementation of the `SyncQueueStorage` interface.
 - `index.ts` – public entry point exporting the `SyncQueueStorage` interface and the `syncQueueStorage` singleton used by the rest of the app.
 
+## Schema versioning
+
+- **Storage schema versions**:
+  - `QueuedWrite` and `SyncCheckpoint` include an optional `version` field that represents the **storage schema version**.
+  - Constants:
+    - `CURRENT_QUEUE_STORAGE_VERSION`
+    - `CURRENT_CHECKPOINT_STORAGE_VERSION`
+  - Legacy records without `version` are treated as version `1` and normalized on read.
+- **Migrations**:
+  - Queue records:
+    - `readQueue()` validates shape, backfills `status`, and generates a deterministic `operationId` for legacy items that are missing it.
+    - If any item is migrated (status fixed, `operationId` added, or `version` defaulted), the entire queue is written back in normalized form.
+  - Checkpoints:
+    - `validateCheckpointShape()` normalizes the `version` field (defaulting to `1` when missing/invalid, matching queue record behavior).
+    - `getCheckpoint()` writes back the normalized checkpoint after successful validation.
+- **Unknown future versions**:
+  - Queue items with `version > CURRENT_QUEUE_STORAGE_VERSION` are **kept** but marked as `FAILED_PERMANENT` to avoid processing data from an unsupported future schema.
+  - Checkpoints with higher versions are accepted as long as their shape is valid; version is preserved on read/write.
+
 If you want to:
 
 - Change how many items can be in the queue → see `constants.ts`.

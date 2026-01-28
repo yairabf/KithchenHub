@@ -6,6 +6,8 @@ import {
   MAX_QUEUE_SIZE,
   SYNC_CHECKPOINT_STORAGE_KEY_PREFIX,
   SYNC_QUEUE_STORAGE_KEY,
+  CURRENT_QUEUE_STORAGE_VERSION,
+  CURRENT_CHECKPOINT_STORAGE_VERSION,
 } from './syncQueueStorage.constants';
 import type { QueueTargetId, QueuedWrite, QueuedWriteStatus, SyncCheckpoint } from './syncQueueStorage.types';
 
@@ -82,6 +84,11 @@ export function validateCheckpointShape(candidate: unknown): SyncCheckpoint | nu
     if (!isValidUuidLike(opId)) return null;
   }
 
+  const normalizedVersion =
+    typeof cp.version === 'number' && Number.isInteger(cp.version) && cp.version > 0
+      ? cp.version
+      : 1;
+
   return {
     checkpointId: cp.checkpointId,
     userId: cp.userId,
@@ -92,6 +99,7 @@ export function validateCheckpointShape(candidate: unknown): SyncCheckpoint | nu
     ttlMs: cp.ttlMs,
     requestId: cp.requestId,
     inFlightOperationIds: cp.inFlightOperationIds as string[],
+    version: normalizedVersion,
   };
 }
 
@@ -131,6 +139,17 @@ export function generateFallbackOperationId(content: string): string {
   return formatHashAsUuid(hexString);
 }
 
+function normalizeStorageVersion(version: unknown): number {
+  if (typeof version !== 'number' || !Number.isInteger(version) || version <= 0) {
+    return 1;
+  }
+  return version;
+}
+
+function isFutureQueueVersion(version: number): boolean {
+  return version > CURRENT_QUEUE_STORAGE_VERSION;
+}
+
 export async function generateDeterministicOperationId(
   entityType: string,
   localId: string,
@@ -159,7 +178,7 @@ export async function readQueue(): Promise<QueuedWrite[]> {
       return [];
     }
 
-    const parsed = JSON.parse(raw) as QueuedWrite[];
+    const parsed = JSON.parse(raw) as unknown;
 
     if (!Array.isArray(parsed)) {
       console.error('Invalid sync queue format: expected array');
@@ -167,60 +186,85 @@ export async function readQueue(): Promise<QueuedWrite[]> {
     }
 
     const valid: QueuedWrite[] = [];
-    const migrationPromises: Promise<QueuedWrite>[] = [];
+    const itemsNeedingWriteBack: QueuedWrite[] = [];
 
-    for (const item of parsed) {
+    for (const candidate of parsed) {
       if (
-        typeof item === 'object' &&
-        item !== null &&
-        typeof item.id === 'string' &&
-        typeof item.entityType === 'string' &&
-        typeof item.op === 'string' &&
-        typeof item.target === 'object' &&
-        item.target !== null &&
-        typeof (item.target as QueueTargetId).localId === 'string' &&
-        typeof item.clientTimestamp === 'string' &&
-        typeof item.attemptCount === 'number'
+        typeof candidate === 'object' &&
+        candidate !== null &&
+        typeof (candidate as QueuedWrite).id === 'string' &&
+        typeof (candidate as QueuedWrite).entityType === 'string' &&
+        typeof (candidate as QueuedWrite).op === 'string' &&
+        typeof (candidate as QueuedWrite).target === 'object' &&
+        (candidate as QueuedWrite).target !== null &&
+        typeof ((candidate as QueuedWrite).target as QueueTargetId).localId === 'string' &&
+        typeof (candidate as QueuedWrite).clientTimestamp === 'string' &&
+        typeof (candidate as QueuedWrite).attemptCount === 'number'
       ) {
+        const rawItem = candidate as QueuedWrite;
+        const version = normalizeStorageVersion((rawItem as { version?: unknown }).version);
+
         const validStatuses: QueuedWriteStatus[] = ['PENDING', 'RETRYING', 'FAILED_PERMANENT'];
-        const status = validStatuses.includes(item.status as QueuedWriteStatus)
-          ? (item.status as QueuedWriteStatus)
+        const status = validStatuses.includes(rawItem.status as QueuedWriteStatus)
+          ? (rawItem.status as QueuedWriteStatus)
           : 'PENDING';
 
-        if (typeof item.operationId === 'string') {
-          const migratedItem: QueuedWrite = {
-            ...item,
-            status,
-            lastAttemptAt: item.lastAttemptAt,
-            lastError: item.lastError,
-            requestId: typeof item.requestId === 'string' ? item.requestId : undefined,
-          };
-          valid.push(migratedItem);
-        } else {
-          migrationPromises.push(
-            generateDeterministicOperationId(
-              item.entityType,
-              (item.target as QueueTargetId).localId,
-              item.op,
-              item.clientTimestamp
-            ).then(operationId => ({
-              ...item,
-              operationId,
-              status,
-              lastAttemptAt: item.lastAttemptAt,
-              lastError: item.lastError,
-              requestId: typeof item.requestId === 'string' ? item.requestId : undefined,
-            }))
+        // If this record comes from a future, unsupported storage schema version,
+        // keep it but mark it as permanently failed to avoid processing it.
+        const isFutureVersion = isFutureQueueVersion(version);
+
+        let baseItem: QueuedWrite = {
+          ...rawItem,
+          status: isFutureVersion ? 'FAILED_PERMANENT' : status,
+          lastAttemptAt: rawItem.lastAttemptAt,
+          lastError: isFutureVersion
+            ? `Unsupported queue storage version ${version}; current=${CURRENT_QUEUE_STORAGE_VERSION}`
+            : rawItem.lastError,
+          requestId: typeof rawItem.requestId === 'string' ? rawItem.requestId : undefined,
+          version,
+        };
+
+        if (!isFutureVersion && typeof rawItem.operationId !== 'string') {
+          // Legacy item without operationId: generate deterministic id
+          const operationId = await generateDeterministicOperationId(
+            rawItem.entityType,
+            (rawItem.target as QueueTargetId).localId,
+            rawItem.op,
+            rawItem.clientTimestamp
           );
+          baseItem = {
+            ...baseItem,
+            operationId,
+          };
+        }
+
+        valid.push(baseItem);
+
+        // If version was missing/invalid or status was fixed, we should write back
+        const needsWriteBack =
+          version !== (rawItem as { version?: number }).version ||
+          baseItem.status !== rawItem.status ||
+          (typeof rawItem.operationId !== 'string' && typeof baseItem.operationId === 'string');
+
+        if (needsWriteBack) {
+          itemsNeedingWriteBack.push(baseItem);
         }
       } else {
-        console.warn('Invalid queue item format, skipping:', item);
+        console.warn('Invalid queue item format, skipping:', candidate);
       }
     }
 
-    if (migrationPromises.length > 0) {
-      const migratedItems = await Promise.all(migrationPromises);
-      valid.push(...migratedItems);
+    if (itemsNeedingWriteBack.length > 0) {
+      // Best-effort: persist the normalized queue state so we do not need
+      // to re-run migrations on every app start.
+      try {
+        const sortedForWriteBack = valid
+          .slice()
+          .sort((a, b) => a.clientTimestamp.localeCompare(b.clientTimestamp));
+        await AsyncStorage.setItem(SYNC_QUEUE_STORAGE_KEY, JSON.stringify(sortedForWriteBack));
+      } catch (writeBackError) {
+        console.error('Failed to write back migrated sync queue:', writeBackError);
+      }
     }
 
     return valid.sort((a, b) => a.clientTimestamp.localeCompare(b.clientTimestamp));

@@ -35,6 +35,12 @@ export type QueuedWrite = {
   status: QueuedWriteStatus;
   lastError?: string;
   requestId?: string;
+  /**
+   * Storage schema version for this queued write.
+   * - Omitted/null in legacy records (treated as version 1 on read).
+   * - Must be a positive integer when written by current code.
+   */
+  version?: number;
 };
 
 /**
@@ -53,5 +59,11 @@ export type SyncCheckpoint = {
   ttlMs: number;
   requestId: string;
   inFlightOperationIds: string[];
+  /**
+   * Storage schema version for this checkpoint.
+   * - Omitted/null in legacy records (treated as version 1 on read).
+   * - Must be a positive integer when written by current code.
+   */
+  version?: number;
 };
 

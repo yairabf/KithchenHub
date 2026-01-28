@@ -728,6 +728,8 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     }
 
     return {
+      // Current payload contract version (v1). Backend treats missing or 1 identically.
+      payloadVersion: 1,
       requestId, // Include optional request ID
       recipes: recipes.length > 0 ? recipes : undefined,
       lists: lists.length > 0 ? lists : undefined,
