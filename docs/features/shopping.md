@@ -633,13 +633,13 @@ Utility for applying remote updates to local cached state:
 
 **Note**: Conflict resolution is client-side. The backend sync endpoint (`POST /auth/sync`) performs simple upsert operations and returns conflicts. Client-side utilities handle timestamp-based merging.
 
-### Partial Batch Recovery
+### Partial Batch Recovery & Checkpointing
 
-**File**: `mobile/src/common/utils/syncQueueProcessor.ts`
+**File**: `mobile/src/common/utils/syncQueue/processor/index.ts`
 
-The sync queue processor implements partial batch recovery to efficiently retry only failed items after partial sync failures.
+The sync queue processor implements **partial batch recovery** and **crash-safe checkpointing** to efficiently retry only failed items and guarantee forward progress after app restarts.
 
-**Features**:
+**Partial batch recovery features**:
 - **Granular Results**: Backend returns per-entity success/failure status with `operationId` mapping
   - `succeeded` array lists successful entities with `operationId`, `entityType`, `id`, and optional `clientLocalId`
   - `conflicts` array includes `operationId` for precise failure tracking
@@ -657,11 +657,27 @@ The sync queue processor implements partial batch recovery to efficiently retry 
   - Logs error if invariant violated (doesn't break sync)
   - Helps catch bugs early in development
 
+**Checkpointing features**:
+- **Lightweight in-flight markers**: Before sending a batch, the processor saves a `SyncCheckpoint` that records:
+  - `requestId` for observability
+  - `inFlightOperationIds` for that batch
+  - `createdAt`, `attemptCount`, `lastAttemptAt`, and `ttlMs` for backoff + staleness
+- **Crash-safe recovery**:
+  - On worker start, if a checkpoint exists, the worker **re-drives that exact batch first**
+  - If the checkpoint items were compacted away, the checkpoint is cleared and normal processing resumes
+- **Per-checkpoint backoff**:
+  - `attemptCount` + `lastAttemptAt` drive exponential backoff for the checkpoint itself
+  - Prevents hot loops if the same batch keeps failing
+- **TTL-based staleness**:
+  - When `now - createdAt > ttlMs`, the checkpoint is cleared and normal queue processing resumes
+  - Safe because writes are idempotent via `operationId`
+
 **Benefits**:
 - Reduces unnecessary retries (only failed items retried, not entire batch)
 - Prevents duplicate processing (idempotency keys ensure exactly-once semantics)
 - Improves sync efficiency and reduces server load
 - Prevents data loss from incomplete responses
+- Guarantees forward progress after crashes by re-driving in-flight batches instead of deadlocking
 
 ### Conflict Resolution Validation & Test Coverage
 
@@ -725,8 +741,8 @@ The sync queue processor implements partial batch recovery to efficiently retry 
 - `conflictResolution` - Conflict resolution utilities (`mobile/src/common/utils/conflictResolution.ts`)
 - `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
 - `guestNoSyncGuardrails` - Guest mode sync guardrails (`mobile/src/common/guards/guestNoSyncGuardrails.ts`) - Runtime assertions preventing guest data from syncing remotely
-- `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueueStorage.ts`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`)
-- `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors). **Partial Batch Recovery**: Retries only failed items after partial failures by matching `operationId`s from backend response. Safety-first logic: never deletes queue items without explicit confirmation in `succeeded` array. Handles confirmed responses even on error status codes. Backward compatible with old servers (missing `succeeded` array)
+- `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueue/storage`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`) and crash-safe checkpoints (`SyncCheckpoint`)
+- `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueue/processor`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects per-item and per-checkpoint backoff delays, and handles error classification (network/auth/validation/server errors). **Partial Batch Recovery**: Retries only failed items after partial failures by matching `operationId`s from backend response. **Checkpointing**: Uses lightweight `SyncCheckpoint` records to re-drive in-flight batches after crashes without deadlocking. Safety-first logic: never deletes queue items without explicit confirmation in `succeeded` array. Handles confirmed responses even on error status codes. Backward compatible with old servers (missing `succeeded` array)
 - `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
 - `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Used by ShoppingItemCard to display sync status indicators
 - `useCachedEntities` - Cache entities hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that provides reactive cache updates for signed-in users. Automatically triggers UI re-renders when cache changes. Used by ShoppingListsScreen for lists and items
