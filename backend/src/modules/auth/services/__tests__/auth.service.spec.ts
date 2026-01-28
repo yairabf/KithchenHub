@@ -378,4 +378,329 @@ describe('AuthService - Idempotency', () => {
       expect(mockPrismaService.recipe.upsert).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('syncData - partial batch recovery', () => {
+    it('should return succeeded array with operationIds for successful entities', async () => {
+      const syncData: SyncDataDto = {
+        recipes: [
+          {
+            id: 'recipe-1',
+            operationId: 'op-recipe-1',
+            title: 'Recipe 1',
+            ingredients: [{ name: 'Flour' }],
+            instructions: [{ step: 1, instruction: 'Mix' }],
+          },
+          {
+            id: 'recipe-2',
+            operationId: 'op-recipe-2',
+            title: 'Recipe 2',
+            ingredients: [{ name: 'Sugar' }],
+            instructions: [{ step: 1, instruction: 'Stir' }],
+          },
+        ],
+      };
+
+      const mockIdempotencyKey1 = { id: 'key-1' };
+      const mockIdempotencyKey2 = { id: 'key-2' };
+
+      mockPrismaService.syncIdempotencyKey.create
+        .mockResolvedValueOnce(mockIdempotencyKey1)
+        .mockResolvedValueOnce(mockIdempotencyKey2);
+      mockPrismaService.syncIdempotencyKey.findFirst
+        .mockResolvedValueOnce(mockIdempotencyKey1)
+        .mockResolvedValueOnce(mockIdempotencyKey2);
+      mockPrismaService.recipe.upsert.mockResolvedValue({});
+      mockPrismaService.syncIdempotencyKey.update.mockResolvedValue(undefined);
+
+      const result = await service.syncData(userId, syncData);
+
+      expect(result.status).toBe('synced');
+      expect(result.succeeded).toBeDefined();
+      expect(result.succeeded?.length).toBe(2);
+      expect(result.succeeded?.some(s => s.operationId === 'op-recipe-1')).toBe(true);
+      expect(result.succeeded?.some(s => s.operationId === 'op-recipe-2')).toBe(true);
+      expect(result.succeeded?.every(s => s.entityType === 'recipe')).toBe(true);
+    });
+
+    it('should return both succeeded and conflicts for partial failures', async () => {
+      const syncData: SyncDataDto = {
+        recipes: [
+          {
+            id: 'recipe-1',
+            operationId: 'op-recipe-1',
+            title: 'Recipe 1',
+            ingredients: [{ name: 'Flour' }],
+            instructions: [{ step: 1, instruction: 'Mix' }],
+          },
+          {
+            id: 'recipe-2',
+            operationId: 'op-recipe-2',
+            title: 'Recipe 2',
+            ingredients: [{ name: 'Sugar' }],
+            instructions: [{ step: 1, instruction: 'Stir' }],
+          },
+        ],
+      };
+
+      const mockIdempotencyKey1 = { id: 'key-1' };
+      const mockIdempotencyKey2 = { id: 'key-2' };
+
+      // First recipe succeeds
+      mockPrismaService.syncIdempotencyKey.create
+        .mockResolvedValueOnce(mockIdempotencyKey1)
+        .mockResolvedValueOnce(mockIdempotencyKey2);
+      mockPrismaService.syncIdempotencyKey.findFirst
+        .mockResolvedValueOnce(mockIdempotencyKey1)
+        .mockResolvedValueOnce(mockIdempotencyKey2);
+      mockPrismaService.recipe.upsert
+        .mockResolvedValueOnce({}) // First recipe succeeds
+        .mockRejectedValueOnce(new Error('Validation failed')); // Second recipe fails
+      mockPrismaService.syncIdempotencyKey.update
+        .mockResolvedValueOnce(undefined) // First recipe completes
+        .mockResolvedValueOnce(undefined); // Second recipe key deleted after failure
+      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(undefined);
+
+      const result = await service.syncData(userId, syncData);
+
+      expect(result.status).toBe('partial');
+      expect(result.succeeded).toBeDefined();
+      expect(result.succeeded?.length).toBe(1);
+      expect(result.succeeded?.some(s => s.operationId === 'op-recipe-1')).toBe(true);
+      expect(result.conflicts.length).toBe(1);
+      expect(result.conflicts[0].operationId).toBe('op-recipe-2');
+      expect(result.conflicts[0].type).toBe('recipe');
+    });
+
+    it('should include operationId in conflicts', async () => {
+      const syncData: SyncDataDto = {
+        recipes: [
+          {
+            id: 'recipe-1',
+            operationId: 'op-recipe-1',
+            title: 'Recipe 1',
+            ingredients: [{ name: 'Flour' }],
+            instructions: [{ step: 1, instruction: 'Mix' }],
+          },
+        ],
+      };
+
+      const mockIdempotencyKey = { id: 'key-1' };
+      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(mockIdempotencyKey);
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(mockIdempotencyKey);
+      mockPrismaService.recipe.upsert.mockRejectedValueOnce(new Error('Validation failed'));
+      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(undefined);
+      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(undefined);
+
+      const result = await service.syncData(userId, syncData);
+
+      expect(result.status).toBe('failed');
+      expect(result.conflicts.length).toBe(1);
+      expect(result.conflicts[0].operationId).toBe('op-recipe-1');
+      expect(result.conflicts[0].id).toBe('recipe-1');
+      expect(result.conflicts[0].type).toBe('recipe');
+    });
+
+    it('should calculate status correctly: synced vs partial vs failed', async () => {
+      // Test 'synced' status
+      const syncData1: SyncDataDto = {
+        recipes: [
+          {
+            id: 'recipe-1',
+            operationId: 'op-recipe-1',
+            title: 'Recipe 1',
+            ingredients: [{ name: 'Flour' }],
+            instructions: [{ step: 1, instruction: 'Mix' }],
+          },
+        ],
+      };
+
+      const mockKey1 = { id: 'key-1' };
+      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(mockKey1);
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(mockKey1);
+      mockPrismaService.recipe.upsert.mockResolvedValueOnce({});
+      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(undefined);
+
+      const result1 = await service.syncData(userId, syncData1);
+      expect(result1.status).toBe('synced');
+      expect(result1.conflicts.length).toBe(0);
+
+      // Test 'partial' status
+      const syncData2: SyncDataDto = {
+        recipes: [
+          {
+            id: 'recipe-1',
+            operationId: 'op-recipe-1',
+            title: 'Recipe 1',
+            ingredients: [{ name: 'Flour' }],
+            instructions: [{ step: 1, instruction: 'Mix' }],
+          },
+          {
+            id: 'recipe-2',
+            operationId: 'op-recipe-2',
+            title: 'Recipe 2',
+            ingredients: [{ name: 'Sugar' }],
+            instructions: [{ step: 1, instruction: 'Stir' }],
+          },
+        ],
+      };
+
+      const mockKey2 = { id: 'key-2' };
+      mockPrismaService.syncIdempotencyKey.create
+        .mockResolvedValueOnce(mockKey1)
+        .mockResolvedValueOnce(mockKey2);
+      mockPrismaService.syncIdempotencyKey.findFirst
+        .mockResolvedValueOnce(mockKey1)
+        .mockResolvedValueOnce(mockKey2);
+      mockPrismaService.recipe.upsert
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('Validation failed'));
+      mockPrismaService.syncIdempotencyKey.update
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
+      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(undefined);
+
+      const result2 = await service.syncData(userId, syncData2);
+      expect(result2.status).toBe('partial');
+      expect(result2.succeeded?.length).toBe(1);
+      expect(result2.conflicts.length).toBe(1);
+
+      // Test 'failed' status
+      const syncData3: SyncDataDto = {
+        recipes: [
+          {
+            id: 'recipe-1',
+            operationId: 'op-recipe-1',
+            title: 'Recipe 1',
+            ingredients: [{ name: 'Flour' }],
+            instructions: [{ step: 1, instruction: 'Mix' }],
+          },
+        ],
+      };
+
+      const mockKey3 = { id: 'key-3' };
+      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(mockKey3);
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(mockKey3);
+      mockPrismaService.recipe.upsert.mockRejectedValueOnce(new Error('Validation failed'));
+      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(undefined);
+      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(undefined);
+
+      const result3 = await service.syncData(userId, syncData3);
+      expect(result3.status).toBe('failed');
+      expect(result3.succeeded).toBeUndefined();
+      expect(result3.conflicts.length).toBe(1);
+    });
+
+    it('should track nested shopping items separately', async () => {
+      const syncData: SyncDataDto = {
+        lists: [
+          {
+            id: 'list-1',
+            operationId: 'op-list-1',
+            name: 'Grocery List',
+            items: [
+              {
+                id: 'item-1',
+                operationId: 'op-item-1',
+                name: 'Milk',
+              },
+              {
+                id: 'item-2',
+                operationId: 'op-item-2',
+                name: 'Bread',
+              },
+            ],
+          },
+        ],
+      };
+
+      const mockListKey = { id: 'key-list' };
+      const mockItemKey1 = { id: 'key-item-1' };
+      const mockItemKey2 = { id: 'key-item-2' };
+
+      mockPrismaService.syncIdempotencyKey.create
+        .mockResolvedValueOnce(mockListKey)
+        .mockResolvedValueOnce(mockItemKey1)
+        .mockResolvedValueOnce(mockItemKey2);
+      mockPrismaService.syncIdempotencyKey.findFirst
+        .mockResolvedValueOnce(mockListKey)
+        .mockResolvedValueOnce(mockItemKey1)
+        .mockResolvedValueOnce(mockItemKey2);
+      mockPrismaService.shoppingList.upsert.mockResolvedValue({});
+      mockPrismaService.shoppingItem.upsert.mockResolvedValue({});
+      mockPrismaService.syncIdempotencyKey.update.mockResolvedValue(undefined);
+
+      const result = await service.syncData(userId, syncData);
+
+      expect(result.status).toBe('synced');
+      expect(result.succeeded).toBeDefined();
+      // Should include list + 2 items = 3 succeeded
+      expect(result.succeeded?.length).toBe(3);
+      expect(result.succeeded?.some(s => s.operationId === 'op-list-1')).toBe(true);
+      expect(result.succeeded?.some(s => s.operationId === 'op-item-1')).toBe(true);
+      expect(result.succeeded?.some(s => s.operationId === 'op-item-2')).toBe(true);
+    });
+
+    it('should log error when invariant is violated (missing operationIds)', async () => {
+      const syncData: SyncDataDto = {
+        recipes: [
+          {
+            id: 'recipe-1',
+            operationId: 'op-recipe-1',
+            title: 'Recipe 1',
+            ingredients: [{ name: 'Flour' }],
+            instructions: [{ step: 1, instruction: 'Mix' }],
+          },
+          {
+            id: 'recipe-2',
+            operationId: 'op-recipe-2',
+            title: 'Recipe 2',
+            ingredients: [{ name: 'Sugar' }],
+            instructions: [{ step: 1, instruction: 'Stir' }],
+          },
+        ],
+      };
+
+      const mockKey1 = { id: 'key-1' };
+      const mockKey2 = { id: 'key-2' };
+
+      // Mock logger
+      const loggerErrorSpy = jest.spyOn(service['logger'], 'error');
+
+      // Mock syncRecipes to return incomplete results (simulating a bug)
+      // This simulates a scenario where syncRecipes doesn't track all operationIds
+      const originalSyncRecipes = service['syncRecipes'].bind(service);
+      service['syncRecipes'] = jest.fn().mockResolvedValue({
+        succeeded: [{ operationId: 'op-recipe-1', id: 'recipe-1', clientLocalId: 'recipe-1' }],
+        conflicts: [],
+        // Missing op-recipe-2 to violate invariant
+      });
+
+      const result = await service.syncData(userId, syncData);
+
+      // Verify error was logged with context
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        'Sync result invariant violated: missing operationIds',
+        expect.objectContaining({
+          userId,
+          requestId: syncData.requestId,
+          missingOperationIds: expect.arrayContaining([
+            expect.objectContaining({
+              operationId: 'op-recipe-2',
+              type: 'recipe',
+              id: 'recipe-2',
+            }),
+          ]),
+          expectedCount: 2,
+          actualCount: 1,
+        }),
+      );
+
+      // Verify sync still completes (doesn't throw)
+      expect(result).toBeDefined();
+      expect(result.status).toBe('synced');
+
+      // Restore original method
+      service['syncRecipes'] = originalSyncRecipes;
+    });
+  });
 });

@@ -183,40 +183,121 @@ export class AuthService {
 
     const user = await this.validateUserHasHousehold(userId);
 
-    const conflicts: SyncConflict[] = [];
+    const allSucceeded: Array<{
+      operationId: string;
+      entityType: 'list' | 'recipe' | 'chore';
+      id: string;
+      clientLocalId?: string;
+    }> = [];
+    const allConflicts: SyncConflict[] = [];
+
+    // Collect all incoming operationIds for invariant checking
+    // Also build mapping for better debugging context
+    const incomingOperationIds = new Set<string>();
+    const operationIdToEntity = new Map<string, { type: string; id: string }>();
 
     if (syncData.lists) {
-      const listConflicts = await this.syncShoppingLists(
+      for (const list of syncData.lists) {
+        incomingOperationIds.add(list.operationId);
+        operationIdToEntity.set(list.operationId, { type: 'list', id: list.id });
+        if (list.items) {
+          for (const item of list.items) {
+            incomingOperationIds.add(item.operationId);
+            operationIdToEntity.set(item.operationId, { type: 'shoppingItem', id: item.id });
+          }
+        }
+      }
+      const listResults = await this.syncShoppingLists(
         userId,
         user.householdId!,
         syncData.lists,
         syncData.requestId,
       );
-      conflicts.push(...listConflicts);
+      allSucceeded.push(
+        ...listResults.succeeded.map(s => ({
+          ...s,
+          entityType: 'list' as const,
+        })),
+      );
+      allConflicts.push(...listResults.conflicts);
     }
 
     if (syncData.recipes) {
-      const recipeConflicts = await this.syncRecipes(
+      for (const recipe of syncData.recipes) {
+        incomingOperationIds.add(recipe.operationId);
+        operationIdToEntity.set(recipe.operationId, { type: 'recipe', id: recipe.id });
+      }
+      const recipeResults = await this.syncRecipes(
         userId,
         user.householdId!,
         syncData.recipes,
         syncData.requestId,
       );
-      conflicts.push(...recipeConflicts);
+      allSucceeded.push(
+        ...recipeResults.succeeded.map(s => ({
+          ...s,
+          entityType: 'recipe' as const,
+        })),
+      );
+      allConflicts.push(...recipeResults.conflicts);
     }
 
     if (syncData.chores) {
-      const choreConflicts = await this.syncChores(
+      for (const chore of syncData.chores) {
+        incomingOperationIds.add(chore.operationId);
+        operationIdToEntity.set(chore.operationId, { type: 'chore', id: chore.id });
+      }
+      const choreResults = await this.syncChores(
         userId,
         user.householdId!,
         syncData.chores,
         syncData.requestId,
       );
-      conflicts.push(...choreConflicts);
+      allSucceeded.push(
+        ...choreResults.succeeded.map(s => ({
+          ...s,
+          entityType: 'chore' as const,
+        })),
+      );
+      allConflicts.push(...choreResults.conflicts);
     }
 
-    const status = conflicts.length > 0 ? 'partial' : 'synced';
-    return { status, conflicts };
+    // Enforce invariant: every operationId must appear exactly once
+    const seenOperationIds = new Set([
+      ...allSucceeded.map(s => s.operationId),
+      ...allConflicts.map(c => c.operationId),
+    ]);
+
+    if (seenOperationIds.size !== incomingOperationIds.size) {
+      const missing = Array.from(incomingOperationIds).filter(
+        id => !seenOperationIds.has(id),
+      );
+      const missingWithContext = missing.map(opId => ({
+        operationId: opId,
+        ...(operationIdToEntity.get(opId) || { type: 'unknown', id: 'unknown' }),
+      }));
+      this.logger.error('Sync result invariant violated: missing operationIds', {
+        userId,
+        requestId: syncData.requestId,
+        missingOperationIds: missingWithContext,
+        expectedCount: incomingOperationIds.size,
+        actualCount: seenOperationIds.size,
+      });
+      // Don't throw - log error but continue (better than breaking sync)
+    }
+
+    const status =
+      allConflicts.length > 0
+        ? allSucceeded.length > 0
+          ? 'partial'
+          : 'failed'
+        : 'synced';
+
+    return {
+      status,
+      conflicts: allConflicts,
+      succeeded: allSucceeded.length > 0 ? allSucceeded : undefined,
+    };
   }
 
   /**
@@ -345,6 +426,47 @@ export class AuthService {
   }
 
   /**
+   * Processes entities with success/failure tracking.
+   * Generic helper to reduce duplication across sync methods.
+   * 
+   * @param entities - Array of entities to process
+   * @param entityType - Type of entity for conflict reporting
+   * @param processEntityFn - Function to process a single entity
+   * @returns Object with succeeded and conflicts arrays
+   */
+  private async processEntitiesWithTracking<T extends { operationId: string; id: string }>(
+    entities: T[],
+    entityType: 'list' | 'recipe' | 'chore' | 'shoppingItem',
+    processEntityFn: (entity: T) => Promise<void>,
+  ): Promise<{
+    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    conflicts: SyncConflict[];
+  }> {
+    const succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }> = [];
+    const conflicts: SyncConflict[] = [];
+
+    for (const entity of entities) {
+      try {
+        await processEntityFn(entity);
+        succeeded.push({
+          operationId: entity.operationId,
+          id: entity.id,
+          clientLocalId: entity.id, // For creates, this is the original localId
+        });
+      } catch (error) {
+        conflicts.push({
+          type: entityType,
+          id: entity.id,
+          operationId: entity.operationId,
+          reason: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    return { succeeded, conflicts };
+  }
+
+  /**
    * Processes an entity with idempotency checking using insert-first pattern.
    * 
    * Atomic processing flow:
@@ -446,28 +568,45 @@ export class AuthService {
 
   /**
    * Synchronizes shopping lists and their items.
+   * Returns both succeeded and failed entities with operationId mapping.
+   * Tracks both lists and their nested items separately.
    */
   private async syncShoppingLists(
     userId: string,
     householdId: string,
     lists: SyncShoppingListDto[],
     requestId: string | undefined,
-  ): Promise<SyncConflict[]> {
+  ): Promise<{
+    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    conflicts: SyncConflict[];
+  }> {
+    const succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }> = [];
     const conflicts: SyncConflict[] = [];
 
     for (const list of lists) {
       try {
-        await this.syncShoppingList(userId, householdId, list, requestId);
+        const { itemResults } = await this.syncShoppingList(userId, householdId, list, requestId);
+        // Include clientLocalId for create operations (id was localId)
+        succeeded.push({
+          operationId: list.operationId,
+          id: list.id, // Server ID (may be same as clientLocalId if create)
+          clientLocalId: list.id, // For creates, this is the original localId
+        });
+
+        // Track nested items separately
+        succeeded.push(...itemResults.succeeded);
+        conflicts.push(...itemResults.conflicts);
       } catch (error) {
         conflicts.push({
           type: 'list',
           id: list.id,
+          operationId: list.operationId,
           reason: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
 
-    return conflicts;
+    return { succeeded, conflicts };
   }
 
   /**
@@ -478,13 +617,25 @@ export class AuthService {
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
    * 
    * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
+   * 
+   * Returns item results for aggregation at the syncShoppingLists level.
    */
   private async syncShoppingList(
     userId: string,
     householdId: string,
     list: SyncShoppingListDto,
     requestId: string | undefined,
-  ): Promise<void> {
+  ): Promise<{
+    itemResults: {
+      succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+      conflicts: SyncConflict[];
+    };
+  }> {
+    let itemResults: {
+      succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+      conflicts: SyncConflict[];
+    } = { succeeded: [], conflicts: [] };
+
     await this.processEntityWithIdempotency(
       userId,
       list.operationId,
@@ -507,54 +658,66 @@ export class AuthService {
         });
 
         if (list.items) {
-          await this.syncShoppingItems(userId, list.id, list.items, requestId);
+          itemResults = await this.syncShoppingItems(userId, list.id, list.items, requestId);
         }
       },
     );
+
+    return { itemResults };
   }
 
   /**
    * Synchronizes shopping items for a list.
    * Each item has its own operationId for idempotency.
+   * Returns both succeeded and failed items with operationId mapping.
    */
   private async syncShoppingItems(
     userId: string,
     listId: string,
     items: SyncShoppingListDto['items'],
     requestId: string | undefined,
-  ): Promise<void> {
-    if (!items) return;
-
-    for (const item of items) {
-      await this.processEntityWithIdempotency(
-        userId,
-        item.operationId,
-        SYNC_ENTITY_TYPES.SHOPPING_ITEM,
-        item.id,
-        requestId,
-        async () => {
-          await this.prisma.shoppingItem.upsert({
-            where: { id: item.id },
-            create: {
-              id: item.id,
-              listId,
-              name: item.name,
-              quantity: item.quantity || 1,
-              unit: item.unit,
-              isChecked: item.isChecked || false,
-              category: item.category,
-            },
-            update: {
-              name: item.name,
-              quantity: item.quantity,
-              unit: item.unit,
-              isChecked: item.isChecked,
-              category: item.category,
-            },
-          });
-        },
-      );
+  ): Promise<{
+    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    conflicts: SyncConflict[];
+  }> {
+    if (!items) {
+      return { succeeded: [], conflicts: [] };
     }
+
+    return this.processEntitiesWithTracking(
+      items,
+      'shoppingItem',
+      async (item) => {
+        await this.processEntityWithIdempotency(
+          userId,
+          item.operationId,
+          SYNC_ENTITY_TYPES.SHOPPING_ITEM,
+          item.id,
+          requestId,
+          async () => {
+            await this.prisma.shoppingItem.upsert({
+              where: { id: item.id },
+              create: {
+                id: item.id,
+                listId,
+                name: item.name,
+                quantity: item.quantity || 1,
+                unit: item.unit,
+                isChecked: item.isChecked || false,
+                category: item.category,
+              },
+              update: {
+                name: item.name,
+                quantity: item.quantity,
+                unit: item.unit,
+                isChecked: item.isChecked,
+                category: item.category,
+              },
+            });
+          },
+        );
+      },
+    );
   }
 
   /**
@@ -565,17 +728,21 @@ export class AuthService {
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
    * 
    * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
+   * Returns both succeeded and failed entities with operationId mapping.
    */
   private async syncRecipes(
     userId: string,
     householdId: string,
     recipes: SyncRecipeDto[],
     requestId: string | undefined,
-  ): Promise<SyncConflict[]> {
-    const conflicts: SyncConflict[] = [];
-
-    for (const recipe of recipes) {
-      try {
+  ): Promise<{
+    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    conflicts: SyncConflict[];
+  }> {
+    return this.processEntitiesWithTracking(
+      recipes,
+      'recipe',
+      async (recipe) => {
         await this.processEntityWithIdempotency(
           userId,
           recipe.operationId,
@@ -600,16 +767,8 @@ export class AuthService {
             });
           },
         );
-      } catch (error) {
-        conflicts.push({
-          type: SYNC_ENTITY_TYPES.RECIPE,
-          id: recipe.id,
-          reason: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
-
-    return conflicts;
+      },
+    );
   }
 
   /**
@@ -620,17 +779,21 @@ export class AuthService {
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
    * 
    * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
+   * Returns both succeeded and failed entities with operationId mapping.
    */
   private async syncChores(
     userId: string,
     householdId: string,
     chores: SyncChoreDto[],
     requestId: string | undefined,
-  ): Promise<SyncConflict[]> {
-    const conflicts: SyncConflict[] = [];
-
-    for (const chore of chores) {
-      try {
+  ): Promise<{
+    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    conflicts: SyncConflict[];
+  }> {
+    return this.processEntitiesWithTracking(
+      chores,
+      'chore',
+      async (chore) => {
         await this.processEntityWithIdempotency(
           userId,
           chore.operationId,
@@ -657,16 +820,8 @@ export class AuthService {
             });
           },
         );
-      } catch (error) {
-        conflicts.push({
-          type: SYNC_ENTITY_TYPES.CHORE,
-          id: chore.id,
-          reason: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
-
-    return conflicts;
+      },
+    );
   }
 
   /**
