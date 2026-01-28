@@ -24,9 +24,8 @@ jobs:
       environment: staging
       deploy_target: render
       image_tag: develop-latest
-      # Note: service_url is omitted to skip health checks
-      # If health checks are desired, uncomment and set the staging service URL:
-      # service_url: https://your-staging-service.onrender.com
+      # Health checks are optional. If STAGING_SERVICE_URL is unset, checks are skipped.
+      service_url: ${{ secrets.STAGING_SERVICE_URL }}
     secrets:
       # Render deploy hook for staging environment
       RENDER_DEPLOY_HOOK_URL_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_URL_STAGING }}

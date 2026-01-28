@@ -32,9 +32,8 @@ jobs:
       environment: production
       deploy_target: render
       image_tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag || 'main-latest' }}
-      # Note: service_url is omitted to skip health checks
-      # If health checks are desired, uncomment and set the production service URL:
-      # service_url: ${{ secrets.PRODUCTION_SERVICE_URL }}
+      # Health checks are optional. If PRODUCTION_SERVICE_URL is unset, checks are skipped.
+      service_url: ${{ secrets.PRODUCTION_SERVICE_URL }}
     secrets:
       # Render deploy hook for production environment
       RENDER_DEPLOY_HOOK_URL_PRODUCTION: ${{ secrets.RENDER_DEPLOY_HOOK_URL_PRODUCTION }}
