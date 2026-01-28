@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kitchen-hub-postgres
+    environment:
+      POSTGRES_USER: kitchen_hub
+      POSTGRES_PASSWORD: kitchen_hub_dev
+      POSTGRES_DB: kitchen_hub
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kitchen_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kitchen-hub-network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dependencies
+    container_name: kitchen-hub-api
+    command: npm run start:dev
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/dist
+      - /usr/src/app/.nest
+    ports:
+      - "3000:3000"
+      - "5555:5555"  # Prisma Studio port
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://kitchen_hub:kitchen_hub_dev@postgres:5432/kitchen_hub?schema=public
+      DIRECT_URL: postgresql://kitchen_hub:kitchen_hub_dev@postgres:5432/kitchen_hub?schema=public
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/version', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - kitchen-hub-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_dist:
+    driver: local
+
+networks:
+  kitchen-hub-network:
+    driver: bridge

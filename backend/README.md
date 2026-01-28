@@ -100,6 +100,192 @@ npm run start:dev         # start API with watch mode
 - Lint: `npm run lint`
 - Tests: `npm test`, `npm run test:e2e`, coverage via `npm run test:cov`
 
+## Local Development with Docker Compose
+
+Docker Compose provides an easy way to run the backend API and PostgreSQL database locally with minimal setup. This setup mirrors production as closely as reasonable while providing development-friendly features like hot reload.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
+- Docker Compose (included with Docker Desktop)
+
+### Quick Start
+
+1. **Copy environment file template**:
+   ```bash
+   cp .env.docker-compose.example .env
+   ```
+
+2. **Update `.env` with your values**:
+   - Set `JWT_SECRET` and `JWT_REFRESH_SECRET` (minimum 32 characters each)
+     - Generate with: `openssl rand -base64 32`
+   - Add your Supabase credentials (URL, anon key, service role key)
+   - Other variables are pre-configured for Docker Compose
+
+3. **Start database service**:
+   ```bash
+   docker-compose up -d postgres
+   ```
+
+4. **Wait for database to be ready** (check status):
+   ```bash
+   docker-compose ps
+   ```
+   Wait until postgres shows as "healthy" (usually takes 5-10 seconds).
+
+5. **Run initial database migrations**:
+   ```bash
+   docker-compose exec backend npm run prisma:migrate
+   ```
+   This creates and applies all migrations. For production deployments, use `prisma migrate deploy` instead.
+
+6. **Generate Prisma Client** (if needed):
+   ```bash
+   docker-compose exec backend npm run prisma:generate
+   ```
+
+7. **Start backend service**:
+   ```bash
+   docker-compose up backend
+   ```
+   Or run in background: `docker-compose up -d backend`
+
+The API will be available at `http://localhost:3000` with Swagger docs at `http://localhost:3000/api/docs/v1`.
+
+### Development Workflow
+
+**Start all services in background**:
+```bash
+docker-compose up -d
+```
+
+**View logs**:
+```bash
+# All services
+docker-compose logs -f
+
+# Backend only
+docker-compose logs -f backend
+
+# PostgreSQL only
+docker-compose logs -f postgres
+```
+
+**Database Migrations**:
+
+For local development (creates and applies migrations):
+```bash
+docker-compose exec backend npm run prisma:migrate
+```
+
+For production/shared environments (applies existing migrations only):
+```bash
+docker-compose exec backend npx prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma
+```
+
+**Open Prisma Studio** (database GUI):
+```bash
+docker-compose exec backend npm run prisma:studio
+```
+Prisma Studio will be available at `http://localhost:5555` (port is mapped in docker-compose.yml).
+
+**Stop services**:
+```bash
+docker-compose down
+```
+
+**Stop and remove volumes** (clean slate - deletes database data):
+```bash
+docker-compose down -v
+```
+
+### Command Reference
+
+| Task | Command |
+|------|---------|
+| Start database only | `docker-compose up -d postgres` |
+| Start all services | `docker-compose up -d` |
+| Start backend (foreground) | `docker-compose up backend` |
+| View all logs | `docker-compose logs -f` |
+| View backend logs | `docker-compose logs -f backend` |
+| Check service status | `docker-compose ps` |
+| Run dev migrations | `docker-compose exec backend npm run prisma:migrate` |
+| Deploy migrations (prod) | `docker-compose exec backend npx prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma` |
+| Generate Prisma Client | `docker-compose exec backend npm run prisma:generate` |
+| Open Prisma Studio | `docker-compose exec backend npm run prisma:studio` |
+| Stop services | `docker-compose down` |
+| Stop and remove volumes | `docker-compose down -v` |
+| Reset everything | `docker-compose down -v && docker-compose up -d` |
+
+### Accessing Services
+
+- **Backend API**: `http://localhost:3000`
+- **API Documentation**: `http://localhost:3000/api/docs/v1`
+- **Version Discovery**: `http://localhost:3000/api/version`
+- **Prisma Studio**: `http://localhost:5555` (when running)
+- **PostgreSQL**: `localhost:5432`
+  - User: `kitchen_hub`
+  - Password: `kitchen_hub_dev`
+  - Database: `kitchen_hub`
+
+### Troubleshooting
+
+**Port conflicts**:
+If ports 3000, 5432, or 5555 are already in use, modify the port mappings in `docker-compose.yml`:
+```yaml
+ports:
+  - "3001:3000"  # Backend on host port 3001
+  - "5556:5555" # Prisma Studio on host port 5556
+  - "5433:5432"  # PostgreSQL on host port 5433
+```
+
+**Database connection errors**:
+- Ensure PostgreSQL service is healthy: `docker-compose ps`
+- Check database logs: `docker-compose logs postgres`
+- Verify environment variables in `.env` match docker-compose.yml settings
+
+**Backend won't start**:
+- Check backend logs: `docker-compose logs backend`
+- Ensure migrations have been run
+- Verify all required environment variables are set in `.env`
+
+**Reset everything**:
+```bash
+# Stop and remove containers, networks, and volumes
+docker-compose down -v
+
+# Remove any orphaned containers
+docker-compose down --remove-orphans
+
+# Start fresh
+docker-compose up -d
+```
+
+### Data Persistence
+
+Database data is stored in a Docker volume (`postgres_data`) and persists across container restarts. To start with a clean database:
+
+```bash
+docker-compose down -v  # Removes volumes
+docker-compose up -d    # Creates fresh database
+```
+
+### Production Parity
+
+This Docker Compose setup mirrors production in:
+- PostgreSQL version (16-alpine)
+- Database schema and migrations
+- Environment variable structure
+- Port mappings (3000 for API, 5432 for DB)
+- Health checks
+
+Development-specific differences:
+- Hot reload enabled via volume mounts (code changes auto-restart backend)
+- Simplified authentication (dev JWT secrets)
+- Local database instead of managed service
+- No SSL/TLS for database connections (local only)
+- Prisma Studio port exposed for database inspection
+
 ## Database (Prisma)
 - Schema: `src/infrastructure/database/prisma/schema.prisma`
 - Generate client: `npm run prisma:generate`
