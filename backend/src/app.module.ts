@@ -9,9 +9,12 @@ import { RecipesModule } from './modules/recipes/recipes.module';
 import { ChoresModule } from './modules/chores/chores.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ImportModule } from './modules/import/import.module';
+import { HealthModule } from './modules/health/health.module';
 import { TransformInterceptor } from './common/interceptors';
 import { HttpExceptionFilter } from './common/filters';
 import { JwtAuthGuard } from './common/guards';
+import { DeprecationInterceptor } from './common/versioning';
+import { VersionGuard } from './common/versioning';
 
 @Module({
   imports: [
@@ -23,6 +26,7 @@ import { JwtAuthGuard } from './common/guards';
     ChoresModule,
     DashboardModule,
     ImportModule,
+    HealthModule,
     SupabaseModule,
   ],
   controllers: [],
@@ -32,8 +36,16 @@ import { JwtAuthGuard } from './common/guards';
       useClass: JwtAuthGuard,
     },
     {
+      provide: APP_GUARD,
+      useClass: VersionGuard,
+    },
+    {
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DeprecationInterceptor,
     },
     {
       provide: APP_FILTER,

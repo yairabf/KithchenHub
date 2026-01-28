@@ -8,7 +8,12 @@ import { DashboardService } from '../services/dashboard.service';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 
-@Controller('dashboard')
+/**
+ * Dashboard controller providing household summary and statistics.
+ * API Version: 1
+ * All endpoints require authentication and household membership.
+ */
+@Controller({ path: 'dashboard', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}

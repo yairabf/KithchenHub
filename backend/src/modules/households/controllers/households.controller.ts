@@ -15,9 +15,10 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 
 /**
  * Households controller managing household operations and member management.
+ * API Version: 1
  * All endpoints require authentication and household membership.
  */
-@Controller('household')
+@Controller({ path: 'household', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class HouseholdsController {
   constructor(private householdsService: HouseholdsService) {}

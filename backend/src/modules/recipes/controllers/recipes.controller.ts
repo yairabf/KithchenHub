@@ -14,7 +14,12 @@ import { CreateRecipeDto, UpdateRecipeDto, CookRecipeDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 
-@Controller('recipes')
+/**
+ * Recipes controller handling recipe CRUD operations.
+ * API Version: 1
+ * All endpoints require authentication and household membership.
+ */
+@Controller({ path: 'recipes', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class RecipesController {
   constructor(private recipesService: RecipesService) {}
