@@ -690,20 +690,303 @@ Before deploying to production:
 
 Staging deployments are automated via GitHub Actions. See [Automated Staging Deployment](#automated-staging-deployment) section above.
 
-**Manual Setup:**
+**Complete Render Setup Guide:**
 
-1. Create new Web Service in Render Dashboard
-2. Connect GitHub repository
-3. Configure service to use GHCR image:
-   - **Docker Image**: `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:develop-latest` (for staging)
-   - **Registry**: GitHub Container Registry
-   - **Authentication**: Use GitHub Personal Access Token with `read:packages` scope
-4. Add environment variables in Render dashboard (see [Environment Variables](#environment-variables-for-production))
-5. Set up deploy hook (for automated deployments):
-   - Go to Settings → Deploy Hook
-   - Copy deploy hook URL
-   - Add as `RENDER_DEPLOY_HOOK_URL_STAGING` secret in GitHub
-6. Deploy manually or let automated workflow handle it
+This section provides step-by-step instructions for setting up Render account, connecting GitHub repository, and configuring Docker-based services for staging and production environments.
+
+#### Step 1: Create Render Account
+
+1. **Sign Up/Login**:
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Sign up for a new account or log in to existing account
+   - Verify email if required
+
+2. **Account Verification**:
+   - Complete account setup
+   - Choose appropriate plan (Free tier available for testing)
+   - **Note**: Free tier has limitations (sleeps after inactivity, limited resources)
+
+#### Step 2: Connect GitHub Repository
+
+1. **Connect GitHub Account**:
+   - Navigate to Render Dashboard → Account Settings → Connected Accounts
+   - Click "Connect GitHub" or "Connect Account"
+   - Authorize Render to access GitHub repositories
+   - Select appropriate permissions:
+     - ✅ Read repository contents
+     - ✅ Read package registry (for GHCR access)
+
+2. **Verify Connection**:
+   - Confirm repository appears in Render dashboard
+   - Verify repository access permissions
+
+#### Step 3: Create GitHub Personal Access Token for GHCR
+
+1. **Generate Token**:
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token (classic)"
+   - Name: "Render GHCR Access"
+   - Select scopes:
+     - ✅ `read:packages` (required to pull images from GHCR)
+   - Click "Generate token"
+   - **Copy token immediately** (won't be visible again)
+
+2. **Store Token Securely**:
+   - Keep token safe for use in Render service configuration
+   - Token will be used as GHCR password in Render
+
+#### Step 4: Create Staging Service
+
+1. **Service Creation**:
+   - In Render Dashboard, click "+ New" → "Web Service"
+   - Under "Source Code", select "Existing Image"
+   - Image URL: `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:develop-latest`
+     - Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username or organization name
+     - Example: `ghcr.io/myusername/kitchen-hub-api:develop-latest`
+
+2. **Configure Image Pull**:
+   - Registry: Select "GitHub Container Registry"
+   - Username: Enter your GitHub username
+   - Password: Enter the GitHub Personal Access Token created in Step 3
+   - Click "Add credential" or "Save credential"
+
+3. **Service Settings**:
+   - **Name**: `kitchen-hub-api-staging` (or your preferred name)
+   - **Region**: Choose appropriate region (e.g., US East)
+   - **Environment**: `Docker`
+   - **Instance Type**: Choose based on needs (Free tier available for testing)
+   - **Auto-Deploy**: **Disable** (deployments triggered via GitHub Actions)
+
+4. **Health Check Configuration**:
+   - **Health Check Path**: `/api/version`
+   - **Health Check Interval**: Default (30 seconds)
+   - **Health Check Timeout**: Default (10 seconds)
+   - **Health Check Grace Period**: Default (40 seconds)
+
+5. **Environment Variables**:
+   Add the following staging-specific environment variables in Render dashboard:
+   
+   **Required Variables:**
+   - `NODE_ENV=production`
+   - `PORT` is provided by Render automatically. Set the **Render service Port** to `3000` (the app listens on 3000 in the Docker image) and do **not** manually override `PORT` as an environment variable.
+   - `DATABASE_URL` - Staging database connection string (pooled)
+   - `DIRECT_URL` - Staging direct database connection string (for migrations)
+   - `JWT_SECRET` - Staging JWT secret (minimum 32 characters)
+   - `JWT_REFRESH_SECRET` - Staging refresh token secret (minimum 32 characters)
+   - `SUPABASE_URL` - Supabase project URL (e.g., `https://xxx.supabase.co`)
+   - `SUPABASE_ANON_KEY` - Supabase anonymous key
+   
+   **Optional Variables:**
+   - `JWT_EXPIRES_IN=15m` (default: 15 minutes)
+   - `JWT_REFRESH_EXPIRES_IN=7d` (default: 7 days)
+   - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (if needed)
+   - `GOOGLE_CLIENT_ID` - Google OAuth client ID (if using Google sign-in)
+   - `GOOGLE_CLIENT_SECRET` - Google OAuth secret (if using Google sign-in)
+
+6. **Deploy Hook Configuration**:
+   - After creating the service, navigate to Settings → Deploy Hook
+   - Copy the deploy hook URL (format: `https://api.render.com/deploy/srv-xxx?key=yyy`)
+   - **Save this URL** - you'll add it to GitHub secrets in Step 6
+
+7. **Create Service**:
+   - Review all settings
+   - Click "Create Web Service"
+   - Wait for initial deployment to complete
+   - Verify service is running and health check passes
+
+#### Step 5: Create Production Service
+
+1. **Service Creation**:
+   - In Render Dashboard, click "+ New" → "Web Service"
+   - Under "Source Code", select "Existing Image"
+   - Image URL: `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest`
+     - Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username or organization name
+     - Example: `ghcr.io/myusername/kitchen-hub-api:main-latest`
+
+2. **Configure Image Pull**:
+   - Registry: Select "GitHub Container Registry"
+   - Username: Enter your GitHub username
+   - Password: Enter the GitHub Personal Access Token (can reuse from staging)
+   - Click "Add credential" or "Save credential"
+
+3. **Service Settings**:
+   - **Name**: `kitchen-hub-api-production` (or your preferred name)
+   - **Region**: Choose appropriate region (should match staging or production requirements)
+   - **Environment**: `Docker`
+   - **Instance Type**: Choose production-appropriate instance (**not Free tier**)
+   - **Auto-Deploy**: **Disable** (deployments triggered via GitHub Actions)
+
+4. **Health Check Configuration**:
+   - **Health Check Path**: `/api/version`
+   - **Health Check Interval**: Default (30 seconds)
+   - **Health Check Timeout**: Default (10 seconds)
+   - **Health Check Grace Period**: Default (40 seconds)
+
+5. **Environment Variables**:
+   Add the following production-specific environment variables in Render dashboard:
+   
+   **Required Variables:**
+   - `NODE_ENV=production`
+   - `PORT` is provided by Render automatically. Set the **Render service Port** to `3000` (the app listens on 3000 in the Docker image) and do **not** manually override `PORT` as an environment variable.
+   - `DATABASE_URL` - Production database connection string (pooled)
+   - `DIRECT_URL` - Production direct database connection string (for migrations)
+   - `JWT_SECRET` - Production JWT secret (**different from staging**, minimum 32 characters)
+   - `JWT_REFRESH_SECRET` - Production refresh token secret (**different from staging**, minimum 32 characters)
+   - `SUPABASE_URL` - Supabase project URL (e.g., `https://xxx.supabase.co`)
+   - `SUPABASE_ANON_KEY` - Supabase anonymous key
+   
+   **Optional Variables:**
+   - `JWT_EXPIRES_IN=15m` (default: 15 minutes)
+   - `JWT_REFRESH_EXPIRES_IN=7d` (default: 7 days)
+   - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (if needed)
+   - `GOOGLE_CLIENT_ID` - Google OAuth client ID (if using Google sign-in)
+   - `GOOGLE_CLIENT_SECRET` - Google OAuth secret (if using Google sign-in)
+
+6. **Deploy Hook Configuration**:
+   - After creating the service, navigate to Settings → Deploy Hook
+   - Copy the deploy hook URL (format: `https://api.render.com/deploy/srv-xxx?key=yyy`)
+   - **Save this URL** - you'll add it to GitHub secrets in Step 6
+
+7. **Create Service**:
+   - Review all settings
+   - Click "Create Web Service"
+   - Wait for initial deployment to complete
+   - Verify service is running and health check passes
+
+#### Step 6: Configure GitHub Secrets
+
+1. **Add Staging Deploy Hook Secret**:
+   - Go to GitHub Repository → Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `RENDER_DEPLOY_HOOK_URL_STAGING`
+   - Value: Deploy hook URL from staging service (Step 4.6)
+   - Click "Add secret"
+
+2. **Add Production Deploy Hook Secret**:
+   - Click "New repository secret"
+   - Name: `RENDER_DEPLOY_HOOK_URL_PRODUCTION`
+   - Value: Deploy hook URL from production service (Step 5.6)
+   - Click "Add secret"
+
+3. **Add Database Secrets (Optional, for automated migrations)**:
+   - `STAGING_DATABASE_URL` - Staging database connection URL (pooled)
+   - `STAGING_DIRECT_URL` - Staging direct database connection URL (preferred for migrations)
+   - `PROD_DATABASE_URL` - Production database connection URL (pooled)
+   - `PROD_DIRECT_URL` - Production direct database connection URL (preferred for migrations)
+
+4. **Add Service URL Secrets (Optional, for health checks)**:
+   - `STAGING_SERVICE_URL` - Staging service URL (e.g., `https://kitchen-hub-api-staging.onrender.com`)
+   - `PRODUCTION_SERVICE_URL` - Production service URL (e.g., `https://kitchen-hub-api-production.onrender.com`)
+
+#### Step 7: Verify Service Configuration
+
+1. **Verify Staging Service**:
+   - Check service is running in Render dashboard
+   - Test health endpoint: `https://YOUR_STAGING_URL.onrender.com/api/version`
+   - Should return JSON with version information
+   - Verify environment variables are set correctly
+   - Check logs for any startup errors
+
+2. **Verify Production Service**:
+   - Check service is running in Render dashboard
+   - Test health endpoint: `https://YOUR_PRODUCTION_URL.onrender.com/api/version`
+   - Should return JSON with version information
+   - Verify environment variables are set correctly
+   - Check logs for any startup errors
+
+3. **Test Deploy Hooks**:
+   - Manually trigger staging deploy hook via curl:
+     ```bash
+     curl -X POST RENDER_DEPLOY_HOOK_URL_STAGING
+     ```
+   - Verify deployment triggers in Render dashboard
+   - Repeat for production deploy hook
+
+#### Step 8: Test Automated Deployment
+
+1. **Test Staging Deployment**:
+   - Push a change to `develop` branch
+   - Verify `build.yml` workflow builds and pushes image to GHCR
+   - Verify `deploy-staging.yml` workflow triggers
+   - Check Render dashboard for new deployment
+   - Verify service health check passes
+
+2. **Test Production Deployment**:
+   - Merge code to `main` branch
+   - Verify `build.yml` workflow builds and pushes image to GHCR
+   - Verify `deploy-production.yml` workflow triggers
+   - Approve deployment in GitHub Actions (if approval required)
+   - Check Render dashboard for new deployment
+   - Verify service health check passes
+
+#### Render Setup Checklist
+
+**Staging Service:**
+- [ ] Render account created
+- [ ] GitHub repository connected to Render
+- [ ] GitHub PAT created with `read:packages` scope
+- [ ] Staging service created in Render
+- [ ] Docker image URL configured: `ghcr.io/USERNAME/kitchen-hub-api:develop-latest`
+- [ ] GHCR credentials configured (username + PAT)
+- [ ] Health check path set: `/api/version`
+- [ ] Environment variables configured
+- [ ] Deploy hook URL copied
+- [ ] Auto-deploy disabled
+- [ ] Service deployed successfully
+- [ ] Health endpoint accessible: `/api/version`
+- [ ] Deploy hook secret added to GitHub: `RENDER_DEPLOY_HOOK_URL_STAGING`
+
+**Production Service:**
+- [ ] Production service created in Render
+- [ ] Docker image URL configured: `ghcr.io/USERNAME/kitchen-hub-api:main-latest`
+- [ ] GHCR credentials configured (can reuse from staging)
+- [ ] Health check path set: `/api/version`
+- [ ] Environment variables configured (production values)
+- [ ] Deploy hook URL copied
+- [ ] Auto-deploy disabled
+- [ ] Service deployed successfully
+- [ ] Health endpoint accessible: `/api/version`
+- [ ] Deploy hook secret added to GitHub: `RENDER_DEPLOY_HOOK_URL_PRODUCTION`
+
+**GitHub Secrets:**
+- [ ] `RENDER_DEPLOY_HOOK_URL_STAGING` added
+- [ ] `RENDER_DEPLOY_HOOK_URL_PRODUCTION` added
+- [ ] `STAGING_DATABASE_URL` added (optional, for migrations)
+- [ ] `STAGING_DIRECT_URL` added (optional, for migrations)
+- [ ] `PROD_DATABASE_URL` added (optional, for migrations)
+- [ ] `PROD_DIRECT_URL` added (optional, for migrations)
+- [ ] `STAGING_SERVICE_URL` added (optional, for health checks)
+- [ ] `PRODUCTION_SERVICE_URL` added (optional, for health checks)
+
+#### Important Notes
+
+**Render Free Tier Limitations:**
+- Free tier services sleep after 15 minutes of inactivity
+- First request after sleep takes ~30 seconds (cold start)
+- Limited CPU and memory resources
+- **Recommendation**: Use Free tier for staging, paid tier for production
+
+**GHCR Authentication:**
+- Public images don't require authentication
+- Private images require GitHub PAT with `read:packages` scope
+- Store PAT securely and rotate periodically
+- Same PAT can be used for multiple services
+
+**Health Check Configuration:**
+- Path: `/api/version` (public endpoint, no auth required)
+- Render checks this endpoint to verify service health
+- Service marked unhealthy after multiple failures
+
+**Deploy Hook Security:**
+- Deploy hook URLs are sensitive - anyone with URL can trigger deployment
+- Store URLs as GitHub secrets, never commit to repository
+- Can regenerate deploy hooks if compromised
+
+**Environment Variables:**
+- Never commit secrets to repository
+- Use different secrets for staging and production
+- Set via Render dashboard UI
+- Ensure all required variables from `backend/src/config/env.validation.ts` are set
 
 ### Fly.io
 
@@ -744,6 +1027,19 @@ fly deploy
 - Ensure migrations run before application starts
 - Check `DIRECT_URL` is set correctly
 - Verify database user has migration permissions
+
+### Prisma engine mismatch (Alpine vs Debian)
+
+If you see an error like:
+- `Prisma Client could not locate the Query Engine for runtime "debian-openssl-3.0.x"`
+- `Prisma Client was generated for "linux-musl-openssl-3.0.x"`
+
+It means Prisma Client was generated in an Alpine (musl) build environment, but is running on a Debian (glibc) runtime image.
+
+**Fix:**
+- Update `src/infrastructure/database/prisma/schema.prisma` Prisma generator to include both binary targets (Debian + musl).
+- Rebuild and push the Docker image to GHCR.
+- Redeploy on Render so the new image is pulled.
 
 ### Health check failures
 - Verify `/api/version` endpoint is accessible
