@@ -1,0 +1,43 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-production.yml'
+      - '.github/workflows/_deploy.yml'
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy (default: main-latest)'
+        required: false
+        default: 'main-latest'
+        type: string
+
+concurrency:
+  group: deploy-production-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy_to_production:
+    name: Deploy to production environment
+    environment: production  # This enables approval protection
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: production
+      deploy_target: render
+      image_tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag || 'main-latest' }}
+      # Note: service_url is omitted to skip health checks
+      # If health checks are desired, uncomment and set the production service URL:
+      # service_url: ${{ secrets.PRODUCTION_SERVICE_URL }}
+    secrets:
+      # Render deploy hook for production environment
+      RENDER_DEPLOY_HOOK_URL_PRODUCTION: ${{ secrets.RENDER_DEPLOY_HOOK_URL_PRODUCTION }}
+      # Map production-specific secrets to generic names expected by _deploy.yml
+      DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.PROD_DIRECT_URL }}

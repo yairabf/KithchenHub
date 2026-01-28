@@ -165,7 +165,215 @@ If you need to manually trigger a staging deployment:
 
 ---
 
-## Production Deployment
+## Automated Production Deployment
+
+The production environment is automatically deployed when code is merged to the `main` branch via GitHub Actions, with manual approval protection via GitHub Environments.
+
+### How It Works
+
+1. **Build Workflow** (`.github/workflows/build.yml`):
+   - Triggers on pushes to `main` branch
+   - Builds Docker image and pushes to GHCR with tag `main-latest`
+   - Creates images tagged with `main-SHA` and `main-latest`
+
+2. **Production Deployment Workflow** (`.github/workflows/deploy-production.yml`):
+   - Triggers on pushes to `main` branch (runs independently, assumes image exists from `build.yml`)
+   - Calls reusable `_deploy.yml` workflow with:
+     - `environment: production`
+     - `deploy_target: render`
+     - `image_tag: main-latest`
+   - **Requires manual approval** before deployment proceeds (via GitHub Environment protection)
+   - Automatically runs database migrations after approval
+   - Triggers Render deployment via deploy hook
+   - Optionally performs health checks
+
+### Prerequisites
+
+Before automated production deployment can work, you need to:
+
+1. **Configure GitHub Environment** (one-time setup):
+   - See [GitHub Environment Setup](#github-environment-setup) section below
+
+2. **Configure GitHub Secrets**:
+   - See [Required GitHub Secrets](#required-github-secrets-for-production) section below
+
+### GitHub Environment Setup
+
+The production deployment workflow uses GitHub Environments to require manual approval before deployment. Follow these steps to configure it:
+
+#### Step 1: Create Production Environment
+
+1. Go to your repository on GitHub
+2. Navigate to **Settings** → **Environments**
+3. Click **"New environment"**
+4. Name it: `production`
+5. Click **"Configure environment"**
+
+#### Step 2: Add Required Reviewers
+
+1. Scroll to **"Deployment protection rules"**
+2. Enable **"Required reviewers"**
+3. Add 1-6 reviewers (users or teams who can approve deployments)
+4. Optionally enable **"Prevent self-review"** to require approval from someone other than the person who triggered the deployment
+5. Click **"Save protection rules"**
+
+#### Step 3: Configure Deployment Branches
+
+1. Scroll to **"Deployment branches"**
+2. Select **"Selected branches"**
+3. Add branch: `main`
+4. This ensures only the `main` branch can deploy to production
+5. Click **"Save"**
+
+#### Step 4: Environment Secrets (Optional)
+
+You can optionally store production secrets at the environment level instead of repository level:
+
+1. In the production environment settings, scroll to **"Environment secrets"**
+2. Click **"Add secret"**
+3. Add secrets like `RENDER_DEPLOY_HOOK_URL_PRODUCTION`, `PROD_DATABASE_URL`, etc.
+4. These secrets are scoped to the production environment only
+
+### Required GitHub Secrets for Production
+
+#### Required Secrets
+
+1. **`RENDER_DEPLOY_HOOK_URL_PRODUCTION`**:
+   - Render deploy hook URL for production service
+   - Get from Render Dashboard → Production Service → Settings → Deploy Hook
+   - Copy the deploy hook URL
+   - Add to GitHub: Repository Settings → Secrets and variables → Actions → New repository secret
+   - Or add at Environment level: Repository Settings → Environments → production → Secrets
+
+2. **`PROD_DATABASE_URL`** (for migrations):
+   - Production database connection URL (pooled connection)
+   - Used for running migrations before deployment
+   - Add to GitHub secrets
+
+3. **`PROD_DIRECT_URL`** (for migrations, preferred):
+   - Direct production database connection URL
+   - Preferred over `PROD_DATABASE_URL` for migrations
+   - Add to GitHub secrets
+
+#### Optional Secrets
+
+4. **`PRODUCTION_SERVICE_URL`** (optional, for health checks):
+   - Base URL of production service
+   - Used for post-deployment health checks
+   - Example: `https://api.production.example.com`
+   - **Recommended for production**: Health checks verify deployment success before marking as complete
+   - If not set, health checks are skipped (workflow will still succeed)
+   - To enable: Add this secret, then uncomment `service_url` line in `deploy-production.yml`
+
+### Deployment Flow
+
+```mermaid
+graph LR
+    A[Push to main] --> B[build.yml triggers]
+    B --> C[Build Docker image]
+    C --> D[Push to GHCR]
+    D --> E[deploy-production.yml triggers]
+    E --> F[Production Environment]
+    F --> G{Approval Required?}
+    G -->|Yes| H[Wait for Manual Approval]
+    H --> I[Reviewer Approves]
+    I --> J[Call _deploy.yml]
+    J --> K[Run Migrations]
+    K --> L[Deploy to Production]
+    L --> M[Health Check]
+    M --> N[Production Live]
+```
+
+### What Happens During Deployment
+
+1. **Workflow Trigger**:
+   - When code is pushed to `main`, `deploy-production.yml` triggers
+   - Workflow pauses and waits for manual approval
+
+2. **Approval Process**:
+   - **Important**: Approval happens before any deployment steps begin (migrations, deployment, health checks)
+   - Required reviewers receive email notifications
+   - Reviewer goes to GitHub Actions → Workflow run → "Review deployments"
+   - Reviewer can approve or reject the deployment
+   - If approved, workflow continues with migrations and deployment
+   - If rejected, workflow stops immediately and no deployment occurs
+
+3. **Migrations Job** (after approval):
+   - Pulls Docker image from GHCR (`main-latest`)
+   - Runs Prisma migrations using `PROD_DIRECT_URL` or `PROD_DATABASE_URL`
+   - Ensures database schema is up-to-date
+
+4. **Deploy Job**:
+   - Validates deployment configuration
+   - Triggers Render deployment via deploy hook
+   - Render pulls the latest `main-latest` image from GHCR
+   - Render starts the new container with updated code
+
+5. **Health Check Job** (if `PRODUCTION_SERVICE_URL` is configured):
+   - Waits for service to become healthy
+   - Checks `/api/version` endpoint
+   - Verifies deployment success
+   - **Note**: Health checks are currently disabled by default. To enable, uncomment `service_url` in `deploy-production.yml` and configure `PRODUCTION_SERVICE_URL` secret.
+
+### Manual Production Deployment
+
+You can also manually trigger a production deployment:
+
+1. **Via GitHub Actions**:
+   - Go to Actions → Deploy to Production
+   - Click "Run workflow"
+   - Select `main` branch
+   - Optionally specify custom `image_tag` (e.g., `main-abc123def456` for specific commit)
+   - Click "Run workflow"
+   - Wait for approval prompt
+   - Approve deployment when ready
+
+2. **Use Cases for Manual Dispatch**:
+   - Deploy specific commit SHA instead of `main-latest`
+   - Re-deploy previous version (rollback)
+   - Deploy to production outside normal merge flow
+   - Emergency deployments
+
+### Monitoring Production Deployments
+
+- **GitHub Actions**: Check `.github/workflows/deploy-production.yml` runs in Actions tab
+- **Approval Status**: View pending approvals in the workflow run
+- **Render Dashboard**: Monitor deployment status in Render dashboard
+- **Logs**: View deployment logs in Render dashboard or GitHub Actions logs
+
+### Troubleshooting Production Deployments
+
+**Deployment doesn't trigger:**
+- Verify you pushed to `main` branch
+- Check path filters: workflow only triggers on `backend/**` changes
+- Verify workflow file exists: `.github/workflows/deploy-production.yml`
+
+**Approval prompt doesn't appear:**
+- Verify GitHub Environment "production" is configured
+- Check that required reviewers are set up
+- Verify job references `environment: production` in workflow file
+- Check that you have permission to view the environment
+
+**Render deployment fails:**
+- Verify `RENDER_DEPLOY_HOOK_URL_PRODUCTION` secret is set correctly
+- Check Render dashboard for deployment errors
+- Verify Render service is configured to use GHCR image: `ghcr.io/YOUR_USERNAME/kitchen-hub-api:main-latest`
+
+**Migrations fail:**
+- Verify `PROD_DIRECT_URL` or `PROD_DATABASE_URL` secrets are set
+- Check database connection string is correct
+- Verify database is accessible from GitHub Actions runners
+- Ensure database user has migration permissions
+
+**Health check fails:**
+- Verify `PRODUCTION_SERVICE_URL` secret is set correctly (if health checks are enabled)
+- Check application is running and accessible
+- Review application logs in Render dashboard
+- Verify `/api/version` endpoint is responding
+
+---
+
+## Production Deployment (Manual)
 
 ### Step 1: Prepare Production Environment
 

@@ -1,0 +1,411 @@
+# 005 - Production Deploy Workflow (main → prod with approval)
+
+**Epic:** Backend Deployment Infrastructure  
+**Created:** 2026-01-28  
+**Status:** Planning
+
+## Overview
+
+Create a production deployment workflow (`.github/workflows/deploy-production.yml`) that automatically deploys to production when code is merged to the `main` branch, with manual approval protection via GitHub Environments. This workflow will call the reusable `_deploy.yml` workflow with `environment=production` and require manual approval before deployment proceeds.
+
+## Current Status Analysis
+
+### Existing Infrastructure ✅
+
+1. **Reusable Deployment Workflow**:
+   - `_deploy.yml` exists and fully supports production environment
+   - Accepts `environment=production` input
+   - Supports multiple deployment targets (render, aws-ecs, gcp-cloudrun)
+   - Handles database migrations, deployment, and health checks
+   - Production secrets already defined: `RENDER_DEPLOY_HOOK_URL_PRODUCTION`, `PROD_DATABASE_URL`, `PROD_DIRECT_URL`
+
+2. **Build Workflow**:
+   - `build.yml` builds and pushes Docker images to GHCR for `main` branch
+   - Creates images tagged with `main-SHA` and `main-latest` formats
+   - Images available at `ghcr.io/${{ github.repository_owner }}/kitchen-hub-api:main-latest`
+
+3. **Staging Deployment Pattern**:
+   - `deploy-staging.yml` provides reference implementation
+   - Triggers on `develop` branch pushes
+   - Calls `_deploy.yml` with `environment=staging`
+   - No approval required (appropriate for staging)
+
+4. **Documentation**:
+   - `backend/DEPLOYMENT.md` documents deployment process
+   - Production secrets documented
+   - Render deploy hooks documented
+
+### What's Missing ❌
+
+1. **Production Deployment Workflow**: No `deploy-production.yml` workflow exists
+2. **GitHub Environment Configuration**: No "production" environment configured with approval protection
+3. **Manual Approval Mechanism**: No manual approval workflow for production deployments
+4. **Manual Dispatch Support**: No ability to manually trigger production deployments
+5. **Production Deployment Documentation**: No documentation for automated production deployment
+
+## Architecture
+
+### Workflow Structure
+
+The production deployment infrastructure will consist of:
+
+1. **`deploy-production.yml`** (Caller Workflow):
+   - Triggers on pushes to `main` branch
+   - Supports manual dispatch (`workflow_dispatch`)
+   - Calls `_deploy.yml` reusable workflow
+   - References GitHub Environment "production" for approval protection
+
+2. **GitHub Environment "production"**:
+   - Configured in repository settings
+   - Requires manual approval (required reviewers)
+   - Restricts deployment branches to `main` only
+   - Protects production secrets
+
+### Deployment Flow
+
+```mermaid
+graph LR
+    A[Push to main] --> B[build.yml triggers]
+    B --> C[Build Docker image]
+    C --> D[Push to GHCR]
+    D --> E[deploy-production.yml triggers]
+    E --> F[Call _deploy.yml]
+    F --> G[Production Environment]
+    G --> H{Approval Required?}
+    H -->|Yes| I[Wait for Manual Approval]
+    I --> J[Approver Reviews]
+    J --> K{Approved?}
+    K -->|Yes| L[Run Migrations]
+    K -->|No| M[Deployment Rejected]
+    L --> N[Deploy to Production]
+    N --> O[Health Check]
+    O --> P[Production Live]
+```
+
+### Production Workflow Design (`deploy-production.yml`)
+
+**Triggers:**
+- `push` to `main` branch
+- `workflow_dispatch` (manual trigger)
+- Path filters: `backend/**` and `.github/workflows/deploy-production.yml`
+
+**Jobs:**
+- `deploy_to_production`: Calls `_deploy.yml` reusable workflow with `environment: production`
+- Job references GitHub Environment "production" for approval protection
+
+**Configuration:**
+- `environment`: `production`
+- `deploy_target`: `render` (configurable, matches staging pattern)
+- `image_tag`: `main-latest` (matches build.yml tagging)
+- `service_url`: Production service URL for health checks
+
+### GitHub Environment Setup
+
+**Environment Name:** `production`
+
+**Protection Rules:**
+1. **Required Reviewers**: 
+   - Configure 1-6 reviewers (users or teams)
+   - At least one reviewer must approve
+   - Optionally prevent self-approvals
+   
+2. **Deployment Branches**:
+   - Restrict to `main` branch only
+   - Prevents accidental deployments from other branches
+
+3. **Environment Secrets** (Optional):
+   - Can store production-specific secrets at environment level
+   - Secrets scoped to production environment only
+
+## Implementation Steps
+
+### Step 1: Create Task Directory Structure
+
+- Create `.cursor/tasks/backend-deployment-infrastructure/005-production-deploy-workflow/`
+- Create plan document: `005-production-deploy-workflow_plan.mdc`
+
+### Step 2: Create Production Deployment Workflow (`deploy-production.yml`)
+
+**Location:** `.github/workflows/deploy-production.yml`
+
+**Key Features:**
+- Triggers on `main` branch pushes
+- Supports `workflow_dispatch` for manual triggers
+- Path filters for backend changes
+- Calls `_deploy.yml` with production configuration
+- References GitHub Environment "production" for approval
+- Concurrency control to prevent duplicate deployments
+
+### Step 3: Configure GitHub Environment
+
+**Location:** Repository Settings → Environments → New environment → "production"
+
+**Configuration Steps:**
+
+1. **Create Environment:**
+   - Go to Repository → Settings → Environments
+   - Click "New environment"
+   - Name: `production`
+   - Click "Configure environment"
+
+2. **Add Required Reviewers:**
+   - Scroll to "Deployment protection rules"
+   - Enable "Required reviewers"
+   - Add 1-6 reviewers (users or teams)
+   - Optionally enable "Prevent self-review" if desired
+   - Save protection rules
+
+3. **Configure Deployment Branches:**
+   - Scroll to "Deployment branches"
+   - Select "Selected branches"
+   - Add branch: `main`
+   - Save configuration
+
+4. **Environment Secrets (Optional):**
+   - Can add production-specific secrets at environment level
+   - These are scoped to production environment only
+   - Can be used instead of repository-level secrets
+
+### Step 4: Verify Required Secrets
+
+**Required GitHub Secrets:**
+
+1. **`RENDER_DEPLOY_HOOK_URL_PRODUCTION`**:
+   - Render deploy hook URL for production service
+   - Get from Render Dashboard → Production Service → Settings → Deploy Hook
+
+2. **`PROD_DATABASE_URL`** (for migrations):
+   - Production database connection URL (pooled)
+   - Used for running migrations before deployment
+
+3. **`PROD_DIRECT_URL`** (for migrations, preferred):
+   - Direct production database connection URL
+   - Preferred over `PROD_DATABASE_URL` for migrations
+
+4. **`PRODUCTION_SERVICE_URL`** (optional, for health checks):
+   - Base URL of production service
+   - Used for post-deployment health checks
+   - Example: `https://api.production.example.com`
+
+### Step 5: Add Concurrency Control
+
+Both workflows should include concurrency control:
+- `deploy-production.yml`: Group by `deploy-production-${{ github.ref }}`
+- Prevents multiple simultaneous production deployments
+- Cancels in-progress deployments when new one starts
+
+### Step 6: Add Error Handling
+
+- `_deploy.yml` already handles errors gracefully
+- Production workflow inherits error handling from reusable workflow
+- Approval rejection stops deployment immediately
+- Failed deployments are logged and visible in GitHub Actions
+
+### Step 7: Documentation
+
+- Update `backend/DEPLOYMENT.md` with production deployment section
+- Document GitHub Environment setup process
+- Document approval workflow
+- Add troubleshooting section for production deployments
+
+## Files to Create/Modify
+
+### New Files
+- `.github/workflows/deploy-production.yml` - Production deployment workflow
+- `.cursor/tasks/backend-deployment-infrastructure/005-production-deploy-workflow/005-production-deploy-workflow_plan.mdc` - This plan
+
+### Files to Reference (No Changes)
+- `.github/workflows/_deploy.yml` - Reusable deployment workflow (already supports production)
+- `.github/workflows/build.yml` - Build workflow that creates images
+- `.github/workflows/deploy-staging.yml` - Reference pattern for production workflow
+- `backend/DEPLOYMENT.md` - Deployment documentation
+
+### Files to Update (Documentation)
+- `backend/DEPLOYMENT.md` - Add automated production deployment section
+- Document GitHub Environment setup process
+- Document approval workflow and manual dispatch
+
+## Testing Strategy
+
+### Manual Testing
+
+1. **Test Production Deployment Workflow**:
+   - Merge a change to `main` branch
+   - Verify `deploy-production.yml` triggers
+   - Verify approval prompt appears in GitHub Actions
+   - Approve deployment
+   - Verify it calls `_deploy.yml` with correct inputs
+   - Verify Render deployment is triggered
+   - Check Render dashboard for deployment status
+
+2. **Test Manual Dispatch**:
+   - Go to Actions → Deploy to Production
+   - Click "Run workflow"
+   - Select `main` branch
+   - Optionally specify custom `image_tag`
+   - Verify workflow triggers with manual dispatch
+   - Verify approval prompt appears
+   - Approve and verify deployment
+
+3. **Test Approval Rejection**:
+   - Trigger production deployment
+   - Reject approval
+   - Verify deployment stops
+   - Verify no deployment occurs
+
+4. **Test Error Handling**:
+   - Test with invalid inputs
+   - Test with missing secrets
+   - Verify error messages are clear
+   - Verify failed deployments don't proceed
+
+### Validation Checklist
+
+- [ ] `deploy-production.yml` exists and is properly configured
+- [ ] Workflow triggers on `main` branch pushes
+- [ ] Workflow supports manual dispatch
+- [ ] Workflow calls `_deploy.yml` with `environment=production`
+- [ ] Job references GitHub Environment "production"
+- [ ] GitHub Environment "production" is configured with required reviewers
+- [ ] Deployment branches restricted to `main`
+- [ ] Approval prompt appears before deployment
+- [ ] Render deployment is triggered successfully
+- [ ] Secrets are properly configured
+- [ ] Concurrency control prevents duplicate deployments
+- [ ] Error handling provides clear feedback
+- [ ] Documentation is updated
+
+## Success Criteria
+
+1. ✅ `.github/workflows/deploy-production.yml` exists and triggers on `main`
+2. ✅ Workflow supports manual dispatch with optional `image_tag` input
+3. ✅ Workflow calls `_deploy.yml` with `environment=production` and `deploy_target=render`
+4. ✅ Job references GitHub Environment "production" for approval protection
+5. ✅ GitHub Environment "production" configured with required reviewers
+6. ✅ Deployment branches restricted to `main` branch
+7. ✅ Manual approval prompt appears before deployment proceeds
+8. ✅ Production secrets are properly configured
+9. ✅ Render deployment is triggered successfully via deploy hook
+10. ✅ Health checks work (if `service_url` is configured)
+11. ✅ Concurrency control prevents duplicate deployments
+12. ✅ Documentation is updated with production deployment process
+
+## Considerations
+
+### Manual Approval Workflow
+
+**How It Works:**
+1. When `deploy-production.yml` triggers, the job references `environment: production`
+2. GitHub Actions pauses the workflow and waits for approval
+3. Notification is sent to required reviewers
+4. Reviewer goes to GitHub Actions → Workflow run → "Review deployments"
+5. Reviewer approves or rejects the deployment
+6. If approved, workflow continues and deployment proceeds
+7. If rejected, workflow stops and no deployment occurs
+
+**Approval Notifications:**
+- Reviewers receive email notifications
+- GitHub UI shows pending approvals
+- Can approve/reject from Actions tab or email link
+
+### Manual Dispatch Use Cases
+
+**When to Use:**
+- Deploy specific commit SHA instead of `main-latest`
+- Re-deploy previous version (rollback)
+- Deploy to production outside normal merge flow
+- Emergency deployments
+
+**Example Usage:**
+```yaml
+# Deploy specific commit SHA
+workflow_dispatch:
+  inputs:
+    image_tag: main-abc123def456
+```
+
+### Image Tag Strategy
+
+- **Default**: `main-latest` (always latest from main branch)
+- **Manual**: Can specify specific SHA tag for reproducible deployments
+- **Rollback**: Can deploy previous SHA tag via manual dispatch
+
+### Security Considerations
+
+1. **Approval Protection**:
+   - Prevents accidental production deployments
+   - Requires human review before deployment
+   - Can prevent self-approvals for additional safety
+
+2. **Branch Restrictions**:
+   - Only `main` branch can deploy to production
+   - Prevents feature branch deployments
+   - Aligns with Git flow best practices
+
+3. **Secrets Management**:
+   - Production secrets stored securely in GitHub
+   - Environment-scoped secrets provide additional isolation
+   - Never exposed in logs or workflow files
+
+4. **Deployment Audit Trail**:
+   - All deployments logged in GitHub Actions
+   - Approval/rejection actions are tracked
+   - Deployment history visible in Actions tab
+
+### Relationship with Staging
+
+**Staging vs Production:**
+- **Staging**: Automatic deployment, no approval (develop → staging)
+- **Production**: Manual approval required (main → production)
+- Both use same `_deploy.yml` reusable workflow
+- Different secrets and deployment targets
+
+### Workflow Dependencies
+
+**Option A: Sequential (Future Enhancement)**
+- `deploy-production.yml` waits for `build.yml` to complete
+- Uses `workflow_run` trigger
+- Ensures image exists before deployment
+
+**Option B: Independent (Current)**
+- `deploy-production.yml` triggers independently
+- Assumes image already exists from `build.yml`
+- Simpler but requires coordination
+
+**Recommendation**: Start with Option B (independent), add dependency later if needed.
+
+## Future Enhancements
+
+1. **Workflow Dependencies**:
+   - Add `workflow_run` trigger to wait for `build.yml`
+   - Ensure image exists before deployment
+   - Add timeout for build completion
+
+2. **Deployment Notifications**:
+   - Slack/Discord notifications on deployment success/failure
+   - Email notifications for production deployments
+   - PagerDuty integration for critical failures
+
+3. **Rollback Capability**:
+   - Add rollback workflow
+   - Quick rollback to previous image version
+   - Automated rollback on health check failure
+
+4. **Deployment Verification**:
+   - Enhanced health checks
+   - Smoke tests after deployment
+   - Canary deployments (future)
+
+5. **Multi-Target Support**:
+   - Support AWS ECS for production
+   - Support GCP Cloud Run for production
+   - Environment-specific deployment targets
+
+## References
+
+- Existing reusable workflow: [`.github/workflows/_deploy.yml`](.github/workflows/_deploy.yml)
+- Staging deployment pattern: [`.github/workflows/deploy-staging.yml`](.github/workflows/deploy-staging.yml)
+- Build workflow: [`.github/workflows/build.yml`](.github/workflows/build.yml)
+- Deployment documentation: [`backend/DEPLOYMENT.md`](backend/DEPLOYMENT.md)
+- GitHub Environments: [GitHub Environments Documentation](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
+- GitHub Required Reviewers: [Required Reviewers Documentation](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-deployments/creating-custom-deployment-protection-rules)
