@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildCheckpointStorageKey, getStoredSignedInUser, removeOperationIdsFromCheckpoint, validateCheckpointShape } from './syncQueueStorage.internal';
 import type { SyncCheckpoint } from './syncQueueStorage.types';
-import { DEFAULT_CHECKPOINT_TTL_MS } from './syncQueueStorage.constants';
+import { CURRENT_CHECKPOINT_STORAGE_VERSION, DEFAULT_CHECKPOINT_TTL_MS } from './syncQueueStorage.constants';
 import * as Crypto from 'expo-crypto';
 
 export async function getCheckpoint(): Promise<SyncCheckpoint | null> {
@@ -23,6 +23,14 @@ export async function getCheckpoint(): Promise<SyncCheckpoint | null> {
     if (user && checkpoint.userId !== user.id) {
       await AsyncStorage.removeItem(storageKey);
       return null;
+    }
+
+    // Best-effort: write back versioned/normalized checkpoint so we do not
+    // need to re-run migrations on every startup.
+    try {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(checkpoint));
+    } catch {
+      // ignore write-back failures
     }
 
     return checkpoint;
@@ -53,6 +61,7 @@ export async function saveCheckpoint(params: {
     ttlMs: params.ttlMs ?? DEFAULT_CHECKPOINT_TTL_MS,
     requestId: params.requestId,
     inFlightOperationIds: [...params.inFlightOperationIds],
+    version: CURRENT_CHECKPOINT_STORAGE_VERSION,
   };
 
   await AsyncStorage.setItem(storageKey, JSON.stringify(checkpoint));

@@ -26,3 +26,15 @@ export const MAX_QUEUE_SIZE = 100;
  */
 export const DEFAULT_CHECKPOINT_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+/**
+ * Current storage schema version for queued writes.
+ * Version 1 corresponds to the pre-versioned schema that is already in production.
+ */
+export const CURRENT_QUEUE_STORAGE_VERSION = 1;
+
+/**
+ * Current storage schema version for checkpoints.
+ * Version 1 corresponds to the pre-versioned schema that is already in production.
+ */
+export const CURRENT_CHECKPOINT_STORAGE_VERSION = 1;
+
