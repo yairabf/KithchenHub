@@ -1,0 +1,57 @@
+# 002 - Setup CI pipeline (lint/test/build image) - Implementation Summary
+
+**Epic:** Backend Deployment Infrastructure  
+**Completed:** 2026-01-28  
+**Status:** Completed
+
+## What Was Implemented
+
+- **GitHub Actions PR CI**
+  - Added `.github/workflows/ci.yml` to run on pull requests and execute:
+    - Backend lint (non-mutating)
+    - Backend typecheck
+    - Backend unit tests (excluding DB-backed RLS integration test)
+    - Docker image build verification (no push)
+
+- **Backend scripts standardized for CI**
+  - Updated `backend/package.json` with:
+    - `lint:check` (CI-safe)
+    - `lint:fix` (dev convenience)
+    - `typecheck`
+    - `test:unit`
+  - Switched `npm run lint` to run `lint:check` (prevents CI from silently auto-fixing files).
+
+- **Dockerfile reliability fixes**
+  - Removed unsupported npm flag `--frozen-lockfile` from `npm ci` calls in `backend/Dockerfile`.
+  - Installed `openssl` in Alpine build stages to prevent Prisma OpenSSL detection warnings and improve build reliability.
+
+## Files Changed / Added
+
+- Added: `.github/workflows/ci.yml`
+- Added: `.cursor/tasks/backend-deployment-infrastructure/002-setup-ci-pipeline-lint-test-build-image/002-setup-ci-pipeline-lint-test-build-image_plan.mdc`
+- Added: `.cursor/tasks/backend-deployment-infrastructure/002-setup-ci-pipeline-lint-test-build-image/002-setup-ci-pipeline-lint-test-build-image_summary.mdc`
+- Updated: `backend/package.json`
+- Updated: `backend/Dockerfile`
+- Updated: multiple backend files to satisfy CI lint rules (formatting + unused imports/vars).
+
+## Testing Results
+
+- **Local checks executed successfully**:
+  - `backend`: `npm run lint`
+  - `backend`: `npm run typecheck`
+  - `backend`: `npm run test:unit`
+  - `docker build -t kitchen-hub-api:ci ./backend`
+
+## Deviations from Plan
+
+- Added an extra Dockerfile hardening step (installing `openssl` in Alpine build stages) after observing Prisma OpenSSL detection warnings during a Docker build.
+
+## Lessons Learned
+
+- CI should use **check-only linting** to avoid auto-mutating PR code.
+- Prisma builds on Alpine can be more robust when OpenSSL is explicitly present.
+
+## Next Steps
+
+- If you want RLS integration tests in CI, add a separate job with a Postgres service and required policies/migrations, rather than running them as part of unit tests.
+

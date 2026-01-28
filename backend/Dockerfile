@@ -6,12 +6,15 @@ FROM node:20-alpine AS dependencies
 
 WORKDIR /usr/src/app
 
+# Prisma (and some transitive deps) may require OpenSSL detection on Alpine.
+RUN apk add --no-cache openssl
+
 # Copy package files for dependency installation
 COPY package.json package-lock.json ./
 
 # Install all dependencies (including devDependencies needed for build)
-# Use --frozen-lockfile to ensure reproducible builds
-RUN npm ci --frozen-lockfile
+# `npm ci` is already lockfile-frozen (no --frozen-lockfile flag in npm).
+RUN npm ci
 
 # =============================================================================
 # Stage 2: Builder
@@ -20,6 +23,9 @@ RUN npm ci --frozen-lockfile
 FROM node:20-alpine AS builder
 
 WORKDIR /usr/src/app
+
+# Ensure OpenSSL is available for Prisma generate on Alpine.
+RUN apk add --no-cache openssl
 
 # Copy dependencies from previous stage
 COPY --from=dependencies /usr/src/app/node_modules ./node_modules
@@ -64,7 +70,7 @@ WORKDIR /usr/src/app
 COPY --chown=node:node package.json package-lock.json ./
 
 # Install only production dependencies
-RUN npm ci --omit=dev --frozen-lockfile && \
+RUN npm ci --omit=dev && \
     npm cache clean --force
 
 # Copy built application from builder stage

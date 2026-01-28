@@ -1,0 +1,101 @@
+# 002 - Setup CI pipeline (lint/test/build image)
+
+**Epic:** Backend Deployment Infrastructure  
+**Created:** 2026-01-28  
+**Status:** Planning
+
+## Overview
+
+Create a GitHub Actions workflow that runs on pull requests and validates backend code health by running:
+
+- Lint (no auto-fixing in CI)
+- Typecheck (tsc no-emit)
+- Unit tests (excluding DB-backed integration specs)
+- Docker image build verification (build only, no push)
+
+## Current Status (Deep Research Summary)
+
+### GitHub Actions
+- There is currently **no** `.github/` folder and **no** workflows in the repo.
+
+### Backend scripts and tooling
+- `backend/package.json` includes `build`, `lint`, and `test` scripts.
+- The current `lint` script runs ESLint with `--fix`, which is **not CI-friendly** because it mutates files.
+- There is **no dedicated `typecheck` script**.
+
+### Backend tests
+- Most backend tests are unit-style and mock config/env.
+- There is at least one DB-backed integration spec:
+  - `backend/src/infrastructure/database/rls.spec.ts` creates a real `PrismaClient` and expects a DB.
+  - This test should **not** run in a PR CI “unit tests” job unless we provision a DB and apply policies/migrations.
+
+### Backend Docker image build
+- `backend/Dockerfile` exists (multi-stage) intended for production builds.
+- The Dockerfile currently uses `npm ci --frozen-lockfile`, but npm does **not** support `--frozen-lockfile`.
+  - This must be removed for Docker builds (CI and local) to succeed.
+
+## Architecture
+
+### CI workflow structure
+
+Two jobs, both triggered on `pull_request`:
+
+1. **backend_checks**
+   - Install deps
+   - Lint (check-only)
+   - Typecheck
+   - Unit tests (excluding DB-backed integration specs)
+
+2. **backend_docker_build**
+   - Build the backend Docker image using Buildx
+   - Do **not** push
+   - Validate build by exporting to a cache-only output
+
+## Implementation Steps
+
+1. **Add task summary folder/files**
+   - Create task directory under `.cursor/tasks/backend-deployment-infrastructure/002-setup-ci-pipeline-lint-test-build-image/`.
+   - Commit plan now, summary after implementation.
+
+2. **Update backend scripts**
+   - Add `lint:check` (no `--fix`, fail on warnings).
+   - Keep `lint:fix` (auto-fix) for local dev.
+   - Add `typecheck` using `tsc -p tsconfig.json --noEmit`.
+   - Add `test:unit` to exclude `src/infrastructure/database/rls.spec.ts`.
+
+3. **Fix Dockerfile npm flag**
+   - Remove `--frozen-lockfile` from all `npm ci` calls in `backend/Dockerfile`.
+   - If Prisma generate fails in CI on Alpine, add necessary Alpine packages (e.g., `openssl`) or switch the build stages to Debian-based images.
+
+4. **Add GitHub Actions workflow**
+   - Create `.github/workflows/ci.yml`.
+   - Run on PRs.
+   - Use Node 20, cache npm installs, run backend scripts.
+   - Build docker image (no push).
+
+5. **Verify locally**
+   - Run the same commands locally that CI will run.
+   - Run Docker build locally (requires Docker daemon).
+
+6. **Post-implementation code review**
+   - Run the repository’s auto code review skill.
+
+## Testing Strategy
+
+- **CI checks**:
+  - `npm run lint`
+  - `npm run typecheck`
+  - `npm run test:unit`
+  - Docker build step succeeds
+
+- **Not in scope for this PR CI**:
+  - DB-backed integration tests (e.g., RLS tests) unless a DB service is added
+
+## Success Criteria
+
+- A PR workflow exists at `.github/workflows/ci.yml` and runs successfully.
+- Lint fails on warnings/errors and does not modify files.
+- Typecheck is executed explicitly.
+- Unit tests run reliably without needing DB credentials.
+- Docker image build is validated without pushing an image.
+
