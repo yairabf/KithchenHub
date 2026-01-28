@@ -1,0 +1,88 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'backend/**'
+      - '.github/workflows/build-push.yml'
+
+concurrency:
+  group: build-push-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build_and_push:
+    name: Build and push Docker image to GHCR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sanitize branch name for Docker tag
+        id: sanitize
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          if [ -z "$BRANCH_NAME" ]; then
+            echo "Error: Branch name is empty"
+            exit 1
+          fi
+          # Replace slashes with hyphens for valid Docker tags
+          SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | tr '/' '-')
+          # Docker tag limit is 128 characters, ensure we don't exceed it
+          # Branch-SHA format: branch (max ~80) + '-' + SHA (40) = ~121 chars (safe)
+          TAG_LENGTH=$(echo -n "${SANITIZED_BRANCH}-${{ github.sha }}" | wc -c)
+          if [ "$TAG_LENGTH" -gt 128 ]; then
+            echo "Warning: Tag length ($TAG_LENGTH) exceeds Docker limit (128), truncating branch name"
+            MAX_BRANCH_LEN=$((128 - 41)) # 128 - (SHA length + hyphen)
+            SANITIZED_BRANCH=$(echo "$SANITIZED_BRANCH" | cut -c1-$MAX_BRANCH_LEN)
+          fi
+          echo "branch=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+          echo "Sanitized branch: $BRANCH_NAME -> $SANITIZED_BRANCH"
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/kitchen-hub-api
+          tags: |
+            type=raw,value=${{ steps.sanitize.outputs.branch }}-${{ github.sha }}
+            type=raw,value=${{ steps.sanitize.outputs.branch }}-latest
+            type=sha,prefix=${{ steps.sanitize.outputs.branch }}-
+            type=sha,format=short
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Verify image was pushed
+        run: |
+          IMAGE_TAG="ghcr.io/${{ github.repository_owner }}/kitchen-hub-api:${{ steps.sanitize.outputs.branch }}-latest"
+          echo "Verifying image exists: $IMAGE_TAG"
+          docker manifest inspect "$IMAGE_TAG" || {
+            echo "Error: Failed to verify image push"
+            exit 1
+          }

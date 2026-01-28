@@ -56,6 +56,11 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 ### Infrastructure
 - **PostgreSQL Database**: Prisma ORM with migrations
 - **Supabase Integration**: Auth, storage, and RLS policies
+- **Docker Support**: Production-ready multi-stage Dockerfile with optimized builds (~150MB)
+- **GitHub Container Registry (GHCR)**: Automated Docker image builds and pushes on every code change
+  - Images tagged with branch + SHA for traceability
+  - Automatic builds for all branches
+  - Pull-ready images for production deployments
 - **Swagger Documentation**: Interactive API docs at `/api/docs/v1`
 - **API Versioning**: URI-based versioning (`/api/v1`, `/api/v2`, etc.)
 - **Version Discovery**: `GET /api/version` endpoint for version information
@@ -774,9 +779,31 @@ const recipes = await prisma.recipe.findMany({
 
 ## Docker Deployment
 
-The backend includes a production-ready multi-stage Dockerfile optimized for NestJS + Prisma.
+The backend includes a production-ready multi-stage Dockerfile optimized for NestJS + Prisma. Docker images are automatically built and pushed to GitHub Container Registry (GHCR) on every code change.
 
-### Building the Docker Image
+### Getting Docker Images
+
+#### Option A: Pull from GitHub Container Registry (GHCR) - Recommended
+
+Images are automatically built and pushed to GHCR with tags following the pattern:
+- `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:BRANCH-SHA` (e.g., `main-abc123def`)
+- `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:BRANCH-latest` (e.g., `main-latest`)
+- `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:SHA` (e.g., `abc123def`)
+
+**Authenticate and pull:**
+```bash
+# Login to GHCR (requires GitHub Personal Access Token with read:packages scope)
+echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+
+# Pull latest main branch image
+docker pull ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
+```
+
+For detailed GHCR instructions, see [GHCR Quick Reference](./docs/GHCR_QUICK_REFERENCE.md) and [Deployment Guide](./DEPLOYMENT.md).
+
+#### Option B: Build Locally
+
+For local development or custom builds:
 
 ```bash
 cd backend
@@ -792,7 +819,19 @@ docker build -t kitchen-hub-api:latest .
 
 ### Running the Container
 
-**Basic run:**
+**Using GHCR image:**
+```bash
+docker run -p 3000:3000 \
+  -e DATABASE_URL="postgresql://user:password@host:5432/db" \
+  -e DIRECT_URL="postgresql://user:password@host:5432/db" \
+  -e JWT_SECRET="your-jwt-secret-min-32-chars" \
+  -e JWT_REFRESH_SECRET="your-refresh-secret-min-32-chars" \
+  -e SUPABASE_URL="https://your-project.supabase.co" \
+  -e SUPABASE_ANON_KEY="your-anon-key" \
+  ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
+```
+
+**Using locally built image:**
 ```bash
 docker run -p 3000:3000 \
   -e DATABASE_URL="postgresql://user:password@host:5432/db" \
@@ -806,6 +845,10 @@ docker run -p 3000:3000 \
 
 **Using environment file:**
 ```bash
+# With GHCR image
+docker run -p 3000:3000 --env-file .env.prod ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
+
+# With locally built image
 docker run -p 3000:3000 --env-file .env.prod kitchen-hub-api:latest
 ```
 
@@ -832,21 +875,21 @@ Migrations should be run before starting the application. For production deploym
 
 **Option 1: Separate migration step**
 ```bash
-# Run migrations
+# Run migrations (using GHCR image)
 docker run --rm \
   -e DATABASE_URL="$DIRECT_URL" \
-  kitchen-hub-api:latest \
+  ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest \
   npx prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma
 
 # Then start the application
-docker run -p 3000:3000 --env-file .env.prod kitchen-hub-api:latest
+docker run -p 3000:3000 --env-file .env.prod ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
 ```
 
 **Option 2: Kubernetes init container**
 ```yaml
 initContainers:
   - name: migrate
-    image: kitchen-hub-api:latest
+    image: ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
     command: ["npx", "prisma", "migrate", "deploy", "--schema=src/infrastructure/database/prisma/schema.prisma"]
     env:
       - name: DATABASE_URL
@@ -909,6 +952,8 @@ The backend API is designed to work seamlessly with the [Kitchen Hub Mobile App]
 
 - **[Root README](../README.md)** - Monorepo overview
 - **[Mobile App](../mobile/README.md)** - Mobile application documentation
+- **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment instructions with GHCR
+- **[GHCR Quick Reference](./docs/GHCR_QUICK_REFERENCE.md)** - Quick reference for GitHub Container Registry
 - **[Detailed Docs](../README-DETAILED.md)** - Comprehensive project documentation
 - **[CLAUDE.md](../CLAUDE.md)** - AI assistant development guidance
 
