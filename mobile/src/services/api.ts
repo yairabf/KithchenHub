@@ -1,13 +1,16 @@
 import { Platform } from 'react-native';
 
 // Use 10.0.2.2 for Android Emulator, localhost for iOS Simulator
-const DEV_API_URL = Platform.select({
-    android: 'http://10.0.2.2:3000/api/v1',
-    ios: 'http://localhost:3000/api/v1',
-    default: 'http://localhost:3000/api/v1',
+const DEV_API_BASE_URL = Platform.select({
+    android: 'http://10.0.2.2:3000',
+    ios: 'http://localhost:3000',
+    default: 'http://localhost:3000',
 });
 
-const BASE_URL = DEV_API_URL;
+// Get API version from environment variable, default to '1'
+const API_VERSION = process.env.EXPO_PUBLIC_API_VERSION || '1';
+
+const BASE_URL = `${DEV_API_BASE_URL}/api`;
 
 interface ApiOptions extends RequestInit {
     token?: string;
@@ -38,11 +41,35 @@ type NetworkStatusProvider = () => { isOffline: boolean };
 
 class ApiClient {
     private baseUrl: string;
+    private apiVersion: string;
     private static networkStatusProvider?: NetworkStatusProvider;
     private static readonly REQUEST_TIMEOUT_MS = 15_000;
 
-    constructor(baseUrl: string) {
+    constructor(baseUrl: string, apiVersion: string = '1') {
         this.baseUrl = baseUrl;
+        this.apiVersion = apiVersion;
+    }
+
+    /**
+     * Sets the API version for all subsequent requests.
+     * @param version - API version (e.g., '1', '2')
+     * @throws Error if version format is invalid
+     */
+    public setApiVersion(version: string): void {
+        if (!/^\d+$/.test(version)) {
+            throw new Error(
+                `Invalid API version format: ${version}. Must be a positive integer (e.g., '1', '2').`
+            );
+        }
+        this.apiVersion = version;
+    }
+
+    /**
+     * Gets the current API version.
+     * @returns Current API version
+     */
+    public getApiVersion(): string {
+        return this.apiVersion;
     }
 
     public static setNetworkStatusProvider(provider?: NetworkStatusProvider) {
@@ -67,8 +94,11 @@ class ApiClient {
 
         const { signal, clearTimeoutRef } = this.createRequestTimeout();
 
+        // Construct URL with version: /api/v1/endpoint or /api/v2/endpoint
+        const versionedUrl = `${this.baseUrl}/v${this.apiVersion}${endpoint}`;
+
         try {
-            const response = await fetch(`${this.baseUrl}${endpoint}`, { ...config, signal });
+            const response = await fetch(versionedUrl, { ...config, signal });
             const data = await this.parseJsonResponse(response);
 
             if (!response.ok) {
@@ -146,5 +176,5 @@ class ApiClient {
     }
 }
 
-export const api = new ApiClient(BASE_URL);
+export const api = new ApiClient(BASE_URL, API_VERSION);
 export const setNetworkStatusProvider = ApiClient.setNetworkStatusProvider;
