@@ -435,9 +435,12 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - Automatically re-reads cache when change events are emitted
     - Provides manual refresh function for pull-to-refresh scenarios
   - **Cache Configuration**:
-    - Cache metadata tracks `lastSyncedAt` per entity type
+    - Cache metadata tracks `lastSyncedAt` per entity type with schema versioning support
+    - Metadata includes optional `version?: number` field for storage schema versioning
     - TTL configuration: 5min stale threshold, 10min expiration
-    - See `mobile/src/common/repositories/cacheAwareRepository.ts` for implementation details
+    - Legacy metadata automatically migrated to current version on read
+    - Future versions preserved (returns `lastSyncedAt` if valid, otherwise `null`)
+    - See `mobile/src/common/repositories/cacheAwareRepository.ts` and `mobile/src/common/utils/cacheMetadata.ts` for implementation details
 - **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
   - Storage keys are centrally managed via `getGuestStorageKey(ENTITY_TYPES.*)` from `dataModeStorage.ts`
   - Uses envelope format internally: `{ version: 1, updatedAt: string, data: T[] }` for versioning support
@@ -586,7 +589,13 @@ Utility for applying remote updates to local cached state:
 - `useCachedEntities` - Reactive cache hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that subscribes to cache changes and automatically updates UI when cache changes. Used by `useRecipes` for signed-in users.
 - `cacheAwareRepository` - Cache utilities (`mobile/src/common/repositories/cacheAwareRepository.ts`) - Provides `getCached()`, `setCached()`, `addEntityToCache()`, `updateEntityInCache()`, and `readCachedEntitiesForUpdate()` for cache-first reads and write-through caching
 - `cacheEvents` - Cache event bus (`mobile/src/common/utils/cacheEvents.ts`) - Event emitter for cache change notifications. Used to trigger UI updates when cache changes.
-- `cacheStorage` - Cache storage utilities (`mobile/src/common/utils/cacheStorage.ts`) - Thin wrapper layer for safe cache access with TTL support. Provides `readCacheArray()`, `writeCacheArray()`, `getCacheState()`, and `shouldRefreshCache()` helpers. Used internally by `cacheAwareRepository`.
+- `cacheStorage` - Cache storage utilities (`mobile/src/common/utils/cacheStorage.ts`) - Versioned cache array storage with schema versioning support. Provides `readCacheArray()`, `writeCacheArray()`, `getCacheState()`, and `shouldRefreshCache()` helpers. Features:
+  - Storage schema versioning: Cache arrays stored as `{ version: number, entities: T[] }` wrapper format
+  - Read-time migrations: Legacy data automatically migrated to current version with write-back normalization
+  - Future version handling: Preserves data from newer app versions without migration
+  - Corruption detection: Distinguishes legacy, current, future, corrupt, and wrong-type data formats
+  - Status reporting: Returns `CacheReadStatus` (`'ok'`, `'migrated'`, `'future_version'`, `'corrupt'`) for repository handling
+  - Used internally by `cacheAwareRepository` for cache-first reads and write-through caching
 - `networkStatus` - Network status singleton (`mobile/src/common/utils/networkStatus.ts`) - Provides `getIsOnline()` for checking network connectivity outside React components
 - `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueueStorage.ts`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`)
 - `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors)
