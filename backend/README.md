@@ -86,7 +86,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 ## Requirements
 - Node.js 18+ and npm
 - PostgreSQL database reachable via `DATABASE_URL` (use Supabase pooler if on IPv4-only networks)
-- Direct database URL for migrations via `DIRECT_URL` (recommended with Supabase)
+- Direct database URL for migrations via `DIRECT_URL` (required in production, optional in development)
 - `.env` file with the variables validated in `src/config/env.validation.ts`
 
 Example `.env`:
@@ -314,6 +314,7 @@ Development-specific differences:
 - Deploy migrations in shared environments: `npx prisma migrate deploy`
 - Inspect data: `npm run prisma:studio`
 - Supabase: prefer a direct connection string in `DIRECT_URL` for migrations; use the session pooler in `DATABASE_URL` if your network is IPv4-only.
+- **Production requirement**: `DIRECT_URL` is required when `NODE_ENV=production` (validated at startup to prevent migration failures)
 
 ### Idempotency Key Management
 - **Table**: `sync_idempotency_keys` tracks processed sync operations
@@ -887,11 +888,13 @@ docker run -p 3000:3000 --env-file .env.prod kitchen-hub-api:latest
 
 **Required:**
 - `DATABASE_URL` - PostgreSQL connection string (can use Supabase session pooler)
-- `DIRECT_URL` - Direct PostgreSQL connection (for migrations)
+- `DIRECT_URL` - Direct PostgreSQL connection (for migrations; **required in production**, optional in development)
 - `JWT_SECRET` - JWT secret (minimum 32 characters)
 - `JWT_REFRESH_SECRET` - Refresh token secret (minimum 32 characters)
 - `SUPABASE_URL` - Supabase project URL
 - `SUPABASE_ANON_KEY` - Supabase anonymous key
+
+**Note:** `DIRECT_URL` is validated as required when `NODE_ENV=production` to ensure migrations can run successfully. In development/test environments, it's optional but recommended.
 
 **Optional:**
 - `PORT` - Server port (default: `3000`)
