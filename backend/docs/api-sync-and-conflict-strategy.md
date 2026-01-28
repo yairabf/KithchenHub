@@ -83,6 +83,140 @@ Any future backend work that implements these behaviors **must** update this doc
 
 ---
 
+## Code Reference (Where to Look)
+
+This section provides exact file paths, class names, and function names for verification. Use this to trace the documented behavior directly in code.
+
+### Request DTOs
+
+**File**: `backend/src/modules/auth/dtos/sync-data.dto.ts`
+
+| DTO Class | Lines | Purpose |
+|-----------|-------|---------|
+| `SyncDataDto` | 127-154 | Top-level sync request payload |
+| `SyncShoppingListDto` | 41-60 | Shopping list with nested items |
+| `SyncShoppingItemDto` | 14-39 | Individual shopping item |
+| `SyncRecipeDto` | 83-102 | Recipe with ingredients/instructions |
+| `SyncRecipeIngredientDto` | 62-73 | Recipe ingredient structure |
+| `SyncRecipeInstructionDto` | 75-81 | Recipe instruction step |
+| `SyncChoreDto` | 104-125 | Chore task |
+
+**Key fields to verify**:
+- Each DTO has `operationId: string` field (idempotency key)
+- Top-level `SyncDataDto` has `payloadVersion?: number` and `requestId?: string`
+- **No timestamp fields** (`createdAt`, `updatedAt`, `deletedAt`) in any DTO
+
+### Response Types
+
+**File**: `backend/src/modules/auth/types/sync-conflict.interface.ts`
+
+| Interface | Lines | Purpose |
+|-----------|-------|---------|
+| `SyncResult` | 14-18 | Top-level sync response |
+| `SyncConflict` | 4-12 | Per-entity failure details |
+
+**Key fields to verify**:
+- `SyncResult.status: 'synced' \| 'partial' \| 'failed'`
+- `SyncResult.succeeded?: Array<{operationId, entityType, id, clientLocalId?}>`
+- `SyncResult.conflicts: SyncConflict[]`
+- `SyncConflict` has `operationId`, `type`, `id`, `reason`
+
+### Service Layer
+
+**File**: `backend/src/modules/auth/services/auth.service.ts`
+
+| Function | Approx Line | Purpose |
+|----------|-------------|---------|
+| `syncData()` | 181-240 | Main sync orchestrator |
+| `syncShoppingLists()` | 440-520 | Process lists + nested items |
+| `syncRecipes()` | 580-620 | Process recipes |
+| `syncChores()` | 680-720 | Process chores |
+| `processEntitiesWithTracking()` | 730-780 | Generic entity processor with result tracking |
+| `processEntityWithIdempotency()` | 790-850 | Idempotency wrapper for single entity |
+
+**Key behavior to verify**:
+- `syncData()` calls `syncShoppingLists()`, `syncRecipes()`, `syncChores()`
+- Each returns `{ succeeded: SucceededEntity[], conflicts: SyncConflict[] }`
+- `syncData()` aggregates all results and computes `status`
+- Invariant checking: compares `incomingOperationIds` vs. `seenOperationIds` (logs error if mismatch)
+
+### Controller Layer
+
+**File**: `backend/src/modules/auth/controllers/auth.controller.ts`
+
+| Endpoint | Method | Approx Line | Purpose |
+|----------|--------|-------------|---------|
+| `POST /auth/sync` | `syncData()` | ~150-170 | Sync endpoint handler |
+
+**Key behavior to verify**:
+- Decorated with `@Post('sync')` (maps to `/api/v1/auth/sync` via global prefix)
+- Calls `this.authService.syncData(user.userId, syncDataDto)`
+- Returns `SyncResult` wrapped in standard API response format
+
+### Database Models
+
+**File**: `backend/src/infrastructure/database/prisma/schema.prisma`
+
+| Model | Line | Key Fields |
+|-------|------|------------|
+| `ShoppingList` | 65 | `id`, `name`, `color`, `createdAt`, `updatedAt`, `deletedAt` |
+| `ShoppingItem` | 81 | `id`, `listId`, `name`, `quantity`, `unit`, `category`, `isChecked`, `createdAt`, `updatedAt`, `deletedAt` |
+| `Recipe` | 120 | `id`, `title`, `prepTime`, `ingredients` (JSON), `instructions` (JSON), `createdAt`, `updatedAt`, `deletedAt` |
+| `Chore` | 138 | `id`, `title`, `assigneeId`, `dueDate`, `isCompleted`, `createdAt`, `updatedAt`, `deletedAt` |
+| `SyncIdempotencyKey` | 197 | `id`, `userId`, `key` (operationId), `entityType`, `entityId`, `status`, `processedAt`, `createdAt` |
+
+**Key directives to verify**:
+- `createdAt DateTime @default(now())`
+- `updatedAt DateTime @updatedAt` - Prisma auto-manages this
+- `deletedAt DateTime? @map("deleted_at")` - Nullable, for soft-delete
+
+### Idempotency Key Table
+
+**Table**: `sync_idempotency_keys`  
+**Model**: `SyncIdempotencyKey` (Line 197 in schema.prisma)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `key` | String | The `operationId` from sync request |
+| `userId` | UUID | User who initiated the sync |
+| `entityType` | String | `'recipe' \| 'shoppingList' \| 'shoppingItem' \| 'chore'` |
+| `entityId` | String | ID of the synced entity |
+| `status` | String | `'PENDING' \| 'COMPLETED'` |
+| `processedAt` | DateTime? | When operation completed |
+
+**Unique constraint**: `(userId, key)` - Ensures exactly-once processing per user per `operationId`
+
+### Upsert Logic
+
+**Location**: Each entity-specific sync function in `auth.service.ts`
+
+Example from `syncShoppingLists()` (approx line 480):
+```typescript
+await this.prisma.shoppingList.upsert({
+  where: { id: listDto.id },
+  update: {
+    name: listDto.name,
+    color: listDto.color,
+    // Note: updatedAt is auto-bumped by Prisma @updatedAt
+    // Note: deletedAt is NOT touched (preserves soft-delete)
+  },
+  create: {
+    id: listDto.id,
+    householdId: user.householdId,
+    name: listDto.name,
+    color: listDto.color,
+    // Note: createdAt and updatedAt are set by Prisma defaults
+  },
+});
+```
+
+**Key to verify**: 
+- `update` block does NOT include `createdAt`, `updatedAt`, or `deletedAt`
+- Prisma handles `updatedAt` automatically via `@updatedAt` directive
+- `deletedAt` is never cleared by sync (no resurrection)
+
+---
+
 ## Endpoint and Payload
 
 ### Endpoint
@@ -226,6 +360,23 @@ For each syncable model (`ShoppingList`, `ShoppingItem`, `Recipe`, `Chore` in `s
       - Sync does not explicitly clear `deletedAt`.
       - Any resurrection would have to happen via another dedicated endpoint that intentionally resets `deletedAt`.
     - Model‑specific delete behavior may still vary by module; this document only covers the sync module’s behavior.
+
+### Re-Upsert After Soft-Delete (Edge Case)
+
+**Scenario**: Client syncs an entity that has been soft-deleted on the server.
+
+**Current Behavior**:
+- Sync upsert hits the `update` branch (entity exists by `id`)
+- Business fields (e.g., `name`, `quantity`) are updated
+- `deletedAt` remains **non-null** (unchanged)
+- Entity stays **logically deleted** (filtered by `ACTIVE_RECORDS_FILTER`)
+- `updatedAt` is bumped by Prisma
+
+**Result**: The entity is updated in the database but remains invisible to normal queries.
+
+**Resurrection**: Not supported via sync endpoint. Requires explicit restore API.
+
+**Status**: This behavior is **implemented** but may be **undefined/unexpected** from a product perspective. Future work may introduce explicit resurrection policies or reject updates to soft-deleted entities.
 
 ### Implications for Conflict Resolution
 
@@ -425,8 +576,39 @@ Later, when both devices (or any other client) fetch data and run `applyRemoteUp
   - It is mitigated somewhat by:
     - Most real‑world usage patterns (rare truly concurrent edits).
     - Mobile LWW semantics always treating server as authoritative when timestamps tie or conflict.
-- Future work:
+- **Future work (Not Implemented)**:
   - A server‑side LWW gate (rejecting clearly out‑of‑date writes based on stored `updatedAt`) would shrink this window and align database history more closely with user edit history.
+
+### 4. Code Verification
+
+**To verify this behavior yourself**:
+
+1. **Check the upsert logic** in `backend/src/modules/auth/services/auth.service.ts`:
+   - Function: `syncShoppingLists()` (approx line 480)
+   - Look for: `prisma.shoppingList.upsert({ where: { id }, update: {...}, create: {...} })`
+   - Confirm: The `update` block overwrites `name` and `color` **unconditionally**
+   - Confirm: No comparison against `updatedAt` before applying update
+
+2. **Check the Prisma schema** in `backend/src/infrastructure/database/prisma/schema.prisma`:
+   - Model: `ShoppingList` (line 65)
+   - Look for: `updatedAt DateTime @updatedAt`
+   - Confirm: The `@updatedAt` directive auto-bumps timestamp on any update
+
+3. **Check the idempotency logic** in `auth.service.ts`:
+   - Function: `processEntityWithIdempotency()` (approx line 790)
+   - Confirm: Only checks for **duplicate `operationId`**, not timestamp comparison
+   - Confirm: Different `operationId` = different operation, always processed
+
+4. **Run this scenario in tests**:
+   ```typescript
+   // In auth.service.spec.ts:
+   // 1. Sync list L1 with operationId=opB, name="Newer Edit"
+   // 2. Sync list L1 with operationId=opA, name="Older Edit"
+   // 3. Verify: Database has name="Older Edit" (last write wins)
+   // 4. Verify: Both succeeded[] arrays contain their respective operationIds
+   ```
+
+**Expected result**: Both syncs succeed, last write wins at database level, no conflict returned to client.
 
 ---
 
