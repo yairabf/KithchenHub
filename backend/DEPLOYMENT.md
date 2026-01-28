@@ -60,7 +60,61 @@ curl http://localhost:3000/api/version
    - Never commit `.env.prod` to git
    - Use environment variables in CI/CD
 
-### Step 2: Build Production Docker Image
+### Step 2: Get Production Docker Image
+
+#### Option A: Pull from GitHub Container Registry (GHCR) - Recommended
+
+Images are automatically built and pushed to GHCR on every code change. Use these images for production deployments.
+
+**Authenticate to GHCR:**
+
+1. Create a GitHub Personal Access Token (PAT) with `read:packages` scope:
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Generate new token with `read:packages` permission
+   - Copy the token
+
+2. Login to GHCR:
+   ```bash
+   echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+   ```
+
+   Or set as environment variable:
+   ```bash
+   export GITHUB_TOKEN=your_pat_token
+   echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+   ```
+
+**Pull image from GHCR:**
+
+Images are tagged with branch name and commit SHA. For production, use the `main` branch:
+
+```bash
+# Pull latest main branch image
+docker pull ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
+
+# Or pull specific commit SHA
+docker pull ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-abc123def456
+
+# Or pull by SHA only
+docker pull ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:abc123def456
+```
+
+**Tag for convenience:**
+```bash
+docker tag ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest kitchen-hub-api:latest
+```
+
+**Verify image:**
+```bash
+docker images ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api
+# Should show ~150MB image size
+```
+
+> **Note**: Replace `YOUR_GITHUB_USERNAME` with your GitHub username or organization name. For organization repos, use the organization name.
+
+#### Option B: Build Locally
+
+If you need to build the image locally:
 
 ```bash
 cd backend
@@ -97,6 +151,17 @@ docker run --rm \
 
 #### Option A: Docker Run (Simple Deployment)
 
+**Using GHCR image:**
+```bash
+docker run -d \
+  --name kitchen-hub-api \
+  -p 3000:3000 \
+  --env-file .env.prod \
+  --restart unless-stopped \
+  ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
+```
+
+**Using locally built image:**
 ```bash
 docker run -d \
   --name kitchen-hub-api \
@@ -110,6 +175,28 @@ docker run -d \
 
 Create `docker-compose.prod.yml`:
 
+**Using GHCR image:**
+```yaml
+version: '3.8'
+
+services:
+  backend:
+    image: ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
+    container_name: kitchen-hub-api-prod
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/version', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+**Using locally built image:**
 ```yaml
 version: '3.8'
 
@@ -147,10 +234,15 @@ docker-compose -f docker-compose.prod.yml up -d
 - **Render**: Dockerfile support
 
 **General steps:**
-1. Push image to container registry (Docker Hub, ECR, GCR, etc.)
+1. Pull image from GHCR (already pushed automatically) or use your platform's container registry
 2. Configure environment variables in platform
 3. Deploy container with health checks
 4. Set up reverse proxy/load balancer if needed
+
+**Using GHCR images:**
+- Images are automatically available at `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:TAG`
+- Use `main-latest` tag for production deployments
+- Use specific commit SHA tags for reproducible deployments
 
 ### Step 5: Verify Deployment
 
@@ -321,6 +413,13 @@ If deployment fails:
 
 2. **Start previous version:**
    ```bash
+   # Using GHCR image with specific SHA
+   docker run -d --name kitchen-hub-api \
+     -p 3000:3000 \
+     --env-file .env.prod \
+     ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:previous-commit-sha
+   
+   # Or using locally tagged image
    docker run -d --name kitchen-hub-api \
      -p 3000:3000 \
      --env-file .env.prod \
@@ -354,4 +453,5 @@ After successful deployment:
 For issues or questions:
 - Check [README.md](./README.md) for general documentation
 - Review [ENV_SETUP_GUIDE.md](./ENV_SETUP_GUIDE.md) for environment setup
+- Check [GHCR_QUICK_REFERENCE.md](./docs/GHCR_QUICK_REFERENCE.md) for GHCR usage
 - Check application logs for errors
