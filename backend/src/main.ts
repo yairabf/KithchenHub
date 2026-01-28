@@ -3,7 +3,7 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { loadConfiguration } from './config/configuration';
@@ -18,7 +18,15 @@ async function bootstrap(): Promise<void> {
     new FastifyAdapter(),
   );
 
-  app.setGlobalPrefix('api/v1');
+  // Set global prefix to 'api' (version will be in path: /api/v1, /api/v2, etc.)
+  app.setGlobalPrefix('api');
+
+  // Enable URI-based versioning
+  // No defaultVersion - require explicit /api/v1/* or /api/v2/* URLs
+  // This ensures canonical URLs and prevents /api/* ambiguity
+  app.enableVersioning({
+    type: VersioningType.URI,
+  });
 
   app.enableCors({
     origin: true,
@@ -36,25 +44,38 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  const swaggerConfig = new DocumentBuilder()
+  // Create Swagger document for v1
+  // Note: NestJS Swagger automatically filters routes by version when versioning is enabled.
+  // Since all controllers are marked with version: '1', only v1 routes will be included.
+  // When v2 is added, create a separate document with version: '2' filter.
+  const swaggerConfigV1 = new DocumentBuilder()
     .setTitle('Kitchen Hub API')
-    .setDescription('API documentation for Kitchen Hub backend')
+    .setDescription('API documentation for Kitchen Hub backend - Version 1')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-
-  await SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: 'Kitchen Hub API Docs',
+  const documentV1 = SwaggerModule.createDocument(app, swaggerConfigV1, {
+    operationIdFactory: (controllerKey: string, methodKey: string) =>
+      methodKey,
   });
+
+  await SwaggerModule.setup('api/docs/v1', app, documentV1, {
+    customSiteTitle: 'Kitchen Hub API Docs - v1',
+  });
+
+  // Optional: Create index page for docs (future: can list all versions)
+  // For now, just document v1
 
   await app.listen(config.port, '0.0.0.0');
   console.log(
     `Application is running on: http://localhost:${config.port}/api/v1`,
   );
   console.log(
-    `Swagger documentation: http://localhost:${config.port}/api/docs`,
+    `Swagger documentation (v1): http://localhost:${config.port}/api/docs/v1`,
+  );
+  console.log(
+    `Version discovery: http://localhost:${config.port}/api/version`,
   );
 }
 

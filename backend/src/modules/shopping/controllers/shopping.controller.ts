@@ -18,9 +18,10 @@ import { Public } from '../../../common/decorators/public.decorator';
 
 /**
  * Groceries controller providing grocery search and category listing.
+ * API Version: 1
  * Public endpoints - no authentication required.
  */
-@Controller('groceries')
+@Controller({ path: 'groceries', version: '1' })
 export class GroceriesController {
   constructor(private shoppingService: ShoppingService) {}
 
@@ -39,9 +40,10 @@ export class GroceriesController {
 
 /**
  * Shopping lists controller handling shopping list CRUD operations.
+ * API Version: 1
  * All endpoints require authentication and household membership.
  */
-@Controller('shopping-lists')
+@Controller({ path: 'shopping-lists', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class ShoppingListsController {
   constructor(private shoppingService: ShoppingService) {}
@@ -103,9 +105,10 @@ export class ShoppingListsController {
 
 /**
  * Shopping items controller handling individual item operations.
+ * API Version: 1
  * All endpoints require authentication and household membership.
  */
-@Controller('shopping-items')
+@Controller({ path: 'shopping-items', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class ShoppingItemsController {
   constructor(private shoppingService: ShoppingService) {}

@@ -1,0 +1,72 @@
+# 001 - api-versioning-infrastructure - Implementation Summary
+
+**Epic:** api-design-and-compatibility  
+**Completed:** 2026-01-28  
+**Status:** Completed
+
+## What Was Implemented
+
+- Added a dedicated API versioning infrastructure in `backend/src/common/versioning/`:
+  - `api-version.constants.ts` with `CURRENT_API_VERSION = '1'`, `SUPPORTED_API_VERSIONS = ['1']`, and empty `DEPRECATED_API_VERSIONS` / `SUNSET_API_VERSIONS`.
+  - `versioning.config.ts` with `VersionMetadata` type plus helpers: `isVersionSupported`, `isVersionDeprecated`, `isVersionSunset`, and `getVersionMetadata` / `getAllVersionMetadata`.
+  - `version.guard.ts` as a global guard validating versions (404 for unsupported, 410 for sunset) using a shared `extractVersionFromRequest` utility.
+  - `deprecation.decorator.ts` and `deprecation.interceptor.ts` to support version-wide and endpoint-level deprecation headers.
+  - `version.utils.ts` with `extractVersionFromRequest()` and tests to centralize version parsing.
+- Enabled URI-based versioning in `backend/src/main.ts`:
+  - Changed the global prefix from `api/v1` to `api`.
+  - Called `app.enableVersioning({ type: VersioningType.URI })` with no `defaultVersion`.
+  - Configured Swagger to serve v1 docs at `/api/docs/v1` and updated console logs to point to `/api/v1` and `/api/docs/v1` plus `/api/version`.
+- Updated all feature controllers under `backend/src/modules/*/controllers/` to use controller-level version metadata, e.g. `@Controller({ path: 'auth', version: '1' })`.
+- Added a controller metadata audit test `backend/src/common/versioning/controller-metadata-audit.spec.ts` to enforce version metadata on controllers, with an allowlist for the unversioned `VersionController` meta endpoint.
+- Implemented deprecation infrastructure:
+  - `DeprecationInterceptor` registered globally in `AppModule` to apply version-wide deprecation headers based on constants/config.
+  - `@Deprecated()` decorator to mark specific endpoints with optional `sunsetDate` and `migrationGuide`.
+- Added a new `HealthModule` and `VersionController` in `backend/src/modules/health/`:
+  - `GET /api/version` public, unversioned endpoint returning `current`, `supported`, `deprecated`, `sunset`, and `docs` (currently v1 docs) from versioning config.
+- Created documentation:
+  - `backend/docs/api-versioning-guidelines.md` describing what is / is not a breaking change and the process for introducing new API versions.
+  - `backend/docs/api-deprecation-policy.md` describing deprecation timelines, headers, communication, and sunset behavior.
+  - Updated `backend/README.md` to document API versioning, version discovery, and the new infrastructure.
+- Updated the mobile API client to support explicit API versions:
+  - `mobile/src/services/api.ts` now builds URLs as `/api/v{version}` and exposes `setApiVersion` / `getApiVersion` with validation.
+  - `mobile/src/config/index.ts` gained an `api.version` config (backed by `EXPO_PUBLIC_API_VERSION`, default `'1'`).
+
+## Deviations from Plan
+
+- **Deprecation interceptor location:** The plan suggested `backend/src/common/interceptors/deprecation.interceptor.ts`; the final implementation lives in `backend/src/common/versioning/deprecation.interceptor.ts` and is exported via the `versioning` index, then registered globally in `AppModule`. Functionally it matches the plan but is grouped under the versioning namespace for cohesion.
+- **Swagger version filtering:** For v1-only today, we rely on NestJS Swagger's integration with URI versioning and generate a single document at `/api/docs/v1`. The plan's multi-document setup for `/api/docs/v2` is deferred until a v2 API actually exists (the README and docs call this out as future work).
+- **RLS integration tests:** The plan did not cover database RLS storage tests; current backend test runs still fail in local dev if Supabase storage RLS policies are not present and `ALLOW_STORAGE_RLS_SKIP=true` is not set. This is an existing behavior, not introduced by the versioning work.
+
+Overall, all core behaviors described in the plan (URI-based versioning, controller-level metadata, version guard, deprecation headers, version discovery endpoint, and mobile API version support) are implemented. Minor path/organization differences were made to keep versioning concerns co-located.
+
+## Testing Results
+
+- **Backend versioning tests:**
+  - Added and ran focused Jest tests for versioning:
+    - `versioning.config.spec.ts` (version helpers)
+    - `version.utils.spec.ts` (version extraction utility)
+    - `version.guard.spec.ts` (guard behavior for supported/unsupported/sunset/unversioned requests)
+    - `deprecation.interceptor.spec.ts` (version-wide and endpoint-level deprecation headers)
+    - `controller-metadata-audit.spec.ts` (controller metadata enforcement)
+  - All 5 versioning-related test suites pass (43 tests total).
+- **Backend full test run:**
+  - `npm test` in `backend/` passes all suites except the existing storage RLS integration tests in `src/infrastructure/database/rls.spec.ts`, which fail when Supabase storage RLS policies are not present and `ALLOW_STORAGE_RLS_SKIP=true` is not configured. These failures are unrelated to the versioning changes.
+- **Mobile tests:**
+  - `npm test` in `mobile/` runs successfully overall, with one existing failure in `RemoteRecipeService` (`Recipe not found: remote-1`), which is not introduced by the versioning changes. The API client changes themselves are covered by existing and new tests and type checks.
+
+## Lessons Learned
+
+- Centralizing all API versioning logic (constants, config, guard, interceptor, utilities) under a single `common/versioning` namespace makes it much easier to reason about current/deprecated/sunset behavior and to enforce consistent routing.
+- A controller metadata audit test is an effective safety net: it prevents new controllers from accidentally bypassing versioning by omitting `version` in the decorator, and it gives us a single allowlist for intentional meta endpoints like `/api/version`.
+- Keeping mobile and backend aligned on API version configuration (via `EXPO_PUBLIC_API_VERSION` and `config.api.version`) is critical: it avoids hard-coded paths and allows safe, gradual rollout of future versions using configuration rather than code changes.
+- Version-wide deprecation via configuration is far less error-prone than annotating individual endpoints; the `DeprecationInterceptor` ensures headers are always present for deprecated versions, while the `@Deprecated()` decorator remains available for rare, endpoint-specific deprecations.
+- Tests for versioning need to be resilient to the current set of versions (e.g., handling empty `DEPRECATED_API_VERSIONS` / `SUNSET_API_VERSIONS`), otherwise the test suite can fail simply because no deprecated/sunset versions exist yet.
+
+## Next Steps
+
+- When introducing API v2:
+  - Extend `SUPPORTED_API_VERSIONS` / `DEPRECATED_API_VERSIONS` / `SUNSET_API_VERSIONS` in `api-version.constants.ts`.
+  - Add v2 controllers or route-level `@Version('2')` handlers where breaking changes are needed.
+  - Generate a separate Swagger document at `/api/docs/v2` and update the version discovery endpoint and docs.
+- Consider setting `ALLOW_STORAGE_RLS_SKIP=true` for local/CI test runs where Supabase storage RLS policies are not configured, to keep RLS storage tests from blocking unrelated work.
+- Add concrete examples and migration guides to the versioning/deprecation docs once a first deprecation (v1 → v2) is planned.

@@ -1,0 +1,124 @@
+ # 001 - Backend Sync Schema and Conflict Strategy
+ 
+ **Epic:** backend-documentation-and-validation  
+ **Created:** 2026-01-28  
+ **Status:** Planning
+ 
+ ## Overview
+ - Document the current backend sync schema and behavior for `POST /api/v1/auth/sync`.
+ - Make the backend doc the explicit **source of truth** by clearly separating **Current Behavior (Implemented)** from **Planned/Design (Not Implemented Yet)**.
+ - Capture how Prisma-managed timestamps (`createdAt`, `updatedAt`, `deletedAt`) behave in practice, including edge cases around soft delete and re-upserts.
+ - Align higher-level docs (`kitchen_hub_project_context.md`, backend API docs) with these clarified contracts.
+ 
+ ## Architecture
+ - **Backend components:**
+   - `backend/src/modules/auth/controllers/auth.controller.ts` → `POST /api/v1/auth/sync`.
+   - `backend/src/modules/auth/services/auth.service.ts`:
+     - `syncData`, `syncShoppingLists`, `syncShoppingItems`, `syncRecipes`, `syncChores`.
+     - `processEntitiesWithTracking`, `processEntityWithIdempotency`.
+   - `backend/src/modules/auth/dtos/sync-data.dto.ts`:
+     - `SyncDataDto`, `SyncShoppingListDto`, `SyncShoppingItemDto`, `SyncRecipeDto`, `SyncChoreDto`.
+   - `backend/src/modules/auth/types/sync-conflict.interface.ts`:
+     - `SyncResult`, `SyncConflict`.
+   - `backend/src/infrastructure/database/prisma/schema.prisma`:
+     - `ShoppingList`, `ShoppingItem`, `Recipe`, `Chore`, `SyncIdempotencyKey`, shared timestamp fields.
+ - **Mobile (for reference and invariants):**
+   - `mobile/src/common/utils/syncQueue/processor/index.ts` (worker, payload builder, partial batch recovery).
+   - `mobile/src/common/utils/conflictResolution.ts` (LWW + tombstones).
+   - `mobile/src/common/utils/syncApplication.ts` (apply remote updates to local cache).
+ 
+ ## Implementation Steps
+ 
+ 1. **Evidence-backed backend analysis**
+    - Re-scan the backend sync implementation and Prisma schema.
+    - Produce short notes listing concrete evidence:
+      - Exact file paths and function/method names implementing `/api/v1/auth/sync`.
+      - DTO types that define the sync payload and result (`SyncDataDto`, `SyncShoppingListDto`, etc.).
+      - Where and how Prisma `createdAt` / `updatedAt` / `deletedAt` are defined and (not) passed through upserts.
+      - Idempotency behavior in `SyncIdempotencyKey` and `processEntityWithIdempotency`.
+ 
+ 2. **Evidence-backed client analysis (already largely done)**
+    - Confirm and record module/file names for:
+      - Sync queue storage and processor (including checkpointing and compaction).
+      - Conflict merge logic (LWW and tombstones).
+      - Places that assume backend invariants (e.g., every `operationId` appears in `succeeded[]` or `conflicts[]`).
+ 
+ 3. **Author backend sync & conflict doc**
+    - Create `backend/docs/api-sync-and-conflict-strategy.md` with the following structure:
+      - **Intro & Endpoint**
+        - Clearly document `POST /api/v1/auth/sync` and its relationship to regular CRUD endpoints.
+      - **Source of Truth: Behavior vs Design**
+        - **Current Behavior (Implemented)**:
+          - Simple Prisma `upsert` per entity with no server-side LWW or version checks.
+          - Idempotency via `SyncIdempotencyKey` insert-first pattern.
+          - Prisma-managed timestamps as the only server-side timestamps.
+        - **Planned/Design (Not Implemented Yet)**:
+          - Intended server-side timestamp-aware conflict checks.
+          - Richer payload-version branching if/when added.
+      - **Payload & DTOs**
+        - Describe the shape of `SyncDataDto`, entity DTOs, `SyncResult`, and `SyncConflict` at the level of type names and key fields.
+      - **Timestamp Semantics**
+        - Explicitly state:
+          - The backend does **not** accept client-supplied `createdAt` / `updatedAt` / `deletedAt` in `/api/v1/auth/sync` payloads (DTOs don’t expose them).
+          - Prisma `@default(now())` and `@updatedAt` semantics:
+            - Sync upserts always bump `updatedAt` server-side when an update occurs.
+            - `createdAt` is set on insert and never updated by sync.
+          - Soft delete (`deletedAt`) behavior:
+            - How soft delete is performed in other modules.
+            - What happens if a soft-deleted row is later “re-upserted” via sync (e.g., `deletedAt` not cleared, so entity remains logically deleted even if other fields change).
+            - Note any model-to-model inconsistencies as current reality.
+      - **Invariants & Failure Modes**
+        - Document:
+          - Backend invariants around idempotency and result mapping (what `syncData` and `processEntityWithIdempotency` guarantee today).
+          - The result invariant targeted by both sides: every request `operationId` should appear in exactly one of `succeeded[]` or `conflicts[]`.
+          - Actual behavior when invariant is violated (backend logs + continues; client keeps unknown operations for retry).
+          - Non-guarantees:
+            - No server-side LWW gate or version checks today.
+            - No per-field merges (whole-row overwrite semantics).
+      - **Worked Example**
+        - One concrete scenario:
+          - Two devices updating the same entity with different `updatedAt`.
+          - What the backend does today (simple upsert, last request wins regardless of timestamp ordering).
+          - How the client’s LWW + tombstone merge resolves things when it later pulls remote state.
+          - Call out the risk window where the server may accept an older write after a newer one.
+      - **Mermaid Sequence Diagram**
+        - Show client queue → `/api/v1/auth/sync` → backend idempotent upserts → `SyncResult` with `succeeded[]` / `conflicts[]` → client queue worker handling partial success.
+ 
+ 4. **Align existing docs with backend truth**
+    - Update `kitchen_hub_project_context.md` to:
+      - Explicitly say that:
+        - Client implements LWW + tombstone merging for **pulls** and local cache.
+        - Backend currently performs simple upserts for **pushes**, without server-side timestamp gating.
+      - Soften or clarify any statements that imply backend already enforces server-side LWW.
+      - Clarify that:
+        - Backend **attempts** to enforce the “every `operationId` appears in results” invariant via logging in `AuthService.syncData`.
+        - Client treats this as a soft contract and keeps unknown `operationId`s for retry.
+      - Standardize route references to `POST /api/v1/auth/sync` (and only shorthand `/auth/sync` where clearly defined).
+    - Add a short “Sync & Conflicts” mention and link in backend docs (e.g., at the bottom of `backend/docs/api-versioning-guidelines.md` or alongside related docs).
+ 
+ 5. **Capture summary and lessons learned**
+    - After docs are written, create `001-backend-sync-schema-and-conflicts_summary.mdc` summarizing:
+      - What was actually implemented in the new backend sync doc.
+      - Any discovered inconsistencies or TODOs (e.g., soft delete semantics, risk windows).
+      - Recommended next steps for backend work (e.g., adding server-side timestamp gates, clear resurrection semantics).
+ 
+ ## API Changes
+ - No new API endpoints.
+ - Documentation-only change clarifying the existing `POST /api/v1/auth/sync` contract, timestamp semantics, and client vs server responsibilities.
+ 
+ ## Testing Strategy
+ - No runtime changes in this task; verification is documentation-only:
+   - Cross-check doc statements against:
+     - `auth.service.ts` implementation.
+     - `schema.prisma` timestamps.
+     - Mobile sync queue + conflict resolution modules.
+   - Optionally add a lightweight backend unit test later (separate task) to assert the documented invariants if behavior is tightened.
+ 
+ ## Success Criteria
+ - Backend doc clearly answers:
+   - What `/api/v1/auth/sync` expects and returns.
+   - How upserts, timestamps, idempotency, and soft delete behave **today**.
+   - What invariants the client can safely rely on vs what is **not** guaranteed.
+ - `kitchen_hub_project_context.md` and backend docs no longer imply unimplemented backend conflict logic.
+ - Future backend work on server-side conflict resolution can use the new doc as a precise contract and checklist.
+ 

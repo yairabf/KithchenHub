@@ -56,8 +56,10 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 ### Infrastructure
 - **PostgreSQL Database**: Prisma ORM with migrations
 - **Supabase Integration**: Auth, storage, and RLS policies
-- **Swagger Documentation**: Interactive API docs at `/api/docs`
-- **Global API Prefix**: All routes under `/api/v1`
+- **Swagger Documentation**: Interactive API docs at `/api/docs/v1`
+- **API Versioning**: URI-based versioning (`/api/v1`, `/api/v2`, etc.)
+- **Version Discovery**: `GET /api/version` endpoint for version information
+- **Deprecation Support**: Automatic deprecation headers and sunset handling
 - **CORS Enabled**: Configured for mobile app access
 
 ## Requirements
@@ -439,6 +441,39 @@ Guest users can only access public endpoints:
 - `/groceries/*` - Grocery catalog search
 
 All other endpoints require valid JWT tokens with household membership, preventing guest data from syncing to the backend.
+
+### API Versioning
+
+The API uses URI-based versioning (`/api/v1`, `/api/v2`, etc.) to support multiple API versions simultaneously.
+
+**Version Discovery:**
+- `GET /api/version` - Returns supported versions, current version, deprecated versions, and documentation links
+- Public endpoint, no authentication required
+
+**Version Strategy:**
+- **URI Versioning**: All endpoints require explicit version in URL (`/api/v1/*`, `/api/v2/*`)
+- **No Default Version**: Requests to `/api/*` without version return 404 (prevents URL ambiguity)
+- **Controller-Level Versioning**: Controllers use `@Controller({ path: 'X', version: '1' })` metadata
+- **Multiple Versions**: Same controller can handle multiple versions simultaneously
+
+**Deprecation:**
+- Deprecated versions automatically include deprecation headers in all responses
+- Sunset versions return `410 Gone` with migration guide link
+- Minimum 6-month deprecation period for mobile apps
+
+**Documentation:**
+- Swagger docs available at `/api/docs/v1` (separate docs per version)
+- See [API Versioning Guidelines](./docs/api-versioning-guidelines.md) for breaking change criteria
+- See [API Deprecation Policy](./docs/api-deprecation-policy.md) for deprecation process
+
+**Example:**
+```typescript
+// v1 endpoint
+GET /api/v1/recipes
+
+// v2 endpoint (when available)
+GET /api/v2/recipes
+```
 
 ### Response Format
 

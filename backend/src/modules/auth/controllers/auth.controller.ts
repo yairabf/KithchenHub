@@ -20,6 +20,8 @@ import { Public } from '../../../common/decorators/public.decorator';
 /**
  * Authentication controller handling user authentication and data synchronization.
  *
+ * API Version: 1
+ *
  * Public endpoints:
  * - POST /auth/google - Google OAuth authentication
  * - POST /auth/guest - Guest user authentication
@@ -28,7 +30,7 @@ import { Public } from '../../../common/decorators/public.decorator';
  * Protected endpoints:
  * - POST /auth/sync - Offline data synchronization
  */
-@Controller('auth')
+@Controller({ path: 'auth', version: '1' })
 export class AuthController {
   constructor(private authService: AuthService) {}
 

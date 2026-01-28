@@ -16,9 +16,10 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 
 /**
  * Chores controller handling chore management and completion tracking.
+ * API Version: 1
  * All endpoints require authentication and household membership.
  */
-@Controller('chores')
+@Controller({ path: 'chores', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class ChoresController {
   constructor(private choresService: ChoresService) {}

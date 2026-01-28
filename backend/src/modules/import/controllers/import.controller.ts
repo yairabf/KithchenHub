@@ -6,10 +6,11 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 import { HouseholdUtils } from '../../../common/utils';
 
 /**
- * Controller for handling data import operations
- * Allows users to import recipes and shopping lists from guest mode to their household
+ * Controller for handling data import operations.
+ * API Version: 1
+ * Allows users to import recipes and shopping lists from guest mode to their household.
  */
-@Controller('import')
+@Controller({ path: 'import', version: '1' })
 @UseGuards(JwtAuthGuard)
 export class ImportController {
   constructor(private readonly importService: ImportService) {}

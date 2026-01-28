@@ -12,6 +12,9 @@ export const config = {
     auth: {
         redirectScheme: 'kitchen-hub',
     },
+    api: {
+        version: process.env.EXPO_PUBLIC_API_VERSION || '1',
+    },
   mockData: {
     enabled: isMockDataEnabled(process.env.EXPO_PUBLIC_USE_MOCK_DATA),
   },

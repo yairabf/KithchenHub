@@ -2,7 +2,7 @@
 
 ### Epic Status Summary
 
-- **Backend Infrastructure & Data Architecture**: Prisma, PostgreSQL with soft-delete (`deletedAt`), `createdAt`/`updatedAt` directives. Lacks documented rollback or schema versioning.
+- **Backend Infrastructure & Data Architecture**: Prisma, PostgreSQL with soft-delete (`deletedAt`), `createdAt`/`updatedAt` directives. API-level versioning and deprecation are now documented; DB-wide schema rollback/versioning is still not formalized.
 - **Public Catalog (Guest + Signed-In) – Plan 009**: Not detailed here.
 - **Guest Mode – Mobile & API**:
   - Local-only data via AsyncStorage
@@ -70,6 +70,23 @@
     - Memoized dependencies prevent unnecessary re-subscriptions
     - Comprehensive test coverage: hook tests, integration tests, RLS validation (36 tests)
 
+  - **API Versioning Infrastructure**:
+    - Backend now uses URI-based API versioning with explicit `/api/v1`, `/api/v2`, ... paths:
+      - Global prefix `api` plus NestJS `enableVersioning({ type: URI })`.
+      - Controllers declare `@Controller({ path: 'X', version: '1' })` so versions are explicit at the routing layer.
+    - Common versioning module in `backend/src/common/versioning/`:
+      - `api-version.constants.ts`: `CURRENT_API_VERSION = '1'`, `SUPPORTED_API_VERSIONS = ['1']`, `DEPRECATED_API_VERSIONS = []`, `SUNSET_API_VERSIONS = []`.
+      - `versioning.config.ts`: helpers to answer whether a version is supported/deprecated/sunset and to fetch `VersionMetadata`.
+      - `version.guard.ts`: global guard returning 404 for unsupported versions and 410 for sunset versions (with optional migration guide text).
+      - `deprecation.decorator.ts` + `deprecation.interceptor.ts`: version-wide deprecation headers and optional per-endpoint deprecation.
+      - `version.utils.ts`: shared `extractVersionFromRequest()` to parse `/api/v{n}` and NestJS `request.version`.
+    - Version discovery endpoint in `HealthModule`:
+      - `GET /api/version` (public, unversioned meta endpoint) returns `current`, `supported`, `deprecated`, `sunset`, and docs links (e.g. `/api/docs/v1`).
+    - Mobile API client now takes an explicit API version:
+      - Base URL is `http(s)://host:port/api`, and all calls target `/api/v{version}{endpoint}`.
+      - `EXPO_PUBLIC_API_VERSION` (default `'1'`) feeds `config.api.version` and `ApiClient`’s `apiVersion`.
+      - `setApiVersion()` validates version strings as positive integers before use.
+
 ---
 
 ### Offline Sync Mechanics
@@ -86,7 +103,7 @@
 - Filters for ready items based on `lastAttemptAt`
 - Exponential backoff per item
 - Retry limit: 3 attempts → `FAILED_PERMANENT`
-- Batches all ready items in one `/auth/sync` call
+- Batches all ready items in one `POST /api/v1/auth/sync` call
 - Each entity in sync payload includes `operationId` for idempotent processing
 - Optional `requestId` included for batch observability
 - **Partial Batch Recovery**: Only failed items are retried after partial failures
@@ -102,17 +119,20 @@
   - Prevents the “in-flight items forever filtered out” deadlock by always re-driving or clearing stale checkpoints
 
 **Conflict Resolution**
-- LWW (Last Write Wins) by `updatedAt`
-- `deletedAt` wins over any update
+- Client-side LWW (Last Write Wins) by `updatedAt` when merging **remote state into local cache**
+- `deletedAt` wins over any update (tombstone semantics)
 - Timestamps normalized (handles timezone, ISO strings)
-- Realtime payloads also processed via LWW
+- Realtime payloads also processed via LWW on the client
 - Deterministic merge ensures same outcome regardless of order
+- Backend currently uses simple Prisma `upsert` for `POST /api/v1/auth/sync` without server-side LWW gates or timestamp/version checks
+  - The database reflects the order in which sync writes are successfully processed
+  - The mobile client is responsible for reconciling local vs remote state using its LWW + tombstone utilities
 
 ---
 
 ### Limitations & Recommendations
 
-**Schema Versioning**
+**Schema Versioning & API Versioning**
 - Guest mode: versioned envelope (v1) for local persistence; no additional migrations yet.
 - Signed-in sync queue: storage schema versioning v1 for `QueuedWrite` and `SyncCheckpoint`:
   - `version` field on queue items and checkpoints.
@@ -126,20 +146,21 @@
   - Future versions (`version` > current) are preserved but not migrated (status: `'future_version'`).
   - Corruption handling distinguishes: legacy, current, future, corrupt, wrong type.
   - Never writes back or clears corrupt/future version data.
-- `/auth/sync` payload: `payloadVersion` (positive integer, currently `1`) added to the sync DTO; missing or `1` are treated equivalently for backward compatibility.
-- Backend DB: still no explicit DB-wide schema version tracking or rollback automation.
+- `POST /api/v1/auth/sync` payload: `payloadVersion` (positive integer, currently `1`) added to the sync DTO; missing or `1` are treated equivalently for backward compatibility.
+- Backend DB: still no explicit DB-wide schema version tracking or rollback automation; HTTP API contract versioning and deprecation policies are now covered by dedicated backend docs.
 
 **Idempotency & Retry**
 - ✅ **Idempotency Keys Implemented**: Each sync operation includes unique `operationId` (UUID)
-  - Backend uses atomic insert-first pattern to prevent duplicate processing
-  - Same `operationId` processed only once, safe retries without duplication
+  - Backend uses atomic insert-first pattern (`SyncIdempotencyKey` + `processEntityWithIdempotency`) to prevent duplicate processing
+  - Same `operationId` processed only once; safe retries without duplication
   - `SyncIdempotencyKey` table tracks processed operations with retention cleanup
-  - Mobile generates stable operationId per queued write, preserved through compaction
+  - Mobile generates stable `operationId` per queued write, preserved through compaction
 - ✅ **Partial Batch Recovery Implemented**: Only failed items are retried after partial failures
-  - Backend returns granular per-entity results with `operationId` mapping in `succeeded[]` and `conflicts[]`
+  - Backend returns granular per-entity results with `operationId` mapping in `succeeded[]` and `conflicts[]` (for newer servers)
   - Mobile uses safety-first logic: removes items ONLY when `operationId` is in `succeeded[]`
-  - Unknown items (not in succeeded or conflicts) are kept for retry to prevent data loss
-  - Backend enforces invariant: every `operationId` must appear exactly once in results
+  - Unknown items (not in `succeeded[]` or `conflicts[]`) are kept for retry to prevent data loss
+  - Backend attempts to cover all `operationId`s and logs an error if any are missing; this is a **soft** invariant (no exception is thrown)
+  - Mobile’s queue processor is written to tolerate invariant violations by treating missing `operationId`s as “no confirmation”
   - Handles backward compatibility with older server versions (missing `succeeded` array)
   - Processes confirmed responses even on non-2xx status codes
 
@@ -163,7 +184,8 @@
 - Direct cache updates for serverId mappings (currently uses cache invalidation via refresh)
 - API-side retry strategies for transient failures
 - Build out account switching and multi-account session management
-- Document backend migration/versioning strategies
+- Document DB schema migration/versioning strategies (API contract versioning and deprecation are already documented)
 - Consider scheduled cleanup automation for idempotency keys (currently manual/optional)
 - Extend realtime sync to other features (recipes, chores) using same hook pattern
+- Consider adding server-side timestamp-aware conflict checks and clearer resurrection semantics for soft-deleted records, as described in `backend/docs/api-sync-and-conflict-strategy.md`
 
