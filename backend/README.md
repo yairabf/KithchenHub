@@ -57,9 +57,11 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 - **PostgreSQL Database**: Prisma ORM with migrations
 - **Supabase Integration**: Auth, storage, and RLS policies
 - **Docker Support**: Production-ready multi-stage Dockerfile with optimized builds (~150MB)
-- **GitHub Container Registry (GHCR)**: Automated Docker image builds and pushes on every code change
+- **GitHub Container Registry (GHCR)**: Automated Docker image builds and pushes
+  - **Production builds** (`build.yml`): Automatically builds and pushes on merges to `develop` and `main` branches
+  - **Development builds** (`build-push.yml`): Builds for all branches (feature branches, PRs, etc.)
   - Images tagged with branch + SHA for traceability
-  - Automatic builds for all branches
+  - GitHub Actions cache for faster builds
   - Pull-ready images for production deployments
 - **Swagger Documentation**: Interactive API docs at `/api/docs/v1`
 - **API Versioning**: URI-based versioning (`/api/v1`, `/api/v2`, etc.)
@@ -779,7 +781,10 @@ const recipes = await prisma.recipe.findMany({
 
 ## Docker Deployment
 
-The backend includes a production-ready multi-stage Dockerfile optimized for NestJS + Prisma. Docker images are automatically built and pushed to GitHub Container Registry (GHCR) on every code change.
+The backend includes a production-ready multi-stage Dockerfile optimized for NestJS + Prisma. Docker images are automatically built and pushed to GitHub Container Registry (GHCR) via GitHub Actions workflows:
+
+- **Production builds** (`.github/workflows/build.yml`): Triggers on pushes to `develop` and `main` branches with 30-minute timeout and build caching
+- **Development builds** (`.github/workflows/build-push.yml`): Triggers on pushes to all branches for testing and development
 
 ### Getting Docker Images
 
