@@ -76,6 +76,18 @@ describe('VersionGuard', () => {
       );
     });
 
+    it('should allow /api/version endpoint (intentionally unversioned)', () => {
+      const context = createMockExecutionContext('/api/version');
+      expect(() => guard.canActivate(context)).not.toThrow();
+      expect(guard.canActivate(context)).toBe(true);
+    });
+
+    it('should allow /api/version endpoint with query parameters', () => {
+      const context = createMockExecutionContext('/api/version?foo=bar');
+      expect(() => guard.canActivate(context)).not.toThrow();
+      expect(guard.canActivate(context)).toBe(true);
+    });
+
     it('should throw NotFoundException for requests without version in URL', () => {
       const context = createMockExecutionContext('/api/auth/sync');
       expect(() => guard.canActivate(context)).toThrow(NotFoundException);
