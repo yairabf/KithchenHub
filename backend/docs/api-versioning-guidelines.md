@@ -172,3 +172,4 @@ POST /api/v2/recipes
 
 - [API Deprecation Policy](./api-deprecation-policy.md)
 - [Backend README](../README.md)
+ - [API Sync & Conflict Strategy](./api-sync-and-conflict-strategy.md)
