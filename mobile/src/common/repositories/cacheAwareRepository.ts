@@ -15,6 +15,7 @@ import { queueRefresh } from '../utils/backgroundRefresh';
 import { applyRemoteUpdatesToLocal } from '../utils/syncApplication';
 import { normalizePersistedArray } from '../utils/storageHelpers';
 import { cacheEvents } from '../utils/cacheEvents';
+import { readCacheArray, writeCacheArray } from '../utils/cacheStorage';
 
 /**
  * Entity type to storage key mapping
@@ -27,21 +28,37 @@ const entityTypeToStorageKey: Record<SyncEntityType, string> = {
 };
 
 /**
- * Reads cached entities from storage
+ * Reads cached entities from storage using versioned cache storage
+ * 
+ * Handles future_version status appropriately: prefers network fetch but preserves local data.
  * 
  * @param entityType - The entity type to read
  * @returns Array of cached entities, or empty array if none exist
- * @throws Error if storage read fails (unexpected errors only)
  */
 async function readCachedEntities<T extends EntityTimestamps>(
   entityType: SyncEntityType
 ): Promise<T[]> {
-  const storageEntity = entityTypeToStorageKey[entityType];
-  const storageKey = getSignedInCacheKey(storageEntity);
-  
   try {
-    const raw = await AsyncStorage.getItem(storageKey);
-    return normalizePersistedArray<T>(raw, storageKey);
+    const result = await readCacheArray<T>(entityType);
+    
+    // Handle future_version status: prefer network but don't blow away local data
+    if (result.status === 'future_version') {
+      // Log for investigation but return the data (preserve local)
+      console.warn(
+        `Cache for ${entityType} has future version. ` +
+        `Returning cached data but repository should prefer network fetch.`
+      );
+      return result.data;
+    }
+    
+    // Handle corrupt status: return empty array (will trigger network fetch)
+    if (result.status === 'corrupt') {
+      console.error(`Cache for ${entityType} is corrupt. Returning empty array.`);
+      return [];
+    }
+    
+    // Handle ok and migrated statuses: return data normally
+    return result.data;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Failed to read cached ${entityType}:`, errorMessage);
@@ -54,6 +71,7 @@ async function readCachedEntities<T extends EntityTimestamps>(
  * 
  * Implements write-through caching: data is written to cache immediately
  * and metadata is updated to mark cache as fresh.
+ * Uses versioned cache storage format.
  * 
  * @param entityType - The entity type to write
  * @param entities - Array of entities to cache
@@ -65,13 +83,9 @@ async function writeCachedEntities<T extends EntityTimestamps>(
   entities: T[],
   getId: (entity: T) => string
 ): Promise<void> {
-  const storageEntity = entityTypeToStorageKey[entityType];
-  const storageKey = getSignedInCacheKey(storageEntity);
-  
   try {
-    const serialized = entities.map(toPersistedTimestamps);
-    await AsyncStorage.setItem(storageKey, JSON.stringify(serialized));
-    await updateCacheMetadata(entityType, new Date().toISOString());
+    // Use versioned cache storage (wraps entities in versioned format)
+    await writeCacheArray(entityType, entities);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to write cached ${entityType}: ${errorMessage}`, { cause: error });
@@ -86,6 +100,7 @@ async function writeCachedEntities<T extends EntityTimestamps>(
  * - Stale: Return cache immediately, refresh in background if online
  * - Expired: Block for network if online, return cache if offline
  * - Missing: Fetch from network
+ * - Future version: Prefer network fetch but preserve local data (don't blow away)
  * 
  * @param entityType - The entity type to get
  * @param fetchFn - Function that fetches fresh data from API
@@ -99,10 +114,44 @@ export async function getCached<T extends EntityTimestamps>(
   getId: (entity: T) => string,
   isOnline: boolean
 ): Promise<T[]> {
-  // Read cache and metadata
-  const cached = await readCachedEntities<T>(entityType);
+  // Read cache with status tracking
+  const cacheResult = await readCacheArray<T>(entityType);
+  const cached = cacheResult.data;
   const metadata = await getCacheMetadata(entityType);
   const state = getCacheState(entityType, metadata?.lastSyncedAt ?? null);
+
+  // Handle future_version status: prefer network but preserve local data
+  if (cacheResult.status === 'future_version') {
+    if (isOnline) {
+      // Online: prefer network fetch but don't overwrite local data
+      // Fetch from network and merge with local
+      try {
+        const fresh = await fetchFn();
+        // Merge remote updates with local (preserves future version data)
+        await applyRemoteUpdatesToLocal(entityType, fresh, getId);
+        await updateCacheMetadata(entityType, new Date().toISOString());
+        return fresh;
+      } catch (error) {
+        // Network fetch failed - return local data
+        console.warn(`Network fetch failed for ${entityType} with future version cache, returning local data:`, error);
+        return cached;
+      }
+    }
+    // Offline: return local data
+    return cached;
+  }
+
+  // Handle corrupt status: treat as missing
+  if (cacheResult.status === 'corrupt') {
+    if (!isOnline) {
+      // Offline and corrupt cache - return empty array
+      return [];
+    }
+    // Online and corrupt cache - fetch from network
+    const fresh = await fetchFn();
+    await writeCachedEntities(entityType, fresh, getId);
+    return fresh;
+  }
 
   // Handle missing cache
   if (state === 'missing') {

@@ -1,0 +1,341 @@
+---
+taskNumber: 002
+taskName: signed-in-cache-schema-versioning
+epic: data-model-and-schema-versioning
+created: 2026-01-28
+status: Planning
+---
+
+# 002 - Signed-In Cache Schema Versioning
+
+**Epic:** data-model-and-schema-versioning  
+**Created:** 2026-01-28  
+**Status:** Planning
+
+## Overview
+
+- Introduce explicit **storage schema versioning** for signed-in cache entity arrays and cache metadata in the mobile app.
+- Ensure existing persisted cache data continues to work, while providing a structured, observable migration path for future schema changes.
+- Follow the same pattern established in `001-sync-queue-schema-versioning` for consistency.
+
+## Current Status Analysis
+
+### ✅ Already Implemented
+
+1. **Sync Queue Schema Versioning** (Task 001):
+   - `version?: number` field on `QueuedWrite` and `SyncCheckpoint`
+   - Constants: `CURRENT_QUEUE_STORAGE_VERSION`, `CURRENT_CHECKPOINT_STORAGE_VERSION`
+   - Migration logic with write-back normalization in `syncQueueStorage.internal.ts`
+   - Legacy records without `version` treated as version `1`
+
+2. **Signed-In Cache Infrastructure**:
+   - Cache storage utilities: `mobile/src/common/utils/cacheStorage.ts`
+   - Cache metadata tracking: `mobile/src/common/utils/cacheMetadata.ts` (tracks `lastSyncedAt` per entity type)
+   - Entity types: `recipes`, `shoppingLists`, `shoppingItems`, `chores`
+   - Storage keys: `@kitchen_hub_cache_*` pattern (via `getSignedInCacheKey()`)
+   - Cache-aware repositories: `cacheAwareRepository.ts`, `cacheAwareRecipeRepository.ts`, etc.
+
+3. **Entity Schema Structure**:
+   - All entities extend `BaseEntity` from `entityMetadata.ts`
+   - `BaseEntity` includes: `id`, `localId`, `createdAt?`, `updatedAt?`, `deletedAt?`
+   - Entity-specific fields: Recipe, ShoppingList, ShoppingItem, Chore have their own fields
+
+### ❌ Missing Implementation
+
+1. **Schema Versioning for Cache Entity Arrays**:
+   - No `version` field on cached entity arrays stored in AsyncStorage
+   - No version constants for cache entity schemas
+   - No migration logic for cache entity schema evolution
+   - No write-back normalization for cache entities
+
+2. **Cache Metadata Schema Versioning**:
+   - `CacheMetadata` interface only has `lastSyncedAt` - no version field
+   - No version tracking for metadata schema itself
+   - No migration logic for metadata schema changes
+
+## Architecture
+
+### Mobile Storage (AsyncStorage)
+
+**Cache Entity Arrays:**
+- Entity arrays are stored under `@kitchen_hub_cache_${entityType}` keys
+- They will carry a **storage schema version** field (`version`) at the array level (not per entity)
+- Backed by explicit constants:
+  - `CURRENT_CACHE_ENTITY_STORAGE_VERSION` (global constant)
+  - `CURRENT_CACHE_ENTITY_STORAGE_VERSION_BY_TYPE` (optional per-entity overrides, defaults to global)
+- Missing `version` will be treated as `1` (legacy pre-versioned schema)
+- Version is stored as a wrapper object: `{ version: number, entities: T[] }`
+
+**Cache Metadata:**
+- Metadata is stored under `@kitchen_hub_cache_meta_${entityType}` keys
+- Current structure: `{ lastSyncedAt: string }`
+- Will add `version?: number` field to `CacheMetadata` interface
+- Backed by constant: `CURRENT_CACHE_METADATA_STORAGE_VERSION`
+- Missing `version` will be treated as `1` (legacy pre-versioned schema)
+
+## Implementation Steps
+
+### 1. Define Versioned Cache Storage Types and Constants (mobile)
+
+**Files:**
+- `mobile/src/common/utils/cacheStorage.types.ts` (new file - mirror sync queue naming: `syncQueueStorage.types.ts`)
+- `mobile/src/common/utils/cacheStorage.constants.ts` (new file - mirror sync queue naming: `syncQueueStorage.constants.ts`)
+- `mobile/src/common/utils/cacheMetadata.ts` (modify)
+
+**Tasks:**
+- Create `cacheStorage.types.ts` with:
+  - `VersionedCacheArray<T>` interface: `{ version: number; entities: T[] }`
+  - `CacheReadStatus` type: `'ok' | 'migrated' | 'future_version' | 'corrupt'`
+  - Extended `CacheReadResult<T>` interface with `status: CacheReadStatus` field
+  - Document that **version 1** corresponds to the current live schema (pre-change state)
+- Create `cacheStorage.constants.ts` with:
+  - `CURRENT_CACHE_ENTITY_STORAGE_VERSION = 1` (global constant for all entity types)
+  - `CURRENT_CACHE_ENTITY_STORAGE_VERSION_BY_TYPE: Partial<Record<SyncEntityType, number>>` (per-entity overrides, empty initially)
+  - Helper function: `getCurrentCacheEntityStorageVersion(entityType: SyncEntityType): number` that returns `CURRENT_CACHE_ENTITY_STORAGE_VERSION_BY_TYPE[entityType] ?? CURRENT_CACHE_ENTITY_STORAGE_VERSION`
+  - `CURRENT_CACHE_METADATA_STORAGE_VERSION = 1`
+  - Export all constants and helper
+- Update `CacheMetadata` interface in `cacheMetadata.ts`:
+  - Add optional `version?: number` field with JSDoc explaining it's a **storage schema version**
+  - Add `CacheMetadataReadStatus` type: `'ok' | 'migrated' | 'future_version' | 'corrupt'`
+  - Document that version 1 corresponds to current schema
+
+### 2. Implement Cache Entity Array Storage Migrations (mobile)
+
+**File:** `mobile/src/common/utils/cacheStorage.ts` (modify)
+
+**Tasks:**
+- Introduce corruption detection helpers:
+  - `detectCacheArrayFormat(raw: unknown): 'legacy' | 'current_wrapper' | 'future_wrapper' | 'corrupt' | 'wrong_type'`
+  - Distinguishes between: legacy (no wrapper), current wrapper, future wrapper, corrupt JSON, wrong type
+- Introduce migration helpers:
+  - `migrateCacheArray<T>(raw: unknown, entityType: SyncEntityType): { result: VersionedCacheArray<T>; status: 'ok' | 'migrated' | 'future_version' | 'corrupt' }`
+  - `normalizeCacheArrayVersion(raw: unknown): number` - extracts version or defaults to 1
+- Define migration registry semantics (codified rules):
+  - `CACHE_ENTITY_MIGRATIONS` registry for versioned transformations
+  - **Migration rules:**
+    - Migrations are **pure transforms** (no storage I/O inside)
+    - Apply **sequentially** from `fromVersion` to `toVersion`
+    - Migrations must be **idempotent** (safe if re-run)
+    - Migrations should be **schema-only**, not "business logic"
+  - For now, v1 migration normalizes legacy arrays (no `version` field) to versioned format
+- Update `readCacheArray()` to:
+  - Parse raw JSON safely (handle corrupt JSON)
+  - Detect format using `detectCacheArrayFormat()`
+  - Handle corruption: return `{ data: [], status: 'corrupt', isValid: false }` - **never write back corrupt data**
+  - Handle legacy format: call `migrateCacheArray()` → migrate → write-back normalized data **only if migration succeeded**
+  - Handle current version: return entities with `status: 'ok'`
+  - Handle future version (`version > CURRENT`):
+    - **Do not migrate**
+    - **Do not write-back**
+    - **Do not clear**
+    - If wrapper is parseable and `entities` is an array: return entities with `status: 'future_version'`
+    - If unparseable/corrupt: return `{ data: [], status: 'corrupt', isValid: false }` but **preserve raw blob** (don't overwrite)
+    - Log warning + analytics event
+  - Write-back normalization **only when**:
+    - Data is legacy or older version (`<= CURRENT`)
+    - Migration succeeded
+    - Normalized blob is different from original
+- Update `writeCacheArray()` to:
+  - Wrap entities in versioned format: `{ version: getCurrentCacheEntityStorageVersion(entityType), entities: T[] }`
+  - Write the versioned wrapper to storage
+
+### 3. Implement Cache Metadata Storage Migrations (mobile)
+
+**File:** `mobile/src/common/utils/cacheMetadata.ts` (modify)
+
+**Tasks:**
+- Introduce corruption detection:
+  - `detectCacheMetadataFormat(raw: unknown): 'legacy' | 'current' | 'future' | 'corrupt' | 'wrong_type'`
+- Introduce `migrateCacheMetadata(raw: unknown): { result: CacheMetadata; status: 'ok' | 'migrated' | 'future_version' | 'corrupt' }` helper
+- Treat missing `version` as `1` and normalize critical fields (`lastSyncedAt`)
+- Update `getCacheMetadata()` to:
+  - Parse raw JSON safely (handle corrupt JSON)
+  - Detect format using `detectCacheMetadataFormat()`
+  - Handle corruption: return `null` - **never write back corrupt data**
+  - Handle legacy format: call `migrateCacheMetadata()` → migrate → write-back normalized data **only if migration succeeded**
+  - Handle current version: return metadata with `status: 'ok'`
+  - Handle future version (`version > CURRENT_CACHE_METADATA_STORAGE_VERSION`):
+    - **Do not migrate**
+    - **Do not write-back**
+    - **Prefer "ignore version" over "return null"** if parseable:
+      - If `lastSyncedAt` is valid ISO string: return it (but mark `status: 'future_version'`)
+      - Otherwise: return `null`
+    - Log warning + analytics event
+- After migration, **write back** the normalized metadata **only if**:
+  - Data is legacy or older version (`<= CURRENT`)
+  - Migration succeeded
+  - Normalized blob is different from original
+- Update `updateCacheMetadata()` to:
+  - Always set `version: CURRENT_CACHE_METADATA_STORAGE_VERSION` on new/updated metadata
+
+### 4. Update Cache-Aware Repository Layer (mobile)
+
+**Files:**
+- `mobile/src/common/repositories/cacheAwareRepository.ts`
+- `mobile/src/common/repositories/cacheAwareRecipeRepository.ts`
+- `mobile/src/common/repositories/cacheAwareShoppingRepository.ts`
+- `mobile/src/common/repositories/cacheAwareChoreRepository.ts`
+
+**Tasks:**
+- Update repositories to handle `status: 'future_version'` from `readCacheArray()`:
+  - Treat `future_version` differently: prefer network fetch, but **don't blow away local data**
+  - Don't trigger cache invalidation or clearing on `future_version`
+  - Log appropriately for investigation
+- Ensure all repository methods use `readCacheArray()` and `writeCacheArray()` (already using them)
+- Migration logic remains transparent to repositories for `'ok'` and `'migrated'` statuses
+
+### 5. Critical End-to-End Scenario (contract test)
+
+**Scenario:**
+1. Seed mobile storage with cache entity arrays **without any `version` fields** (legacy format)
+2. Seed cache metadata **without `version` field** (legacy format)
+3. Call `readCacheArray()` / `getCacheMetadata()`:
+   - Migrations treat them as `version 1`
+   - Normalized data (with `version = CURRENT_*_STORAGE_VERSION`) is written back to storage
+4. Verify that:
+   - Entities are readable and valid
+   - Metadata is readable and valid
+   - Normalized format is persisted
+   - Status is `'migrated'` on first read, `'ok'` on subsequent reads
+5. After app restart, verify that:
+   - Stored cache arrays and metadata are already normalized to latest storage schema
+   - No additional migrations are needed on subsequent reads
+   - Status is `'ok'` (not `'migrated'`)
+
+## API Changes
+
+**Return Type Changes:**
+- `readCacheArray()` return type extended with `status: CacheReadStatus` field
+- Repositories must handle `status: 'future_version'` appropriately (prefer network but preserve local)
+
+No backend API changes required - this is purely a mobile storage schema change.
+
+## Testing Strategy
+
+### Mobile Unit Tests
+
+**Cache Entity Array Migrations:**
+- Legacy arrays with no `version` are treated as `version 1` and migrated to `CURRENT_CACHE_ENTITY_STORAGE_VERSION`
+- Arrays with missing/invalid structure are handled safely
+- Mixed-version scenarios (shouldn't happen, but handle gracefully)
+- Verify read-time + write-back behavior (migrations run once, persisted)
+- Verify `writeCacheArray()` always writes versioned format
+- **Write-back conditions**: Test that write-back only happens when data is legacy/older version, migration succeeded, and normalized blob differs
+
+**Cache Metadata Migrations:**
+- Legacy metadata without `version` migrate to `CURRENT_CACHE_METADATA_STORAGE_VERSION`
+- Metadata validation logic is preserved post-migration
+- Verify `updateCacheMetadata()` always sets version
+- **Write-back conditions**: Test that write-back only happens when data is legacy/older version, migration succeeded, and normalized blob differs
+
+**Corruption Handling:**
+- Test corrupt JSON (unparseable)
+- Test wrong type (object but not expected structure)
+- Test partial writes
+- Verify corrupt data **never triggers write-back**
+- Verify corrupt data **never triggers clear**
+
+**Unknown Future Versions:**
+- Cache arrays with `version > CURRENT_CACHE_ENTITY_STORAGE_VERSION`:
+  - Return entities if parseable (don't return empty array)
+  - Status is `'future_version'`
+  - **Never write-back**
+  - **Never clear**
+  - Log warning + analytics event
+- Metadata with `version > CURRENT_CACHE_METADATA_STORAGE_VERSION`:
+  - Return `lastSyncedAt` if valid ISO string (don't return null)
+  - Status is `'future_version'`
+  - **Never write-back**
+  - Log warning + analytics event
+- **Critical test**: Verify future version does not write-back / does not clear
+
+**Migration Registry Semantics:**
+- Test migrations are pure (no I/O)
+- Test sequential application (fromVersion → toVersion)
+- Test idempotency (safe if re-run)
+- Test schema-only transformations (no business logic)
+
+### Mobile Integration Tests
+
+- End-to-end cache → repository → UI flow across app restarts
+- Verify migrated data behaves identically to fresh data
+- Verify cache events still fire correctly after migration
+- Verify `future_version` status doesn't trigger cache invalidation loops
+
+### Critical E2E Contract Test
+
+- Implement the scenario described in step 5 to validate real-world safety and backward compatibility
+- Test that future versions preserve data and don't trigger write-back
+
+## Success Criteria
+
+- Existing users with pre-versioned cache data experience **no data loss** and no crashes after the upgrade
+- All new cache arrays and metadata persist with explicit **storage schema versions**
+- Unknown future storage schema versions are handled deterministically and safely:
+  - **Never write-back** future versions
+  - **Never clear** future versions
+  - Return entities if parseable (don't return empty array unnecessarily)
+  - Preserve raw blob for investigation
+- Corruption is handled as first-class concern:
+  - Distinguish between legacy, current, future, corrupt, wrong type
+  - **Never write-back** corrupt data (unless explicit repair flow)
+  - **Never clear** corrupt data
+- Tests reliably cover migrations, version handling, corruption handling, and the most critical end-to-end cache scenario
+- Implementation follows the same pattern as sync queue schema versioning for consistency
+- Migration registry semantics are codified and tested (pure, sequential, idempotent, schema-only)
+
+## Files to Create/Modify
+
+### New Files:
+- `mobile/src/common/utils/cacheStorage.types.ts` - Versioned cache array types and status enums
+- `mobile/src/common/utils/cacheStorage.constants.ts` - Version constants (mirror sync queue naming)
+
+### Modified Files:
+- `mobile/src/common/utils/cacheStorage.ts` - Add migration logic, corruption detection, status handling to `readCacheArray()` and `writeCacheArray()`
+- `mobile/src/common/utils/cacheMetadata.ts` - Add version field, migration logic, corruption detection, status handling
+- `mobile/src/common/repositories/cacheAwareRepository.ts` - Handle `status: 'future_version'` appropriately
+- `mobile/src/common/utils/__tests__/cacheStorage.test.ts` - Add migration, versioning, corruption, and write-back condition tests
+- `mobile/src/common/utils/__tests__/cacheMetadata.test.ts` - Add versioning, corruption, and write-back condition tests (if file exists, or create)
+
+## Design Decisions
+
+1. **Versioned Wrapper Format**: Store cache arrays as `{ version: number, entities: T[] }` wrapper rather than adding version per entity. This is cleaner and matches the sync queue pattern.
+
+2. **Global Version Constant with Per-Entity Overrides**: Use `CURRENT_CACHE_ENTITY_STORAGE_VERSION` as global constant, but allow `CURRENT_CACHE_ENTITY_STORAGE_VERSION_BY_TYPE` for future per-entity overrides. This future-proofs the design without changing storage format today.
+
+3. **Migration at Read Time**: Migrations happen during `readCacheArray()` and `getCacheMetadata()` calls, with write-back normalization. This ensures migrations run once and are persisted, avoiding repeated work.
+
+4. **Backward Compatibility**: Legacy data without `version` is treated as version `1`, ensuring existing users experience no disruption.
+
+5. **Future Version Handling**: 
+   - **Never migrate** future versions
+   - **Never write-back** future versions
+   - **Never clear** future versions
+   - Return entities if parseable (avoid empty array → cache miss → background refresh → overwrite loops)
+   - Preserve raw blob for investigation
+   - Log + analytics for observability
+
+6. **Corruption Handling as First-Class**:
+   - Distinguish: legacy, current wrapper, future wrapper, corrupt JSON, wrong type
+   - **Never write-back** corrupt data (unless explicit repair flow)
+   - **Never clear** corrupt data
+   - Return safe fallbacks (empty array for entities, null for metadata)
+
+7. **Metadata Fallback**: Prefer "ignore version" over "return null" if parseable:
+   - If `lastSyncedAt` is valid ISO string: return it (but mark `status: 'future_version'`)
+   - Otherwise: return null
+   - This preserves UX (doesn't force re-sync / invalidate freshness unnecessarily)
+
+8. **Migration Registry Semantics**: Codified rules enforced by tests:
+   - Pure transforms (no storage I/O)
+   - Sequential application (fromVersion → toVersion)
+   - Idempotent (safe if re-run)
+   - Schema-only (not business logic)
+
+9. **Write-Back Conditions**: Write-back normalization **only when**:
+   - Data is legacy or older version (`<= CURRENT`)
+   - Migration succeeded
+   - Normalized blob is different from original
+   - This prevents unnecessary writes and preserves future versions
+
+10. **Naming Convention**: Mirror sync queue naming exactly (`cacheStorage.types.ts`, `cacheStorage.constants.ts`) to reduce cognitive load and maintain consistency.

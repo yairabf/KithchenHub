@@ -4,6 +4,11 @@ import { getCacheMetadata, updateCacheMetadata } from '../cacheMetadata';
 import { getCacheState as getCacheStateFromConfig } from '../../config/cacheConfig';
 import type { SyncEntityType } from '../cacheMetadata';
 import type { CacheState } from '../../config/cacheConfig';
+import {
+  CURRENT_CACHE_ENTITY_STORAGE_VERSION,
+  getCurrentCacheEntityStorageVersion,
+} from '../cacheStorage.constants';
+import type { CacheReadStatus } from '../cacheStorage.types';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
@@ -38,6 +43,7 @@ describe('cacheStorage', () => {
         expectedData: [],
         expectedAge: null,
         expectedIsValid: true,
+        expectedStatus: 'ok' as CacheReadStatus,
       },
       {
         scenario: 'invalid JSON',
@@ -47,30 +53,34 @@ describe('cacheStorage', () => {
         expectedData: [],
         expectedAge: null,
         expectedIsValid: false,
+        expectedStatus: 'corrupt' as CacheReadStatus,
       },
       {
-        scenario: 'valid cached array with fresh metadata',
+        scenario: 'valid cached array with fresh metadata (legacy format)',
         storageValue: JSON.stringify([{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }]),
         metadata: { lastSyncedAt: new Date(Date.now() - 1000).toISOString() }, // 1 second ago
         cacheState: 'fresh' as CacheState,
         expectedData: [{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }],
         expectedIsValid: true,
+        expectedStatus: 'migrated' as CacheReadStatus,
       },
       {
-        scenario: 'valid cached array with stale metadata',
+        scenario: 'valid cached array with stale metadata (legacy format)',
         storageValue: JSON.stringify([{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }]),
         metadata: { lastSyncedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString() }, // 6 minutes ago (stale for recipes)
         cacheState: 'stale' as CacheState,
         expectedData: [{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }],
         expectedIsValid: true,
+        expectedStatus: 'migrated' as CacheReadStatus,
       },
       {
-        scenario: 'valid cached array with expired metadata',
+        scenario: 'valid cached array with expired metadata (legacy format)',
         storageValue: JSON.stringify([{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }]),
         metadata: { lastSyncedAt: new Date(Date.now() - 11 * 60 * 1000).toISOString() }, // 11 minutes ago (expired for recipes)
         cacheState: 'expired' as CacheState,
         expectedData: [{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }],
         expectedIsValid: true,
+        expectedStatus: 'migrated' as CacheReadStatus,
       },
       {
         scenario: 'non-array data',
@@ -80,6 +90,7 @@ describe('cacheStorage', () => {
         expectedData: [],
         expectedAge: null,
         expectedIsValid: false,
+        expectedStatus: 'corrupt' as CacheReadStatus,
       },
       {
         scenario: 'metadata exists but data is corrupted (invalid JSON)',
@@ -88,6 +99,7 @@ describe('cacheStorage', () => {
         cacheState: 'fresh' as CacheState,
         expectedData: [],
         expectedIsValid: false, // Data is corrupted
+        expectedStatus: 'corrupt' as CacheReadStatus,
       },
       {
         scenario: 'metadata exists but data is corrupted (non-array)',
@@ -96,6 +108,7 @@ describe('cacheStorage', () => {
         cacheState: 'stale' as CacheState,
         expectedData: [],
         expectedIsValid: false, // Data is corrupted
+        expectedStatus: 'corrupt' as CacheReadStatus,
       },
       {
         scenario: 'array with invalid items (no id)',
@@ -104,6 +117,7 @@ describe('cacheStorage', () => {
         cacheState: 'fresh' as CacheState,
         expectedData: [{ id: '2', localId: 'uuid-2', name: 'Recipe 2' }], // Only valid items
         expectedIsValid: true,
+        expectedStatus: 'migrated' as CacheReadStatus,
       },
     ])('when $scenario', ({ 
       storageValue, 
@@ -112,6 +126,7 @@ describe('cacheStorage', () => {
       expectedData, 
       expectedAge, 
       expectedIsValid,
+      expectedStatus,
       cacheState 
     }) => {
       it('should return correct result', async () => {
@@ -127,6 +142,7 @@ describe('cacheStorage', () => {
           expect(result.data).toEqual(expectedData);
           expect(result.state).toBe(cacheState);
           expect(result.isValid).toBe(expectedIsValid);
+          expect(result.status).toBe(expectedStatus);
           expect(result.lastSyncedAt).toBe(metadata.lastSyncedAt);
           expect(result.age).toBeGreaterThanOrEqual(age - 100); // Allow small time difference
           expect(result.age).toBeLessThanOrEqual(age + 100);
@@ -139,6 +155,7 @@ describe('cacheStorage', () => {
           expect(result.state).toBe(expectedState);
           expect(result.age).toBe(expectedAge);
           expect(result.isValid).toBe(expectedIsValid);
+          expect(result.status).toBe(expectedStatus);
           expect(result.lastSyncedAt).toBe(metadata?.lastSyncedAt ?? null);
         }
         
@@ -230,16 +247,23 @@ describe('cacheStorage', () => {
       const setItemCall = (AsyncStorage.setItem as jest.Mock).mock.calls[0];
       const writtenData = JSON.parse(setItemCall[1]);
       
-      expect(writtenData).toHaveLength(2);
-      expect(writtenData[0].id).toBe('1');
-      expect(writtenData[1].id).toBe('3');
+      expect(writtenData).toHaveProperty('version', CURRENT_CACHE_ENTITY_STORAGE_VERSION);
+      expect(writtenData).toHaveProperty('entities');
+      expect(writtenData.entities).toHaveLength(2);
+      expect(writtenData.entities[0].id).toBe('1');
+      expect(writtenData.entities[1].id).toBe('3');
       expect(mockUpdateCacheMetadata).toHaveBeenCalled();
     });
 
     it('should handle empty array', async () => {
       await writeCacheArray(entityType, []);
       
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(storageKey, '[]');
+      const setItemCall = (AsyncStorage.setItem as jest.Mock).mock.calls[0];
+      const writtenData = JSON.parse(setItemCall[1]);
+      
+      expect(writtenData).toHaveProperty('version', CURRENT_CACHE_ENTITY_STORAGE_VERSION);
+      expect(writtenData).toHaveProperty('entities');
+      expect(writtenData.entities).toEqual([]);
       expect(mockUpdateCacheMetadata).toHaveBeenCalled();
     });
   });
@@ -364,6 +388,283 @@ describe('cacheStorage', () => {
         expect(result).toBe(expected);
         expect(mockGetCacheMetadata).toHaveBeenCalledWith(entityType);
       });
+    });
+  });
+
+  describe('readCacheArray - versioned format and migrations', () => {
+    const entityType: SyncEntityType = 'recipes';
+    const storageKey = '@kitchen_hub_cache_recipes';
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockGetCacheMetadata.mockResolvedValue({ lastSyncedAt: new Date(Date.now() - 1000).toISOString() });
+      mockGetCacheStateFromConfig.mockReturnValue('fresh');
+    });
+
+    describe('versioned format (current version)', () => {
+      it('should read versioned wrapper format and return ok status', async () => {
+        const versionedData = {
+          version: CURRENT_CACHE_ENTITY_STORAGE_VERSION,
+          entities: [{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }],
+        };
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(versionedData));
+
+        const result = await readCacheArray(entityType);
+
+        expect(result.data).toEqual([{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }]);
+        expect(result.status).toBe('ok');
+        expect(result.isValid).toBe(true);
+        // Should not write back (already current version)
+        expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('legacy format migration', () => {
+      it('should migrate legacy array format and write back normalized data', async () => {
+        const legacyData = [{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }];
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(legacyData));
+
+        const result = await readCacheArray(entityType);
+
+        expect(result.data).toEqual([{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }]);
+        expect(result.status).toBe('migrated');
+        expect(result.isValid).toBe(true);
+        
+        // Should write back normalized versioned format
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+          storageKey,
+          expect.stringContaining(`"version":${CURRENT_CACHE_ENTITY_STORAGE_VERSION}`)
+        );
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+          storageKey,
+          expect.stringContaining('"entities"')
+        );
+      });
+
+      it('should not write back if normalized blob is identical', async () => {
+        // First write versioned format
+        const versionedData = {
+          version: CURRENT_CACHE_ENTITY_STORAGE_VERSION,
+          entities: [{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }],
+        };
+        const versionedJson = JSON.stringify(versionedData);
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(versionedJson);
+
+        const result = await readCacheArray(entityType);
+
+        expect(result.status).toBe('ok');
+        // Should not write back (already normalized)
+        expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('future version handling', () => {
+      it('should return entities from future version without migrating', async () => {
+        const futureVersion = CURRENT_CACHE_ENTITY_STORAGE_VERSION + 1;
+        const futureData = {
+          version: futureVersion,
+          entities: [{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }],
+        };
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(futureData));
+
+        const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+        const result = await readCacheArray(entityType);
+
+        expect(result.data).toEqual([{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }]);
+        expect(result.status).toBe('future_version');
+        expect(result.isValid).toBe(true);
+        
+        // Should NOT write back future version
+        expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+        
+        // Should log warning
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining(`future version ${futureVersion}`)
+        );
+
+        consoleWarnSpy.mockRestore();
+      });
+
+      it('should handle future version with invalid entities array', async () => {
+        const futureVersion = CURRENT_CACHE_ENTITY_STORAGE_VERSION + 1;
+        const futureData = {
+          version: futureVersion,
+          entities: 'not an array', // Invalid
+        };
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(futureData));
+
+        const result = await readCacheArray(entityType);
+
+        expect(result.data).toEqual([]);
+        expect(result.status).toBe('corrupt');
+        expect(result.isValid).toBe(false);
+        
+        // Should NOT write back corrupt future version
+        expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('corruption handling', () => {
+      it('should never write back corrupt JSON', async () => {
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('invalid json');
+
+        const result = await readCacheArray(entityType);
+
+        expect(result.data).toEqual([]);
+        expect(result.status).toBe('corrupt');
+        expect(result.isValid).toBe(false);
+        
+        // Should NOT write back corrupt data
+        expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      });
+
+      it('should never write back wrong type data', async () => {
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify({ not: 'an array or wrapper' }));
+
+        const result = await readCacheArray(entityType);
+
+        expect(result.data).toEqual([]);
+        expect(result.status).toBe('corrupt');
+        expect(result.isValid).toBe(false);
+        
+        // Should NOT write back wrong type data
+        expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('writeCacheArray - versioned format', () => {
+    const entityType: SyncEntityType = 'recipes';
+    const storageKey = '@kitchen_hub_cache_recipes';
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should always write versioned wrapper format', async () => {
+      const items = [
+        { id: '1', localId: 'uuid-1', name: 'Recipe 1' },
+        { id: '2', localId: 'uuid-2', name: 'Recipe 2' },
+      ];
+
+      await writeCacheArray(entityType, items);
+
+      const setItemCall = (AsyncStorage.setItem as jest.Mock).mock.calls[0];
+      const writtenData = JSON.parse(setItemCall[1]);
+
+      expect(writtenData).toHaveProperty('version', CURRENT_CACHE_ENTITY_STORAGE_VERSION);
+      expect(writtenData).toHaveProperty('entities');
+      expect(Array.isArray(writtenData.entities)).toBe(true);
+      expect(writtenData.entities).toHaveLength(2);
+      expect(mockUpdateCacheMetadata).toHaveBeenCalled();
+    });
+
+    it('should write empty array in versioned format', async () => {
+      await writeCacheArray(entityType, []);
+
+      const setItemCall = (AsyncStorage.setItem as jest.Mock).mock.calls[0];
+      const writtenData = JSON.parse(setItemCall[1]);
+
+      expect(writtenData).toHaveProperty('version', CURRENT_CACHE_ENTITY_STORAGE_VERSION);
+      expect(writtenData).toHaveProperty('entities');
+      expect(writtenData.entities).toEqual([]);
+    });
+  });
+
+  describe('migration idempotency', () => {
+    const entityType: SyncEntityType = 'recipes';
+    const storageKey = '@kitchen_hub_cache_recipes';
+
+    it('should be idempotent when migrating same data multiple times', async () => {
+      const legacyData = [{ id: '1', localId: 'uuid-1', name: 'Recipe 1' }];
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(legacyData));
+      mockGetCacheMetadata.mockResolvedValue({ lastSyncedAt: new Date(Date.now() - 1000).toISOString() });
+      mockGetCacheStateFromConfig.mockReturnValue('fresh');
+
+      // First read - should migrate
+      const firstResult = await readCacheArray(entityType);
+      expect(firstResult.status).toBe('migrated');
+      expect(firstResult.data).toEqual(legacyData);
+
+      // Simulate reading again with migrated format (already normalized)
+      const migratedJson = JSON.stringify({
+        version: CURRENT_CACHE_ENTITY_STORAGE_VERSION,
+        entities: legacyData,
+      });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(migratedJson);
+      jest.clearAllMocks();
+      mockGetCacheMetadata.mockResolvedValue({ lastSyncedAt: new Date(Date.now() - 1000).toISOString() });
+      mockGetCacheStateFromConfig.mockReturnValue('fresh');
+
+      // Second read - should not re-migrate
+      const secondResult = await readCacheArray(entityType);
+      expect(secondResult.status).toBe('ok'); // Should be 'ok' not 'migrated'
+      expect(secondResult.data).toEqual(firstResult.data);
+      
+      // Should NOT write back again (already normalized)
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('E2E contract test - legacy data migration', () => {
+    const entityType: SyncEntityType = 'recipes';
+    const storageKey = '@kitchen_hub_cache_recipes';
+
+    it('should migrate legacy cache data and persist normalized form across reads', async () => {
+      // Step 1: Seed storage with legacy format (no version wrapper)
+      const legacyData = [
+        { id: '1', localId: 'uuid-1', name: 'Recipe 1' },
+        { id: '2', localId: 'uuid-2', name: 'Recipe 2' },
+      ];
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(legacyData));
+      mockGetCacheMetadata.mockResolvedValue({ lastSyncedAt: new Date(Date.now() - 1000).toISOString() });
+      mockGetCacheStateFromConfig.mockReturnValue('fresh');
+
+      // Step 2: First read - should migrate and write back
+      const firstRead = await readCacheArray(entityType);
+
+      expect(firstRead.data).toEqual(legacyData);
+      expect(firstRead.status).toBe('migrated');
+      expect(firstRead.isValid).toBe(true);
+
+      // Verify normalized format was written back
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        storageKey,
+        expect.stringContaining(`"version":${CURRENT_CACHE_ENTITY_STORAGE_VERSION}`)
+      );
+
+      // Step 3: Simulate app restart - read again with normalized format
+      const normalizedJson = JSON.stringify({
+        version: CURRENT_CACHE_ENTITY_STORAGE_VERSION,
+        entities: legacyData,
+      });
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(normalizedJson);
+      jest.clearAllMocks();
+      mockGetCacheMetadata.mockResolvedValue({ lastSyncedAt: new Date(Date.now() - 1000).toISOString() });
+      mockGetCacheStateFromConfig.mockReturnValue('fresh');
+
+      const secondRead = await readCacheArray(entityType);
+
+      expect(secondRead.data).toEqual(legacyData);
+      expect(secondRead.status).toBe('ok'); // Should be 'ok' not 'migrated' on second read
+      expect(secondRead.isValid).toBe(true);
+
+      // Should NOT write back again (already normalized)
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getCurrentCacheEntityStorageVersion', () => {
+    it('should return global version when no override exists', () => {
+      const version = getCurrentCacheEntityStorageVersion('recipes');
+      expect(version).toBe(CURRENT_CACHE_ENTITY_STORAGE_VERSION);
+    });
+
+    it('should return valid positive integer version', () => {
+      const version = getCurrentCacheEntityStorageVersion('recipes');
+      expect(version).toBeGreaterThan(0);
+      expect(Number.isInteger(version)).toBe(true);
     });
   });
 });

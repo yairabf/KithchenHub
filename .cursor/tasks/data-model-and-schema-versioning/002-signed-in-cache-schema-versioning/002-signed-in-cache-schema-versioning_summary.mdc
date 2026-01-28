@@ -1,0 +1,108 @@
+# 002 - Signed-In Cache Schema Versioning - Implementation Summary
+
+**Epic:** data-model-and-schema-versioning  
+**Completed:** 2026-01-28  
+**Status:** Completed
+
+## What Was Implemented
+
+- **Versioned cache entity arrays**
+  - Added `VersionedCacheArray<T>` wrapper and `CacheReadStatus` / `CacheArrayFormat` types in `cacheStorage.types.ts`.
+  - Introduced `CURRENT_CACHE_ENTITY_STORAGE_VERSION`, `CURRENT_CACHE_ENTITY_STORAGE_VERSION_BY_TYPE`, and `getCurrentCacheEntityStorageVersion()` in `cacheStorage.constants.ts` (with validation and future per-entity override support).
+  - Updated `readCacheArray()` in `cacheStorage.ts` to:
+    - Safely parse JSON (`safeParseJSON`) and compute cache age.
+    - Detect array format (`detectCacheArrayFormat`) as `legacy`, `current_wrapper`, `future_wrapper`, `wrong_type`.
+    - Route to specialized handlers: `handleMissingCache`, `handleCorruptCache`, `handleFutureVersionCache`, `handleLegacyOrCurrentVersionCache`.
+    - Return a `CacheReadResult<T>` extended with `status: CacheReadStatus`.
+  - Implemented `CACHE_ENTITY_MIGRATIONS` registry and `migrateCacheArray()` enforcing pure, idempotent, sequential, schema-only transforms.
+  - Ensured write-back normalization only when:
+    - Data is legacy or older version (`<= CURRENT`),
+    - Migration succeeded,
+    - Normalized blob differs from the original.
+  - Updated `writeCacheArray()` to always write the `{ version, entities }` wrapper using `getCurrentCacheEntityStorageVersion()`.
+
+- **Cache metadata schema versioning**
+  - Extended `CacheMetadata` with optional `version?: number` and introduced `CacheMetadataReadStatus` in `cacheMetadata.ts`.
+  - Added `CURRENT_CACHE_METADATA_STORAGE_VERSION` in `cacheStorage.constants.ts`.
+  - Implemented `detectCacheMetadataFormat()` and `migrateCacheMetadata()` to normalize legacy metadata into the current schema.
+  - Updated `getCacheMetadata()` to:
+    - Parse JSON safely and detect format.
+    - Migrate legacy/older versions and write back normalized metadata only when needed and when the blob changes.
+    - Handle future versions by:
+      - Returning `{ lastSyncedAt, version }` if `lastSyncedAt` is a valid ISO string (status effectively `future_version`), without write-back.
+      - Returning `null` when `lastSyncedAt` is invalid, without write-back.
+    - Never write back or clear corrupt/wrong-type data.
+  - Updated `updateCacheMetadata()` to always set `version: CURRENT_CACHE_METADATA_STORAGE_VERSION`.
+
+- **Repository integration**
+  - Updated `cacheAwareRepository.ts` to use the new `readCacheArray()` result shape:
+    - For `status === 'future_version'`: log a warning, prefer network when online (with `applyRemoteUpdatesToLocal` + `updateCacheMetadata`), but never clear or overwrite local data; offline returns cached data.
+    - For `status === 'corrupt'`: treat as missing (fallback to network when online, empty when offline).
+    - For `status === 'ok' | 'migrated'`: use cached data as previously.
+  - Kept feature-specific repositories (recipes, shopping, chores) unchanged, since they depend on the generic cache-aware repository behavior.
+
+- **Testing**
+  - Expanded `cacheStorage.test.ts` to cover:
+    - Legacy, current, and future version formats.
+    - Corrupt/wrong-type data (JSON parse failures, non-array/wrapper structures).
+    - Validator-based filtering and ID validation helpers.
+    - Idempotent migrations (first read `migrated`, second read `ok` with no extra write-back).
+    - E2E contract for legacy data: migration, write-back, restart behavior, and subsequent `ok` status.
+    - Future version behavior: no write-back, no clear, log warning, and status `future_version`.
+    - Write-back conditions and versioned wrapper invariants for `writeCacheArray()`.
+    - `getCurrentCacheEntityStorageVersion()` behavior and validation.
+  - Added `cacheMetadata.test.ts` to validate:
+    - Legacy metadata migration with write-back to versioned format.
+    - Future-version metadata behavior (preserve `lastSyncedAt` when valid; return `null` when invalid).
+    - Corruption handling (invalid JSON, wrong type, invalid `lastSyncedAt`) with no write-back.
+    - `updateCacheMetadata()` always setting version and `clearCacheMetadata()` removing values.
+
+- **Documentation**
+  - Updated `kitchen_hub_project_context.md` to:
+    - Document signed-in cache storage schema versioning and metadata versioning.
+    - Mark cache storage schema versioning as implemented in future improvements.
+  - Updated feature docs (`docs/features/recipes.md`, `docs/features/chores.md`) to describe:
+    - Versioned cache storage, migration behavior, and corruption/future-version handling.
+  - Added `mobile/src/common/utils/cacheStorage.README.md` describing:
+    - Responsibilities, schema versioning, migration registry semantics, future-version behavior, corruption handling, and repository integration.
+
+## Deviations from Plan
+
+- **Analytics events**: The plan mentioned logging + analytics for observability; implementation currently uses `console.warn` / `console.error` only. Analytics hooks can be added later without changing storage format.
+- **Per-repository wiring**: The plan called out updating `cacheAwareRecipeRepository`, `cacheAwareShoppingRepository`, and `cacheAwareChoreRepository` explicitly. In practice, all of these consume the generic `cacheAwareRepository`, so only `cacheAwareRepository.ts` required changes to support `future_version` and `corrupt` statuses.
+- **Explicit `CacheMetadataReadStatus` usage**: The metadata read status type is defined and used conceptually in migrations and tests, but the public API returns `CacheMetadata | null` (as previous), with behavior documented rather than exposing a status enum to callers. This keeps the metadata API surface minimal while aligning with the planned semantics.
+
+## Testing Results
+
+- **Unit tests**
+  - `cacheStorage.test.ts`:
+    - Verified legacy → current migration for cache arrays with single-write normalization.
+    - Confirmed `status` values for `ok`, `migrated`, `future_version`, and `corrupt` across scenarios.
+    - Ensured corrupt/wrong-type data never triggers write-back or clear.
+    - Validated future-version handling: entities returned when parseable, no write-back, no clear, warning logged.
+    - Asserted that `writeCacheArray()` always writes `{ version, entities }` and updates metadata.
+    - Confirmed migration idempotency and E2E contract behavior across reads.
+  - `cacheMetadata.test.ts`:
+    - Confirmed legacy metadata migration and write-back to versioned format.
+    - Verified future-version semantics (preserve `lastSyncedAt` when valid, `null` otherwise) with no write-back.
+    - Ensured corrupt/wrong-type/invalid metadata never triggers write-back.
+    - Validated `updateCacheMetadata()` / `clearCacheMetadata()` correctness.
+
+- **Behavioral validation**
+  - Confirmed that cache-aware repositories:
+    - Treat `future_version` as “prefer network but preserve local state”.
+    - Treat `corrupt` as “missing” (network-first, empty when offline).
+    - Preserve existing cache-first behavior for `ok` and `migrated`.
+
+## Lessons Learned
+
+- Centralizing format detection, migration, and future-version handling into small, well-named helpers (`detectCacheArrayFormat`, `migrateCacheArray`, `handleFutureVersionCache`, etc.) keeps complex storage logic readable and testable.
+- Treating corruption and future versions as first-class statuses (rather than silent fallbacks) significantly improves safety and debuggability for offline storage.
+- Aligning the cache storage pattern with the sync queue (versioned wrapper + read-time migrations + write-back normalization) reduces cognitive load and makes future schema changes safer.
+
+## Next Steps
+
+- **Analytics integration**: Wire the existing console warnings into a real analytics/telemetry pipeline for better observability of future-version and corruption events in the wild.
+- **Guest mode alignment**: Extend similar schema-versioning and migration patterns to guest storage when future schema changes are planned there.
+- **Broader E2E coverage**: Add higher-level integration/E2E tests that exercise full flows (cache-aware repositories + sync queue + UI) across app restarts with mixed legacy and versioned data.
+

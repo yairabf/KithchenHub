@@ -113,10 +113,21 @@
 ### Limitations & Recommendations
 
 **Schema Versioning**
-- Guest mode: versioned envelope (v1), no migration yet
-- Signed-in cache: no schema versioning
-- Sync queue: no versioning beyond field migration
-- Backend: no DB version tracking or migration rollback
+- Guest mode: versioned envelope (v1) for local persistence; no additional migrations yet.
+- Signed-in sync queue: storage schema versioning v1 for `QueuedWrite` and `SyncCheckpoint`:
+  - `version` field on queue items and checkpoints.
+  - Read-time migrations + best-effort write-back to normalize legacy records.
+  - Future versions (`version` > current) are retained but marked `FAILED_PERMANENT` with a diagnostic `lastError`.
+- Signed-in cache storage: storage schema versioning v1 for cache entity arrays and metadata:
+  - Cache arrays stored as `{ version: number, entities: T[] }` wrapper format.
+  - Cache metadata includes optional `version?: number` field.
+  - Constants: `CURRENT_CACHE_ENTITY_STORAGE_VERSION` (global), `CURRENT_CACHE_METADATA_STORAGE_VERSION`.
+  - Read-time migrations with write-back normalization for legacy data.
+  - Future versions (`version` > current) are preserved but not migrated (status: `'future_version'`).
+  - Corruption handling distinguishes: legacy, current, future, corrupt, wrong type.
+  - Never writes back or clears corrupt/future version data.
+- `/auth/sync` payload: `payloadVersion` (positive integer, currently `1`) added to the sync DTO; missing or `1` are treated equivalently for backward compatibility.
+- Backend DB: still no explicit DB-wide schema version tracking or rollback automation.
 
 **Idempotency & Retry**
 - ✅ **Idempotency Keys Implemented**: Each sync operation includes unique `operationId` (UUID)
@@ -147,7 +158,7 @@
 - ✅ **Idempotency Keys**: Implemented for sync operations (backend + mobile)
 - ✅ **Realtime Sync Integration**: Implemented for shopping lists/items with custom hook and cache integration
 - ✅ **Partial Batch Recovery**: Implemented with granular operation tracking and safety-first logic
-- Add versioning to signed-in cache & sync queue
+- ✅ **Cache Storage Schema Versioning**: Implemented for cache entity arrays and metadata with migration support
 - Support schema migrations in guest mode
 - Direct cache updates for serverId mappings (currently uses cache invalidation via refresh)
 - API-side retry strategies for transient failures

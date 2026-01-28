@@ -493,7 +493,13 @@ Utility for applying remote updates to local cached state:
 - `useCachedEntities` - Reactive cache hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that subscribes to cache changes and automatically updates UI when cache changes. Used by `ChoresScreen` for signed-in users.
 - `cacheAwareRepository` - Cache utilities (`mobile/src/common/repositories/cacheAwareRepository.ts`) - Provides `getCached()`, `setCached()`, `addEntityToCache()`, `updateEntityInCache()`, and `readCachedEntitiesForUpdate()` for cache-first reads and write-through caching
 - `cacheEvents` - Cache event bus (`mobile/src/common/utils/cacheEvents.ts`) - Event emitter for cache change notifications. Used to trigger UI updates when cache changes.
-- `cacheStorage` - Cache storage utilities (`mobile/src/common/utils/cacheStorage.ts`) - Thin wrapper layer for safe cache access with TTL support. Provides `readCacheArray()`, `writeCacheArray()`, `getCacheState()`, and `shouldRefreshCache()` helpers. Used internally by `cacheAwareRepository`.
+- `cacheStorage` - Cache storage utilities (`mobile/src/common/utils/cacheStorage.ts`) - Versioned cache array storage with schema versioning support. Provides `readCacheArray()`, `writeCacheArray()`, `getCacheState()`, and `shouldRefreshCache()` helpers. Features:
+  - Storage schema versioning: Cache arrays stored as `{ version: number, entities: T[] }` wrapper format
+  - Read-time migrations: Legacy data automatically migrated to current version with write-back normalization
+  - Future version handling: Preserves data from newer app versions without migration
+  - Corruption detection: Distinguishes legacy, current, future, corrupt, and wrong-type data formats
+  - Status reporting: Returns `CacheReadStatus` (`'ok'`, `'migrated'`, `'future_version'`, `'corrupt'`) for repository handling
+  - Used internally by `cacheAwareRepository` for cache-first reads and write-through caching
 - `networkStatus` - Network status singleton (`mobile/src/common/utils/networkStatus.ts`) - Provides `getIsOnline()` for checking network connectivity outside React components
 - `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueueStorage.ts`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`)
 - `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors)
