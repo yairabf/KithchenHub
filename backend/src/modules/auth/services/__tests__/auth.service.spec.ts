@@ -1,16 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth.service';
 import { AuthRepository } from '../../repositories/auth.repository';
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service';
 import { UuidService } from '../../../../common/services/uuid.service';
-import {
-  SyncDataDto,
-  SyncRecipeDto,
-  SyncShoppingListDto,
-  SyncChoreDto,
-} from '../../dtos';
+import { SyncDataDto } from '../../dtos';
 
 // Mock loadConfiguration to avoid environment variable validation in tests
 jest.mock('../../../../config/configuration', () => ({
@@ -30,7 +24,6 @@ jest.mock('../../../../config/configuration', () => ({
 
 describe('AuthService - Idempotency', () => {
   let service: AuthService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     user: {
@@ -102,7 +95,7 @@ describe('AuthService - Idempotency', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    module.get<PrismaService>(PrismaService);
 
     // Setup default mocks
     mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
@@ -128,9 +121,15 @@ describe('AuthService - Idempotency', () => {
         const processFn = jest.fn().mockResolvedValue(undefined);
         const mockIdempotencyKey = { id: 'key-123' };
 
-        mockPrismaService.syncIdempotencyKey.create.mockResolvedValue(mockIdempotencyKey);
-        mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(mockIdempotencyKey);
-        mockPrismaService.syncIdempotencyKey.update.mockResolvedValue(undefined);
+        mockPrismaService.syncIdempotencyKey.create.mockResolvedValue(
+          mockIdempotencyKey,
+        );
+        mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(
+          mockIdempotencyKey,
+        );
+        mockPrismaService.syncIdempotencyKey.update.mockResolvedValue(
+          undefined,
+        );
 
         // Use reflection to access private method
         await (service as any).processEntityWithIdempotency(
@@ -142,7 +141,9 @@ describe('AuthService - Idempotency', () => {
           processFn,
         );
 
-        expect(mockPrismaService.syncIdempotencyKey.create).toHaveBeenCalledWith({
+        expect(
+          mockPrismaService.syncIdempotencyKey.create,
+        ).toHaveBeenCalledWith({
           data: {
             userId,
             key: operationId,
@@ -153,7 +154,9 @@ describe('AuthService - Idempotency', () => {
           },
         });
         expect(processFn).toHaveBeenCalled();
-        expect(mockPrismaService.syncIdempotencyKey.update).toHaveBeenCalledWith({
+        expect(
+          mockPrismaService.syncIdempotencyKey.update,
+        ).toHaveBeenCalledWith({
           where: { id: mockIdempotencyKey.id },
           data: {
             status: 'COMPLETED',
@@ -169,7 +172,9 @@ describe('AuthService - Idempotency', () => {
           meta: { target: ['userId', 'key'] },
         };
 
-        mockPrismaService.syncIdempotencyKey.create.mockRejectedValue(uniqueConstraintError);
+        mockPrismaService.syncIdempotencyKey.create.mockRejectedValue(
+          uniqueConstraintError,
+        );
 
         await (service as any).processEntityWithIdempotency(
           userId,
@@ -182,7 +187,9 @@ describe('AuthService - Idempotency', () => {
 
         expect(mockPrismaService.syncIdempotencyKey.create).toHaveBeenCalled();
         expect(processFn).not.toHaveBeenCalled();
-        expect(mockPrismaService.syncIdempotencyKey.update).not.toHaveBeenCalled();
+        expect(
+          mockPrismaService.syncIdempotencyKey.update,
+        ).not.toHaveBeenCalled();
       });
 
       it('should delete idempotency key and re-throw error when processing fails', async () => {
@@ -190,9 +197,15 @@ describe('AuthService - Idempotency', () => {
         const processFn = jest.fn().mockRejectedValue(processError);
         const mockIdempotencyKey = { id: 'key-123' };
 
-        mockPrismaService.syncIdempotencyKey.create.mockResolvedValue(mockIdempotencyKey);
-        mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(mockIdempotencyKey);
-        mockPrismaService.syncIdempotencyKey.delete.mockResolvedValue(undefined);
+        mockPrismaService.syncIdempotencyKey.create.mockResolvedValue(
+          mockIdempotencyKey,
+        );
+        mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(
+          mockIdempotencyKey,
+        );
+        mockPrismaService.syncIdempotencyKey.delete.mockResolvedValue(
+          undefined,
+        );
 
         await expect(
           (service as any).processEntityWithIdempotency(
@@ -206,7 +219,9 @@ describe('AuthService - Idempotency', () => {
         ).rejects.toThrow('Processing failed');
 
         expect(processFn).toHaveBeenCalled();
-        expect(mockPrismaService.syncIdempotencyKey.delete).toHaveBeenCalledWith({
+        expect(
+          mockPrismaService.syncIdempotencyKey.delete,
+        ).toHaveBeenCalledWith({
           where: { id: mockIdempotencyKey.id },
         });
       });
@@ -229,8 +244,12 @@ describe('AuthService - Idempotency', () => {
       };
 
       const mockIdempotencyKey = { id: 'key-123' };
-      mockPrismaService.syncIdempotencyKey.create.mockResolvedValue(mockIdempotencyKey);
-      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(mockIdempotencyKey);
+      mockPrismaService.syncIdempotencyKey.create.mockResolvedValue(
+        mockIdempotencyKey,
+      );
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(
+        mockIdempotencyKey,
+      );
       mockPrismaService.recipe.upsert.mockResolvedValue({});
       mockPrismaService.syncIdempotencyKey.update.mockResolvedValue(undefined);
 
@@ -267,15 +286,21 @@ describe('AuthService - Idempotency', () => {
 
       // First call succeeds
       const mockIdempotencyKey = { id: 'key-123' };
-      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(mockIdempotencyKey);
-      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(mockIdempotencyKey);
+      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(
+        mockIdempotencyKey,
+      );
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(
+        mockIdempotencyKey,
+      );
       mockPrismaService.recipe.upsert.mockResolvedValue({});
       mockPrismaService.syncIdempotencyKey.update.mockResolvedValue(undefined);
 
       await service.syncData(userId, syncData);
 
       // Second call with same operationId should be skipped
-      mockPrismaService.syncIdempotencyKey.create.mockRejectedValueOnce(uniqueConstraintError);
+      mockPrismaService.syncIdempotencyKey.create.mockRejectedValueOnce(
+        uniqueConstraintError,
+      );
 
       const result2 = await service.syncData(userId, syncData);
 
@@ -321,7 +346,9 @@ describe('AuthService - Idempotency', () => {
       const result = await service.syncData(userId, syncData);
 
       expect(result.status).toBe('synced');
-      expect(mockPrismaService.syncIdempotencyKey.create).toHaveBeenCalledTimes(2);
+      expect(mockPrismaService.syncIdempotencyKey.create).toHaveBeenCalledTimes(
+        2,
+      );
       expect(mockPrismaService.syncIdempotencyKey.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           key: 'op-list-123',
@@ -362,7 +389,9 @@ describe('AuthService - Idempotency', () => {
         .mockResolvedValueOnce(mockIdempotencyKey) // First request succeeds
         .mockRejectedValueOnce(uniqueConstraintError); // Second request gets duplicate
 
-      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(mockIdempotencyKey);
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValue(
+        mockIdempotencyKey,
+      );
       mockPrismaService.recipe.upsert.mockResolvedValue({});
       mockPrismaService.syncIdempotencyKey.update.mockResolvedValue(undefined);
 
@@ -417,9 +446,15 @@ describe('AuthService - Idempotency', () => {
       expect(result.status).toBe('synced');
       expect(result.succeeded).toBeDefined();
       expect(result.succeeded?.length).toBe(2);
-      expect(result.succeeded?.some(s => s.operationId === 'op-recipe-1')).toBe(true);
-      expect(result.succeeded?.some(s => s.operationId === 'op-recipe-2')).toBe(true);
-      expect(result.succeeded?.every(s => s.entityType === 'recipe')).toBe(true);
+      expect(
+        result.succeeded?.some((s) => s.operationId === 'op-recipe-1'),
+      ).toBe(true);
+      expect(
+        result.succeeded?.some((s) => s.operationId === 'op-recipe-2'),
+      ).toBe(true);
+      expect(result.succeeded?.every((s) => s.entityType === 'recipe')).toBe(
+        true,
+      );
     });
 
     it('should return both succeeded and conflicts for partial failures', async () => {
@@ -458,14 +493,18 @@ describe('AuthService - Idempotency', () => {
       mockPrismaService.syncIdempotencyKey.update
         .mockResolvedValueOnce(undefined) // First recipe completes
         .mockResolvedValueOnce(undefined); // Second recipe key deleted after failure
-      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(undefined);
+      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(
+        undefined,
+      );
 
       const result = await service.syncData(userId, syncData);
 
       expect(result.status).toBe('partial');
       expect(result.succeeded).toBeDefined();
       expect(result.succeeded?.length).toBe(1);
-      expect(result.succeeded?.some(s => s.operationId === 'op-recipe-1')).toBe(true);
+      expect(
+        result.succeeded?.some((s) => s.operationId === 'op-recipe-1'),
+      ).toBe(true);
       expect(result.conflicts.length).toBe(1);
       expect(result.conflicts[0].operationId).toBe('op-recipe-2');
       expect(result.conflicts[0].type).toBe('recipe');
@@ -485,11 +524,21 @@ describe('AuthService - Idempotency', () => {
       };
 
       const mockIdempotencyKey = { id: 'key-1' };
-      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(mockIdempotencyKey);
-      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(mockIdempotencyKey);
-      mockPrismaService.recipe.upsert.mockRejectedValueOnce(new Error('Validation failed'));
-      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(undefined);
-      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(undefined);
+      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(
+        mockIdempotencyKey,
+      );
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(
+        mockIdempotencyKey,
+      );
+      mockPrismaService.recipe.upsert.mockRejectedValueOnce(
+        new Error('Validation failed'),
+      );
+      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(
+        undefined,
+      );
+      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(
+        undefined,
+      );
 
       const result = await service.syncData(userId, syncData);
 
@@ -515,10 +564,16 @@ describe('AuthService - Idempotency', () => {
       };
 
       const mockKey1 = { id: 'key-1' };
-      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(mockKey1);
-      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(mockKey1);
+      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(
+        mockKey1,
+      );
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(
+        mockKey1,
+      );
       mockPrismaService.recipe.upsert.mockResolvedValueOnce({});
-      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(undefined);
+      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(
+        undefined,
+      );
 
       const result1 = await service.syncData(userId, syncData1);
       expect(result1.status).toBe('synced');
@@ -557,7 +612,9 @@ describe('AuthService - Idempotency', () => {
       mockPrismaService.syncIdempotencyKey.update
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined);
-      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(undefined);
+      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(
+        undefined,
+      );
 
       const result2 = await service.syncData(userId, syncData2);
       expect(result2.status).toBe('partial');
@@ -578,11 +635,21 @@ describe('AuthService - Idempotency', () => {
       };
 
       const mockKey3 = { id: 'key-3' };
-      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(mockKey3);
-      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(mockKey3);
-      mockPrismaService.recipe.upsert.mockRejectedValueOnce(new Error('Validation failed'));
-      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(undefined);
-      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(undefined);
+      mockPrismaService.syncIdempotencyKey.create.mockResolvedValueOnce(
+        mockKey3,
+      );
+      mockPrismaService.syncIdempotencyKey.findFirst.mockResolvedValueOnce(
+        mockKey3,
+      );
+      mockPrismaService.recipe.upsert.mockRejectedValueOnce(
+        new Error('Validation failed'),
+      );
+      mockPrismaService.syncIdempotencyKey.update.mockResolvedValueOnce(
+        undefined,
+      );
+      mockPrismaService.syncIdempotencyKey.delete.mockResolvedValueOnce(
+        undefined,
+      );
 
       const result3 = await service.syncData(userId, syncData3);
       expect(result3.status).toBe('failed');
@@ -635,9 +702,15 @@ describe('AuthService - Idempotency', () => {
       expect(result.succeeded).toBeDefined();
       // Should include list + 2 items = 3 succeeded
       expect(result.succeeded?.length).toBe(3);
-      expect(result.succeeded?.some(s => s.operationId === 'op-list-1')).toBe(true);
-      expect(result.succeeded?.some(s => s.operationId === 'op-item-1')).toBe(true);
-      expect(result.succeeded?.some(s => s.operationId === 'op-item-2')).toBe(true);
+      expect(result.succeeded?.some((s) => s.operationId === 'op-list-1')).toBe(
+        true,
+      );
+      expect(result.succeeded?.some((s) => s.operationId === 'op-item-1')).toBe(
+        true,
+      );
+      expect(result.succeeded?.some((s) => s.operationId === 'op-item-2')).toBe(
+        true,
+      );
     });
 
     it('should log error when invariant is violated (missing operationIds)', async () => {
@@ -660,9 +733,6 @@ describe('AuthService - Idempotency', () => {
         ],
       };
 
-      const mockKey1 = { id: 'key-1' };
-      const mockKey2 = { id: 'key-2' };
-
       // Mock logger
       const loggerErrorSpy = jest.spyOn(service['logger'], 'error');
 
@@ -670,7 +740,13 @@ describe('AuthService - Idempotency', () => {
       // This simulates a scenario where syncRecipes doesn't track all operationIds
       const originalSyncRecipes = service['syncRecipes'].bind(service);
       service['syncRecipes'] = jest.fn().mockResolvedValue({
-        succeeded: [{ operationId: 'op-recipe-1', id: 'recipe-1', clientLocalId: 'recipe-1' }],
+        succeeded: [
+          {
+            operationId: 'op-recipe-1',
+            id: 'recipe-1',
+            clientLocalId: 'recipe-1',
+          },
+        ],
         conflicts: [],
         // Missing op-recipe-2 to violate invariant
       });

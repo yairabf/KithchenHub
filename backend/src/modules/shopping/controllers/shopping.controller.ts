@@ -8,7 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  BadRequestException,
 } from '@nestjs/common';
 import { ShoppingService } from '../services/shopping.service';
 import { CreateListDto, AddItemsDto, UpdateItemDto } from '../dtos';

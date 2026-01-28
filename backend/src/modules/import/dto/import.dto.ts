@@ -4,7 +4,6 @@ import {
   IsArray,
   ValidateNested,
   IsOptional,
-  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateRecipeDto } from '../../recipes/dtos/create-recipe.dto';

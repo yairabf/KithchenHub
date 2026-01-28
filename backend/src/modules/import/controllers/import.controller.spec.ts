@@ -4,10 +4,10 @@ import { ImportController } from './import.controller';
 import { ImportService } from '../services/import.service';
 import { ImportRequestDto, ImportResponseDto } from '../dto/import.dto';
 import { CurrentUserPayload } from '../../../common/decorators';
+import { JwtAuthGuard } from '../../../common/guards';
 
 describe('ImportController', () => {
   let controller: ImportController;
-  let importService: ImportService;
 
   const mockImportService = {
     executeImport: jest.fn(),
@@ -30,12 +30,12 @@ describe('ImportController', () => {
         },
       ],
     })
-      .overrideGuard(require('../../../common/guards').JwtAuthGuard)
+      .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<ImportController>(ImportController);
-    importService = module.get<ImportService>(ImportService);
+    module.get<ImportService>(ImportService);
   });
 
   afterEach(() => {

@@ -39,9 +39,12 @@ describe('Versioning Config', () => {
       ['1', false], // Current version is not deprecated
       ['2', false], // Not in deprecated list
       ...DEPRECATED_API_VERSIONS.map((v) => [v, true] as [string, boolean]),
-    ])('should return %s for version %s', (version: string, expected: boolean) => {
-      expect(isVersionDeprecated(version)).toBe(expected);
-    });
+    ])(
+      'should return %s for version %s',
+      (version: string, expected: boolean) => {
+        expect(isVersionDeprecated(version)).toBe(expected);
+      },
+    );
   });
 
   describe('isVersionSunset', () => {
@@ -49,9 +52,12 @@ describe('Versioning Config', () => {
       ['1', false], // Current version is not sunset
       ['2', false], // Not in sunset list
       ...SUNSET_API_VERSIONS.map((v) => [v, true] as [string, boolean]),
-    ])('should return %s for version %s', (version: string, expected: boolean) => {
-      expect(isVersionSunset(version)).toBe(expected);
-    });
+    ])(
+      'should return %s for version %s',
+      (version: string, expected: boolean) => {
+        expect(isVersionSunset(version)).toBe(expected);
+      },
+    );
   });
 
   describe('getVersionMetadata', () => {

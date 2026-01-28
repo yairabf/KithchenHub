@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { Controller } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -100,7 +99,9 @@ describe('Controller Metadata Audit', () => {
     }
 
     // Check for @Controller('path') without version (invalid)
-    const controllerStringMatch = content.match(/@Controller\s*\(\s*['"]([^'"]+)['"]\s*\)/);
+    const controllerStringMatch = content.match(
+      /@Controller\s*\(\s*['"]([^'"]+)['"]\s*\)/,
+    );
     if (controllerStringMatch) {
       return {
         className,
@@ -139,7 +140,8 @@ describe('Controller Metadata Audit', () => {
 
     if (violations.length > 0) {
       const violationMessages = violations.map(
-        (v) => `  - ${v.className} in ${v.file}${v.path ? ` (path: ${v.path})` : ''}`,
+        (v) =>
+          `  - ${v.className} in ${v.file}${v.path ? ` (path: ${v.path})` : ''}`,
       );
 
       fail(

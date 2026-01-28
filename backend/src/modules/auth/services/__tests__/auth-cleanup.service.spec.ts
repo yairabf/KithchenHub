@@ -4,7 +4,6 @@ import { PrismaService } from '../../../../infrastructure/database/prisma/prisma
 
 describe('AuthCleanupService', () => {
   let service: AuthCleanupService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     syncIdempotencyKey: {
@@ -25,7 +24,7 @@ describe('AuthCleanupService', () => {
     }).compile();
 
     service = module.get<AuthCleanupService>(AuthCleanupService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
@@ -44,7 +43,9 @@ describe('AuthCleanupService', () => {
       const result = await service.cleanupOldIdempotencyKeys(retentionDays);
 
       expect(result).toBe(deletedCount);
-      expect(mockPrismaService.syncIdempotencyKey.deleteMany).toHaveBeenCalledWith({
+      expect(
+        mockPrismaService.syncIdempotencyKey.deleteMany,
+      ).toHaveBeenCalledWith({
         where: {
           status: 'COMPLETED',
           processedAt: {
@@ -62,20 +63,25 @@ describe('AuthCleanupService', () => {
 
       await service.cleanupOldIdempotencyKeys();
 
-      const call = mockPrismaService.syncIdempotencyKey.deleteMany.mock.calls[0][0];
+      const call =
+        mockPrismaService.syncIdempotencyKey.deleteMany.mock.calls[0][0];
       const cutoffDate = call.where.processedAt.lt;
       const expectedCutoff = new Date();
       expectedCutoff.setDate(expectedCutoff.getDate() - 30);
 
       // Allow 1 second difference for test execution time
-      expect(Math.abs(cutoffDate.getTime() - expectedCutoff.getTime())).toBeLessThan(1000);
+      expect(
+        Math.abs(cutoffDate.getTime() - expectedCutoff.getTime()),
+      ).toBeLessThan(1000);
     });
 
     it('should handle errors gracefully', async () => {
       const error = new Error('Database error');
       mockPrismaService.syncIdempotencyKey.deleteMany.mockRejectedValue(error);
 
-      await expect(service.cleanupOldIdempotencyKeys(30)).rejects.toThrow('Database error');
+      await expect(service.cleanupOldIdempotencyKeys(30)).rejects.toThrow(
+        'Database error',
+      );
     });
 
     it('should only delete COMPLETED keys with processedAt', async () => {
@@ -85,7 +91,8 @@ describe('AuthCleanupService', () => {
 
       await service.cleanupOldIdempotencyKeys(30);
 
-      const call = mockPrismaService.syncIdempotencyKey.deleteMany.mock.calls[0][0];
+      const call =
+        mockPrismaService.syncIdempotencyKey.deleteMany.mock.calls[0][0];
       expect(call.where.status).toBe('COMPLETED');
       expect(call.where.processedAt).toEqual({
         not: null,
@@ -102,13 +109,18 @@ describe('AuthCleanupService', () => {
 
       await service.handleScheduledCleanup();
 
-      expect(mockPrismaService.syncIdempotencyKey.deleteMany).toHaveBeenCalled();
-      const call = mockPrismaService.syncIdempotencyKey.deleteMany.mock.calls[0][0];
+      expect(
+        mockPrismaService.syncIdempotencyKey.deleteMany,
+      ).toHaveBeenCalled();
+      const call =
+        mockPrismaService.syncIdempotencyKey.deleteMany.mock.calls[0][0];
       const cutoffDate = call.where.processedAt.lt;
       const expectedCutoff = new Date();
       expectedCutoff.setDate(expectedCutoff.getDate() - 30);
 
-      expect(Math.abs(cutoffDate.getTime() - expectedCutoff.getTime())).toBeLessThan(1000);
+      expect(
+        Math.abs(cutoffDate.getTime() - expectedCutoff.getTime()),
+      ).toBeLessThan(1000);
     });
 
     it('should handle cleanup errors without throwing', async () => {
@@ -139,7 +151,9 @@ describe('AuthCleanupService', () => {
         oldCompleted: 20,
       });
 
-      expect(mockPrismaService.syncIdempotencyKey.count).toHaveBeenCalledTimes(5);
+      expect(mockPrismaService.syncIdempotencyKey.count).toHaveBeenCalledTimes(
+        5,
+      );
     });
 
     it('should calculate oldCompleted keys correctly (30 days ago)', async () => {
@@ -153,7 +167,8 @@ describe('AuthCleanupService', () => {
       await service.getIdempotencyKeyStats();
 
       // Check the last call (oldCompleted)
-      const lastCall = mockPrismaService.syncIdempotencyKey.count.mock.calls[4][0];
+      const lastCall =
+        mockPrismaService.syncIdempotencyKey.count.mock.calls[4][0];
       expect(lastCall.where.status).toBe('COMPLETED');
       expect(lastCall.where.processedAt).toEqual({
         not: null,
@@ -162,7 +177,9 @@ describe('AuthCleanupService', () => {
 
       const cutoffDate = lastCall.where.processedAt.lt;
       const expectedCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      expect(Math.abs(cutoffDate.getTime() - expectedCutoff.getTime())).toBeLessThan(1000);
+      expect(
+        Math.abs(cutoffDate.getTime() - expectedCutoff.getTime()),
+      ).toBeLessThan(1000);
     });
   });
 });

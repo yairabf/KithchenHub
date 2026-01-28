@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RecipesService } from './recipes.service';
 import { RecipesRepository } from '../repositories/recipes.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 
 /**
  * Recipes Service Unit Tests

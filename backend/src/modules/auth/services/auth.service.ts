@@ -33,7 +33,10 @@ import {
   MAX_SYNC_ITEMS,
 } from '../../../common/constants/token-expiry.constants';
 
-import { SYNC_ENTITY_TYPES, type SyncEntityType } from '../constants/sync-entity-types';
+import {
+  SYNC_ENTITY_TYPES,
+  type SyncEntityType,
+} from '../constants/sync-entity-types';
 
 /**
  * Type guard for Prisma unique constraint violation errors
@@ -199,11 +202,17 @@ export class AuthService {
     if (syncData.lists) {
       for (const list of syncData.lists) {
         incomingOperationIds.add(list.operationId);
-        operationIdToEntity.set(list.operationId, { type: 'list', id: list.id });
+        operationIdToEntity.set(list.operationId, {
+          type: 'list',
+          id: list.id,
+        });
         if (list.items) {
           for (const item of list.items) {
             incomingOperationIds.add(item.operationId);
-            operationIdToEntity.set(item.operationId, { type: 'shoppingItem', id: item.id });
+            operationIdToEntity.set(item.operationId, {
+              type: 'shoppingItem',
+              id: item.id,
+            });
           }
         }
       }
@@ -214,7 +223,7 @@ export class AuthService {
         syncData.requestId,
       );
       allSucceeded.push(
-        ...listResults.succeeded.map(s => ({
+        ...listResults.succeeded.map((s) => ({
           ...s,
           entityType: 'list' as const,
         })),
@@ -225,7 +234,10 @@ export class AuthService {
     if (syncData.recipes) {
       for (const recipe of syncData.recipes) {
         incomingOperationIds.add(recipe.operationId);
-        operationIdToEntity.set(recipe.operationId, { type: 'recipe', id: recipe.id });
+        operationIdToEntity.set(recipe.operationId, {
+          type: 'recipe',
+          id: recipe.id,
+        });
       }
       const recipeResults = await this.syncRecipes(
         userId,
@@ -234,7 +246,7 @@ export class AuthService {
         syncData.requestId,
       );
       allSucceeded.push(
-        ...recipeResults.succeeded.map(s => ({
+        ...recipeResults.succeeded.map((s) => ({
           ...s,
           entityType: 'recipe' as const,
         })),
@@ -245,7 +257,10 @@ export class AuthService {
     if (syncData.chores) {
       for (const chore of syncData.chores) {
         incomingOperationIds.add(chore.operationId);
-        operationIdToEntity.set(chore.operationId, { type: 'chore', id: chore.id });
+        operationIdToEntity.set(chore.operationId, {
+          type: 'chore',
+          id: chore.id,
+        });
       }
       const choreResults = await this.syncChores(
         userId,
@@ -254,7 +269,7 @@ export class AuthService {
         syncData.requestId,
       );
       allSucceeded.push(
-        ...choreResults.succeeded.map(s => ({
+        ...choreResults.succeeded.map((s) => ({
           ...s,
           entityType: 'chore' as const,
         })),
@@ -264,25 +279,31 @@ export class AuthService {
 
     // Enforce invariant: every operationId must appear exactly once
     const seenOperationIds = new Set([
-      ...allSucceeded.map(s => s.operationId),
-      ...allConflicts.map(c => c.operationId),
+      ...allSucceeded.map((s) => s.operationId),
+      ...allConflicts.map((c) => c.operationId),
     ]);
 
     if (seenOperationIds.size !== incomingOperationIds.size) {
       const missing = Array.from(incomingOperationIds).filter(
-        id => !seenOperationIds.has(id),
+        (id) => !seenOperationIds.has(id),
       );
-      const missingWithContext = missing.map(opId => ({
+      const missingWithContext = missing.map((opId) => ({
         operationId: opId,
-        ...(operationIdToEntity.get(opId) || { type: 'unknown', id: 'unknown' }),
+        ...(operationIdToEntity.get(opId) || {
+          type: 'unknown',
+          id: 'unknown',
+        }),
       }));
-      this.logger.error('Sync result invariant violated: missing operationIds', {
-        userId,
-        requestId: syncData.requestId,
-        missingOperationIds: missingWithContext,
-        expectedCount: incomingOperationIds.size,
-        actualCount: seenOperationIds.size,
-      });
+      this.logger.error(
+        'Sync result invariant violated: missing operationIds',
+        {
+          userId,
+          requestId: syncData.requestId,
+          missingOperationIds: missingWithContext,
+          expectedCount: incomingOperationIds.size,
+          actualCount: seenOperationIds.size,
+        },
+      );
       // Don't throw - log error but continue (better than breaking sync)
     }
 
@@ -428,21 +449,31 @@ export class AuthService {
   /**
    * Processes entities with success/failure tracking.
    * Generic helper to reduce duplication across sync methods.
-   * 
+   *
    * @param entities - Array of entities to process
    * @param entityType - Type of entity for conflict reporting
    * @param processEntityFn - Function to process a single entity
    * @returns Object with succeeded and conflicts arrays
    */
-  private async processEntitiesWithTracking<T extends { operationId: string; id: string }>(
+  private async processEntitiesWithTracking<
+    T extends { operationId: string; id: string },
+  >(
     entities: T[],
     entityType: 'list' | 'recipe' | 'chore' | 'shoppingItem',
     processEntityFn: (entity: T) => Promise<void>,
   ): Promise<{
-    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    succeeded: Array<{
+      operationId: string;
+      id: string;
+      clientLocalId?: string;
+    }>;
     conflicts: SyncConflict[];
   }> {
-    const succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }> = [];
+    const succeeded: Array<{
+      operationId: string;
+      id: string;
+      clientLocalId?: string;
+    }> = [];
     const conflicts: SyncConflict[] = [];
 
     for (const entity of entities) {
@@ -468,13 +499,13 @@ export class AuthService {
 
   /**
    * Processes an entity with idempotency checking using insert-first pattern.
-   * 
+   *
    * Atomic processing flow:
    * 1. Try to insert idempotency key (unique constraint = already processed → skip)
    * 2. If insert succeeds, we "own" this operation → process entity
    * 3. If processing succeeds, mark key as COMPLETED
    * 4. If processing fails, delete key to allow retry
-   * 
+   *
    * @param userId - User ID performing the operation
    * @param operationId - Idempotency key (operationId from client)
    * @param entityType - Type of entity (from SYNC_ENTITY_TYPES constant)
@@ -494,7 +525,7 @@ export class AuthService {
     // Try to insert idempotency key first (atomic check)
     // Store the created key's ID to avoid redundant queries later
     let idempotencyKeyId: string | null = null;
-    
+
     try {
       const created = await this.prisma.syncIdempotencyKey.create({
         data: {
@@ -555,10 +586,13 @@ export class AuthService {
           });
         } catch (deleteError) {
           // Log but don't throw - original error is more important
-          this.logger.warn('Failed to delete idempotency key after processing failure', {
-            idempotencyKeyId,
-            error: deleteError,
-          });
+          this.logger.warn(
+            'Failed to delete idempotency key after processing failure',
+            {
+              idempotencyKeyId,
+              error: deleteError,
+            },
+          );
         }
       }
       // Re-throw original error
@@ -577,15 +611,28 @@ export class AuthService {
     lists: SyncShoppingListDto[],
     requestId: string | undefined,
   ): Promise<{
-    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    succeeded: Array<{
+      operationId: string;
+      id: string;
+      clientLocalId?: string;
+    }>;
     conflicts: SyncConflict[];
   }> {
-    const succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }> = [];
+    const succeeded: Array<{
+      operationId: string;
+      id: string;
+      clientLocalId?: string;
+    }> = [];
     const conflicts: SyncConflict[] = [];
 
     for (const list of lists) {
       try {
-        const { itemResults } = await this.syncShoppingList(userId, householdId, list, requestId);
+        const { itemResults } = await this.syncShoppingList(
+          userId,
+          householdId,
+          list,
+          requestId,
+        );
         // Include clientLocalId for create operations (id was localId)
         succeeded.push({
           operationId: list.operationId,
@@ -611,13 +658,13 @@ export class AuthService {
 
   /**
    * Synchronizes a single shopping list and its items.
-   * 
+   *
    * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
    * Client-side conflict resolution handles all conflicts using LWW strategy.
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
-   * 
+   *
    * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
-   * 
+   *
    * Returns item results for aggregation at the syncShoppingLists level.
    */
   private async syncShoppingList(
@@ -627,12 +674,20 @@ export class AuthService {
     requestId: string | undefined,
   ): Promise<{
     itemResults: {
-      succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+      succeeded: Array<{
+        operationId: string;
+        id: string;
+        clientLocalId?: string;
+      }>;
       conflicts: SyncConflict[];
     };
   }> {
     let itemResults: {
-      succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+      succeeded: Array<{
+        operationId: string;
+        id: string;
+        clientLocalId?: string;
+      }>;
       conflicts: SyncConflict[];
     } = { succeeded: [], conflicts: [] };
 
@@ -658,7 +713,12 @@ export class AuthService {
         });
 
         if (list.items) {
-          itemResults = await this.syncShoppingItems(userId, list.id, list.items, requestId);
+          itemResults = await this.syncShoppingItems(
+            userId,
+            list.id,
+            list.items,
+            requestId,
+          );
         }
       },
     );
@@ -677,7 +737,11 @@ export class AuthService {
     items: SyncShoppingListDto['items'],
     requestId: string | undefined,
   ): Promise<{
-    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    succeeded: Array<{
+      operationId: string;
+      id: string;
+      clientLocalId?: string;
+    }>;
     conflicts: SyncConflict[];
   }> {
     if (!items) {
@@ -722,11 +786,11 @@ export class AuthService {
 
   /**
    * Synchronizes recipes.
-   * 
+   *
    * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
    * Client-side conflict resolution handles all conflicts using LWW strategy.
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
-   * 
+   *
    * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
    * Returns both succeeded and failed entities with operationId mapping.
    */
@@ -736,7 +800,11 @@ export class AuthService {
     recipes: SyncRecipeDto[],
     requestId: string | undefined,
   ): Promise<{
-    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    succeeded: Array<{
+      operationId: string;
+      id: string;
+      clientLocalId?: string;
+    }>;
     conflicts: SyncConflict[];
   }> {
     return this.processEntitiesWithTracking(
@@ -773,11 +841,11 @@ export class AuthService {
 
   /**
    * Synchronizes chores.
-   * 
+   *
    * **Note:** Uses simple `upsert` without timestamp-based conflict resolution.
    * Client-side conflict resolution handles all conflicts using LWW strategy.
    * Server timestamps are authoritative (Prisma auto-manages `updatedAt`).
-   * 
+   *
    * **Idempotency:** Uses insert-first pattern to prevent duplicate processing.
    * Returns both succeeded and failed entities with operationId mapping.
    */
@@ -787,41 +855,41 @@ export class AuthService {
     chores: SyncChoreDto[],
     requestId: string | undefined,
   ): Promise<{
-    succeeded: Array<{ operationId: string; id: string; clientLocalId?: string }>;
+    succeeded: Array<{
+      operationId: string;
+      id: string;
+      clientLocalId?: string;
+    }>;
     conflicts: SyncConflict[];
   }> {
-    return this.processEntitiesWithTracking(
-      chores,
-      'chore',
-      async (chore) => {
-        await this.processEntityWithIdempotency(
-          userId,
-          chore.operationId,
-          SYNC_ENTITY_TYPES.CHORE,
-          chore.id,
-          requestId,
-          async () => {
-            await this.prisma.chore.upsert({
-              where: { id: chore.id },
-              create: {
-                id: chore.id,
-                householdId,
-                title: chore.title,
-                assigneeId: chore.assigneeId,
-                dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
-                isCompleted: chore.isCompleted || false,
-              },
-              update: {
-                title: chore.title,
-                assigneeId: chore.assigneeId,
-                dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
-                isCompleted: chore.isCompleted,
-              },
-            });
-          },
-        );
-      },
-    );
+    return this.processEntitiesWithTracking(chores, 'chore', async (chore) => {
+      await this.processEntityWithIdempotency(
+        userId,
+        chore.operationId,
+        SYNC_ENTITY_TYPES.CHORE,
+        chore.id,
+        requestId,
+        async () => {
+          await this.prisma.chore.upsert({
+            where: { id: chore.id },
+            create: {
+              id: chore.id,
+              householdId,
+              title: chore.title,
+              assigneeId: chore.assigneeId,
+              dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
+              isCompleted: chore.isCompleted || false,
+            },
+            update: {
+              title: chore.title,
+              assigneeId: chore.assigneeId,
+              dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
+              isCompleted: chore.isCompleted,
+            },
+          });
+        },
+      );
+    });
   }
 
   /**

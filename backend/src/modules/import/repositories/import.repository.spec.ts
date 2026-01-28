@@ -4,7 +4,6 @@ import { PrismaService } from '../../../infrastructure/database/prisma/prisma.se
 
 describe('ImportRepository', () => {
   let repository: ImportRepository;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     importMapping: {
@@ -24,7 +23,7 @@ describe('ImportRepository', () => {
     }).compile();
 
     repository = module.get<ImportRepository>(ImportRepository);
-    prismaService = module.get<PrismaService>(PrismaService);
+    module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {

@@ -10,7 +10,6 @@ import {
   HouseholdResponseDto,
   UpdateHouseholdDto,
   InviteMemberDto,
-  HouseholdMemberDto,
 } from '../dtos';
 
 /**
@@ -99,10 +98,9 @@ export class HouseholdsService {
       throw new ForbiddenException('Only admins can update household');
     }
 
-    const household = await this.householdsRepository.updateHousehold(
-      user.householdId,
-      { name: dto.name },
-    );
+    await this.householdsRepository.updateHousehold(user.householdId, {
+      name: dto.name,
+    });
 
     return this.getHousehold(userId);
   }

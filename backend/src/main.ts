@@ -4,7 +4,6 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { loadConfiguration } from './config/configuration';
 import { HttpExceptionFilter } from './common/filters';
@@ -14,7 +13,9 @@ async function bootstrap(): Promise<void> {
   try {
     console.log('🚀 Starting Kitchen Hub Backend API...');
     const config = loadConfiguration();
-    console.log(`📋 Configuration loaded - Port: ${config.port}, Env: ${config.env}`);
+    console.log(
+      `📋 Configuration loaded - Port: ${config.port}, Env: ${config.env}`,
+    );
 
     console.log('🔨 Creating NestJS application...');
     const app = await NestFactory.create<NestFastifyApplication>(
@@ -60,7 +61,9 @@ async function bootstrap(): Promise<void> {
     // When v2 is added, create a separate document with version: '2' filter.
     // Swagger setup - temporarily disabled due to @fastify/static dependency issue
     // TODO: Install @fastify/static package or configure Swagger differently
-    console.log('📚 Skipping Swagger setup (requires @fastify/static package)...');
+    console.log(
+      '📚 Skipping Swagger setup (requires @fastify/static package)...',
+    );
     // Uncomment when @fastify/static is installed:
     /*
     try {
@@ -94,9 +97,7 @@ async function bootstrap(): Promise<void> {
     console.log(
       `\n🎉 Application is running on: http://localhost:${config.port}/api/v1`,
     );
-    console.log(
-      `📖 Swagger documentation (v1): http://localhost:${config.port}/api/docs/v1`,
-    );
+    console.log('📖 Swagger documentation: disabled (missing @fastify/static)');
     console.log(
       `🔍 Version discovery: http://localhost:${config.port}/api/version`,
     );

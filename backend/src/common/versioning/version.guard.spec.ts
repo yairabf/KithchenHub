@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext, NotFoundException, GoneException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  NotFoundException,
+  GoneException,
+} from '@nestjs/common';
 import { VersionGuard } from './version.guard';
 import {
   SUPPORTED_API_VERSIONS,
@@ -35,7 +39,7 @@ describe('VersionGuard', () => {
   describe('canActivate', () => {
     it.each(SUPPORTED_API_VERSIONS.map((v) => [`/api/v${v}/auth/sync`, v]))(
       'should allow requests for supported version %s',
-      (url, version) => {
+      (url) => {
         const context = createMockExecutionContext(url);
         expect(() => guard.canActivate(context)).not.toThrow();
         expect(guard.canActivate(context)).toBe(true);
@@ -60,20 +64,17 @@ describe('VersionGuard', () => {
       SUNSET_API_VERSIONS.length > 0
         ? SUNSET_API_VERSIONS.map((v) => [`/api/v${v}/auth/sync`, v])
         : [['/api/v999/auth/sync', '999']], // Dummy test when no sunset versions
-    )(
-      'should throw GoneException for sunset version %s',
-      (url, version) => {
-        // Skip test if no sunset versions exist
-        if (SUNSET_API_VERSIONS.length === 0) {
-          return;
-        }
-        const context = createMockExecutionContext(url);
-        expect(() => guard.canActivate(context)).toThrow(GoneException);
-        expect(() => guard.canActivate(context)).toThrow(
-          expect.stringContaining(`API version ${version} has been sunset`),
-        );
-      },
-    );
+    )('should throw GoneException for sunset version %s', (url, version) => {
+      // Skip test if no sunset versions exist
+      if (SUNSET_API_VERSIONS.length === 0) {
+        return;
+      }
+      const context = createMockExecutionContext(url);
+      expect(() => guard.canActivate(context)).toThrow(GoneException);
+      expect(() => guard.canActivate(context)).toThrow(
+        expect.stringContaining(`API version ${version} has been sunset`),
+      );
+    });
 
     it('should throw NotFoundException for requests without version in URL', () => {
       const context = createMockExecutionContext('/api/auth/sync');
@@ -83,13 +84,17 @@ describe('VersionGuard', () => {
         fail('Expected NotFoundException to be thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(NotFoundException);
-        expect((error as NotFoundException).message).toContain('API version is required');
+        expect((error as NotFoundException).message).toContain(
+          'API version is required',
+        );
       }
     });
 
     it('should allow deprecated versions (deprecation headers added by interceptor)', () => {
       DEPRECATED_API_VERSIONS.forEach((version) => {
-        const context = createMockExecutionContext(`/api/v${version}/auth/sync`);
+        const context = createMockExecutionContext(
+          `/api/v${version}/auth/sync`,
+        );
         expect(() => guard.canActivate(context)).not.toThrow();
         expect(guard.canActivate(context)).toBe(true);
       });

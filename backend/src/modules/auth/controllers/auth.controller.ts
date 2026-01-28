@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import {
   GoogleAuthDto,
@@ -13,7 +6,6 @@ import {
   SyncDataDto,
   RefreshTokenDto,
 } from '../dtos';
-import { JwtAuthGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 import { Public } from '../../../common/decorators/public.decorator';
 
