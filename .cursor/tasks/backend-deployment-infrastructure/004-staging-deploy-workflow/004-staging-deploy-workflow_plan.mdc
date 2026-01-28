@@ -1,0 +1,374 @@
+# 004 - Staging Deploy Workflow (develop → staging)
+
+**Epic:** Backend Deployment Infrastructure  
+**Created:** 2026-01-28  
+**Status:** Planning
+
+## Overview
+
+Create a staging deployment workflow (`.github/workflows/deploy-staging.yml`) that automatically deploys to staging environment when code is merged to the `develop` branch. This workflow will call a reusable `_deploy.yml` workflow with `environment=staging` and `deploy_target=render`, establishing a cloud-agnostic deployment pattern that can be extended for other environments and deployment targets.
+
+## Current Status Analysis
+
+### Existing Infrastructure ✅
+
+1. **Build Workflows**:
+  - `build.yml` - Builds and pushes Docker images to GHCR for `develop` and `main` branches
+  - `build-push.yml` - Builds and pushes Docker images to GHCR for all branches
+  - Both workflows create images tagged with `BRANCH-SHA` and `BRANCH-latest` formats
+2. **CI Workflow**:
+  - `ci.yml` - Runs lint, typecheck, and unit tests on PRs
+3. **Docker Infrastructure**:
+  - Production-ready multi-stage Dockerfile exists
+  - Images are automatically built and pushed to GHCR
+  - Images available at `ghcr.io/${{ github.repository_owner }}/kitchen-hub-api:TAG`
+4. **Deployment Documentation**:
+  - `backend/DEPLOYMENT.md` documents Render deployment process
+  - Render supports deploy hooks (HTTP POST/GET) and API-based deployment
+
+### What's Missing ❌
+
+1. **Reusable Deployment Workflow**: No `_deploy.yml` reusable workflow exists
+2. **Staging Deployment Workflow**: No `deploy-staging.yml` workflow exists
+3. **Deployment Automation**: No automated deployment process after builds complete
+4. **Environment-Specific Configuration**: No environment-specific deployment logic
+5. **Cloud-Agnostic Pattern**: No abstraction layer for different deployment targets
+
+## Architecture
+
+### Workflow Structure
+
+The deployment infrastructure will consist of two workflows:
+
+1. `**_deploy.yml**` (Reusable Workflow):
+  - Cloud-agnostic deployment workflow
+  - Accepts inputs: `environment`, `deploy_target`, `image_tag`
+  - Supports multiple deployment targets (Render, Railway, AWS, etc.)
+  - Handles deployment logic based on `deploy_target` input
+2. `**deploy-staging.yml**` (Caller Workflow):
+  - Triggers on pushes to `develop` branch
+  - Calls `_deploy.yml` with `environment=staging` and `deploy_target=render`
+  - Waits for build workflow to complete (if needed)
+  - Handles staging-specific configuration
+
+### Deployment Flow
+
+```mermaid
+graph LR
+    A[Push to develop] --> B[build.yml triggers]
+    B --> C[Build Docker image]
+    C --> D[Push to GHCR]
+    D --> E[deploy-staging.yml triggers]
+    E --> F[Call _deploy.yml]
+    F --> G{deploy_target?}
+    G -->|render| H[Render Deploy Hook]
+    G -->|railway| I[Railway API]
+    G -->|aws| J[AWS ECS]
+    H --> K[Staging Environment]
+    I --> K
+    J --> K
+```
+
+### Reusable Workflow Design (`_deploy.yml`)
+
+**Inputs:**
+
+- `environment` (required, string): Environment name (staging, production, etc.)
+- `deploy_target` (required, string): Deployment target (render, railway, aws, etc.)
+- `image_tag` (optional, string): Docker image tag to deploy (defaults to `develop-latest` for staging)
+
+**Jobs:**
+
+- `deploy`: Handles deployment based on `deploy_target` input
+
+**Deployment Target Logic:**
+
+- **render**: Uses Render deploy hook URL (from secrets)
+- **railway**: Uses Railway API (future)
+- **aws**: Uses AWS ECS deployment (future)
+- **other**: Extensible for additional targets
+
+### Staging Workflow Design (`deploy-staging.yml`)
+
+**Triggers:**
+
+- `push` to `develop` branch
+- Path filters: `backend/**` and `.github/workflows/deploy-staging.yml`
+
+**Jobs:**
+
+- `deploy_to_staging`: Calls `_deploy.yml` reusable workflow
+
+**Configuration:**
+
+- `environment`: `staging`
+- `deploy_target`: `render`
+- `image_tag`: `develop-latest` (matches build.yml tagging)
+
+## Implementation Steps
+
+### Step 1: Create Task Directory Structure
+
+- Create `.cursor/tasks/backend-deployment-infrastructure/004-staging-deploy-workflow/`
+- Create plan document: `004-staging-deploy-workflow_plan.mdc`
+
+### Step 2: Create Reusable Deployment Workflow (`_deploy.yml`)
+
+**Location:** `.github/workflows/_deploy.yml`
+
+**Key Features:**
+
+- `workflow_call` trigger with inputs
+- Environment-specific job configuration
+- Conditional deployment logic based on `deploy_target`
+- Render deploy hook implementation
+- Extensible structure for future deployment targets
+
+**Inputs Definition:**
+
+```yaml
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Deployment environment (staging, production, etc.)'
+      deploy_target:
+        required: true
+        type: string
+        description: 'Deployment target (render, railway, aws, etc.)'
+      image_tag:
+        required: false
+        type: string
+        description: 'Docker image tag to deploy'
+        default: ''
+```
+
+**Render Deployment Implementation:**
+
+- Use Render deploy hook URL from secrets
+- Send HTTP POST request to trigger deployment
+- Handle response and verify deployment trigger
+- Support both staging and production Render services
+
+### Step 3: Create Staging Deployment Workflow (`deploy-staging.yml`)
+
+**Location:** `.github/workflows/deploy-staging.yml`
+
+**Key Features:**
+
+- Triggers on `develop` branch pushes
+- Path filters for backend changes
+- Calls `_deploy.yml` with appropriate inputs
+- Concurrency control to prevent duplicate deployments
+
+**Workflow Call:**
+
+```yaml
+jobs:
+  deploy_to_staging:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: staging
+      deploy_target: render
+      image_tag: develop-latest
+    secrets: inherit
+```
+
+### Step 4: Configure Secrets
+
+**Required GitHub Secrets:**
+
+- `RENDER_DEPLOY_HOOK_URL_STAGING`: Render deploy hook URL for staging environment
+- (Future) `RENDER_DEPLOY_HOOK_URL_PRODUCTION`: For production deployments
+- (Future) `RENDER_API_KEY`: For API-based deployments
+
+**Secret Setup Instructions:**
+
+1. Get deploy hook URL from Render Dashboard → Service Settings → Deploy Hook
+2. Add secret in GitHub: Settings → Secrets and variables → Actions → New repository secret
+
+### Step 5: Add Concurrency Control
+
+Both workflows should include concurrency control:
+
+- `_deploy.yml`: Group by `deploy-${{ inputs.environment }}-${{ inputs.deploy_target }}`
+- `deploy-staging.yml`: Group by `deploy-staging-${{ github.ref }}`
+
+### Step 6: Add Error Handling
+
+- Validate inputs in `_deploy.yml`
+- Handle deployment failures gracefully
+- Provide clear error messages
+- Support retry logic (optional)
+
+### Step 7: Documentation
+
+- Update `backend/DEPLOYMENT.md` with staging deployment information
+- Document secret setup process
+- Add troubleshooting section for deployment issues
+
+## Files to Create/Modify
+
+### New Files
+
+- `.github/workflows/_deploy.yml` - Reusable deployment workflow
+- `.github/workflows/deploy-staging.yml` - Staging deployment workflow
+- `.cursor/tasks/backend-deployment-infrastructure/004-staging-deploy-workflow/004-staging-deploy-workflow_plan.mdc` - This plan
+
+### Files to Reference (No Changes)
+
+- `.github/workflows/build.yml` - Build workflow that creates images
+- `backend/DEPLOYMENT.md` - Deployment documentation
+- `backend/Dockerfile` - Docker image source
+
+### Files to Update (Documentation)
+
+- `backend/DEPLOYMENT.md` - Add staging deployment section
+- `backend/README.md` - Reference staging deployment workflow (optional)
+
+## Testing Strategy
+
+### Manual Testing
+
+1. **Test Reusable Workflow**:
+  - Create a test workflow that calls `_deploy.yml` with test inputs
+  - Verify inputs are passed correctly
+  - Verify deployment logic executes
+2. **Test Staging Deployment**:
+  - Push a change to `develop` branch
+  - Verify `deploy-staging.yml` triggers
+  - Verify it calls `_deploy.yml` with correct inputs
+  - Verify Render deployment is triggered
+  - Check Render dashboard for deployment status
+3. **Test Error Handling**:
+  - Test with invalid inputs
+  - Test with missing secrets
+  - Verify error messages are clear
+
+### Validation Checklist
+
+- `_deploy.yml` exists and is properly configured
+- `deploy-staging.yml` exists and triggers on `develop` branch
+- Workflow call syntax is correct
+- Inputs are properly defined and used
+- Render deploy hook integration works
+- Secrets are configured correctly
+- Concurrency control prevents duplicate deployments
+- Error handling provides clear feedback
+- Documentation is updated
+
+## Success Criteria
+
+1. ✅ `.github/workflows/_deploy.yml` exists as reusable workflow
+2. ✅ `.github/workflows/deploy-staging.yml` exists and triggers on `develop`
+3. ✅ `deploy-staging.yml` calls `_deploy.yml` with `environment=staging` and `deploy_target=render`
+4. ✅ Render deployment is triggered successfully via deploy hook
+5. ✅ Workflow is cloud-agnostic and extensible for other targets
+6. ✅ Secrets are properly configured
+7. ✅ Concurrency control prevents duplicate deployments
+8. ✅ Documentation is updated with staging deployment process
+
+## Considerations
+
+### Render Deploy Hook Method
+
+**Advantages:**
+
+- Simple HTTP POST/GET request
+- No API key management required
+- Render handles deployment orchestration
+- Works well for automated deployments
+
+**Implementation:**
+
+- Use `curl` or GitHub Actions HTTP action
+- Send POST request to deploy hook URL
+- Verify response status
+- Log deployment trigger confirmation
+
+### Cloud-Agnostic Design
+
+The `_deploy.yml` workflow is designed to support multiple deployment targets:
+
+- **Current**: Render (via deploy hook)
+- **Future**: Railway (API), AWS ECS (CLI), Google Cloud Run (API), etc.
+
+Each target can be added as a conditional step in the deploy job.
+
+### Image Tag Strategy
+
+- **Staging**: Uses `develop-latest` tag (always latest from develop branch)
+- **Production**: Will use `main-latest` tag (when production workflow is created)
+- **Specific deployments**: Can pass specific SHA tags for reproducible deployments
+
+### Workflow Dependencies
+
+**Option A: Sequential (Recommended)**
+
+- `deploy-staging.yml` waits for `build.yml` to complete
+- Uses `workflow_run` trigger or job dependencies
+- Ensures image exists before deployment
+
+**Option B: Independent**
+
+- `deploy-staging.yml` triggers independently
+- Assumes image already exists (from previous build)
+- Simpler but less reliable
+
+**Recommendation**: Start with Option B (independent), add dependency later if needed.
+
+### Environment Variables
+
+Render deployments require environment variables to be configured in Render dashboard:
+
+- Database URLs
+- JWT secrets
+- Supabase credentials
+- Other application secrets
+
+These should NOT be passed through GitHub Actions workflows for security.
+
+## Security Considerations
+
+1. **Secrets Management**:
+  - Deploy hook URLs stored as GitHub secrets
+  - Never expose secrets in logs
+  - Use `secrets: inherit` for reusable workflows
+2. **Deployment Permissions**:
+  - Minimal permissions required
+  - Only `contents: read` needed for workflow call
+  - Secrets access controlled by repository settings
+3. **Image Verification**:
+  - Verify image exists in GHCR before deployment
+  - Use specific tags for reproducible deployments
+  - Avoid deploying untested images
+
+## Future Enhancements
+
+1. **Production Deployment Workflow**:
+  - Create `deploy-production.yml` for `main` branch
+  - Similar structure to staging workflow
+  - Production-specific configuration
+2. **Deployment Status Notifications**:
+  - Slack/Discord notifications on deployment success/failure
+  - Email notifications for production deployments
+3. **Rollback Capability**:
+  - Add ability to rollback to previous image version
+  - Manual rollback workflow
+4. **Multi-Target Support**:
+  - Add Railway deployment support
+  - Add AWS ECS deployment support
+  - Add other cloud providers
+5. **Deployment Verification**:
+  - Health check after deployment
+  - Smoke tests to verify deployment success
+  - Automatic rollback on health check failure
+
+## References
+
+- Existing build workflow: [`.github/workflows/build.yml`](.github/workflows/build.yml)
+- Deployment documentation: [`backend/DEPLOYMENT.md`](backend/DEPLOYMENT.md)
+- Render deploy hooks: [Render Deploy Hooks Documentation](https://docs.render.com/deploy-hooks)
+- GitHub reusable workflows: [GitHub Actions Reusable Workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows)

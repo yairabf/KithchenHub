@@ -34,6 +34,137 @@ curl http://localhost:3000/api/version
 
 ---
 
+## Automated Staging Deployment
+
+The staging environment is automatically deployed when code is merged to the `develop` branch via GitHub Actions.
+
+### How It Works
+
+1. **Build Workflow** (`.github/workflows/build.yml`):
+   - Triggers on pushes to `develop` branch
+   - Builds Docker image and pushes to GHCR with tag `develop-latest`
+   - Creates images tagged with `develop-SHA` and `develop-latest`
+
+2. **Staging Deployment Workflow** (`.github/workflows/deploy-staging.yml`):
+   - Triggers on pushes to `develop` branch (runs independently, assumes image exists from `build.yml`)
+   - Calls reusable `_deploy.yml` workflow with:
+     - `environment: staging`
+     - `deploy_target: render`
+     - `image_tag: develop-latest`
+   - Automatically runs database migrations
+   - Triggers Render deployment via deploy hook
+   - Optionally performs health checks
+
+### Prerequisites
+
+Before automated staging deployment can work, you need to configure GitHub secrets:
+
+#### Required GitHub Secrets
+
+1. **`RENDER_DEPLOY_HOOK_URL_STAGING`**:
+   - Get this from Render Dashboard → Your Staging Service → Settings → Deploy Hook
+   - Copy the deploy hook URL
+   - Add to GitHub: Repository Settings → Secrets and variables → Actions → New repository secret
+
+2. **`STAGING_DATABASE_URL`** (Optional, for migrations):
+   - Staging database connection URL (pooled connection)
+   - Used for running migrations before deployment
+   - Add to GitHub secrets if you want automated migrations
+
+3. **`STAGING_DIRECT_URL`** (Optional, for migrations):
+   - Direct staging database connection URL
+   - Preferred over `STAGING_DATABASE_URL` for migrations
+   - Add to GitHub secrets if you want automated migrations
+
+#### Setting Up Render Deploy Hook
+
+1. **In Render Dashboard**:
+   - Navigate to your staging service
+   - Go to Settings → Deploy Hook
+   - Copy the deploy hook URL (looks like `https://api.render.com/deploy/srv-xxx?key=yyy`)
+
+2. **In GitHub**:
+   - Go to your repository → Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `RENDER_DEPLOY_HOOK_URL_STAGING`
+   - Value: Paste the deploy hook URL
+   - Click "Add secret"
+
+### Deployment Flow
+
+```mermaid
+graph LR
+    A[Push to develop] --> B[build.yml triggers]
+    B --> C[Build Docker image]
+    C --> D[Push to GHCR]
+    D --> E[deploy-staging.yml triggers]
+    E --> F[Call _deploy.yml]
+    F --> G[Run migrations]
+    G --> H[Trigger Render deploy]
+    H --> I[Staging Environment]
+```
+
+### What Happens During Deployment
+
+1. **Migrations Job**:
+   - Pulls Docker image from GHCR (`develop-latest`)
+   - Runs Prisma migrations using `STAGING_DIRECT_URL` or `STAGING_DATABASE_URL`
+   - Ensures database schema is up-to-date
+
+2. **Deploy Job**:
+   - Validates deployment configuration
+   - Triggers Render deployment via deploy hook
+   - Render pulls the latest `develop-latest` image from GHCR
+   - Render starts the new container with updated code
+
+3. **Health Check Job** (if `service_url` is provided):
+   - Waits for service to become healthy
+   - Checks `/api/version` endpoint
+   - Verifies deployment success
+   - **Note**: Currently disabled in `deploy-staging.yml` (service_url not set). To enable, add `service_url` input with your staging service URL.
+
+### Monitoring Deployments
+
+- **GitHub Actions**: Check `.github/workflows/deploy-staging.yml` runs in Actions tab
+- **Render Dashboard**: Monitor deployment status in Render dashboard
+- **Logs**: View deployment logs in Render dashboard or GitHub Actions logs
+
+### Troubleshooting Staging Deployments
+
+**Deployment doesn't trigger:**
+- Verify you pushed to `develop` branch
+- Check path filters: workflow only triggers on `backend/**` changes
+- Verify workflow file exists: `.github/workflows/deploy-staging.yml`
+
+**Render deployment fails:**
+- Verify `RENDER_DEPLOY_HOOK_URL_STAGING` secret is set correctly
+- Check Render dashboard for deployment errors
+- Verify Render service is configured to use GHCR image: `ghcr.io/YOUR_USERNAME/kitchen-hub-api:develop-latest`
+
+**Migrations fail:**
+- Verify `STAGING_DIRECT_URL` or `STAGING_DATABASE_URL` secrets are set
+- Check database connection string is correct
+- Verify database is accessible from GitHub Actions runners
+
+**Health check fails:**
+- Verify staging service URL is correct (if `service_url` is configured)
+- Check application is running and accessible
+- Review application logs in Render dashboard
+
+### Manual Staging Deployment
+
+If you need to manually trigger a staging deployment:
+
+1. **Via GitHub Actions**:
+   - Go to Actions → Deploy to Staging
+   - Click "Run workflow" → Select `develop` branch → Run workflow
+
+2. **Via Render Dashboard**:
+   - Go to your staging service
+   - Click "Manual Deploy" → Select commit → Deploy
+
+---
+
 ## Production Deployment
 
 ### Step 1: Prepare Production Environment
@@ -347,12 +478,24 @@ Before deploying to production:
 
 ### Render
 
-1. Create new Web Service
-2. Connect repository
-3. Set build command: `docker build -t app .`
-4. Set start command: `docker run -p 3000:3000 app`
-5. Add environment variables
-6. Deploy
+**Automated Deployment (Recommended):**
+
+Staging deployments are automated via GitHub Actions. See [Automated Staging Deployment](#automated-staging-deployment) section above.
+
+**Manual Setup:**
+
+1. Create new Web Service in Render Dashboard
+2. Connect GitHub repository
+3. Configure service to use GHCR image:
+   - **Docker Image**: `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:develop-latest` (for staging)
+   - **Registry**: GitHub Container Registry
+   - **Authentication**: Use GitHub Personal Access Token with `read:packages` scope
+4. Add environment variables in Render dashboard (see [Environment Variables](#environment-variables-for-production))
+5. Set up deploy hook (for automated deployments):
+   - Go to Settings → Deploy Hook
+   - Copy deploy hook URL
+   - Add as `RENDER_DEPLOY_HOOK_URL_STAGING` secret in GitHub
+6. Deploy manually or let automated workflow handle it
 
 ### Fly.io
 

@@ -1,0 +1,35 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-staging.yml'
+      - '.github/workflows/_deploy.yml'
+
+concurrency:
+  group: deploy-staging-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy_to_staging:
+    name: Deploy to staging environment
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: staging
+      deploy_target: render
+      image_tag: develop-latest
+      # Note: service_url is omitted to skip health checks
+      # If health checks are desired, uncomment and set the staging service URL:
+      # service_url: https://your-staging-service.onrender.com
+    secrets:
+      # Render deploy hook for staging environment
+      RENDER_DEPLOY_HOOK_URL_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_URL_STAGING }}
+      # Map staging-specific secrets to generic names expected by _deploy.yml
+      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
