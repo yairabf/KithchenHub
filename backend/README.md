@@ -34,6 +34,11 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
   - Optional `requestId` for batch observability
   - Atomic insert-first pattern ensures exactly-once processing
   - Automatic cleanup of old idempotency keys (configurable retention period)
+- **Partial Batch Recovery**: Sync endpoint returns granular per-entity results
+  - `succeeded` array lists successful entities with `operationId` mapping
+  - `conflicts` array includes `operationId` for precise failure tracking
+  - Enables mobile clients to retry only failed items instead of entire batch
+  - Invariant enforcement ensures every `operationId` appears in results (logs error if violated)
 
 ### Household Management
 - Multi-user household support
@@ -156,7 +161,35 @@ To verify that Row Level Security is correctly isolating data between households
   - Optional `requestId` for batch observability (same for all items in a sync request)
 - Performs simple `upsert` operations (no timestamp-based conflict resolution on server)
 - Returns sync result with status (`synced`, `partial`, or `failed`)
-- Includes conflicts array for failed items (validation errors, not timestamp conflicts)
+- **Granular Results**: Returns per-entity success/failure status
+  - `succeeded` array (optional): Lists successful entities with `operationId`, `entityType`, `id`, and optional `clientLocalId`
+  - `conflicts` array: Lists failed entities with `operationId`, `type`, `id`, and `reason`
+  - Each `operationId` appears exactly once in either `succeeded` or `conflicts` (invariant enforced)
+  - Enables partial batch recovery: mobile clients can retry only failed items
+
+**Sync Response Format:**
+```typescript
+{
+  status: 'synced' | 'partial' | 'failed';
+  conflicts: Array<{
+    type: 'list' | 'recipe' | 'chore' | 'shoppingItem';
+    id: string;
+    operationId: string;
+    reason: string;
+  }>;
+  succeeded?: Array<{
+    operationId: string;
+    entityType: 'list' | 'recipe' | 'chore';
+    id: string; // Server-assigned ID
+    clientLocalId?: string; // Original localId (for create operations)
+  }>;
+}
+```
+
+**Response Status Values:**
+- `synced`: All entities processed successfully (no conflicts)
+- `partial`: Some entities succeeded, some failed (both `succeeded` and `conflicts` arrays populated)
+- `failed`: All entities failed (only `conflicts` array populated, `succeeded` may be undefined)
 
 **Conflict Resolution Strategy:**
 - **Server Behavior**: Simple upsert operations - no timestamp-based conflict resolution

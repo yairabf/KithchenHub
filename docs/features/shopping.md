@@ -633,6 +633,36 @@ Utility for applying remote updates to local cached state:
 
 **Note**: Conflict resolution is client-side. The backend sync endpoint (`POST /auth/sync`) performs simple upsert operations and returns conflicts. Client-side utilities handle timestamp-based merging.
 
+### Partial Batch Recovery
+
+**File**: `mobile/src/common/utils/syncQueueProcessor.ts`
+
+The sync queue processor implements partial batch recovery to efficiently retry only failed items after partial sync failures.
+
+**Features**:
+- **Granular Results**: Backend returns per-entity success/failure status with `operationId` mapping
+  - `succeeded` array lists successful entities with `operationId`, `entityType`, `id`, and optional `clientLocalId`
+  - `conflicts` array includes `operationId` for precise failure tracking
+- **Safety-First Logic**: Never deletes queue items without explicit confirmation
+  - Items removed only when `operationId` is in `succeeded[]`
+  - Items kept when `operationId` is in `conflicts[]` (for retry)
+  - Unknown items (not in either array) are kept for retry (prevents data loss)
+- **Confirmed Response Handling**: Processes result body even on error status codes
+  - Distinguishes between confirmed response (server processed some items) vs no confirmation (network error)
+  - Only retries all items when no confirmation received
+- **Backward Compatibility**: Handles old servers gracefully
+  - If `succeeded` array missing and `status === 'synced'`: removes all items (old behavior)
+  - If `succeeded` array missing and `status !== 'synced'`: keeps all items (safe fallback)
+- **Invariant Enforcement**: Backend ensures every `operationId` appears exactly once in results
+  - Logs error if invariant violated (doesn't break sync)
+  - Helps catch bugs early in development
+
+**Benefits**:
+- Reduces unnecessary retries (only failed items retried, not entire batch)
+- Prevents duplicate processing (idempotency keys ensure exactly-once semantics)
+- Improves sync efficiency and reduces server load
+- Prevents data loss from incomplete responses
+
 ### Conflict Resolution Validation & Test Coverage
 
 **Comprehensive Test Coverage**:
@@ -696,7 +726,7 @@ Utility for applying remote updates to local cached state:
 - `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
 - `guestNoSyncGuardrails` - Guest mode sync guardrails (`mobile/src/common/guards/guestNoSyncGuardrails.ts`) - Runtime assertions preventing guest data from syncing remotely
 - `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueueStorage.ts`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`)
-- `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors)
+- `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueueProcessor.ts`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects backoff delays, and handles error classification (network/auth/validation/server errors). **Partial Batch Recovery**: Retries only failed items after partial failures by matching `operationId`s from backend response. Safety-first logic: never deletes queue items without explicit confirmation in `succeeded` array. Handles confirmed responses even on error status codes. Backward compatible with old servers (missing `succeeded` array)
 - `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
 - `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Used by ShoppingItemCard to display sync status indicators
 - `useCachedEntities` - Cache entities hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that provides reactive cache updates for signed-in users. Automatically triggers UI re-renders when cache changes. Used by ShoppingListsScreen for lists and items

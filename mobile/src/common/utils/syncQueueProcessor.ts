@@ -24,9 +24,16 @@ import * as Crypto from 'expo-crypto';
 interface SyncResult {
   status: 'synced' | 'partial' | 'failed';
   conflicts: Array<{
-    type: 'list' | 'recipe' | 'chore';
+    type: 'list' | 'recipe' | 'chore' | 'shoppingItem';
     id: string;
+    operationId: string; // Idempotency key for precise matching
     reason: string;
+  }>;
+  succeeded?: Array<{ // Optional for backward compatibility
+    operationId: string;
+    entityType: 'list' | 'recipe' | 'chore';
+    id: string; // Server ID
+    clientLocalId?: string; // Original localId (for creates)
   }>;
 }
 
@@ -114,6 +121,70 @@ function calculateBackoffDelay(
  */
 function waitForDelay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Type guard to validate SyncResult structure from backend.
+ * Ensures response body has correct structure before processing.
+ * 
+ * @param data - Unknown data to validate
+ * @returns True if data is a valid SyncResult
+ */
+function isValidSyncResult(data: unknown): data is SyncResult {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+  
+  const result = data as Record<string, unknown>;
+  
+  // Check status
+  if (!['synced', 'partial', 'failed'].includes(result.status as string)) {
+    return false;
+  }
+  
+  // Check conflicts
+  if (!Array.isArray(result.conflicts)) {
+    return false;
+  }
+  
+  // Validate conflicts structure
+  for (const conflict of result.conflicts) {
+    if (
+      typeof conflict !== 'object' ||
+      !['list', 'recipe', 'chore', 'shoppingItem'].includes(conflict.type as string) ||
+      typeof conflict.id !== 'string' ||
+      typeof conflict.operationId !== 'string' ||
+      typeof conflict.reason !== 'string'
+    ) {
+      return false;
+    }
+  }
+  
+  // Check succeeded if present (optional for backward compatibility)
+  if (result.succeeded !== undefined) {
+    if (!Array.isArray(result.succeeded)) {
+      return false;
+    }
+    
+    // Validate succeeded structure
+    for (const success of result.succeeded) {
+      if (
+        typeof success !== 'object' ||
+        typeof success.operationId !== 'string' ||
+        !['list', 'recipe', 'chore'].includes(success.entityType as string) ||
+        typeof success.id !== 'string'
+      ) {
+        return false;
+      }
+      
+      // clientLocalId is optional but must be string if present
+      if (success.clientLocalId !== undefined && typeof success.clientLocalId !== 'string') {
+        return false;
+      }
+    }
+  }
+  
+  return true;
 }
 
 /**
@@ -488,10 +559,34 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
       }
 
       // Call sync endpoint
-      const result = await api.post<SyncResult>('/auth/sync', syncPayload);
+      try {
+        const result = await api.post<SyncResult>('/auth/sync', syncPayload);
+        // Success response: process results
+        await this.handleSyncResult(readyItems, result);
+      } catch (error) {
+        // Check if we got a response body (even on non-2xx)
+        const maybeResult = (error instanceof ApiError) 
+          ? error.response?.data 
+          : undefined;
 
-      // Handle sync result
-      await this.handleSyncResult(readyItems, result);
+        // Validate it's a valid SyncResult object
+        if (isValidSyncResult(maybeResult)) {
+          // We have server confirmation (partial or failed with details)
+          // Process it even though it's an error response
+          console.warn('Sync returned error response but with result body, processing...');
+          await this.handleSyncResult(readyItems, maybeResult);
+          
+          // Update lastAttemptAt for all processed items
+          for (const item of readyItems) {
+            await syncQueueStorage.updateLastAttempt(item.id);
+          }
+          return;
+        }
+
+        // No confirmation at all -> keep all items, retry later
+        // Idempotency makes this safe (backend won't duplicate)
+        throw error; // Re-throw to trigger existing error classification logic
+      }
 
       // Update lastAttemptAt for all processed items (successful or not)
       for (const item of readyItems) {
@@ -522,9 +617,10 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
       
       // RETRY classification
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Sync queue processing failed:', errorMessage);
+      console.error('Sync queue processing failed (no confirmation):', errorMessage);
       
       // Update items based on classification
+      // Keep all items for retry (nothing was confirmed as processed)
       for (const item of readyItems) {
         await syncQueueStorage.updateLastAttempt(item.id);
         
@@ -897,87 +993,217 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
   }
 
   /**
-   * Handles sync result from backend
+   * Handles sync result from backend with safety-first logic.
    * 
-   * - For successful syncs: Update cache with server entities, remove from queue
-   * - For conflicts: Keep in queue, increment retry count
-   * - For failed syncs: Keep in queue, increment retry count
+   * **Core Safety Rule:** NEVER delete queue items without explicit confirmation.
+   * 
+   * - Explicit Success: Item removed only if operationId is in result.succeeded[]
+   * - Explicit Failure: Item kept if operationId is in result.conflicts[]
+   * - Unknown: Item kept if operationId is in neither (server bug, incomplete response)
+   * - Backward Compatibility: If succeeded missing, only delete all when status === 'synced'
+   * 
+   * @param queue - Array of queued writes that were sent in this sync batch
+   * @param result - Sync result from backend
    */
   private async handleSyncResult(
     queue: QueuedWrite[],
     result: SyncResult
   ): Promise<void> {
-    const syncedIds = new Set<string>();
-    const conflictIds = new Set<string>();
-
-    // Track conflicts
-    for (const conflict of result.conflicts) {
-      conflictIds.add(conflict.id);
+    // Backward compatibility: if succeeded array is missing
+    if (!result.succeeded) {
+      await this.handleBackwardCompatibleResult(queue, result);
+      return;
     }
 
-    // Process each queued write
-    for (const item of queue) {
-      // Check for conflicts using both serverId and localId
-      // Backend may return conflicts with either ID format
-      const entityId = item.target.serverId || item.target.localId;
-      const hasConflict = 
-        conflictIds.has(entityId) ||
-        conflictIds.has(item.target.localId) ||
-        (item.target.serverId && conflictIds.has(item.target.serverId));
+    // New server with succeeded array: use explicit operationId matching
+    const { syncedIds, syncedTypes, serverIdMappings } = 
+      await this.processSyncResultsByOperationId(queue, result);
+    
+    await this.applyServerIdMappings(serverIdMappings);
+    await this.invalidateCacheForSyncedTypes(syncedTypes);
+    
+    this.logSyncResult(syncedIds.size, result.conflicts.length, queue.length);
+  }
 
-      if (hasConflict) {
-        // Conflict: keep in queue, increment retry
-        if (item.attemptCount < MAX_RETRY_ATTEMPTS) {
-          await syncQueueStorage.incrementRetry(item.id);
-          await syncQueueStorage.updateStatus(item.id, 'RETRYING');
-          console.warn(
-            `Sync conflict for ${item.entityType}:${item.target.localId}, ` +
-            `retry ${item.attemptCount + 1}/${MAX_RETRY_ATTEMPTS}`
-          );
-        } else {
-          // Max retries reached, mark as permanently failed
-          console.error(
-            `Sync conflict for ${item.entityType}:${item.target.localId} exceeded max retries, ` +
-            `marking as permanently failed`
-          );
-          await syncQueueStorage.markAsFailedPermanent(
-            item.id,
-            `Sync conflict: max retries exceeded`
-          );
-        }
-      } else {
-        // Success: remove from queue
-        syncedIds.add(item.id);
+  /**
+   * Handles backward-compatible sync results (old server without succeeded array).
+   * 
+   * @param queue - Array of queued writes
+   * @param result - Sync result from backend (without succeeded array)
+   */
+  private async handleBackwardCompatibleResult(
+    queue: QueuedWrite[],
+    result: SyncResult
+  ): Promise<void> {
+    if (result.status === 'synced') {
+      // Old server: status 'synced' means all succeeded
+      // Remove all items (current behavior for backward compatibility)
+      for (const item of queue) {
         await syncQueueStorage.remove(item.id);
       }
-    }
-
-    // Update cache after successful sync
-    // Since backend doesn't return synced entities, we invalidate cache
-    // to force refresh on next read, which will get server-assigned IDs
-    const syncedTypes = new Set<SyncEntityType>();
-    for (const item of queue) {
-      if (syncedIds.has(item.id)) {
-        syncedTypes.add(item.entityType);
+      
+      // Invalidate cache for all synced types
+      const syncedTypes = new Set(queue.map(item => item.entityType));
+      for (const entityType of syncedTypes) {
+        await invalidateCache(entityType);
+        cacheEvents.emitCacheChange(entityType);
       }
+      
+      console.log(`Sync queue processed: ${queue.length} synced (backward compatibility mode)`);
+    } else {
+      // Partial or failed, but no succeeded array
+      // SAFE: Don't remove anything (can't prove success)
+      // Keep all items for retry
+      console.warn(
+        'Sync result missing succeeded array but status is not synced. ' +
+        'Keeping all items for retry (backward compatibility safety).'
+      );
+    }
+  }
+
+  /**
+   * Processes sync results by matching operationIds.
+   * Returns tracking information for synced items.
+   * 
+   * @param queue - Array of queued writes
+   * @param result - Sync result with succeeded and conflicts arrays
+   * @returns Tracking information for synced items
+   */
+  private async processSyncResultsByOperationId(
+    queue: QueuedWrite[],
+    result: SyncResult
+  ): Promise<{
+    syncedIds: Set<string>;
+    syncedTypes: Set<SyncEntityType>;
+    serverIdMappings: Map<string, { serverId: string; entityType: SyncEntityType }>;
+  }> {
+    const succeededOperationIds = new Set(
+      result.succeeded.map(s => s.operationId)
+    );
+    const failedOperationIds = new Set(
+      result.conflicts.map(c => c.operationId)
+    );
+
+    const syncedIds = new Set<string>();
+    const syncedTypes = new Set<SyncEntityType>();
+    const serverIdMappings = new Map<string, { serverId: string; entityType: SyncEntityType }>();
+
+    // Process each queued item
+    for (const item of queue) {
+      if (succeededOperationIds.has(item.operationId)) {
+        // Explicit success: remove from queue
+        syncedIds.add(item.id);
+        syncedTypes.add(item.entityType);
+        
+        // Track serverId mapping for creates
+        const successEntry = result.succeeded.find(s => s.operationId === item.operationId);
+        if (successEntry && successEntry.id !== item.target.localId) {
+          // Server assigned new ID (create operation)
+          serverIdMappings.set(item.target.localId, {
+            serverId: successEntry.id,
+            entityType: item.entityType,
+          });
+        }
+        
+        await syncQueueStorage.remove(item.id);
+        continue;
+      }
+      
+      if (failedOperationIds.has(item.operationId)) {
+        // Explicit failure: keep in queue, let existing retry/backoff logic apply
+        await this.handleFailedItem(item);
+        continue;
+      }
+
+      // Unknown: operationId not in succeeded or conflicts
+      // SAFE: Do NOT delete. Keep for retry + log warning.
+      console.warn('Sync result missing operationId', {
+        operationId: item.operationId,
+        entityType: item.entityType,
+        localId: item.target.localId,
+        status: result.status,
+      });
+      // Keep item in queue for retry (idempotency makes this safe)
     }
 
-    // Invalidate cache for synced entity types to force refresh
-    // This ensures cache gets updated with server-assigned IDs on next read
+    return { syncedIds, syncedTypes, serverIdMappings };
+  }
+
+  /**
+   * Handles a failed sync item by updating retry count or marking as permanently failed.
+   * 
+   * @param item - Queued write that failed to sync
+   */
+  private async handleFailedItem(item: QueuedWrite): Promise<void> {
+    if (item.attemptCount < MAX_RETRY_ATTEMPTS) {
+      await syncQueueStorage.incrementRetry(item.id);
+      await syncQueueStorage.updateStatus(item.id, 'RETRYING');
+      console.warn(
+        `Sync failed for ${item.entityType}:${item.target.localId}, ` +
+        `retry ${item.attemptCount + 1}/${MAX_RETRY_ATTEMPTS}`
+      );
+    } else {
+      await syncQueueStorage.markAsFailedPermanent(
+        item.id,
+        `Sync failed: max retries exceeded`
+      );
+    }
+  }
+
+  /**
+   * Applies serverId mappings to cache for create operations.
+   * 
+   * **Current Implementation**: Cache invalidation (via `invalidateCacheForSyncedTypes`)
+   * ensures cache is refreshed on next read, which will include server-assigned IDs.
+   * This is safe but less efficient than direct cache updates.
+   * 
+   * **Future Enhancement**: Directly update cache entities with serverId mappings
+   * to avoid unnecessary cache refresh. Tracked in mobile-apply-serverid-on-success task.
+   * 
+   * @param serverIdMappings - Map of localId to serverId mappings
+   */
+  private async applyServerIdMappings(
+    serverIdMappings: Map<string, { serverId: string; entityType: SyncEntityType }>
+  ): Promise<void> {
+    // Current implementation: Cache invalidation handles ID mapping via refresh
+    // This ensures cache entities get updated with server-assigned IDs on next read
+    // Future: Direct cache updates will be more efficient for large batches
+    if (serverIdMappings.size > 0) {
+      // No-op: Cache invalidation (called separately) handles ID mapping
+    }
+  }
+
+  /**
+   * Invalidates cache for synced entity types and emits cache change events.
+   * 
+   * @param syncedTypes - Set of entity types that were successfully synced
+   */
+  private async invalidateCacheForSyncedTypes(
+    syncedTypes: Set<SyncEntityType>
+  ): Promise<void> {
     for (const entityType of syncedTypes) {
       try {
         await invalidateCache(entityType);
-        // Emit cache change event to trigger UI refresh
         cacheEvents.emitCacheChange(entityType);
       } catch (error) {
         console.error(`Failed to invalidate cache for ${entityType} after sync:`, error);
-        // Still emit event even if invalidation fails
         cacheEvents.emitCacheChange(entityType);
       }
     }
+  }
 
+  /**
+   * Logs sync result summary.
+   * 
+   * @param syncedCount - Number of items successfully synced
+   * @param failedCount - Number of items that failed
+   * @param totalCount - Total number of items in the batch
+   */
+  private logSyncResult(syncedCount: number, failedCount: number, totalCount: number): void {
+    const unknownCount = totalCount - syncedCount - failedCount;
     console.log(
-      `Sync queue processed: ${syncedIds.size} synced, ${result.conflicts.length} conflicts`
+      `Sync queue processed: ${syncedCount} synced, ${failedCount} failed, ` +
+      `${unknownCount} unknown (kept for retry)`
     );
   }
 }

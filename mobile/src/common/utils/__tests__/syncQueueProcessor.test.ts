@@ -139,10 +139,11 @@ describe('SyncQueueProcessor', () => {
   });
 
   describe('conflict handling', () => {
-    it('should handle conflicts correctly', async () => {
+    it('should handle conflicts correctly with operationId matching', async () => {
       const mockQueue: QueuedWrite[] = [
         {
           id: 'queue-1',
+          operationId: 'op-recipe-1',
           entityType: 'recipes',
           op: 'update',
           target: { localId: 'local-123', serverId: 'server-123' },
@@ -154,6 +155,7 @@ describe('SyncQueueProcessor', () => {
           },
           clientTimestamp: new Date().toISOString(),
           attemptCount: 0,
+          status: 'PENDING',
         },
       ];
 
@@ -161,13 +163,15 @@ describe('SyncQueueProcessor', () => {
       (api.post as jest.Mock).mockResolvedValue({
         status: 'partial',
         conflicts: [
-          { type: 'recipe', id: 'server-123', reason: 'Conflict' },
+          { type: 'recipe', id: 'server-123', operationId: 'op-recipe-1', reason: 'Conflict' },
         ],
+        succeeded: [], // New server format with succeeded array
       });
 
       await processor.processQueue();
 
       expect(syncQueueStorage.incrementRetry).toHaveBeenCalledWith('queue-1');
+      expect(syncQueueStorage.remove).not.toHaveBeenCalledWith('queue-1');
     });
   });
 
@@ -555,6 +559,292 @@ describe('SyncQueueProcessor', () => {
           ]),
         }),
       );
+    });
+  });
+
+  describe('partial batch recovery', () => {
+    it('should remove items ONLY when operationId is in succeeded array', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'op-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-1' },
+          payload: { id: 'recipe-1', name: 'Recipe 1', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+        {
+          id: 'queue-2',
+          operationId: 'op-2',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-2' },
+          payload: { id: 'recipe-2', name: 'Recipe 2', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'partial',
+        conflicts: [
+          { type: 'recipe', id: 'recipe-2', operationId: 'op-2', reason: 'Validation failed' },
+        ],
+        succeeded: [
+          { operationId: 'op-1', entityType: 'recipe', id: 'recipe-1' },
+        ],
+      });
+
+      await processor.processQueue();
+
+      // Only op-1 should be removed (in succeeded)
+      expect(syncQueueStorage.remove).toHaveBeenCalledWith('queue-1');
+      expect(syncQueueStorage.remove).not.toHaveBeenCalledWith('queue-2');
+      // op-2 should be kept for retry
+      expect(syncQueueStorage.incrementRetry).toHaveBeenCalledWith('queue-2');
+    });
+
+    it('should keep unknown items (not in succeeded or conflicts)', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'op-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-1' },
+          payload: { id: 'recipe-1', name: 'Recipe 1', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+        {
+          id: 'queue-2',
+          operationId: 'op-2',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-2' },
+          payload: { id: 'recipe-2', name: 'Recipe 2', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'partial',
+        conflicts: [
+          { type: 'recipe', id: 'recipe-1', operationId: 'op-1', reason: 'Failed' },
+        ],
+        succeeded: [], // op-2 is missing from both arrays
+      });
+
+      await processor.processQueue();
+
+      // op-1 should be kept (in conflicts)
+      expect(syncQueueStorage.remove).not.toHaveBeenCalledWith('queue-1');
+      expect(syncQueueStorage.incrementRetry).toHaveBeenCalledWith('queue-1');
+      // op-2 should be kept (unknown - not in either array)
+      expect(syncQueueStorage.remove).not.toHaveBeenCalledWith('queue-2');
+      // Unknown items are kept but not incremented (they'll retry naturally)
+    });
+
+    it('should handle backward compatibility: missing succeeded array with status synced', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'op-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-1' },
+          payload: { id: 'recipe-1', name: 'Recipe 1', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'synced',
+        conflicts: [],
+        // No succeeded array (old server)
+      });
+
+      await processor.processQueue();
+
+      // Should remove all items (backward compatibility)
+      expect(syncQueueStorage.remove).toHaveBeenCalledWith('queue-1');
+    });
+
+    it('should handle backward compatibility: missing succeeded array with status partial', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'op-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-1' },
+          payload: { id: 'recipe-1', name: 'Recipe 1', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'partial',
+        conflicts: [],
+        // No succeeded array (old server)
+      });
+
+      await processor.processQueue();
+
+      // Should NOT remove items (can't prove success)
+      expect(syncQueueStorage.remove).not.toHaveBeenCalled();
+    });
+
+    it('should process confirmed response even on error status code', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'op-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-1' },
+          payload: { id: 'recipe-1', name: 'Recipe 1', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+        {
+          id: 'queue-2',
+          operationId: 'op-2',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-2' },
+          payload: { id: 'recipe-2', name: 'Recipe 2', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      
+      // Simulate error response with result body
+      const errorResponse = new ApiError('Partial failure', 400);
+      (errorResponse as any).response = {
+        data: {
+          status: 'partial',
+          conflicts: [
+            { type: 'recipe', id: 'recipe-2', operationId: 'op-2', reason: 'Validation failed' },
+          ],
+          succeeded: [
+            { operationId: 'op-1', entityType: 'recipe', id: 'recipe-1' },
+          ],
+        },
+      };
+      (api.post as jest.Mock).mockRejectedValue(errorResponse);
+
+      await processor.processQueue();
+
+      // Should process the result body even though it's an error
+      expect(syncQueueStorage.remove).toHaveBeenCalledWith('queue-1');
+      expect(syncQueueStorage.incrementRetry).toHaveBeenCalledWith('queue-2');
+    });
+
+    it('should keep all items when no confirmation (true network error)', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'op-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-1' },
+          payload: { id: 'recipe-1', name: 'Recipe 1', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      
+      // True network error (no response body)
+      (api.post as jest.Mock).mockRejectedValue(new NetworkError('Network timeout'));
+
+      await processor.processQueue();
+
+      // Should NOT remove items (no confirmation)
+      expect(syncQueueStorage.remove).not.toHaveBeenCalled();
+      // Should update status for retry
+      expect(syncQueueStorage.updateStatus).toHaveBeenCalledWith('queue-1', 'RETRYING');
+    });
+
+    it('should retry only failed items after partial failure', async () => {
+      const mockQueue: QueuedWrite[] = [
+        {
+          id: 'queue-1',
+          operationId: 'op-1',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-1' },
+          payload: { id: 'recipe-1', name: 'Recipe 1', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+        {
+          id: 'queue-2',
+          operationId: 'op-2',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-2' },
+          payload: { id: 'recipe-2', name: 'Recipe 2', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+        {
+          id: 'queue-3',
+          operationId: 'op-3',
+          entityType: 'recipes',
+          op: 'create',
+          target: { localId: 'recipe-3' },
+          payload: { id: 'recipe-3', name: 'Recipe 3', ingredients: [], instructions: [] },
+          clientTimestamp: new Date().toISOString(),
+          attemptCount: 0,
+          status: 'PENDING',
+        },
+      ];
+
+      (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
+      (api.post as jest.Mock).mockResolvedValue({
+        status: 'partial',
+        conflicts: [
+          { type: 'recipe', id: 'recipe-2', operationId: 'op-2', reason: 'Failed' },
+        ],
+        succeeded: [
+          { operationId: 'op-1', entityType: 'recipe', id: 'recipe-1' },
+          { operationId: 'op-3', entityType: 'recipe', id: 'recipe-3' },
+        ],
+      });
+
+      await processor.processQueue();
+
+      // op-1 and op-3 should be removed (succeeded)
+      expect(syncQueueStorage.remove).toHaveBeenCalledWith('queue-1');
+      expect(syncQueueStorage.remove).toHaveBeenCalledWith('queue-3');
+      // op-2 should be kept for retry (failed)
+      expect(syncQueueStorage.remove).not.toHaveBeenCalledWith('queue-2');
+      expect(syncQueueStorage.incrementRetry).toHaveBeenCalledWith('queue-2');
     });
   });
 });
