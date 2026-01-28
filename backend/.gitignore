@@ -9,7 +9,10 @@ build/
 .env
 .env.local
 .env.*.local
-# Keep .env.example for documentation
+# Keep example env files for documentation
+!.env.example
+!.env.docker-compose.example
+!.env.production.example
 
 # Logs
 *.log
