@@ -1,0 +1,147 @@
+# 002-add-sync-queue-checkpointing - Implementation Summary
+
+**Epic:** sync-reliability-and-retry-safety  
+**Completed:** 2026-01-28  
+**Status:** Completed
+
+## What Was Implemented
+
+- **Checkpoint schema & types**
+  - Added `SyncCheckpoint` type under `mobile/src/common/utils/syncQueue/storage/syncQueueStorage.types.ts` with:
+    - `checkpointId`, `userId`, optional `householdId`
+    - `createdAt`, optional `lastAttemptAt`, `attemptCount`, `ttlMs`
+    - `requestId`, `inFlightOperationIds: string[]`
+  - Added queue-related constants in `syncQueueStorage.constants.ts`, including `DEFAULT_CHECKPOINT_TTL_MS`.
+
+- **Checkpoint storage & validation**
+  - Implemented low-level helpers in `syncQueueStorage.internal.ts`:
+    - `getStoredSignedInUser()` to read and validate the current signed-in, non-guest user.
+    - `buildCheckpointStorageKey(userId)` to scope storage key per user.
+    - `isValidIsoDateString`, `isValidUuidLike`, `validateCheckpointShape()` to validate stored checkpoint shape and fields.
+    - `removeOperationIdsFromCheckpoint()` to prune confirmed operationIds.
+  - Implemented checkpoint persistence in `syncQueueStorage.checkpointStorage.ts`:
+    - `getCheckpoint()`: reads, validates, enforces userId match, clears invalid data.
+    - `saveCheckpoint()`: creates a new checkpoint record with TTL and in-flight operationIds.
+    - `markCheckpointAttempt()`: increments attemptCount and updates lastAttemptAt.
+    - `confirmCheckpointOperationIds()`: prunes confirmed ids and clears checkpoint when empty.
+    - `clearCheckpoint()`: removes the scoped checkpoint.
+  - Exposed high-level storage API in `SyncQueueStorageImpl`:
+    - `getCheckpoint()`, `saveCheckpoint()`, `markCheckpointAttempt()`, `confirmCheckpointOperationIds()`, `clearCheckpoint()`.
+
+- **Checkpoint re-drive & worker loop integration**
+  - In `mobile/src/common/utils/syncQueue/processor/index.ts`:
+    - Added `processCheckpointIfPresent(queueSnapshot)`:
+      - Reads checkpoint (if none, returns false).
+      - Uses helper `isCheckpointStale()` (from backoff module) to clear stale checkpoints and fall back to normal processing.
+      - Selects checkpoint items from the current queue by matching `operationId` to `inFlightOperationIds`.
+      - If no items match (compaction/clearing), clears checkpoint and returns false.
+      - Uses `filterItemsReadyForRetry()` and `isCheckpointReadyForAttempt()` to apply per-item and per-checkpoint backoff.
+      - Calls `markCheckpointAttempt()` before sending, then re-uses `sendBatchesWithCheckpoint()` to send only checkpoint items.
+      - Returns `true` when a checkpoint batch was processed (or deferred due to backoff), signalling the worker loop to skip normal batch selection that iteration.
+    - Updated `runWorkerLoop()` to:
+      - Call `processCheckpointIfPresent(queue)` before selecting new work.
+      - Continue immediately if a checkpoint is being handled; only fall back to normal batch selection when no checkpoint is present or it has been cleared.
+
+- **Batching & processor backoff helpers**
+  - Introduced dedicated backoff utilities in `syncQueueProcessor.backoff.ts`:
+    - `calculateBackoffDelay()`, `waitForDelay()`.
+    - `parseAttemptTimestamp()`, `calculateNextAttemptTime()`, `calculateEarliestNextAttempt()`.
+    - `filterItemsReadyForRetry()` to select per-item-ready queue entries.
+    - `isCheckpointStale()` and `isCheckpointReadyForAttempt()` for checkpoint-level backoff and TTL.
+    - `waitForDelayWithCancellation(ms, isCancelled)` to support graceful worker shutdown.
+  - Set `MAX_BATCH_SIZE = 50` in `syncQueueProcessor.constants.ts`.
+  - Updated processor logic to:
+    - Use `createBatches(readyItems, MAX_BATCH_SIZE)` when no checkpoint exists.
+    - For each batch:
+      - Generate a `requestId`.
+      - Save a checkpoint with `inFlightOperationIds` and `requestId`.
+      - Call `sendBatchesWithCheckpoint(batch, requestId)`.
+
+- **Interaction with compaction**
+  - Queue compaction remains centralized in `syncQueueStorage.internal.ts` (`compactQueue`), and is used in all write paths (enqueue, compact).
+  - Checkpoint logic:
+    - When reading a checkpoint and its operationIds no longer appear in the queue snapshot, the checkpoint is cleared and processing falls back to normal batches, avoiding stranded checkpoints.
+    - `confirmCheckpointOperationIds()` prunes operationIds as they are definitively confirmed from the server.
+
+- **Storage key scoping**
+  - Checkpoint storage key is built via `buildCheckpointStorageKey(userId)` using `SYNC_CHECKPOINT_STORAGE_KEY_PREFIX` (derived from signed-in cache key).
+  - `getCheckpoint()` verifies that any checkpoint read from storage has a matching `userId` to the current signed-in user; mismatched data is cleared.
+  - Tests verify that changing users prevents a previous user’s checkpoint from being surfaced.
+
+- **Tests & TDD**
+  - **Storage tests** (`mobile/src/common/utils/__tests__/syncQueueStorage.test.ts`):
+    - Added checkpoint-focused scenarios:
+      - Save + read checkpoint scoped by userId, with TTL preserved.
+      - Clear checkpoint when user changes (user-scoped behavior).
+      - `confirmCheckpointOperationIds()` prunes operationIds and clears when empty.
+      - `markCheckpointAttempt()` increments `attemptCount` and sets `lastAttemptAt`.
+  - **Processor tests** (`mobile/src/common/utils/__tests__/syncQueueProcessor.test.ts`):
+    - Added “checkpoint re-drive” tests:
+      - Re-drive checkpoint batch instead of deadlocking after crash:
+        - When a checkpoint exists and queue contains matching operationIds, `processQueue()` triggers an API call using that batch.
+      - Handling when in-flight operationIds are missing from the queue:
+        - If the checkpoint references only missing opIds, `processQueue()` does not send, and the real worker loop (when running) will clear the checkpoint based on the compaction-aware logic.
+  - All mobile tests pass; backend tests are independent of this change.
+
+- **Documentation updates**
+  - Updated `docs/features/shopping.md`:
+    - Renamed section to **“Partial Batch Recovery & Checkpointing”**.
+    - Described `SyncCheckpoint` semantics, re-drive behavior, per-checkpoint backoff, and TTL-based staleness.
+    - Updated key dependency references to the new `syncQueue/storage` and `syncQueue/processor` modules.
+  - Updated `kitchen_hub_project_context.md`:
+    - Replaced “No checkpointing for large queues” with the new checkpointed design.
+    - Documented checkpoint-first worker loop behavior and crash-safe progress guarantees.
+
+## Deviations from Plan
+
+- **File layout refactor**
+  - The plan referenced legacy monolithic files (`syncQueueStorage.ts`, `syncQueueProcessor.ts`).  
+  - Implementation was done in a new structured module:
+    - `mobile/src/common/utils/syncQueue/storage/*` for queue + checkpoint storage.
+    - `mobile/src/common/utils/syncQueue/processor/*` for worker logic, backoff, error handling, and DTOs.
+  - Shims for the old files were temporarily used during refactor and then removed, as requested.
+
+- **API surface for storage**
+  - Instead of a generic `updateCheckpoint(patch: Partial<SyncCheckpoint>)`, we implemented more explicit operations:
+    - `markCheckpointAttempt()` and `confirmCheckpointOperationIds()` plus `clearCheckpoint()`.
+  - This keeps behavior clearer and easier to test, while still satisfying the plan’s intent (save/update/clear and prune opIds).
+
+- **Validation/pruning location**
+  - Pruning of missing in-flight operationIds is implemented as:
+    - Partly in `confirmCheckpointOperationIds()` (removing known-confirmed ids).
+    - Partly in `processCheckpointIfPresent()` by clearing the checkpoint when no matching queue items remain after compaction.
+  - We did not add a separate `validateAndPruneCheckpointAgainstQueue(queue)` helper; the behavior is embedded in existing functions.
+
+Overall, these deviations are structural/ergonomic and do not change the behavioral guarantees specified in the plan.
+
+## Testing Results
+
+- **Mobile test suite**
+  - `npm test` from `mobile/` passes:
+    - `syncQueueStorage` tests, including checkpoint storage scenarios, pass.
+    - `syncQueueProcessor` tests, including checkpoint re-drive behavior, pass.
+  - No TypeScript or lint errors in the new modules (`syncQueue/storage`, `syncQueue/processor`).
+
+- **Backend test suite**
+  - Backend Jest tests are unchanged by this work.
+  - Current known backend failures are related to storage RLS integration tests configuration, not to sync queue changes.
+
+- **Manual verification**
+  - Confirmed that:
+    - Checkpoint keys are user-scoped and do not leak across accounts.
+    - Worker loop logic prioritizes checkpoints and falls back cleanly when checkpoints are stale or invalid.
+    - Docs (`shopping.md`, `kitchen_hub_project_context.md`) describe the new behavior accurately.
+
+## Lessons Learned
+
+- **Separation of concerns pays off**: Moving from monolithic `syncQueueProcessor.ts` / `syncQueueStorage.ts` to a structured `syncQueue/{storage,processor}` module made it much easier to introduce checkpointing without tangling concerns.
+- **Checkpoint semantics must be explicit**: Encoding TTL, attemptCount, and user scoping directly into `SyncCheckpoint` avoids subtle bugs (deadlocks, cross-account leakage) that are easy to introduce if checkpointing is bolted on.
+- **Backoff is a cross-cutting concern**: Centralizing per-item and per-checkpoint backoff logic in `syncQueueProcessor.backoff.ts` keeps the worker loop readable and ensures a single source of truth for retry timing.
+- **Tests drive safety**: Adding targeted tests for checkpoint re-drive and scoped storage keys helped validate that the recovery algorithm behaves correctly under crash and compaction scenarios.
+
+## Next Steps
+
+- Consider extracting remaining large responsibilities from `processor/index.ts` into dedicated `payloadBuilder` and `resultHandler` modules to further improve readability and reuse.
+- Add more exhaustive processor tests around mixed scenarios (e.g., multiple checkpoints over time, combined with queue compaction) if we see issues in practice.
+- Explore metrics/logging hooks in the processor to make checkpoint/backoff behavior observable in production (e.g., logs or telemetry for checkpoint creation, re-drive, TTL expiry).
+
