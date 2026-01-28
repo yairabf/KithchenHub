@@ -20,13 +20,16 @@ const config = loadConfiguration();
 @Module({
   imports: [
     PrismaModule,
-    JwtModule.register({
-      secret: config.jwt.secret,
-      signOptions: { expiresIn: config.jwt.expiresIn },
+    JwtModule.registerAsync({
+      global: true,
+      useFactory: () => ({
+        secret: config.jwt.secret,
+        signOptions: { expiresIn: config.jwt.expiresIn },
+      }),
     } as any),
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthRepository, AuthCleanupService, UuidService],
-  exports: [AuthService, AuthCleanupService],
+  exports: [AuthService, AuthCleanupService, JwtModule],
 })
 export class AuthModule {}
