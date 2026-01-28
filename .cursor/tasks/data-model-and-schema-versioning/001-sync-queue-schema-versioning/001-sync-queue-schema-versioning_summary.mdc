@@ -1,0 +1,93 @@
+# 001 - sync-queue-schema-versioning - Implementation Summary
+
+**Epic:** data-model-and-schema-versioning  
+**Completed:** 2026-01-28  
+**Status:** Completed
+
+## What Was Implemented
+
+- **Mobile storage schema versioning**
+  - Added `version?: number` to `QueuedWrite` and `SyncCheckpoint` plus `CURRENT_QUEUE_STORAGE_VERSION` and `CURRENT_CHECKPOINT_STORAGE_VERSION` in `syncQueueStorage.types.ts` / `syncQueueStorage.constants.ts`.
+  - Updated `readQueue()` in `syncQueueStorage.internal.ts` to:
+    - Validate and normalize legacy records (default `status`, generate deterministic `operationId` if missing).
+    - Normalize queue `version` (default to `1` when missing/invalid).
+    - Mark items with `version > CURRENT_QUEUE_STORAGE_VERSION` as `FAILED_PERMANENT` and set a clear `lastError`.
+    - Best-effort write back the normalized queue only when changes are detected.
+  - Updated checkpoint handling to:
+    - Normalize `SyncCheckpoint.version` to `1` on read when missing/invalid (`validateCheckpointShape`).
+    - Stamp new checkpoints with `version = CURRENT_CHECKPOINT_STORAGE_VERSION`.
+    - Write back normalized checkpoints from `getCheckpoint()` so migrations do not re-run every startup.
+  - New queue items from `SyncQueueStorageImpl.enqueue()` are created with `version = CURRENT_QUEUE_STORAGE_VERSION`.
+
+- **Unknown future storage versions**
+  - Queue items with `version > CURRENT_QUEUE_STORAGE_VERSION` are preserved but marked `FAILED_PERMANENT` and carry a diagnostic `lastError` explaining the unsupported version.
+  - Checkpoints keep their `version` as long as overall shape is valid; they are not dropped and are re-written in normalized form.
+
+- **API payload versioning for `/auth/sync`**
+  - Backend: extended `SyncDataDto` (`backend/src/modules/auth/dtos/sync-data.dto.ts`) with:
+    - `payloadVersion?: number` validated via `@IsInt()` + `@Min(1)` + `@IsOptional()`.
+  - Mobile: extended `SyncDataDto` type in `syncQueueProcessor.types.ts` with `payloadVersion?: number` and:
+    - `transformToDto` now always sets `payloadVersion: 1` in the sync payload.
+  - Updated backend README sync section to document `payloadVersion` semantics (optional, positive integer, current version `1`, missing treated as `1`).
+
+- **Documentation and project context**
+  - Updated `mobile` syncQueue READMEs to describe:
+    - Storage schema versioning for queue/checkpoint records.
+    - Behavior for legacy and future versions.
+  - Updated `backend/README.md` to document payload versioning on `/auth/sync`.
+  - Created `@kitchen_hub_project_context.md` with a concise summary of sync architecture, schema versioning, and payloadVersion behavior.
+
+## Deviations from Plan
+
+- **Migration helpers / registry**
+  - Plan called for explicit `migrateQueuedWrite`, `migrateQueue`, and a registry (`QUEUE_MIGRATIONS`).  
+  - Implementation folded migration logic directly into `readQueue()` using inline normalization and write-back rather than a separate registry.  
+  - This keeps behavior simple for v1; the design still allows introducing explicit per-version migration helpers later.
+
+- **Checkpoint migration helper**
+  - Instead of a standalone `migrateCheckpoint(raw: unknown)` function, checkpoint migration is handled via `validateCheckpointShape` (version normalization) plus write-back in `getCheckpoint()`.
+  - Functionally this matches the intent (normalize legacy checkpoints, persist normalized form) but does not introduce a named migration registry.
+
+- **Backend behavior for unsupported `payloadVersion`**
+  - DTO and validation for `payloadVersion` are in place, but there is no dedicated branch yet that returns a structured error when `payloadVersion` is greater than the highest supported value.
+  - Current behavior: all versions that pass validation are accepted and handled by the same `/auth/sync` logic.  
+  - The schema and docs are ready to support stricter handling in a follow-up change.
+
+- **Critical E2E contract test**
+  - The plan’s explicit E2E scenario (legacy queue + checkpoint → migration → `/auth/sync` call → partial success → restart) is partially covered by existing unit/integration tests:
+    - Queue migration, status/operationId backfill, and idempotency are tested.
+    - Processor behavior with `succeeded` / `conflicts` arrays and backward-compat scenarios is tested.
+  - A single, end-to-end test that seeds both queue and checkpoint in legacy format and asserts post-restart normalization has not been added yet and remains a good candidate for future coverage.
+
+## Testing Results
+
+- **Mobile**
+  - `syncQueueStorage.test.ts`:
+    - Validates queue operations, compaction, status migration, deterministic `operationId` migration, and new schema versioning behavior (legacy vs future versions, including write-back).
+  - `syncQueueProcessor.test.ts`:
+    - Validates processing, conflict handling, backoff, idempotency keys in payloads, partial batch recovery, and backward compatibility for `succeeded[]` presence/absence.
+  - All mobile Jest tests pass.
+
+- **Backend**
+  - All existing unit/integration tests pass except pre-existing RLS integration tests in `src/infrastructure/database/rls.spec.ts`, which fail due to missing storage RLS policies (known environment prerequisite).
+  - No new dedicated tests were added specifically for `payloadVersion`; existing `/auth/sync` behavior remains unchanged and continues to pass its current tests.
+
+## Lessons Learned
+
+- Adding schema version fields early, even when there is only one live version, provides a clear anchor for future migrations and makes backward compatibility decisions explicit.
+- Centralizing migrations in the read path with best-effort write-back offers a good balance between safety and simplicity for mobile storage.
+- Clear, structured error messages (e.g., for unsupported queue schema versions) significantly improve observability and future debugging.
+
+## Next Steps
+
+- Add a focused backend test suite around `/auth/sync` that exercises:
+  - Requests without `payloadVersion`.
+  - Requests with `payloadVersion = 1`.
+  - Requests with unsupported `payloadVersion > supported` once stricter behavior is implemented.
+- Add an explicit end-to-end mobile test that:
+  - Seeds both queue and checkpoint in legacy format.
+  - Drives a sync cycle (with partial success) and verifies:
+    - Items and checkpoints are normalized to the latest storage schema.
+    - No additional migrations run on subsequent reads.
+- When introducing future storage schema versions, consider refactoring the inline migration logic into explicit versioned migration helpers/registries as described in the original plan.
+

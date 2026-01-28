@@ -15,6 +15,17 @@ The module is split into two submodules:
 - `storage/` – queue and checkpoint persistence in AsyncStorage.
 - `processor/` – worker loop, backoff, batching, payload building, and result handling.
 
+### Schema and payload versioning
+
+- **Storage schema versioning (mobile)**:
+  - Queue records (`QueuedWrite`) and checkpoints (`SyncCheckpoint`) include a `version` field representing the **storage schema version**.
+  - Legacy records without `version` are treated as version `1` and migrated on read; the normalized form is written back to AsyncStorage.
+  - Queue items with an unknown future version are retained but marked as non-processable (`FAILED_PERMANENT`) to avoid corrupting data.
+- **API payload versioning (`/auth/sync`)**:
+  - Every sync request includes a top-level `payloadVersion` (currently `1`) in the payload built by the processor.
+  - The backend `SyncDataDto` accepts `payloadVersion` as an optional number; missing or `1` are treated identically today.
+  - This keeps the API contract observable and ready for future payload evolutions without breaking older clients.
+
 If you want to:
 
 - **Change how the queue is stored, compacted, or checkpointed** → see `storage/`.
