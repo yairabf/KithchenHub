@@ -1,0 +1,202 @@
+# 003 - Build Workflow for GHCR (develop/main branches)
+
+**Epic:** Backend Deployment Infrastructure  
+**Created:** 2026-01-28  
+**Status:** Planning
+
+## Overview
+
+Create `.github/workflows/build.yml` to build and push multi-stage Docker images to GitHub Container Registry (GHCR) specifically when code is merged to `develop` and `main` branches. This workflow will use GitHub Actions cache for faster builds and follow production deployment best practices.
+
+## Current Status Analysis
+
+### Existing Infrastructure ✅
+
+1. **Dockerfile**: Production-ready multi-stage Dockerfile exists at `backend/Dockerfile`
+   - 3-stage build: dependencies → builder → production
+   - Optimized for size (~150-180MB)
+   - Security hardened (non-root user, signal handling)
+
+2. **Existing Workflow**: `build-push.yml` exists but triggers on ALL branches
+   - Triggers on: `branches: ['**']` (all branches)
+   - Path filters: `backend/**` and `.github/workflows/build-push.yml`
+   - Uses GitHub Actions cache (`type=gha`)
+   - Pushes to GHCR with proper tagging
+   - Has branch name sanitization and tag validation
+
+3. **CI Workflow**: `ci.yml` exists for PR validation
+   - Runs lint, typecheck, unit tests
+   - Builds Docker image (no push) for validation
+
+4. **GHCR Configuration**: Already configured
+   - Authentication via `GITHUB_TOKEN`
+   - Image naming: `ghcr.io/${{ github.repository_owner }}/kitchen-hub-api`
+   - Tagging strategy documented in `backend/docs/GHCR_QUICK_REFERENCE.md`
+
+### What's Missing ❌
+
+1. **Production-focused workflow**: No dedicated workflow for `develop` and `main` branches
+2. **Branch-specific triggers**: Current `build-push.yml` triggers on all branches, not just production branches
+3. **Workflow naming**: User requested `build.yml` specifically (not `build-push.yml`)
+
+## Architecture
+
+### Workflow Structure
+
+The new `build.yml` workflow will:
+
+1. **Trigger**: On pushes to `develop` and `main` branches only
+2. **Path filters**: Only run when `backend/**` or `.github/workflows/build.yml` changes
+3. **Build**: Multi-stage Docker image using existing `backend/Dockerfile`
+4. **Cache**: Use GitHub Actions cache (`type=gha`) for faster builds
+5. **Push**: Push to GHCR with production-appropriate tags
+6. **Verify**: Verify image was successfully pushed
+
+### Tagging Strategy
+
+For `develop` and `main` branches:
+- `BRANCH-SHA` (e.g., `main-abc123def456`, `develop-xyz789ghi012`)
+- `BRANCH-latest` (e.g., `main-latest`, `develop-latest`)
+- `BRANCH-SHA_SHORT` (short SHA format)
+- `SHA` (full commit SHA)
+
+### Caching Strategy
+
+- **Cache type**: GitHub Actions cache (`type=gha`)
+- **Cache mode**: `max` (cache all layers)
+- **Cache from**: Restore from previous builds
+- **Cache to**: Save all layers for future builds
+
+## Implementation Steps
+
+1. **Create task directory structure**
+   - Create `.cursor/tasks/backend-deployment-infrastructure/003-build-workflow-ghcr/`
+   - Create plan document: `003-build-workflow-ghcr_plan.mdc`
+
+2. **Create `.github/workflows/build.yml`**
+   - Configure triggers: `push` to `develop` and `main` branches
+   - Add path filters for `backend/**` and workflow file
+   - Set up concurrency control (cancel in-progress builds)
+   - Configure permissions: `contents: read`, `packages: write`
+
+3. **Implement build job**
+   - Checkout code
+   - Set up Docker Buildx
+   - Log in to GHCR using `GITHUB_TOKEN`
+   - Sanitize branch names for Docker tags (handle special characters)
+   - Extract metadata (tags, labels) using `docker/metadata-action`
+   - Build and push Docker image with caching
+   - Verify image push
+
+4. **Optimize caching**
+   - Use `cache-from: type=gha` to restore cache
+   - Use `cache-to: type=gha,mode=max` to save cache
+   - Ensure cache is shared across workflow runs
+
+5. **Add verification step**
+   - Verify image exists in GHCR after push
+   - Use `docker manifest inspect` to validate
+
+6. **Documentation**
+   - Update workflow with clear comments
+   - Ensure alignment with existing `build-push.yml` patterns
+
+## Key Differences from `build-push.yml`
+
+| Feature          | `build-push.yml`             | `build.yml` (new)         |
+| ---------------- | ---------------------------- | ------------------------- |
+| Trigger branches | All branches (`**`)          | `develop` and `main` only |
+| Purpose          | Development/testing branches | Production branches       |
+| Tagging          | Same strategy                | Same strategy             |
+| Caching          | GitHub Actions cache         | GitHub Actions cache      |
+| Verification     | Yes                          | Yes                       |
+
+## Files to Create/Modify
+
+### New Files
+- `.github/workflows/build.yml` - New production build workflow
+- `.cursor/tasks/backend-deployment-infrastructure/003-build-workflow-ghcr/003-build-workflow-ghcr_plan.mdc` - This plan
+
+### Files to Reference (No Changes)
+- `backend/Dockerfile` - Multi-stage Dockerfile (already exists)
+- `.github/workflows/build-push.yml` - Reference for patterns (keep as-is)
+- `backend/docs/GHCR_QUICK_REFERENCE.md` - Tagging strategy documentation
+
+## Testing Strategy
+
+### Manual Testing
+1. **Test on `develop` branch**:
+   - Merge a change to `develop`
+   - Verify workflow triggers
+   - Check image is built and pushed
+   - Verify tags are correct
+
+2. **Test on `main` branch**:
+   - Merge a change to `main`
+   - Verify workflow triggers
+   - Check image is built and pushed
+   - Verify tags are correct
+
+3. **Test caching**:
+   - First build should be slower (no cache)
+   - Second build should be faster (cache hit)
+   - Verify cache is being used
+
+### Validation Checklist
+- [ ] Workflow triggers on `develop` branch pushes
+- [ ] Workflow triggers on `main` branch pushes
+- [ ] Workflow does NOT trigger on other branches
+- [ ] Path filters work correctly
+- [ ] Docker image builds successfully
+- [ ] Image is pushed to GHCR
+- [ ] Tags are correct (`BRANCH-SHA`, `BRANCH-latest`, etc.)
+- [ ] Cache is being used (faster subsequent builds)
+- [ ] Image verification step passes
+
+## Success Criteria
+
+1. ✅ `.github/workflows/build.yml` exists and is properly configured
+2. ✅ Workflow triggers only on `develop` and `main` branch merges
+3. ✅ Multi-stage Docker images build successfully
+4. ✅ Images are pushed to GHCR with correct tags
+5. ✅ Build caching is working (faster rebuilds)
+6. ✅ Image verification confirms successful push
+7. ✅ Workflow follows same patterns as `build-push.yml` for consistency
+
+## Considerations
+
+### Relationship with `build-push.yml`
+- **Option A**: Keep both workflows
+  - `build.yml`: Production branches (`develop`, `main`)
+  - `build-push.yml`: All other branches (development/testing)
+- **Option B**: Replace `build-push.yml` with `build.yml`
+  - Single workflow for all branches
+  - Simpler maintenance
+
+**Recommendation**: Keep both workflows (Option A) to maintain separation between production and development builds, unless user specifies otherwise.
+
+### Branch Name Sanitization
+- Handle branch names with special characters (`/`, `.`, etc.)
+- Ensure Docker tag length limits (128 characters)
+- Truncate if necessary while preserving SHA
+
+### Cache Efficiency
+- GitHub Actions cache (`type=gha`) is automatically scoped per workflow
+- Cache is shared across runs of the same workflow
+- `mode=max` ensures all layers are cached for maximum speed
+
+## Next Steps After Implementation
+
+1. Test workflow on `develop` branch
+2. Test workflow on `main` branch
+3. Verify cache performance
+4. Monitor workflow runs for any issues
+5. Consider adding workflow status badges to README
+6. Document workflow in backend deployment docs
+
+## References
+
+- Existing workflow: [`.github/workflows/build-push.yml`](.github/workflows/build-push.yml)
+- Dockerfile: [`backend/Dockerfile`](backend/Dockerfile)
+- GHCR documentation: [`backend/docs/GHCR_QUICK_REFERENCE.md`](backend/docs/GHCR_QUICK_REFERENCE.md)
+- CI workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
