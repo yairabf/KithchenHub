@@ -6,6 +6,10 @@ FROM node:20-alpine AS dependencies
 
 WORKDIR /usr/src/app
 
+# Install OpenSSL for Prisma (required for Prisma Client)
+# Alpine 3.19+ uses OpenSSL 3, but Prisma needs OpenSSL 1.1 compatibility
+RUN apk add --no-cache openssl openssl-dev libc6-compat
+
 # Copy package files for dependency installation
 COPY package.json package-lock.json ./
 

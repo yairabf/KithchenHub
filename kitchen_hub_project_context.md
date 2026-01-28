@@ -91,6 +91,8 @@
 
 ### Offline Sync Mechanics
 
+**📚 Canonical Reference**: See `backend/docs/api-sync-and-conflict-strategy.md` for complete sync behavior, timestamp semantics, and edge cases.
+
 **Queue Behavior**
 - Stores writes per entity (`entityType:localId`)
 - Merges multiple writes into one latest state
@@ -119,14 +121,17 @@
   - Prevents the “in-flight items forever filtered out” deadlock by always re-driving or clearing stale checkpoints
 
 **Conflict Resolution**
-- Client-side LWW (Last Write Wins) by `updatedAt` when merging **remote state into local cache**
+- **Client-side LWW** (Last Write Wins) by `updatedAt` when merging **remote state into local cache**
 - `deletedAt` wins over any update (tombstone semantics)
 - Timestamps normalized (handles timezone, ISO strings)
 - Realtime payloads also processed via LWW on the client
 - Deterministic merge ensures same outcome regardless of order
-- Backend currently uses simple Prisma `upsert` for `POST /api/v1/auth/sync` without server-side LWW gates or timestamp/version checks
-  - The database reflects the order in which sync writes are successfully processed
-  - The mobile client is responsible for reconciling local vs remote state using its LWW + tombstone utilities
+- **Backend sync behavior** (`POST /api/v1/auth/sync`):
+  - Uses simple Prisma `upsert` per entity (no server-side LWW gate or timestamp comparison)
+  - Last sync write wins at database layer (based on arrival order, not logical timestamp)
+  - Server ignores all client timestamps; Prisma auto-manages `updatedAt` via `@updatedAt` directive
+  - Mobile client reconciles local vs remote state using its LWW + tombstone utilities when pulling data
+  - **See**: `backend/docs/api-sync-and-conflict-strategy.md` for complete sync behavior specification
 
 ---
 
@@ -187,5 +192,9 @@
 - Document DB schema migration/versioning strategies (API contract versioning and deprecation are already documented)
 - Consider scheduled cleanup automation for idempotency keys (currently manual/optional)
 - Extend realtime sync to other features (recipes, chores) using same hook pattern
-- Consider adding server-side timestamp-aware conflict checks and clearer resurrection semantics for soft-deleted records, as described in `backend/docs/api-sync-and-conflict-strategy.md`
+- **Server-side conflict resolution improvements** (Not Implemented):
+  - Add server-side timestamp-aware conflict checks (LWW gate to reject stale writes)
+  - Define resurrection semantics for soft-deleted records
+  - Payload version branching for evolving sync contract
+  - See `backend/docs/api-sync-and-conflict-strategy.md` § "Planned/Design (Not Implemented Yet)" for details
 
