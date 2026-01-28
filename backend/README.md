@@ -586,6 +586,130 @@ const recipes = await prisma.recipe.findMany({
 - Keep services focused on business logic
 - Use parameterized tests for comprehensive coverage
 
+## Docker Deployment
+
+The backend includes a production-ready multi-stage Dockerfile optimized for NestJS + Prisma.
+
+### Building the Docker Image
+
+```bash
+cd backend
+docker build -t kitchen-hub-api:latest .
+```
+
+**Image Features:**
+- Multi-stage build (dependencies → builder → production)
+- Optimized size (~150MB vs ~465MB unoptimized)
+- Non-root user for security
+- Proper signal handling with `dumb-init`
+- Prisma Client pre-generated during build
+
+### Running the Container
+
+**Basic run:**
+```bash
+docker run -p 3000:3000 \
+  -e DATABASE_URL="postgresql://user:password@host:5432/db" \
+  -e DIRECT_URL="postgresql://user:password@host:5432/db" \
+  -e JWT_SECRET="your-jwt-secret-min-32-chars" \
+  -e JWT_REFRESH_SECRET="your-refresh-secret-min-32-chars" \
+  -e SUPABASE_URL="https://your-project.supabase.co" \
+  -e SUPABASE_ANON_KEY="your-anon-key" \
+  kitchen-hub-api:latest
+```
+
+**Using environment file:**
+```bash
+docker run -p 3000:3000 --env-file .env.prod kitchen-hub-api:latest
+```
+
+### Environment Variables
+
+**Required:**
+- `DATABASE_URL` - PostgreSQL connection string (can use Supabase session pooler)
+- `DIRECT_URL` - Direct PostgreSQL connection (for migrations)
+- `JWT_SECRET` - JWT secret (minimum 32 characters)
+- `JWT_REFRESH_SECRET` - Refresh token secret (minimum 32 characters)
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_ANON_KEY` - Supabase anonymous key
+
+**Optional:**
+- `PORT` - Server port (default: `3000`)
+- `NODE_ENV` - Environment (default: `production` in container)
+- `JWT_EXPIRES_IN` - Access token expiry (default: `15m`)
+- `JWT_REFRESH_EXPIRES_IN` - Refresh token expiry (default: `7d`)
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (for admin operations)
+
+### Database Migrations
+
+Migrations should be run before starting the application. For production deployments:
+
+**Option 1: Separate migration step**
+```bash
+# Run migrations
+docker run --rm \
+  -e DATABASE_URL="$DIRECT_URL" \
+  kitchen-hub-api:latest \
+  npx prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma
+
+# Then start the application
+docker run -p 3000:3000 --env-file .env.prod kitchen-hub-api:latest
+```
+
+**Option 2: Kubernetes init container**
+```yaml
+initContainers:
+  - name: migrate
+    image: kitchen-hub-api:latest
+    command: ["npx", "prisma", "migrate", "deploy", "--schema=src/infrastructure/database/prisma/schema.prisma"]
+    env:
+      - name: DATABASE_URL
+        valueFrom:
+          secretKeyRef:
+            name: db-credentials
+            key: direct-url
+```
+
+### Docker Best Practices
+
+- **Non-root user**: Container runs as user `node` (UID 1001)
+- **Signal handling**: Uses `dumb-init` for proper SIGTERM handling
+- **Layer caching**: Optimized for fast rebuilds when source changes
+- **Security**: Minimal base image (`node:20-slim`) with only required packages
+- **Size**: Multi-stage build excludes dev dependencies and source code
+
+### Health Check
+
+The application exposes health check endpoints:
+- `GET /api/version` - API version information (public)
+- `GET /api/docs/v1` - Swagger documentation (public)
+
+Add to `docker-compose.yml`:
+```yaml
+healthcheck:
+  test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/version', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+```
+
+### Troubleshooting
+
+**Container fails to start:**
+- Check environment variables are set correctly
+- Verify database is accessible from container
+- Check logs: `docker logs <container-id>`
+
+**Prisma Client errors:**
+- Ensure Prisma Client was generated during build
+- Verify schema path is correct in Dockerfile
+- Rebuild image if schema changed
+
+**Permission errors:**
+- Container runs as non-root user `node`
+- Ensure mounted volumes have correct permissions
+
 ## Integration with Mobile App
 
 The backend API is designed to work seamlessly with the [Kitchen Hub Mobile App](../mobile/README.md):
