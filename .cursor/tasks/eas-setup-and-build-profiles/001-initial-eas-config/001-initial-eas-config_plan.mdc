@@ -1,0 +1,146 @@
+# 001 - Initial EAS Configuration (eas.json)
+
+**Epic:** EAS Setup and Build Profiles
+**Created:** 2026-01-29
+**Status:** Planning
+
+## Overview
+
+Create the initial EAS Build configuration file (`eas.json`) in the mobile app directory, defining build profiles for **preview** (internal testing) and **production** (store releases). Configure distribution type, EAS Update channels, and auto-increment settings for native build numbers so the project is ready for `eas build` and OTA updates.
+
+**User story:** As a developer, I want a single `eas.json` so I can run `eas build --profile preview` for internal testing and `eas build --profile production` for store submissions, with correct distribution, update channels, and automatic native version bumping.
+
+**Note on path:** The project uses `mobile/` at repo root (not `apps/mobile/`). The file will be created at **`mobile/eas.json`**.
+
+---
+
+## Deep Research: Current Status
+
+### Already Implemented
+
+| Item | Location | Details |
+|------|----------|---------|
+| **Expo app config** | mobile/app.json, mobile/app.config.js | Name, slug, scheme, iOS bundleIdentifier `com.kitchenhub.app`, Android package `com.kitchenhub.app`. Version from repo root `version.json` via app.config.js. |
+| **OTA / expo-updates** | mobile/package.json, mobile/app.json | `expo-updates ~29.0.16`; `updates.enabled`, `checkAutomatically: "ON_ERROR_RECOVERY"`, `url: "https://u.expo.dev/[PROJECT_ID]"`. |
+| **Runtime version** | mobile/app.json | `runtimeVersion: { "policy": "appVersion" }` — compatible with EAS Update and autoIncrement (appVersion policy required for remote versioning). |
+| **App identifiers locked** | .cursor/rules/app_identifiers_rule.mdc, mobile/scripts/verify-app-identifiers.sh | Canonical `com.kitchenhub.app`; rule and script prevent accidental changes. |
+| **OTA verification** | mobile/scripts/verify-ota-config.sh, npm run verify:ota | Validates updates block, runtimeVersion policy, version.json; warns if `[PROJECT_ID]` still present. |
+| **User-facing version** | version.json (repo root), app.config.js | Single source of truth for `expo.version`; no version in app.json. |
+
+### Missing (Gaps)
+
+| Gap | Description |
+|-----|-------------|
+| **No eas.json** | No EAS Build configuration exists. `eas build` has nothing to read. |
+| **No build profiles** | No `preview` or `production` (or `development`) profiles defined. |
+| **No distribution type** | Preview should use `distribution: "internal"`; production should use `distribution: "store"` (default when omitted). |
+| **No EAS Update channel** | Builds need `channel` so EAS Update delivers the correct OTA updates (e.g. `preview` vs `production`). |
+| **No auto-increment** | Native build numbers (Android `versionCode`, iOS `buildNumber`) are not set or auto-incremented; risk of duplicate version rejections from stores. |
+| **No cli.appVersionSource** | Recommended `remote` for build number management not configured. |
+| **EAS project not linked** | `updates.url` still has `[PROJECT_ID]`; must be replaced after running `eas init` / linking project. |
+
+### Constraints and Conventions
+
+- **App identifiers:** Must remain `com.kitchenhub.app` for all profiles (see app_identifiers_rule.mdc). Do not override in eas.json.
+- **Version:** User-facing version stays in `version.json`; do not use autoIncrement for `version` (only for versionCode/buildNumber).
+- **Runtime version:** Policy is `appVersion`; compatible with EAS Update and remote autoIncrement (Expo docs: autoIncrement not supported with `nativeVersion` policy).
+- **SDK:** Expo SDK 54; EAS Update uses `channel` (not deprecated `releaseChannel`).
+
+---
+
+## Architecture
+
+### Files to Create
+
+- **mobile/eas.json** — EAS Build (and optionally Submit) configuration.
+
+### Files to Modify (Optional / Follow-up)
+
+- **mobile/app.json** — No change required for initial config. If using remote appVersionSource, build numbers can remain unset locally; EAS initializes with 1 on first build.
+- **mobile/README.md** — Add subsection for EAS Build (eas.json location, profiles, how to run builds, link to replace `[PROJECT_ID]`).
+
+### Dependencies
+
+- EAS CLI: used via `npx eas-cli` or global `eas` (not in package.json by default).
+- Expo account and `eas init` (or equivalent) to obtain project ID and replace `[PROJECT_ID]` in app.json when ready for OTA.
+
+### Schema Reference (Expo docs)
+
+- [Configure EAS Build with eas.json](https://docs.expo.dev/build/eas-json/)
+- [Configuration with eas.json (schema)](https://docs.expo.dev/eas/json/)
+- [App version management](https://docs.expo.dev/build-reference/app-versions/)
+
+---
+
+## Implementation Steps
+
+1. **Create task directory and plan** (this document).
+2. **Create `mobile/eas.json`** with:
+   - **cli** (optional but recommended): `appVersionSource: "remote"` so EAS manages build numbers remotely; first build initializes with 1 if not set in app config.
+   - **build**:
+     - **preview**
+       - `distribution: "internal"` — shareable install links for testers.
+       - `channel: "preview"` — EAS Update channel for this build (OTA).
+       - Optionally `android.buildType: "apk"` for easier internal install (default is app-bundle).
+       - Do **not** enable autoIncrement for preview if you want to reserve bumping for production only; or set `autoIncrement: true` for consistency.
+     - **production**
+       - No `distribution` (defaults to store) — for App Store / Play Store.
+       - `channel: "production"` — EAS Update channel for store builds.
+       - `autoIncrement: true` — bump Android versionCode and iOS buildNumber on each build (recommended; avoids duplicate version rejections).
+3. **Optional:** Add `development` profile with `developmentClient: true` and `distribution: "internal"` if the team uses dev clients (not required for this task).
+4. **Document in mobile/README.md:** Short “EAS Build” subsection: location of eas.json, profile names (preview, production), commands (`eas build --profile preview`, `eas build --profile production`), and reminder to replace `[PROJECT_ID]` in app.json after `eas init`.
+5. **Post-implementation:** Run auto-code-review skill; create `001-initial-eas-config_summary.mdc`.
+
+---
+
+## Build Profile Summary (Target)
+
+| Profile      | Distribution | Channel     | Auto-increment | Purpose                    |
+|-------------|--------------|------------|----------------|----------------------------|
+| preview     | internal     | preview    | optional (no)  | Internal testing; shareable links |
+| production  | store        | production | yes            | Store releases; OTA on production channel |
+
+---
+
+## EAS Update Channel Behavior
+
+- Standalone builds check for updates matching **platform**, **runtime version** (appVersion), and **channel**.
+- Preview builds with `channel: "preview"` receive updates published to the `preview` channel (e.g. `eas update --channel preview`).
+- Production builds with `channel: "production"` receive updates published to `production` (e.g. `eas update --channel production`).
+
+---
+
+## Auto-Increment and App Version Source
+
+- **User-facing version** (`expo.version`): Continues to come from `version.json` via app.config.js; update manually for releases. Do not use autoIncrement for `version`.
+- **Developer-facing versions:** Android `versionCode`, iOS `buildNumber`. With `cli.appVersionSource: "remote"` and `build.production.autoIncrement: true`, EAS increments these on the server; no need to add them to app.json (EAS initializes with 1 on first build if absent).
+- **Limitation (Expo):** autoIncrement does not support the `version` option; not supported with `runtimeVersion.policy: "nativeVersion"` — we use `appVersion`, so we are compliant.
+
+---
+
+## Verification Plan
+
+- **eas.json exists** at `mobile/eas.json` and is valid JSON.
+- **Profiles:** `preview` and `production` present under `build`.
+- **Preview:** `distribution: "internal"`, `channel: "preview"`.
+- **Production:** `channel: "production"`, `autoIncrement: true`; distribution omitted (store).
+- **Optional:** `cli.appVersionSource: "remote"` set.
+- **Identifiers:** No override of bundleIdentifier or package in eas.json (remain in app.json only).
+- **README:** EAS Build subsection added with commands and project ID note.
+
+---
+
+## Success Criteria
+
+- Single `mobile/eas.json` defines preview (internal) and production (store) build profiles.
+- Distribution type, update channels, and auto-increment for production are configured as specified.
+- Plan and (after implementation) summary live under `.cursor/tasks/eas-setup-and-build-profiles/001-initial-eas-config/`.
+- Documentation and coding rules (including app identifiers) are respected; auto-code-review applied after implementation.
+
+---
+
+## Skills and Rules Applied
+
+- **Epic/Task structure:** Plan stored in `.cursor/tasks/eas-setup-and-build-profiles/001-initial-eas-config/` per coding_rule.mdc (Composer/Plan Mode).
+- **App identifiers:** .cursor/rules/app_identifiers_rule.mdc — no change to bundleIdentifier or package.
+- **Post-implementation:** .cursor/skills/auto-code-review/SKILL.md — run after creating eas.json and README updates.

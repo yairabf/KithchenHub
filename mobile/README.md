@@ -144,6 +144,21 @@ The app is configured for Expo Updates so you can ship JavaScript-only changes w
 
 To verify OTA config locally (presence of `updates`, `runtimeVersion` with `appVersion` policy, version from `version.json`, no `version` in `app.json`, and that `url` does not still contain the placeholder), run `npm run verify:ota` from the `mobile` directory.
 
+### EAS Build
+
+Build configuration lives in **`eas.json`** in the mobile directory. Two profiles are defined:
+
+| Profile      | Distribution | Channel     | Use case |
+|-------------|--------------|-------------|----------|
+| **preview** | internal     | preview     | Internal testing; shareable install links (APK on Android). Run: `eas build --profile preview` |
+| **production** | store    | production  | App Store / Play Store releases. Native build numbers (Android versionCode, iOS buildNumber) auto-increment. Run: `eas build --profile production` |
+
+Only the **production** profile uses auto-increment for native build numbers; **preview** does not.
+
+**App version source:** `cli.appVersionSource` is set to `remote` so EAS manages build numbers; the first build initializes with 1 if not set in app config. User-facing version remains in repo root **version.json** (see OTA Updates above).
+
+Before running production builds or shipping OTA, replace `[PROJECT_ID]` in `app.json` with your EAS project ID (e.g. after `eas init` or linking the project in the Expo dashboard).
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
