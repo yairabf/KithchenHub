@@ -1,0 +1,64 @@
+# 002 - Runtime Version Policy for OTA Safety
+
+**Epic:** Mobile App Configuration
+**Created:** 2026-01-29
+**Status:** Planning
+
+## Overview
+
+Formalize and lock the existing runtimeVersion policy (already set to appVersion in app.json) with explicit documentation, verification that enforces the policy, and a Cursor rule so OTA updates stay compatible with native builds and accidental breaking changes are avoided.
+
+## Current status (research summary)
+
+### Already implemented
+
+| Item | Location | Details |
+|------|----------|---------|
+| **runtimeVersion policy** | mobile/app.json | `runtimeVersion: { "policy": "appVersion" }` is set. The `version` field is the effective runtime version. |
+| **OTA config** | mobile/app.json | `updates.enabled`, `checkAutomatically: "ON_ERROR_RECOVERY"`, `fallbackToCacheTimeout: 0`, `updates.url` present. |
+| **README OTA section** | mobile/README.md | Documents runtimeVersion uses appVersion policy, version as runtime version, troubleshooting, and references `npm run verify:ota`. |
+| **OTA verification script** | mobile/scripts/verify-ota-config.sh | Checks presence of `updates` and `runtimeVersion`, and that `url` does not contain `[PROJECT_ID]`. |
+| **npm script** | mobile/package.json | `verify:ota` runs the OTA config script. |
+
+### Gaps (missing for a locked policy)
+
+1. No explicit "locked policy" statement in README.
+2. Verification does not enforce policy type (appVersion).
+3. No Cursor rule for runtimeVersion.
+4. No single policy doc (optional).
+5. Task/plan not under mobile-app-configuration (this plan addresses that).
+
+## Policy context (Expo)
+
+- **runtimeVersion** ties a build's native code to compatible updates. Mismatches can cause crashes.
+- **Policies:** appVersion (derives from expo.version), nativeVersion, fingerprint. Custom string is also allowed.
+- **appVersion** is appropriate when you bump `version` on every public release and want OTA only for the same native runtime.
+
+## Architecture
+
+- **Single source of truth:** mobile/app.json — `expo.version` and `expo.runtimeVersion.policy`.
+- **Documentation:** mobile/README.md — explicit "locked" OTA/runtimeVersion policy subsection.
+- **Validation:** Extend mobile/scripts/verify-ota-config.sh to require `"policy": "appVersion"`.
+- **Guardrails:** New Cursor rule for mobile/app.json covering runtimeVersion and version.
+
+## Implementation Steps
+
+1. Create task directory and plan doc (this file).
+2. Document "locked" runtimeVersion policy in README under OTA Updates.
+3. Extend verify-ota-config.sh to enforce appVersion policy (grep for "policy": "appVersion").
+4. Add Cursor rule runtime_version_ota_rule.mdc (globs: mobile/app.json).
+5. Optional: dedicated policy doc — not mandatory.
+6. Post-implementation: run auto-code-review, create summary doc.
+
+## Verification plan
+
+- Script: `npm run verify:ota` must pass; with runtimeVersion changed to string or other policy, must fail.
+- README: "Runtime version policy (locked)" present.
+- Cursor rule: exists with correct globs and description.
+
+## Success criteria
+
+- runtimeVersion policy documented as appVersion and locked.
+- `npm run verify:ota` enforces appVersion policy.
+- Cursor rule prevents AI from changing runtimeVersion policy without explicit approval.
+- Plan and summary live under .cursor/tasks/mobile-app-configuration/002-runtime-version-ota-policy/.

@@ -1,0 +1,32 @@
+# 001 - Define and Lock App Identifiers - Implementation Summary
+
+**Epic:** Mobile App Configuration
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **app.json:** No value changes. Verified `ios.bundleIdentifier` and `android.package` remain `com.kitchenhub.app`.
+- **mobile/README.md:** Added "App Identifiers (Locked)" subsection under Tech Stack with table (iOS `expo.ios.bundleIdentifier`, Android `expo.android.package`), canonical value `com.kitchenhub.app`, and warning not to change without explicit decision. Referenced `npm run verify:identifiers`.
+- **mobile/scripts/verify-app-identifiers.sh:** New script that greps `app.json` for `"bundleIdentifier": "com.kitchenhub.app"` and `"package": "com.kitchenhub.app"`; exits 1 with clear errors if either is missing. Script is executable.
+- **mobile/package.json:** Added script `"verify:identifiers": "bash scripts/verify-app-identifiers.sh"`.
+- **.cursor/rules/app_identifiers_rule.mdc:** New rule with `globs: ["mobile/app.json"]` instructing not to change bundleIdentifier or package without explicit user approval; documents canonical value and `npm run verify:identifiers`.
+
+## Deviations from Plan
+
+- None. All planned steps were implemented.
+
+## Testing Results
+
+- **verify:identifiers (valid):** Run with current `app.json`; exit 0 and message "App identifiers OK: iOS and Android both use com.kitchenhub.app".
+- **verify:identifiers (invalid):** Temporarily set `bundleIdentifier` to `com.wrong.app`; script exited 1 with "Error: iOS bundleIdentifier in app.json is not \"com.kitchenhub.app\""; change reverted.
+
+## Lessons Learned
+
+- Single source of truth in `app.json` plus README and Cursor rule makes the lock-down clear to humans and AI.
+- Shell script with explicit grep patterns avoids JSON parsing and keeps the check simple and portable.
+
+## Next Steps
+
+- Optional: Add a CI step (e.g. in a workflow that runs on `mobile/**` changes) that runs `npm run verify:identifiers` from the mobile directory to enforce identifiers on every PR.
+- When adding EAS Build or `app.config.ts`, ensure identifiers are not overridden per environment; keep `com.kitchenhub.app` for all builds.

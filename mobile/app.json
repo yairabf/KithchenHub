@@ -2,12 +2,20 @@
   "expo": {
     "name": "Kitchen Hub",
     "slug": "kitchen-hub",
-    "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "kitchen-hub",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_ERROR_RECOVERY",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/[PROJECT_ID]"
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",

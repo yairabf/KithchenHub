@@ -1,0 +1,34 @@
+# 002 - Enable Expo Updates (OTA) - Implementation Summary
+
+**Epic:** Mobile App Configuration
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **mobile/package.json:** Added dependency `expo-updates: ~29.0.16` (via `npx expo install expo-updates`). Added script `verify:ota`: `bash scripts/verify-ota-config.sh`.
+- **mobile/app.json:** Added `runtimeVersion: { "policy": "appVersion" }`. Added `updates`: `enabled: true`, `checkAutomatically: "ON_ERROR_RECOVERY"`, `fallbackToCacheTimeout: 0`, `url: "https://u.expo.dev/[PROJECT_ID]"`.
+- **mobile/README.md:** Added "OTA Updates (Over-the-Air)" subsection with config table, update URL note, warning not to ship with `[PROJECT_ID]` placeholder, workflow, troubleshooting, and reference to `npm run verify:ota`. Added Verification section under Available Scripts for `verify:identifiers` and `verify:ota`.
+- **mobile/scripts/verify-ota-config.sh:** New executable script that checks `app.json` for presence of `updates` and `runtimeVersion`, and fails with a warning if `url` still contains `[PROJECT_ID]`. Used by `npm run verify:ota`.
+
+## Deviations from Plan
+
+- **Code review follow-up:** Added README warning and clarification about not shipping with placeholder; added `verify-ota-config.sh` and `verify:ota` script (recommended in review, not in original plan).
+
+## Testing Results
+
+- **expo install:** `npx expo install expo-updates` completed; `expo-updates ~29.0.16` in package.json.
+- **app.json:** Valid JSON; `npx expo-doctor` run (no config issues; unrelated @types/jest mismatch reported).
+- **verify:ota:** With current `app.json` (placeholder present), script exits 1 and prints warning; with placeholder removed and valid config, script would exit 0.
+
+## Lessons Learned
+
+- Safe defaults (`ON_ERROR_RECOVERY`, `fallbackToCacheTimeout: 0`) keep app startup non-blocking and resilient to update server failures.
+- Placeholder URL plus verification script prevents accidentally shipping builds that cannot receive OTA updates.
+- Storing plan and summary under `.cursor/tasks/mobile-app-configuration/` keeps Epic/Task documentation consistent with coding rules.
+
+## Next Steps
+
+- Replace `[PROJECT_ID]` in `app.json` with EAS project ID when adopting EAS Update.
+- Optional: Add `verify:ota` (and/or `verify:identifiers`) to CI when building or releasing mobile.
+- Optional: Manual update-checking hook or Settings UI for "Check for updates" (future enhancement).

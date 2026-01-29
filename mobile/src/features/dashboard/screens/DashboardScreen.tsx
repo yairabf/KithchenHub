@@ -313,7 +313,6 @@ export function DashboardScreen({
                         styles.quickStatIconContainer,
                         stat.iconBgStyle === 'shopping' && styles.quickStatIconShopping,
                         stat.iconBgStyle === 'recipes' && styles.quickStatIconRecipes,
-                        stat.iconBgStyle === 'usage' && styles.quickStatIconUsage,
                       ]}
                     >
                       <Ionicons
@@ -322,9 +321,7 @@ export function DashboardScreen({
                         color={
                           stat.iconBgStyle === 'shopping'
                             ? colors.primary
-                            : stat.iconBgStyle === 'recipes'
-                              ? colors.secondary
-                              : colors.textSecondary
+                            : colors.secondary
                         }
                       />
                     </View>

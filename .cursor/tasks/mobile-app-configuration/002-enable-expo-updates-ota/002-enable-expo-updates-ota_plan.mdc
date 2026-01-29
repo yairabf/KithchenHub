@@ -1,0 +1,53 @@
+# 002 - Enable Expo Updates (OTA)
+
+**Epic:** Mobile App Configuration
+**Created:** 2026-01-29
+**Status:** Completed
+
+## Overview
+
+Enable and configure Expo Updates (OTA) in the mobile app so JavaScript-only changes can be shipped without app store resubmissions. Configure `updates.enabled`, a safe update strategy, and `runtimeVersion` in `mobile/app.json`.
+
+## Architecture
+
+- **Primary Config:** `mobile/app.json` – Expo configuration
+- **Package:** `expo-updates` – Must be installed as dependency (SDK 54 compatible)
+- **Documentation:** `mobile/README.md` – OTA section, workflow, troubleshooting
+
+## Implementation Steps
+
+1. **Install expo-updates**
+   - Run `npx expo install expo-updates` in `mobile/`.
+   - Ensures version compatibility with Expo SDK 54.
+
+2. **Configure updates in app.json**
+   - Add `updates`: `enabled: true`, `checkAutomatically: "ON_ERROR_RECOVERY"`, `fallbackToCacheTimeout: 0`, `url: "https://u.expo.dev/[PROJECT_ID]"`.
+   - Add `runtimeVersion`: `{ "policy": "appVersion" }`.
+
+3. **Update documentation**
+   - Add OTA Updates section to `mobile/README.md`.
+   - Document config keys, workflow, and troubleshooting.
+   - Warn not to ship production with `[PROJECT_ID]` placeholder.
+
+4. **Validate configuration**
+   - Run `npx expo-doctor` and verify `app.json` is valid JSON.
+
+## Configuration Rationale
+
+- **checkAutomatically: ON_ERROR_RECOVERY** – App starts immediately; checks for updates only after error recovery.
+- **fallbackToCacheTimeout: 0** – Immediate fallback to cached bundle if update server is unreachable.
+- **runtimeVersion.policy: appVersion** – Uses `version` from `app.json`; native builds and OTA must share same runtime version.
+
+## Success Criteria
+
+- `expo-updates` installed and compatible with SDK 54.
+- `updates.enabled: true` and safe strategy in `app.json`.
+- `runtimeVersion` configured with `appVersion` policy.
+- README documents OTA and placeholder warning.
+- Configuration validated (expo doctor, valid JSON).
+
+## Out of Scope (Future)
+
+- Manual update-checking UI.
+- EAS project ID injection (placeholder remains until EAS is configured).
+- Update channels (production/preview).

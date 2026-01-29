@@ -280,9 +280,6 @@ export const styles = StyleSheet.create({
   quickStatIconRecipes: {
     backgroundColor: colors.pastel.peach,
   },
-  quickStatIconUsage: {
-    backgroundColor: colors.quantityBg,
-  },
   quickStatLabel: {
     ...typography.tiny,
     color: colors.textMuted,

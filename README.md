@@ -62,10 +62,13 @@ kitchen-hub/
 │   ├── architecture/   # Architecture docs
 │   └── screenshots/    # App screenshots
 ├── .cursor/            # Cursor IDE configuration
+├── version.json        # Product version (bump only for store releases; OTA does not change it)
 ├── README.md           # This file
 ├── README-DETAILED.md  # Comprehensive documentation
 └── CLAUDE.md          # AI assistant guidance
 ```
+
+**Product version:** The canonical app version lives in `version.json` at the repo root. Bump it only when cutting a **store release**; over-the-air (OTA) updates do not change this version. The mobile app reads it via `app.config.js`.
 
 ## Tech Stack
 

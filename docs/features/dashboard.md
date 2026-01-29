@@ -106,8 +106,8 @@ All other UI is inline in DashboardScreen.
 
 - **AuthContext**: User data via `useAuth()` for display name, role, avatar
 - **useCatalog**: `groceryItems`, `frequentlyAddedItems` for search and suggestions
-- **useDashboardChores**: `todayChores`, `toggleChore`, `isLoading` for chores section
-- **createShoppingService** + **getActiveListId**: Active list id for adding suggested items
+- **useDashboardChores**: `todayChores`, `toggleChore`, `isLoading` for chores section (cache for signed-in, guest storage for guest; uses `determineUserDataMode` and `config.mockData.enabled`)
+- **createShoppingService** + **getActiveListId**: Active list id for adding suggested items; service created with `shouldUseMockData ? 'guest' : 'signed-in'` where `shouldUseMockData = config.mockData.enabled || !user || user?.isGuest`; `activeListId` is set in `useEffect` via `shoppingService.getShoppingData()` then `getActiveListId(data.shoppingLists, current)`
 - **Local state**: `searchValue`, `activeListId`, `currentTime` (for clock); `shoppingButtonRef` for modal position
 
 ## Key Dependencies
