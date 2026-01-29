@@ -11,13 +11,20 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ImportModule } from './modules/import/import.module';
 import { HealthModule } from './modules/health/health.module';
 import { TransformInterceptor } from './common/interceptors';
+import { RequestContextInterceptor } from './common/interceptors';
+import { LoggingInterceptor } from './common/interceptors';
 import { HttpExceptionFilter } from './common/filters';
+import { SentryExceptionFilter } from './common/filters';
 import { JwtAuthGuard } from './common/guards';
 import { DeprecationInterceptor } from './common/versioning';
 import { VersionGuard } from './common/versioning';
+import { LoggerModule } from './common/logger/logger.module';
+import { MonitoringModule } from './common/monitoring/monitoring.module';
 
 @Module({
   imports: [
+    LoggerModule,
+    MonitoringModule,
     PrismaModule,
     AuthModule,
     HouseholdsModule,
@@ -41,6 +48,14 @@ import { VersionGuard } from './common/versioning';
     },
     {
       provide: APP_INTERCEPTOR,
+      useClass: RequestContextInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor,
     },
     {
@@ -49,7 +64,7 @@ import { VersionGuard } from './common/versioning';
     },
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
+      useClass: SentryExceptionFilter,
     },
   ],
 })

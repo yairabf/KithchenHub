@@ -4,10 +4,36 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
+import * as Sentry from '@sentry/node';
 import { AppModule } from './app.module';
 import { loadConfiguration } from './config/configuration';
-import { HttpExceptionFilter } from './common/filters';
-import { TransformInterceptor } from './common/interceptors';
+
+/**
+ * Initialize Sentry before NestJS bootstrap to capture early errors.
+ */
+function initializeSentry(config: ReturnType<typeof loadConfiguration>): void {
+  if (!config.sentry?.dsn) {
+    // Sentry is optional - gracefully degrade if not configured
+    return;
+  }
+
+  try {
+    Sentry.init({
+      dsn: config.sentry.dsn,
+      environment: config.sentry.environment || config.env,
+      tracesSampleRate: config.sentry.tracesSampleRate,
+      integrations: [
+        // Enable HTTP request tracing
+        new Sentry.Integrations.Http({ tracing: true }),
+      ],
+      // Filter out health check endpoints from performance monitoring
+      ignoreTransactions: ['GET /api/health', 'GET /api/health/live'],
+    });
+  } catch (error) {
+    // Log error but don't fail application startup
+    console.error('Failed to initialize Sentry:', error);
+  }
+}
 
 async function bootstrap(): Promise<void> {
   try {
@@ -16,6 +42,9 @@ async function bootstrap(): Promise<void> {
     console.log(
       `📋 Configuration loaded - Port: ${config.port}, Env: ${config.env}`,
     );
+
+    // Initialize Sentry early to capture bootstrap errors
+    initializeSentry(config);
 
     console.log('🔨 Creating NestJS application...');
     const app = await NestFactory.create<NestFastifyApplication>(
@@ -51,9 +80,8 @@ async function bootstrap(): Promise<void> {
       }),
     );
 
-    console.log('🔧 Setting up global filters and interceptors...');
-    app.useGlobalFilters(new HttpExceptionFilter());
-    app.useGlobalInterceptors(new TransformInterceptor());
+    // Global filters and interceptors are configured in AppModule
+    // via APP_FILTER and APP_INTERCEPTOR providers
 
     // Create Swagger document for v1
     // Note: NestJS Swagger automatically filters routes by version when versioning is enabled.
