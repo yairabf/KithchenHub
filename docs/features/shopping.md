@@ -36,6 +36,7 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - Multiple modal interactions (quantity, create list, category, all items, quick add)
   - Floating action button for quick add
   - **Guest Support**: Loads private list data from local storage (AsyncStorage) for guest users while signed-in users use the API
+  - **Add-item quantity**: New items are added with quantity 1; adding an item that already exists in the list increments its quantity. Quantity input resets to 1 after add.
   - **Cache-Aware Repository** (signed-in users): Uses `CacheAwareShoppingRepository` wrapper with `useCachedEntities` hooks for reactive cache updates
     - Cache updates automatically trigger UI re-renders via React hooks
     - No manual state management needed for signed-in users
