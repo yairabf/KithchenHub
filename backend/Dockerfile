@@ -80,6 +80,11 @@ COPY --chown=node:node --from=builder /usr/src/app/dist ./dist
 # Copy generated Prisma Client from builder stage
 COPY --chown=node:node --from=builder /usr/src/app/node_modules/.prisma/client ./node_modules/.prisma/client
 
+# Copy Prisma CLI from builder so staging (and any production) can run migrations
+# without devDependencies. Keeps version in sync with @prisma/client and works offline.
+COPY --chown=node:node --from=builder /usr/src/app/node_modules/prisma ./node_modules/prisma
+COPY --chown=node:node --from=builder /usr/src/app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
 # Copy Prisma schema (needed for migrations in production if required)
 COPY --chown=node:node --from=builder /usr/src/app/src/infrastructure/database/prisma ./src/infrastructure/database/prisma
 
