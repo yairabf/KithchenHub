@@ -173,7 +173,7 @@ graph TB
 5. **Environment Variables**:
    - Add staging-specific environment variables:
      - `NODE_ENV=production`
-     - `PORT=3000` (or Render's assigned port)
+     - Do not set `PORT`; Render sets `PORT=10000` by default; app binds to `process.env.PORT` on `0.0.0.0`
      - `DATABASE_URL` (staging database connection string)
      - `DIRECT_URL` (staging direct database connection string)
      - `JWT_SECRET` (staging JWT secret)
@@ -232,7 +232,7 @@ graph TB
 5. **Environment Variables**:
    - Add production-specific environment variables:
      - `NODE_ENV=production`
-     - `PORT=3000` (or Render's assigned port)
+     - Do not set `PORT`; Render sets `PORT=10000` by default; app binds to `process.env.PORT` on `0.0.0.0`
      - `DATABASE_URL` (production database connection string)
      - `DIRECT_URL` (production direct database connection string)
      - `JWT_SECRET` (production JWT secret - different from staging)

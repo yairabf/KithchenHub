@@ -31,6 +31,7 @@ export const loadConfiguration = (): AppConfig => {
 
   const env = validateEnv();
 
+  // port comes from process.env.PORT (Render sets 10000; local default 3000)
   config = {
     env: env.NODE_ENV,
     port: env.PORT,

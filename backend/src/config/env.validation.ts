@@ -5,6 +5,7 @@ const envSchema = z
     NODE_ENV: z
       .enum(['development', 'production', 'test'])
       .default('development'),
+    // Render sets PORT=10000; default 3000 is for local dev only.
     PORT: z
       .string()
       .transform(Number)

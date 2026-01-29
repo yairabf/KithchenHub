@@ -758,7 +758,7 @@ This section provides step-by-step instructions for setting up Render account, c
    - **Auto-Deploy**: **Disable** (deployments triggered via GitHub Actions)
 
 4. **Health Check Configuration**:
-   - **Health Check Path**: `/api/version`
+   - **Health Check Path**: `/api/version` (no trailing slash; returns 200 OK)
    - **Health Check Interval**: Default (30 seconds)
    - **Health Check Timeout**: Default (10 seconds)
    - **Health Check Grace Period**: Default (40 seconds)
@@ -768,7 +768,7 @@ This section provides step-by-step instructions for setting up Render account, c
    
    **Required Variables:**
    - `NODE_ENV=production`
-   - `PORT` is provided by Render automatically. Set the **Render service Port** to `3000` (the app listens on 3000 in the Docker image) and do **not** manually override `PORT` as an environment variable.
+   - Do **not** set `PORT` in Render. Render sets `PORT=10000` by default; the app binds to `process.env.PORT` on `0.0.0.0`, so health checks will succeed. If you override PORT, use `10000` so it matches what Render probes.
    - `DATABASE_URL` - Staging database connection string (pooled)
    - `DIRECT_URL` - Staging direct database connection string (for migrations)
    - `JWT_SECRET` - Staging JWT secret (minimum 32 characters)
@@ -817,7 +817,7 @@ This section provides step-by-step instructions for setting up Render account, c
    - **Auto-Deploy**: **Disable** (deployments triggered via GitHub Actions)
 
 4. **Health Check Configuration**:
-   - **Health Check Path**: `/api/version`
+   - **Health Check Path**: `/api/version` (no trailing slash; returns 200 OK)
    - **Health Check Interval**: Default (30 seconds)
    - **Health Check Timeout**: Default (10 seconds)
    - **Health Check Grace Period**: Default (40 seconds)
@@ -827,7 +827,7 @@ This section provides step-by-step instructions for setting up Render account, c
    
    **Required Variables:**
    - `NODE_ENV=production`
-   - `PORT` is provided by Render automatically. Set the **Render service Port** to `3000` (the app listens on 3000 in the Docker image) and do **not** manually override `PORT` as an environment variable.
+   - Do **not** set `PORT` in Render. Render sets `PORT=10000` by default; the app binds to `process.env.PORT` on `0.0.0.0`, so health checks will succeed. If you override PORT, use `10000` so it matches what Render probes.
    - `DATABASE_URL` - Production database connection string (pooled)
    - `DIRECT_URL` - Production direct database connection string (for migrations)
    - `JWT_SECRET` - Production JWT secret (**different from staging**, minimum 32 characters)
