@@ -1,0 +1,50 @@
+# 001 - Define and Lock App Identifiers
+
+**Epic:** Mobile App Configuration
+**Created:** 2026-01-29
+**Status:** Completed
+
+## Overview
+Formalize and lock the existing iOS bundle identifier and Android applicationId (already set to `com.kitchenhub.app` in `mobile/app.json`). Document them as the single source of truth and add safeguards (validation script, Cursor rule) so they stay consistent across environments and future EAS/OTA usage.
+
+## Architecture
+- **Single Source of Truth:** `mobile/app.json`
+- **Documentation:** `mobile/README.md`
+- **Validation:** New script `mobile/scripts/verify-app-identifiers.sh`
+- **Guardrails:** New Cursor rule
+
+## Implementation Steps
+
+1.  **Keep `app.json` as Single Source of Truth**
+    - Ensure `ios.bundleIdentifier` and `android.package` remain `com.kitchenhub.app`.
+    - No changes to values needed, just verification.
+
+2.  **Document "Locked" Policy**
+    - Modify `mobile/README.md` to add an "App Identifiers" section.
+    - Explicitly state that `com.kitchenhub.app` is the canonical identifier and must not change.
+
+3.  **Add Validation Script**
+    - Create `mobile/scripts/verify-app-identifiers.sh`.
+    - Script will grep `mobile/app.json` for `com.kitchenhub.app` and exit 1 if not found.
+    - Make script executable.
+
+4.  **Integrate Validation into Package.json**
+    - Add `verify:identifiers` script to `mobile/package.json`.
+
+5.  **Add Cursor Rule**
+    - Create a rule to prevent AI from accidentally modifying these identifiers without explicit approval.
+
+## Verification Plan
+
+### Automated Tests
+- Run `npm run verify:identifiers` in `mobile` directory. Expect success.
+- Temporarily modify `app.json` to an invalid identifier. Run `npm run verify:identifiers`. Expect failure (exit code 1). (Revert change afterwards).
+
+### Manual Verification
+- Check `mobile/README.md` for the new section.
+- Verify the Cursor rule exists (if file-based validation is possible).
+
+## Success Criteria
+- `mobile/app.json` identifiers are `com.kitchenhub.app`.
+- `mobile/README.md` clearly documents these identifiers.
+- CI/Local script exists to enforce this.

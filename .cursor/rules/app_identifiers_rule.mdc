@@ -1,0 +1,13 @@
+---
+globs: ["mobile/app.json"]
+description: "Locked mobile app identifiers - do not change without explicit approval"
+---
+
+# Mobile App Identifiers (Locked)
+
+When editing `mobile/app.json`:
+
+- **Do not change** `expo.ios.bundleIdentifier` or `expo.android.package` unless the user has explicitly requested a change and approved the impact (App Store/Play Store continuity, OTA updates).
+- **Canonical values:** Both must remain `com.kitchenhub.app` for all environments.
+- Changing these identifiers after release breaks store listing continuity and over-the-air updates. Any change requires a formal product/engineering decision.
+- To verify identifiers locally, run `npm run verify:identifiers` from the `mobile` directory.
