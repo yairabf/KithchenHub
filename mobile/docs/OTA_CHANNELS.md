@@ -60,6 +60,15 @@ Run these from the **mobile** directory after `eas login` and `eas init`:
 
 Only JS/asset changes are delivered via OTA. Native or dependency changes require a new build and a version bump in **version.json** (see README OTA section).
 
+## Installing preview builds on real devices
+
+Preview builds (staging) are installable on real devices without the App Store or Play Store:
+
+- **Android:** Builds are APKs. After running `eas build --profile preview --platform android`, open the build page URL on the device (or scan the QR code from the [Expo dashboard](https://expo.dev)) to download and install.
+- **iOS:** Register each test device with `eas device:create` so its UDID is included in the ad hoc provisioning profile. Then run `eas build --profile preview --platform ios` and install from the build URL. New devices require a new build (or re-signing) to be added to the profile.
+
+See [Expo Internal distribution](https://docs.expo.dev/build/internal-distribution/) and the mobile README (EAS Build → Internal distribution) for more detail.
+
 ## References
 
 - [Manage branches and channels with EAS CLI](https://docs.expo.dev/eas-update/eas-cli/)

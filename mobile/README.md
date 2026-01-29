@@ -162,13 +162,17 @@ Build configuration lives in **`eas.json`** in the mobile directory. Two profile
 | **preview** | internal     | develop   | Staging and testing; shareable install links (APK on Android). Run: `eas build --profile preview` |
 | **production** | store    | main      | App Store / Play Store releases. Native build numbers (Android versionCode, iOS buildNumber) auto-increment. Run: `eas build --profile production` |
 
+The **preview** profile is the staging build profile. It uses internal distribution so builds are installable on real devices without going through the stores.
+
+**Internal distribution (preview builds):** Preview builds are installable on real devices via shareable EAS build URLs (or QR codes from the [Expo dashboard](https://expo.dev)). **Android:** Builds are APKs; open the build page link on the device (or scan the QR code) to download and install. **iOS:** Register test devices first with `eas device:create` (each device’s UDID must be in the ad hoc provisioning profile), then run `eas build --profile preview --platform ios` and install from the build URL. See [Expo Internal distribution](https://docs.expo.dev/build/internal-distribution/) for details.
+
 Only the **production** profile uses auto-increment for native build numbers; **preview** does not. Auto-increment prevents store submission failures from duplicate Android `versionCode` or iOS build number (see [Expo app version management](https://docs.expo.dev/build-reference/app-versions/)).
 
 **App version source:** `cli.appVersionSource` is set to `remote` so EAS manages build numbers; the first build initializes with 1 if not set in app config. User-facing version remains in repo root **version.json** (see OTA Updates above).
 
 **Linking the project:** Run **`eas init`** from the `mobile` directory (after `eas login`). This adds `extra.eas.projectId` to `app.json`; `app.config.js` then sets `updates.url` from it so OTA and builds work. Verify project ownership, slug (`kitchen-hub`), and linked account with **`eas project:info`** and **`eas whoami`**.
 
-To verify EAS config locally (remote app version source, production auto-increment, and OTA channel names develop/main), run `npm run verify:eas` from the mobile directory.
+To verify EAS config locally (remote app version source, production auto-increment, preview internal distribution and Android APK, and OTA channel names develop/main), run `npm run verify:eas` from the mobile directory.
 
 ## Prerequisites
 

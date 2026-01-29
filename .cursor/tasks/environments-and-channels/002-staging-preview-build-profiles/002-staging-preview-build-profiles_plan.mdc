@@ -1,0 +1,63 @@
+# 002 - Staging (Preview) Build Profiles – Plan
+
+**Epic:** environments-and-channels
+**Task:** 002-staging-preview-build-profiles
+**Created:** 2026-01-29
+**Status:** Planning
+
+## 1. Current status (deep research)
+
+### Already implemented
+
+| Item | Location | Details |
+|------|----------|---------|
+| **Preview profile** | mobile/eas.json | `distribution: "internal"`, `channel: "develop"`, `android.buildType: "apk"`. No iOS overrides (EAS uses ad hoc for internal by default). |
+| **Channel naming** | Task 001 | Channels **develop** (preview) and **main** (production) are set and locked via .cursor/rules/eas_update_channels_rule.mdc. |
+| **Channel validation** | mobile/scripts/validate-eas-config.js | Asserts `build.preview.channel === "develop"` and `build.production.channel === "main"`. |
+| **OTA docs** | mobile/docs/OTA_CHANNELS.md, mobile/README.md | OTA channel table and publish commands; README EAS Build table mentions "shareable install links (APK on Android)". |
+| **App identifiers** | .cursor/rules/app_identifiers_rule.mdc | `com.kitchenhub.app` for all environments; no override in eas.json. |
+
+**Conclusion:** The preview profile is already configured for internal distribution and the develop channel. Android uses APK (installable on real devices via link). iOS internal builds use ad hoc provisioning (installable on real devices whose UDIDs are registered via `eas device:create`).
+
+### Gaps (what is missing)
+
+| Gap | Description |
+|-----|-------------|
+| **No validation of distribution / APK** | validate-eas-config.js does not assert `build.preview.distribution === "internal"` or `build.preview.android?.buildType === "apk"`. A future edit could set distribution to `store` or remove APK and break internal/real-device installability. |
+| **No doc for real-device install** | README and OTA_CHANNELS.md do not explain how to install preview builds on real devices: Android = install via EAS build URL/QR; iOS = register devices with `eas device:create`, then build and install via link. |
+| **No rule locking preview distribution** | eas_update_channels_rule.mdc locks channel names only. There is no rule that forbids changing preview to `distribution: "store"` or removing `android.buildType: "apk"`. |
+| **Staging vs preview naming** | "Staging" is not explicitly equated to the **preview** profile in one place (README says "Staging and testing" for develop channel but could state "preview = staging build profile"). |
+
+## 2. Architecture
+
+- **Preview profile** = staging build profile; keep name `preview` for backward compatibility.
+- **Internal distribution** ensures shareable install URLs; validation will enforce `distribution: "internal"` and (for Android) `buildType: "apk"`.
+- **Develop channel** is already enforced; preview builds receive OTA from `eas update --branch develop`.
+
+## 3. Implementation steps
+
+1. **Task directory** – Create `.cursor/tasks/environments-and-channels/002-staging-preview-build-profiles/` and save this plan as `002-staging-preview-build-profiles_plan.mdc`.
+2. **Extend EAS config validation** – In mobile/scripts/validate-eas-config.js: require `build.preview.distribution === "internal"`; require `build.preview.android?.buildType === "apk"`; update success log; update verify-eas-config.sh comment.
+3. **Unit tests** – Add parameterized cases for invalid distribution and invalid android buildType in mobile/scripts/__tests__/validate-eas-config.test.js.
+4. **Documentation** – README: Internal distribution (preview builds) subsection; OTA_CHANNELS.md: Installing preview builds on real devices subsection.
+5. **Optional Cursor rule** – Extend eas_update_channels_rule.mdc to include preview distribution and APK constraints.
+6. **Post-implementation** – Run auto-code-review; create 002-staging-preview-build-profiles_summary.mdc.
+
+## 4. Verification
+
+- `npm run verify:eas` from mobile/ passes and fails if preview distribution is not internal or preview android.buildType is not apk.
+- README and OTA_CHANNELS.md describe how to install preview builds on real devices.
+- New tests cover invalid distribution and invalid Android buildType.
+- Cursor rule prevents changing preview distribution or APK without approval.
+
+## 5. Success criteria
+
+- Preview (staging) build profile is explicitly validated for internal distribution and Android APK.
+- Documentation clearly describes real-device install for both platforms and ties preview to the develop OTA channel.
+- Plan and summary live under .cursor/tasks/environments-and-channels/002-staging-preview-build-profiles/.
+- Cursor rule locks preview distribution and APK; auto-code-review applied after implementation.
+
+## 6. References
+
+- [Expo Internal distribution](https://docs.expo.dev/build/internal-distribution/)
+- [EAS Build eas.json](https://docs.expo.dev/build/eas-json/)

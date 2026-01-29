@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verifies that mobile/eas.json has EAS Build config required for store submissions:
-# cli.appVersionSource "remote", build.production.autoIncrement true, and OTA channels
-# develop (preview profile) and main (production profile).
+# cli.appVersionSource "remote", build.production.autoIncrement true, preview distribution
+# "internal" and Android buildType "apk", and OTA channels develop (preview) and main (production).
 # Exit 0 if all checks pass; exit 1 otherwise.
 # Used by npm run verify:eas and can be wired into CI.
 

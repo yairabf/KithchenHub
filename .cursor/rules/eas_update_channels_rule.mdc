@@ -1,13 +1,13 @@
 ---
 globs: ["mobile/eas.json"]
-description: "Locked EAS Update channel names - do not change without explicit approval"
+description: "Locked EAS Update channels and preview profile (internal distribution, APK) - do not change without explicit approval"
 ---
 
-# EAS Update Channels (Locked)
+# EAS Update Channels and Preview Profile (Locked)
 
 When editing `mobile/eas.json`:
 
-- **Do not change** `build.preview.channel` or `build.production.channel` unless the user has explicitly requested a change and approved the impact (OTA and environment semantics).
-- **Canonical values:** `build.preview.channel` must remain `"develop"` (staging/testing); `build.production.channel` must remain `"main"` (production users).
-- Changing these channel names after builds are shipped can cause the wrong OTA updates to be delivered to staging vs production. Any change requires a formal product/engineering decision.
-- To verify EAS config locally (including channel names), run `npm run verify:eas` from the `mobile` directory.
+- **Channels:** Do not change `build.preview.channel` or `build.production.channel` unless the user has explicitly requested a change and approved the impact (OTA and environment semantics). Canonical values: `build.preview.channel` must remain `"develop"` (staging/testing); `build.production.channel` must remain `"main"` (production users). Changing channel names after builds are shipped can cause the wrong OTA updates to be delivered to staging vs production.
+- **Preview distribution:** Do not change `build.preview.distribution` from `"internal"` without explicit approval. Internal distribution keeps preview (staging) builds installable on real devices via shareable URLs; changing to `"store"` would break that workflow.
+- **Preview Android APK:** Do not remove or change `build.preview.android.buildType` from `"apk"` without explicit approval. APK is required for direct install on real Android devices without the Play Store.
+- Any change to these values requires a formal product/engineering decision. To verify EAS config locally (channels, preview distribution, and Android APK), run `npm run verify:eas` from the `mobile` directory.

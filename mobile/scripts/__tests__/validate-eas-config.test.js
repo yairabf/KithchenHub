@@ -1,6 +1,6 @@
 /**
  * Unit tests for EAS config validation (validate-eas-config.js).
- * Validates that develop/main channel rules and other EAS requirements are enforced.
+ * Validates develop/main channel rules, preview internal distribution, Android APK, and other EAS requirements.
  */
 
 const { validateEasConfig } = require('../validate-eas-config');
@@ -62,6 +62,36 @@ describe('validateEasConfig', () => {
         build: { ...validConfig.build, preview: { distribution: 'internal' } },
       },
       'develop',
+    ],
+    [
+      'preview distribution not internal',
+      {
+        cli: validConfig.cli,
+        build: { ...validConfig.build, preview: { ...validConfig.build.preview, distribution: 'store' } },
+      },
+      'internal',
+    ],
+    [
+      'preview android buildType not apk',
+      {
+        cli: validConfig.cli,
+        build: {
+          ...validConfig.build,
+          preview: { ...validConfig.build.preview, android: { buildType: 'app-bundle' } },
+        },
+      },
+      'apk',
+    ],
+    [
+      'preview android missing',
+      {
+        cli: validConfig.cli,
+        build: {
+          ...validConfig.build,
+          preview: { distribution: 'internal', channel: 'develop' },
+        },
+      },
+      'apk',
     ],
     [
       'production channel missing',

@@ -6,6 +6,8 @@
  * - cli.appVersionSource === "remote"
  * - build.production.autoIncrement === true
  * - build.preview.channel === "develop"
+ * - build.preview.distribution === "internal"
+ * - build.preview.android.buildType === "apk"
  * - build.production.channel === "main"
  *
  * @param {object} config - Parsed eas.json object
@@ -31,6 +33,20 @@ function validateEasConfig(config) {
       valid: false,
       error:
         'Error: eas.json must set build.preview.channel to "develop" for staging/testing OTA updates.',
+    };
+  }
+  if (config.build?.preview?.distribution !== 'internal') {
+    return {
+      valid: false,
+      error:
+        'Error: eas.json must set build.preview.distribution to "internal" for staging/real-device installs.',
+    };
+  }
+  if (config.build?.preview?.android?.buildType !== 'apk') {
+    return {
+      valid: false,
+      error:
+        'Error: eas.json must set build.preview.android.buildType to "apk" for direct install on real Android devices.',
     };
   }
   if (config.build?.production?.channel !== 'main') {
@@ -73,7 +89,7 @@ function runFromCli(easJsonPath) {
   }
 
   console.log(
-    'EAS config OK: cli.appVersionSource is remote; build.production.autoIncrement is true; channels develop (preview) and main (production)'
+    'EAS config OK: cli.appVersionSource is remote; build.production.autoIncrement is true; preview internal distribution and Android APK; channels develop (preview) and main (production)'
   );
   process.exit(0);
 }
