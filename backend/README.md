@@ -598,6 +598,8 @@ backend/
 │   │   │   ├── controllers/        # HealthController, VersionController (/api/health, /api/version)
 │   │   │   ├── services/           # HealthService
 │   │   │   └── health.module.ts
+│   │   ├── settings/              # Settings module (app preferences)
+│   │   ├── users/                  # Users module (user profile data)
 │   │   └── supabase/               # Supabase client service (global)
 │   │       ├── services/           # SupabaseService
 │   │       └── supabase.module.ts
