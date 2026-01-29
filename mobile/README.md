@@ -121,14 +121,16 @@ The app is configured for Expo Updates so you can ship JavaScript-only changes w
 | `updates.enabled` | `app.json` | Enables OTA updates |
 | `updates.checkAutomatically` | `app.json` | Set to `ON_ERROR_RECOVERY` so the app starts immediately and only checks for updates after error recovery |
 | `updates.fallbackToCacheTimeout` | `app.json` | Set to `0` so the app always falls back to the cached bundle if the update server is unreachable |
-| `runtimeVersion` | `app.json` | Uses `appVersion` policy so the `version` field in `app.json` is the runtime version; native builds and OTA updates must share the same runtime version |
+| `runtimeVersion` | `app.json` | Uses `appVersion` policy so the runtime version comes from the product version; native builds and OTA updates must share the same runtime version |
 
-**Runtime version policy (locked):** This project uses the **appVersion** policy: the runtime version is derived from `expo.version` in `app.json`. **Do not change** the runtime version policy (e.g. to `nativeVersion`, `fingerprint`, or a custom string) without an explicit product/engineering decision. Changing the policy can cause OTA updates to be applied to incompatible native builds (crashes or broken behavior). Native code or dependency changes require a new store build and a version bump in `app.json` before publishing OTA for that build; OTA is for JS-only compatible updates.
+**Version source of truth:** The product version lives in **version.json** at the repo root. The mobile app sets **expo.version** from it via **app.config.js** (do not add a static `version` field back into `app.json`). This version is the store release version and the OTA runtime version.
+
+**Runtime version policy (locked):** This project uses the **appVersion** policy: the runtime version is derived from `expo.version`, which is set from **version.json**. **Do not change** the runtime version policy (e.g. to `nativeVersion`, `fingerprint`, or a custom string) without an explicit product/engineering decision. Changing the policy can cause OTA updates to be applied to incompatible native builds (crashes or broken behavior). Bump **version.json** only for **store releases** and when native code or dependencies change; then publish OTA for that build. OTA publishes do not change the version—they ship JS to the existing runtime. OTA is for JS-only compatible updates.
 
 | Config | Canonical value |
 |--------|-----------------|
 | `expo.runtimeVersion.policy` | `appVersion` |
-| Runtime version source | `expo.version` (bump on every public release and when native code changes) |
+| Runtime version source | `expo.version` from repo root **version.json** (bump only for store releases and native changes) |
 
 **Update URL:** `updates.url` in `app.json` is set to `https://u.expo.dev/[PROJECT_ID]`. Replace `[PROJECT_ID]` with your EAS project ID when using [EAS Update](https://docs.expo.dev/eas-update/introduction/). **Do not ship production builds with `[PROJECT_ID]` still in place**—replace it before release or production builds will not receive OTA updates (the update URL will be invalid). Development mode (Expo Go, `expo start`) does not use OTA updates.
 
@@ -136,11 +138,11 @@ The app is configured for Expo Updates so you can ship JavaScript-only changes w
 
 **Troubleshooting:**
 
-- **Updates not applying:** Ensure the published update’s `runtimeVersion` matches the app’s `version` in `app.json`. Run `npx expo doctor` to check config.
+- **Updates not applying:** Ensure the published update’s `runtimeVersion` matches the app’s `version` (from `version.json` via `app.config.js`). Run `npx expo doctor` to check config.
 - **App hangs on startup:** With `fallbackToCacheTimeout: 0` and `checkAutomatically: ON_ERROR_RECOVERY`, the app should not block on the network; if it does, verify `app.json` and that you are not overriding update behavior in code.
 - **Development:** OTA is off in dev; use production builds (e.g. EAS Build) to test OTA.
 
-To verify OTA config locally (presence of `updates`, `runtimeVersion` with `appVersion` policy, and that `url` does not still contain the placeholder), run `npm run verify:ota` from the `mobile` directory.
+To verify OTA config locally (presence of `updates`, `runtimeVersion` with `appVersion` policy, version from `version.json`, no `version` in `app.json`, and that `url` does not still contain the placeholder), run `npm run verify:ota` from the `mobile` directory.
 
 ## Prerequisites
 

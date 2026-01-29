@@ -1,13 +1,15 @@
 ---
-globs: ["mobile/app.json"]
+globs: ["mobile/app.json", "mobile/app.config.js"]
 description: "Runtime version and OTA policy — do not change without explicit approval"
 ---
 
 # Runtime Version and OTA Policy (Locked)
 
-When editing `mobile/app.json`:
+**Product version source of truth:** The canonical product version is **version.json** at the repo root. `expo.version` is set from it in **mobile/app.config.js**; do not add a static `version` field back into `app.json`.
+
+When editing `mobile/app.json` or `mobile/app.config.js`:
 
 - **Do not change** `expo.runtimeVersion` (policy or replace with a raw string) or the semantics of `expo.version` (as the runtime version when using appVersion) unless the user has explicitly requested it and approved the impact.
 - **Canonical policy:** `expo.runtimeVersion` must use `{ "policy": "appVersion" }`. Changing to `nativeVersion`, `fingerprint`, or a custom string can cause incompatible OTA updates (builds may load JS that expects different native code, leading to crashes or broken behavior).
-- **Version bumps:** When using appVersion policy, bump `expo.version` on every public release and whenever native code or dependencies change; only then publish OTA for that build. OTA is for JS-only compatible updates.
-- To verify OTA config locally (including appVersion policy), run `npm run verify:ota` from the `mobile` directory.
+- **Version bumps:** Bump **version.json** (at repo root) only for store releases and whenever native code or dependencies change; only then publish OTA for that build. OTA publishes do not change the version. OTA is for JS-only compatible updates.
+- To verify OTA config locally (including appVersion policy and version consistency), run `npm run verify:ota` from the `mobile` directory.
