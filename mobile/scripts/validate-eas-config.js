@@ -5,10 +5,12 @@
  * Requirements:
  * - cli.appVersionSource === "remote"
  * - build.production.autoIncrement === true
+ * - build.production.distribution === "store"
+ * - build.production.channel === "main"
+ * - build.production.android.buildType === "app-bundle"
  * - build.preview.channel === "develop"
  * - build.preview.distribution === "internal"
  * - build.preview.android.buildType === "apk"
- * - build.production.channel === "main"
  *
  * @param {object} config - Parsed eas.json object
  * @returns {{ valid: boolean, error?: string }} Result; if valid is false, error contains the message
@@ -26,6 +28,27 @@ function validateEasConfig(config) {
       valid: false,
       error:
         'Error: eas.json must set build.production.autoIncrement to true to avoid store submission failures from duplicate versionCode/buildNumber.',
+    };
+  }
+  if (config.build?.production?.distribution !== 'store') {
+    return {
+      valid: false,
+      error:
+        'Error: eas.json must set build.production.distribution to "store" for App Store and Play Store submissions.',
+    };
+  }
+  if (config.build?.production?.channel !== 'main') {
+    return {
+      valid: false,
+      error:
+        'Error: eas.json must set build.production.channel to "main" for production OTA updates.',
+    };
+  }
+  if (config.build?.production?.android?.buildType !== 'app-bundle') {
+    return {
+      valid: false,
+      error:
+        'Error: eas.json must set build.production.android.buildType to "app-bundle" for Google Play Store submission.',
     };
   }
   if (config.build?.preview?.channel !== 'develop') {
@@ -47,13 +70,6 @@ function validateEasConfig(config) {
       valid: false,
       error:
         'Error: eas.json must set build.preview.android.buildType to "apk" for direct install on real Android devices.',
-    };
-  }
-  if (config.build?.production?.channel !== 'main') {
-    return {
-      valid: false,
-      error:
-        'Error: eas.json must set build.production.channel to "main" for production OTA updates.',
     };
   }
   return { valid: true };
@@ -89,7 +105,7 @@ function runFromCli(easJsonPath) {
   }
 
   console.log(
-    'EAS config OK: cli.appVersionSource is remote; build.production.autoIncrement is true; preview internal distribution and Android APK; channels develop (preview) and main (production)'
+    'EAS config OK: cli.appVersionSource is remote; production store distribution and Android app-bundle; production autoIncrement; preview internal distribution and Android APK; channels develop (preview) and main (production)'
   );
   process.exit(0);
 }

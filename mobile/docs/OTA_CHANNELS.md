@@ -9,6 +9,8 @@ This document describes the OTA update channel strategy and one-time EAS setup s
 | **develop** | Staging and testing | `preview`     | Internal builds, QA, staging |
 | **main**    | Production users   | `production`  | App Store / Play Store      |
 
+Production builds (`eas build --profile production`) are for App Store and Google Play submission and use channel **main**. For credentials, first-time setup, and store submission, see the mobile [README EAS Build — Production build profile (store submissions)](../README.md#production-build-profile-store-submissions).
+
 - **preview** profile builds (`eas build --profile preview`) use channel **develop** and receive updates published to the `develop` branch.
 - **production** profile builds (`eas build --profile production`) use channel **main** and receive updates published to the `main` branch.
 

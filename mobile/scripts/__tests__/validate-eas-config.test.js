@@ -1,6 +1,7 @@
 /**
  * Unit tests for EAS config validation (validate-eas-config.js).
- * Validates develop/main channel rules, preview internal distribution, Android APK, and other EAS requirements.
+ * Validates develop/main channel rules, preview internal distribution, Android APK,
+ * production store distribution and Android app-bundle, and other EAS requirements.
  */
 
 const { validateEasConfig } = require('../validate-eas-config');
@@ -9,7 +10,12 @@ const validConfig = {
   cli: { appVersionSource: 'remote' },
   build: {
     preview: { distribution: 'internal', channel: 'develop', android: { buildType: 'apk' } },
-    production: { distribution: 'store', channel: 'main', autoIncrement: true },
+    production: {
+      distribution: 'store',
+      channel: 'main',
+      autoIncrement: true,
+      android: { buildType: 'app-bundle' },
+    },
   },
 };
 
@@ -97,9 +103,39 @@ describe('validateEasConfig', () => {
       'production channel missing',
       {
         cli: validConfig.cli,
-        build: { ...validConfig.build, production: { distribution: 'store', autoIncrement: true } },
+        build: { ...validConfig.build, production: { distribution: 'store', autoIncrement: true, android: { buildType: 'app-bundle' } } },
       },
       'main',
+    ],
+    [
+      'production distribution not store',
+      {
+        cli: validConfig.cli,
+        build: { ...validConfig.build, production: { ...validConfig.build.production, distribution: 'internal' } },
+      },
+      'store',
+    ],
+    [
+      'production android buildType not app-bundle',
+      {
+        cli: validConfig.cli,
+        build: {
+          ...validConfig.build,
+          production: { ...validConfig.build.production, android: { buildType: 'apk' } },
+        },
+      },
+      'app-bundle',
+    ],
+    [
+      'production android missing',
+      {
+        cli: validConfig.cli,
+        build: {
+          ...validConfig.build,
+          production: { distribution: 'store', channel: 'main', autoIncrement: true },
+        },
+      },
+      'app-bundle',
     ],
     [
       'empty config',

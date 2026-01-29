@@ -1,0 +1,47 @@
+# 003 - Production Build Profiles (App Store / Google Play) – Implementation Summary
+
+**Epic:** environments-and-channels
+**Task:** 003-production-build-profiles
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **Task directory:** `.cursor/tasks/environments-and-channels/003-production-build-profiles/` with `003-production-build-profiles_plan.mdc` and this summary.
+- **EAS config** ([mobile/eas.json](mobile/eas.json)): Added `build.production.credentialsSource: "remote"` and `build.production.android.buildType: "app-bundle"`. Kept existing `distribution: "store"`, `channel: "main"`, and `autoIncrement: true`.
+- **EAS config validation** ([mobile/scripts/validate-eas-config.js](mobile/scripts/validate-eas-config.js)): Added checks for `build.production.distribution === "store"` and `build.production.android.buildType === "app-bundle"`; updated JSDoc requirements list and success log. Updated [mobile/scripts/verify-eas-config.sh](mobile/scripts/verify-eas-config.sh) header comment to mention production store distribution and Android app-bundle.
+- **Unit tests** ([mobile/scripts/__tests__/validate-eas-config.test.js](mobile/scripts/__tests__/validate-eas-config.test.js)): Updated `validConfig` to include `production.android.buildType: "app-bundle"`. Added parameterized cases for "production distribution not store", "production android buildType not app-bundle", and "production android missing". All 16 tests pass.
+- **Documentation:**
+  - **README:** Added subsection **Production build profile (store submissions)** under EAS Build: distribution store, channel main, EAS-managed credentials, first-time setup, Android AAB for Play, iOS App Store, `eas credentials` and `eas submit`, with links to [Using automatically managed credentials](https://docs.expo.dev/app-signing/managed-credentials/) and [Production builds](https://docs.expo.dev/build/eas-json/#production-builds). Updated verify:eas description to include production store distribution and Android app-bundle.
+  - **OTA_CHANNELS.md:** Added note that production builds are for App Store / Play Store and use channel main, with link to README Production build profile subsection.
+- **Cursor rule** ([.cursor/rules/eas_update_channels_rule.mdc](.cursor/rules/eas_update_channels_rule.mdc)): Extended to lock production profile: do not change `build.production.distribution` from `"store"` or `build.production.android.buildType` from `"app-bundle"` without explicit approval. Rule description and title updated to include production profile; final line references `npm run verify:eas` for local verification.
+
+## Deviations from Plan
+
+- None. All steps implemented as specified. EAS Submit was left optional (no `submit` block in eas.json); README documents manual submission and `eas submit` instead.
+
+## Testing Results
+
+- **npm run verify:eas:** Passes from mobile directory; output includes "production store distribution and Android app-bundle" and channel names.
+- **Unit tests:** All 16 tests in `validate-eas-config.test.js` pass, including the three new cases for invalid production distribution, invalid production Android buildType, and missing production android.
+- **Validation behavior:** Setting `build.production.distribution` to `"internal"` or `build.production.android.buildType` to `"apk"` (or omitting production android) causes `npm run verify:eas` to fail with the expected error messages.
+
+## Code Review (Auto Code Review)
+
+- **Correctness:** Validation logic and optional chaining are correct; wrong or missing production distribution or Android app-bundle are caught. Check order (channel, then distribution, then android.buildType) is consistent with preview checks.
+- **Architecture:** Single responsibility preserved; validation script remains focused on eas.json requirements. Production rules mirror preview rules (distribution + platform buildType).
+- **Readability:** Error messages and JSDoc are clear and self-explanatory. README subsection is structured and links to official Expo docs.
+- **Testing:** New cases are parameterized and cover the added validation rules; validConfig updated so baseline passes.
+- **Compliance:** Matches project coding rules (descriptive names, parameterized tests, no unnecessary complexity).
+- **Recommendation:** Approve.
+
+## Lessons Learned
+
+- Explicit production `credentialsSource` and `android.buildType` in eas.json make intent clear and allow validation to enforce store submission requirements. Relying on EAS defaults would not have allowed the script to catch accidental changes.
+- Extending the existing EAS rule (rather than a new rule) keeps all eas.json constraints in one place, consistent with task 002.
+
+## Next Steps
+
+- One-time: Run `eas build --profile production` (or `eas credentials`) to set up Apple/Google credentials if not already done; ensure channels **develop** and **main** exist and are linked to branches per [mobile/docs/OTA_CHANNELS.md](mobile/docs/OTA_CHANNELS.md).
+- Optional: Wire `npm run verify:eas` into CI when building or releasing the mobile app.
+- Optional: Add a `submit` block in eas.json for `eas submit` automation and document in README if desired.

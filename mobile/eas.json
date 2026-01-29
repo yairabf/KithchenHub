@@ -13,7 +13,11 @@
     "production": {
       "distribution": "store",
       "channel": "main",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "credentialsSource": "remote",
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   }
 }
