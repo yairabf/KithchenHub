@@ -1,0 +1,35 @@
+# 001 - Initial EAS Configuration - Implementation Summary
+
+**Epic:** EAS Setup and Build Profiles
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **mobile/eas.json (new):** EAS Build configuration with:
+  - **cli.appVersionSource:** `"remote"` — EAS manages Android versionCode and iOS buildNumber remotely; first build initializes with 1 if not set in app config.
+  - **build.preview:** `distribution: "internal"`, `channel: "preview"`, `android.buildType: "apk"` for shareable internal testing builds.
+  - **build.production:** `distribution: "store"`, `channel: "production"`, `autoIncrement: true` for store releases with automatic native build number bumping.
+- **mobile/README.md:** Added "EAS Build" subsection after OTA Updates: location of eas.json, profile table (preview vs production), commands (`eas build --profile preview` / `production`), app version source note, and reminder to replace `[PROJECT_ID]` before production/OTA.
+
+## Deviations from Plan
+
+- **Explicit `distribution: "store"` on production:** Plan said "omit (defaults to store)"; added explicitly for clarity and symmetry with preview.
+- **No `development` profile:** Plan listed as optional; not added (can be added later if dev client is adopted).
+
+## Verification
+
+- **eas.json:** Valid JSON; profiles `preview` and `production` present; distribution, channel, and autoIncrement as specified; no override of bundleIdentifier or package (app identifiers remain in app.json only).
+- **README:** EAS Build subsection present with table and commands; references version.json and [PROJECT_ID] replacement.
+
+## Compliance
+
+- **App identifiers:** No changes to app.json identifiers; .cursor/rules/app_identifiers_rule.mdc respected.
+- **Version source:** User-facing version remains in version.json; autoIncrement applies only to native build numbers (versionCode/buildNumber).
+- **Runtime version:** Existing `runtimeVersion.policy: "appVersion"` is compatible with EAS Update and remote autoIncrement.
+
+## Next Steps
+
+- Run `eas init` (or link project in Expo dashboard) and replace `[PROJECT_ID]` in app.json with the EAS project ID before production builds or OTA.
+- Optional: Add `development` profile to eas.json if the team adopts expo-dev-client.
+- Optional: Add CI job to run `eas build --profile preview` (or production) and/or run `npm run verify:ota` and `npm run verify:identifiers` on mobile changes.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Verifies that mobile/app.json contains required OTA updates configuration and version source of truth.
-# Checks: updates block exists, runtimeVersion exists with policy "appVersion", url has no [PROJECT_ID],
+# Checks: updates block exists, runtimeVersion exists with policy "appVersion", resolved updates.url (from app.config.js) has no [PROJECT_ID],
 # version.json exists at repo root with valid "version", and app.json does not define expo.version (set by app.config.js).
 # Exit 0 if all checks pass; exit 1 otherwise.
 # Used by npm run verify:ota and can be wired into CI.
@@ -53,8 +53,15 @@ if ! grep -q '"policy": "appVersion"' "$APP_JSON"; then
   FAILED=1
 fi
 
-if grep -q "$PLACEHOLDER" "$APP_JSON"; then
-  echo "Warning: app.json updates.url still contains the placeholder \"$PLACEHOLDER\". Replace it with your EAS project ID before shipping production builds."
+# Check resolved config (app.config.js) so that when extra.eas.projectId is set, url is derived there and we don't fail
+if ! (cd "$MOBILE_DIR" && node -e "
+  const c = require('./app.config.js');
+  const url = c.expo?.updates?.url;
+  if (typeof url !== 'string' || url.includes('$PLACEHOLDER')) {
+    console.error('Warning: resolved updates.url still contains the placeholder \"$PLACEHOLDER\". Run \"eas init\" from the mobile directory and ensure app.json has extra.eas.projectId (or set updates.url) before shipping production builds.');
+    process.exit(1);
+  }
+"); then
   FAILED=1
 fi
 

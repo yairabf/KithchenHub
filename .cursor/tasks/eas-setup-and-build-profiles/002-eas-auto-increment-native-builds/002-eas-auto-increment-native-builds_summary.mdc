@@ -1,0 +1,32 @@
+# 002 - EAS Auto-Increment for Native Builds - Implementation Summary
+
+**Epic:** EAS Setup and Build Profiles
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **Verification (read-only):** Confirmed mobile/eas.json has `cli.appVersionSource: "remote"` and `build.production.autoIncrement: true`; no changes to eas.json.
+- **mobile/scripts/verify-eas-config.sh (new):** Bash script that ensures eas.json exists, is valid JSON, sets `cli.appVersionSource` to `"remote"`, and `build.production.autoIncrement` to `true`; exits with clear errors otherwise. Follows patterns from verify-ota-config.sh (SCRIPT_DIR, MOBILE_DIR, EAS_JSON path; Node used to parse JSON and check values).
+- **mobile/package.json:** Added `"verify:eas": "bash scripts/verify-eas-config.sh"` to scripts.
+- **mobile/README.md:** In EAS Build subsection: added one sentence that auto-increment prevents store submission failures from duplicate Android versionCode or iOS build number, with link to [Expo app version management](https://docs.expo.dev/build-reference/app-versions/). Added line that users can run `npm run verify:eas` from the mobile directory to verify EAS config locally.
+- **Task documentation:** Plan stored at .cursor/tasks/eas-setup-and-build-profiles/002-eas-auto-increment-native-builds/002-eas-auto-increment-native-builds_plan.mdc; this summary at 002-eas-auto-increment-native-builds_summary.mdc.
+
+## Deviations from Plan
+
+- None. All steps implemented as specified.
+
+## Verification
+
+- **eas.json:** Unchanged; production autoIncrement and remote appVersionSource confirmed.
+- **Script:** `npm run verify:eas` exits 0 when config is correct; script validates JSON and both required fields.
+- **README:** EAS Build section includes store submission note and verify:eas command.
+
+## Compliance
+
+- **App identifiers:** No changes to app.json or identifiers; .cursor/rules/app_identifiers_rule.mdc respected.
+- **Version:** User-facing version remains in version.json; autoIncrement applies only to native build numbers.
+
+## Next Steps
+
+- Optional: Wire `npm run verify:eas` into CI (e.g. alongside verify:ota and verify:identifiers on mobile changes).

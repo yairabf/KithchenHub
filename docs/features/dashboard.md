@@ -23,8 +23,12 @@ The Dashboard feature serves as the home screen of Kitchen Hub, providing users 
 
 #### Props Interface
 
+Defined in `mobile/src/features/dashboard/screens/types.ts`:
+
 ```typescript
-interface DashboardScreenProps {
+import type { TabKey } from '../../../common/components/BottomPillNav';
+
+export interface DashboardScreenProps {
   onOpenShoppingModal: (buttonPosition?: { x: number; y: number; width: number; height: number }) => void;
   onOpenChoresModal: () => void;
   onNavigateToTab: (tab: TabKey) => void;
@@ -35,8 +39,8 @@ interface DashboardScreenProps {
 
 ```typescript
 const QUICK_STATS = [
-  { icon: 'basket-outline', label: 'Shopping Lists', value: '2 Active', route: 'Shopping', iconBgStyle: 'shopping' },
-  { icon: 'book-outline', label: 'Saved Recipes', value: '12 Items', route: 'Recipes', iconBgStyle: 'recipes' },
+  { icon: 'basket-outline' as const, label: 'Shopping Lists', value: '2 Active', route: 'Shopping' as TabKey, iconBgStyle: 'shopping' as const },
+  { icon: 'book-outline' as const, label: 'Saved Recipes', value: '12 Items', route: 'Recipes' as TabKey, iconBgStyle: 'recipes' as const },
 ];
 ```
 
@@ -63,8 +67,9 @@ const formattedDate = formatDateForDisplay(currentTime);
 ### useDashboardChores
 
 - **File**: `mobile/src/features/dashboard/hooks/useDashboardChores.ts`
-- **Purpose**: Load today's chores and toggle completion for the dashboard. Uses the same data source as ChoresScreen (cache for signed-in, guest storage for guest).
-- **Returns**: `{ todayChores, toggleChore, isLoading }`
+- **Purpose**: Load today's chores and toggle completion for the dashboard. Uses the same data source as ChoresScreen: signed-in uses `CacheAwareChoreRepository` and `useCachedEntities('chores')`; guest uses `createChoresService('guest')` and local state. Today's list is filtered by `section === 'today'` (filterTodayChores).
+- **Returns**: Exported as `UseDashboardChoresReturn`: `{ todayChores, toggleChore, isLoading }`
+- **Data mode**: `determineUserDataMode(user)` and `config.mockData.enabled` drive `userMode`; `createChoresService(userMode)` and (when signed-in) `CacheAwareChoreRepository` are used internally.
 
 ## Components
 
@@ -87,7 +92,7 @@ All other UI is inline in DashboardScreen.
 
 ### Add to Shopping List Card (Left Column)
 
-- Title "Add to Shopping List", subtitle, "Main List" badge
+- Title "Add to Shopping List", subtitle "Running low on something? Put it down now.", "Main List" badge
 - GrocerySearchBar with mic and add buttons
 - "Suggested Items" label and chips (from catalog/frequently added); tap adds to list or increments quantity
 
@@ -105,17 +110,19 @@ All other UI is inline in DashboardScreen.
 ## State Management
 
 - **AuthContext**: User data via `useAuth()` for display name, role, avatar
-- **useCatalog**: `groceryItems`, `frequentlyAddedItems` for search and suggestions
-- **useDashboardChores**: `todayChores`, `toggleChore`, `isLoading` for chores section (cache for signed-in, guest storage for guest; uses `determineUserDataMode` and `config.mockData.enabled`)
+- **useCatalog**: `groceryItems`, `frequentlyAddedItems` for search and suggestions (suggested items: up to `SUGGESTED_ITEMS_MAX` = 8 from frequently added, else from catalog)
+- **useDashboardChores**: `todayChores`, `toggleChore`, `isLoading` for chores section; signed-in path uses `CacheAwareChoreRepository` and `useCachedEntities('chores')`; guest path uses `createChoresService('guest')` and local `guestChores`/`guestLoading`; data mode from `determineUserDataMode(user)` and `config.mockData.enabled`
 - **createShoppingService** + **getActiveListId**: Active list id for adding suggested items; service created with `shouldUseMockData ? 'guest' : 'signed-in'` where `shouldUseMockData = config.mockData.enabled || !user || user?.isGuest`; `activeListId` is set in `useEffect` via `shoppingService.getShoppingData()` then `getActiveListId(data.shoppingLists, current)`
-- **Local state**: `searchValue`, `activeListId`, `currentTime` (for clock); `shoppingButtonRef` for modal position
+- **Local state**: `searchValue`, `activeListId`, `currentTime` (for clock); `shoppingButtonRef` for modal position (used in `openShoppingModal` with `measureInWindow`)
 
 ## Key Dependencies
 
 - `@expo/vector-icons` – Ionicons
 - `dayjs` – via `formatTimeForDisplay` / `formatDateForDisplay` from `common/utils/dateTimeUtils`
-- `useAuth`, `useResponsive`, `useCatalog`, `useDashboardChores`
-- `GrocerySearchBar`, `SafeImage` (shopping feature + common)
+- **Hooks**: `useAuth`, `useResponsive`, `useCatalog`, `useDashboardChores`
+- **Components**: `GrocerySearchBar`, `SafeImage` (shopping feature + common)
+- **Services/utils**: `createShoppingService`, `getActiveListId` (shopping); `createChoresService`, `CacheAwareChoreRepository`, `useCachedEntities` (chores, used inside useDashboardChores)
+- **Config**: `config.mockData.enabled`; types: `TabKey` (BottomPillNav), `GroceryItem`, `ShoppingItem`
 - Theme: `colors`, `spacing`, `borderRadius`, `typography`, `shadows`, `componentSize`, `zIndex`
 
 ## Layout Notes

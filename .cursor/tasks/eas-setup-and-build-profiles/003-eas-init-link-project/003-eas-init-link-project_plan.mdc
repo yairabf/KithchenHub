@@ -1,0 +1,96 @@
+# 003 - Initialize Expo Project with EAS (eas init)
+
+**Epic:** EAS Setup and Build Profiles
+**Task:** 003-eas-init-link-project
+**Created:** 2026-01-29
+**Status:** Planning
+
+## Overview
+
+Run `eas init` inside `mobile/` to connect the project to Expo Application Services. Verify correct project ownership, slug, and linked account. Replace `[PROJECT_ID]` in app.json so OTA and EAS Build work.
+
+**Note on path:** The repo uses `mobile/` at repo root, not `apps/mobile/`. Run `eas init` from **`mobile/`** (e.g. `cd mobile && eas init`).
+
+---
+
+## Deep Research: Current Status
+
+### Already Implemented
+
+| Item | Location | Details |
+|------|----------|---------|
+| **eas.json** | mobile/eas.json | From 001: cli.appVersionSource "remote", build profiles preview (internal, channel preview, apk) and production (store, channel production, autoIncrement true). |
+| **EAS config verification** | mobile/scripts/verify-eas-config.sh, npm run verify:eas | From 002: validates eas.json (remote appVersionSource, production autoIncrement). |
+| **App config** | mobile/app.json, mobile/app.config.js | Name "Kitchen Hub", slug kitchen-hub, scheme kitchen-hub, iOS/Android com.kitchenhub.app. Version from version.json via app.config.js. |
+| **OTA / expo-updates** | mobile/app.json | updates.enabled, checkAutomatically ON_ERROR_RECOVERY, runtimeVersion policy appVersion, updates.url = https://u.expo.dev/[PROJECT_ID] (placeholder). |
+| **OTA verification** | mobile/scripts/verify-ota-config.sh, npm run verify:ota | Validates updates block, runtimeVersion, version.json; fails (exit 1) while [PROJECT_ID] is still in app.json. |
+| **App identifiers (locked)** | .cursor/rules/app_identifiers_rule.mdc, npm run verify:identifiers | Canonical com.kitchenhub.app; no change without explicit approval. |
+| **Task docs** | 001-initial-eas-config, 002-eas-auto-increment-native-builds | 001 summary explicitly lists: "Run eas init … and replace [PROJECT_ID] in app.json". |
+
+### Missing (Gaps)
+
+| Gap | Description |
+|-----|-------------|
+| **EAS project not linked** | No extra.eas.projectId in app.json; updates.url still contains literal [PROJECT_ID]. eas init has not been run. |
+| **Project ID not set** | EAS stores project ID in app.json under extra.eas.projectId. Without it, EAS Build/Update and eas project:info cannot associate this repo with an EAS project. |
+| **OTA URL invalid** | Until [PROJECT_ID] is replaced with the real EAS project ID, production builds will not receive OTA updates; npm run verify:ota fails. |
+| **Ownership / slug / account not verified** | No formal check that the linked Expo account, project owner (user vs org), and slug (kitchen-hub) match team expectations. |
+
+### Constraints
+
+- **App identifiers:** .cursor/rules/app_identifiers_rule.mdc — do not change bundleIdentifier or package; they remain com.kitchenhub.app.
+- **Slug:** app.json has expo.slug "kitchen-hub". EAS project slug should match (eas init typically uses this when creating a new project).
+- **Version:** User-facing version stays in version.json; native build numbers are managed by EAS (remote + autoIncrement).
+
+---
+
+## What eas init does (Expo CLI reference)
+
+- **Command:** `eas init [--id <value>] [--force] [--non-interactive]`
+- **Purpose:** Create or link an EAS project.
+- **Typical outcome:** Adds extra.eas.projectId to app.json (and may prompt to create a new project or link by ID). Does not automatically replace [PROJECT_ID] in updates.url in all setups; that may need a follow-up edit.
+- **Verification:** After init, eas project:info shows project details; eas whoami shows linked account.
+
+---
+
+## Implementation Steps
+
+1. **Create task directory and plan** — Create .cursor/tasks/eas-setup-and-build-profiles/003-eas-init-link-project/ and add 003-eas-init-link-project_plan.mdc (this document).
+2. **Run eas init inside mobile/** — From repo root: cd mobile && eas init. Ensure logged in (eas whoami); if not, eas login. Choose to create a new EAS project or link an existing one (--id <project-id> to link). Confirm slug is kitchen-hub when creating; do not change app identifiers.
+3. **Verify project ownership, slug, and linked account** — Run eas project:info from mobile/ and confirm: project ID matches extra.eas.projectId in app.json, slug is kitchen-hub, owner (user or org) is as intended. Run eas whoami and confirm the correct Expo account. If using an organization, confirm in Expo dashboard that the project is under that org.
+4. **Set updates.url to the real project ID** — If eas init did not replace [PROJECT_ID] in app.json, manually replace it with the value of extra.eas.projectId so updates.url becomes https://u.expo.dev/<projectId>. Alternatively, in mobile/app.config.js, read extra.eas.projectId and set expo.updates.url to https://u.expo.dev/${projectId} so a single source of truth is kept (then remove the placeholder URL from app.json or leave it overridden by app.config.js).
+5. **Re-run verifiers** — From mobile/: npm run verify:ota (must pass), npm run verify:eas, npm run verify:identifiers. Fix any regressions.
+6. **Document and optional README** — In mobile/README.md, in the EAS Build / OTA section, add a short note that the project is linked via eas init and that extra.eas.projectId and updates.url must stay in sync (or point to app.config.js if used). Optional: add one sentence that eas project:info and eas whoami are used to verify ownership, slug, and account.
+7. **Post-implementation** — Create 003-eas-init-link-project_summary.mdc in the same task directory. Run .cursor/skills/auto-code-review/SKILL.md on any modified files (app.json, app.config.js, README).
+
+---
+
+## Verification Checklist
+
+- eas init run from mobile/ (not apps/mobile).
+- app.json contains extra.eas.projectId (valid UUID).
+- updates.url is https://u.expo.dev/<projectId> (no literal [PROJECT_ID]).
+- npm run verify:ota exits 0.
+- npm run verify:eas and npm run verify:identifiers still pass.
+- eas project:info shows slug kitchen-hub and expected owner.
+- eas whoami shows correct Expo account.
+- App identifiers unchanged (com.kitchenhub.app); app_identifiers_rule.mdc respected.
+
+---
+
+## Success Criteria
+
+- Project is connected to EAS via eas init from mobile/.
+- Project ownership, slug (kitchen-hub), and linked account are verified and documented.
+- OTA URL uses the real project ID so production builds can receive updates and verify:ota passes.
+- Plan and summary live under .cursor/tasks/eas-setup-and-build-profiles/003-eas-init-link-project/.
+- No change to app identifiers; auto-code-review applied after implementation.
+
+---
+
+## Skills and Rules Applied
+
+- **Epic/task structure:** .cursor/rules/coding_rule.mdc — plan and summary in task directory; task number 003.
+- **App identifiers:** .cursor/rules/app_identifiers_rule.mdc — no change to bundleIdentifier or package.
+- **Post-implementation:** .cursor/skills/auto-code-review/SKILL.md — run after app.json, app.config.js, README changes.
+- **References:** Expo EAS CLI (eas init), EAS project ID in app config (extra.eas.projectId), existing 001/002 task docs.
