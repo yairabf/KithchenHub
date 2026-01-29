@@ -28,6 +28,7 @@ export class StructuredLoggerService implements LoggerService {
       // Use pino-pretty for development
       // Import pino-pretty dynamically to avoid bundling in production
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const pinoPretty = require('pino-pretty');
         const stream = pinoPretty({
           colorize: true,

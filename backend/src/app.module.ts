@@ -13,7 +13,6 @@ import { HealthModule } from './modules/health/health.module';
 import { TransformInterceptor } from './common/interceptors';
 import { RequestContextInterceptor } from './common/interceptors';
 import { LoggingInterceptor } from './common/interceptors';
-import { HttpExceptionFilter } from './common/filters';
 import { SentryExceptionFilter } from './common/filters';
 import { JwtAuthGuard } from './common/guards';
 import { DeprecationInterceptor } from './common/versioning';

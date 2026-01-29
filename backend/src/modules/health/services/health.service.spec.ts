@@ -4,7 +4,6 @@ import { PrismaService } from '../../../infrastructure/database/prisma/prisma.se
 
 describe('HealthService', () => {
   let service: HealthService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     $queryRaw: jest.fn(),
@@ -24,7 +23,6 @@ describe('HealthService', () => {
     }).compile();
 
     service = module.get<HealthService>(HealthService);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   it('should be defined', () => {
