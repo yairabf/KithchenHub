@@ -1,0 +1,13 @@
+---
+globs: ["mobile/eas.json"]
+description: "Locked EAS Update channel names - do not change without explicit approval"
+---
+
+# EAS Update Channels (Locked)
+
+When editing `mobile/eas.json`:
+
+- **Do not change** `build.preview.channel` or `build.production.channel` unless the user has explicitly requested a change and approved the impact (OTA and environment semantics).
+- **Canonical values:** `build.preview.channel` must remain `"develop"` (staging/testing); `build.production.channel` must remain `"main"` (production users).
+- Changing these channel names after builds are shipped can cause the wrong OTA updates to be delivered to staging vs production. Any change requires a formal product/engineering decision.
+- To verify EAS config locally (including channel names), run `npm run verify:eas` from the `mobile` directory.

@@ -1,0 +1,75 @@
+# 001 - Expo Update Channels (develop / main)
+
+**Epic:** environments-and-channels
+**Task:** 001-expo-update-channels-develop-main
+**Created:** 2026-01-29
+**Status:** Planning
+
+## Overview
+
+Define OTA update channels **develop** (staging/testing) and **main** (production), align EAS build profiles to use them, document the strategy, and add verification and optional guardrails so builds reference the correct channel per environment.
+
+## 1. Deep research: current status
+
+### Already implemented
+
+| Item | Location | Details |
+|------|----------|---------|
+| **EAS build config** | mobile/eas.json | Two profiles: `preview` (channel "preview", internal, APK) and `production` (channel "production", store, autoIncrement). |
+| **OTA / expo-updates** | mobile/app.json, mobile/package.json | `expo-updates ~29.0.16`; `updates.enabled`, `checkAutomatically: "ON_ERROR_RECOVERY"`, `runtimeVersion: { policy: "appVersion" }`. |
+| **Updates URL** | mobile/app.config.js | Derives `updates.url` from `extra.eas.projectId` (no placeholder in resolved config). |
+| **README OTA + EAS** | mobile/README.md | OTA section documents runtimeVersion, workflow, troubleshooting; EAS Build section documents preview and production profiles and current channel names. |
+| **EAS verification** | mobile/scripts/verify-eas-config.sh | Validates `cli.appVersionSource` and `build.production.autoIncrement` only; does not validate channel names. |
+| **OTA verification** | mobile/scripts/verify-ota-config.sh | Validates updates block, runtimeVersion policy, url placeholder; does not check channels. |
+| **Task history** | .cursor/tasks/eas-setup-and-build-profiles/, .cursor/tasks/mobile-app-configuration/ | 001-initial-eas-config introduced preview/production channels; 002-enable-expo-updates-ota marked "Update channels (production/preview)" as out of scope. |
+
+### Gaps (what is missing)
+
+| Gap | Description |
+|-----|-------------|
+| **Channel names** | User requires **develop** (staging/testing) and **main** (production). Current eas.json uses "preview" and "production". Channels must be renamed to develop and main so OTA semantics match environment naming. |
+| **Documentation** | No single place documents that develop = staging/testing and main = production, when to publish to each, or that EAS builds reference the correct channel per environment. |
+| **Verification** | verify-eas-config.sh does not assert that build profiles use channel develop (staging) and main (production). |
+| **Channel/branch setup** | No doc or script for one-time EAS setup: create channels develop and main, create/link branches, so `eas update --branch develop` and `eas update --branch main` work. |
+| **Guardrails** | No Cursor rule locking channel names in eas.json (similar to app_identifiers_rule.mdc) to avoid accidental renames. |
+
+### Constraints
+
+- **App identifiers:** Remain `com.kitchenhub.app` for all profiles (app_identifiers_rule.mdc).
+- **Profile names:** Keep **preview** and **production** for backward compatibility; only **channel** values change to develop and main.
+- **Expo behavior:** Channel is set at build time in native code; branches are linked to channels via EAS.
+
+## 2. Architecture
+
+- **preview** profile: `channel: "develop"` — internal/staging builds receive OTA from develop.
+- **production** profile: `channel: "main"` — store builds receive OTA from main.
+- Publish staging updates: `eas update --branch develop` (branch linked to channel develop).
+- Publish production updates: `eas update --branch main` (branch linked to channel main).
+
+## 3. Implementation steps
+
+1. Create task directory and plan document (this file).
+2. Update mobile/eas.json: set build.preview.channel to "develop", build.production.channel to "main".
+3. Document OTA update channels in mobile/README.md and optionally mobile/docs/OTA_CHANNELS.md.
+4. Extend mobile/scripts/verify-eas-config.sh to assert build.preview.channel === "develop" and build.production.channel === "main".
+5. Optional: Add Cursor rule eas_update_channels_rule.mdc for mobile/eas.json locking channel names.
+6. Post-implementation: run auto-code-review and create summary doc.
+
+## 4. Verification
+
+- `npm run verify:eas` from mobile/ passes and fails if preview.channel or production.channel are not develop or main.
+- README (and optional doc) clearly describe develop = staging, main = production, and which profile uses which channel.
+- eas build --profile preview produces a build that checks for updates on channel develop; production profile on channel main.
+
+## 5. Success criteria
+
+- OTA update channels **develop** (staging/testing) and **main** (production) are defined and documented.
+- EAS builds reference the correct channel per environment: preview → develop, production → main.
+- Verification script enforces these channel values.
+- Plan (and later summary) stored under .cursor/tasks/environments-and-channels/001-expo-update-channels-develop-main/.
+- Optional: Cursor rule prevents changing channel names without explicit approval.
+
+## 6. References
+
+- [Using EAS Update](https://docs.expo.dev/build/updates/) — channel per build profile.
+- [Manage branches and channels with EAS CLI](https://docs.expo.dev/eas-update/eas-cli/) — channel/branch linking and eas update --branch.
