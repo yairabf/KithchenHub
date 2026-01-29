@@ -521,9 +521,11 @@ backend/
 │   │   ├── errors/                  # Custom error classes
 │   │   ├── filters/                 # Exception filters (HttpExceptionFilter)
 │   │   ├── guards/                 # Auth guards (JWT, Household)
-│   │   ├── interceptors/            # Response transformation (TransformInterceptor)
-│   │   ├── logger/                 # Logger service
+│   │   ├── interceptors/            # Response transformation, logging, request context
+│   │   ├── logger/                 # Structured logger service
+│   │   ├── monitoring/             # Sentry and observability (SentryExceptionFilter)
 │   │   ├── pipes/                  # Validation pipes
+│   │   ├── versioning/             # API version guard, deprecation interceptor
 │   │   ├── services/               # Shared services (UuidService)
 │   │   ├── types/                   # Shared TypeScript interfaces
 │   │   └── utils/                   # Shared utility functions
