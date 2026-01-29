@@ -112,6 +112,8 @@ SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
+Optional (monitoring and logging): `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`, `LOG_LEVEL`, `LOG_FORMAT`. See `src/config/env.validation.ts` and the [Monitoring Setup Guide](./docs/MONITORING_SETUP.md).
+
 ## Getting Started
 ```
 cd backend
