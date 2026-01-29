@@ -4,7 +4,7 @@ This document describes how to run Prisma migrations and recover from failures i
 
 ## Running migrations
 
-One command applies everywhere: **`prisma migrate deploy`** with the project schema path and a direct database URL. Use `DIRECT_URL` when available (required in production); otherwise `DATABASE_URL` is sufficient.
+One command applies everywhere: **`prisma migrate deploy`** with the project schema path and a direct database URL. Use `DIRECT_URL` when your app uses a pooled `DATABASE_URL` (e.g. Supabase pooler, PgBouncer); otherwise `DATABASE_URL` is sufficient and Prisma will use it for migrations.
 
 ### Canonical command
 
