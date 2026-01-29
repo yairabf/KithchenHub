@@ -91,8 +91,7 @@ async function bootstrap(): Promise<void> {
     // Optional: Create index page for docs (future: can list all versions)
     // For now, just document v1
 
-    // Bind to process.env.PORT (Render default 10000) on 0.0.0.0 so health checks succeed.
-    // Do not hardcode port; Render probes the port it assigns.
+    // Bind to process.env.PORT on 0.0.0.0 for cloud platforms (e.g. Cloud Run) and local.
     console.log(`🌐 Starting server on port ${config.port}...`);
     await app.listen(config.port, '0.0.0.0');
     console.log('✅ Server started successfully!');

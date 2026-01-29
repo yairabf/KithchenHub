@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       deploy_target:
-        description: "Deploy target: render | aws-ecs | gcp-cloudrun"
+        description: "Deploy target: aws-ecs | gcp-cloudrun"
         required: true
         type: string
       image_tag:
@@ -26,13 +26,6 @@ on:
         required: false
       DIRECT_URL:
         description: "Direct database URL for Prisma migrations (preferred if available)"
-        required: false
-      # Render
-      RENDER_DEPLOY_HOOK_URL_STAGING:
-        description: "Render deploy hook URL for the staging service"
-        required: false
-      RENDER_DEPLOY_HOOK_URL_PRODUCTION:
-        description: "Render deploy hook URL for the production service"
         required: false
       # AWS ECS
       AWS_ACCESS_KEY_ID:
@@ -144,11 +137,11 @@ jobs:
           set -euo pipefail
           DEPLOY_TARGET="${{ inputs.deploy_target }}"
           case "$DEPLOY_TARGET" in
-            render|aws-ecs|gcp-cloudrun)
+            aws-ecs|gcp-cloudrun)
               echo "Valid deploy target: $DEPLOY_TARGET"
               ;;
             *)
-              echo "ERROR: Invalid deploy_target '$DEPLOY_TARGET'. Must be one of: render, aws-ecs, gcp-cloudrun"
+              echo "ERROR: Invalid deploy_target '$DEPLOY_TARGET'. Must be one of: aws-ecs, gcp-cloudrun"
               exit 1
               ;;
           esac
@@ -176,33 +169,6 @@ jobs:
 
       - name: Log image reference
         run: echo "Deploying image ${{ steps.image.outputs.value }} to ${{ inputs.deploy_target }} in ${{ inputs.environment }} environment"
-
-      # -------- Render --------
-      - name: Trigger Render deploy
-        if: inputs.deploy_target == 'render'
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
-          RENDER_DEPLOY_HOOK_URL_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_URL_STAGING }}
-          RENDER_DEPLOY_HOOK_URL_PRODUCTION: ${{ secrets.RENDER_DEPLOY_HOOK_URL_PRODUCTION }}
-        run: |
-          set -euo pipefail
-          # Select the appropriate hook URL based on environment
-          if [ "$ENVIRONMENT" = "staging" ]; then
-            HOOK_URL="$RENDER_DEPLOY_HOOK_URL_STAGING"
-          elif [ "$ENVIRONMENT" = "production" ]; then
-            HOOK_URL="$RENDER_DEPLOY_HOOK_URL_PRODUCTION"
-          else
-            echo "ERROR: Render deploy hook URL is only configured for 'staging' and 'production' environments. Got: $ENVIRONMENT"
-            exit 1
-          fi
-
-          if [ -z "$HOOK_URL" ]; then
-            echo "ERROR: Render deploy hook URL is not configured for environment: $ENVIRONMENT"
-            exit 1
-          fi
-
-          echo "Triggering Render deploy via hook: $HOOK_URL"
-          curl -fsSL -X POST "$HOOK_URL"
 
       # -------- AWS ECS --------
       - name: Configure AWS credentials
@@ -356,19 +322,22 @@ jobs:
 # -----------------------------------------------------------------------------
 # Example usage (caller workflows)
 #
-# Staging (Render):
+# Staging (GCP Cloud Run):
 # jobs:
 #   deploy-staging:
 #     uses: ./.github/workflows/_deploy.yml
 #     with:
 #       environment: staging
-#       deploy_target: render
+#       deploy_target: gcp-cloudrun
 #       image_tag: develop-latest
 #       service_url: https://staging-api.example.com
 #     secrets:
 #       DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
 #       DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
-#       RENDER_DEPLOY_HOOK_URL_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_URL_STAGING }}
+#       GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+#       GCP_REGION: ${{ secrets.GCP_REGION }}
+#       GCP_CLOUD_RUN_SERVICE: ${{ secrets.GCP_CLOUD_RUN_SERVICE_STAGING }}
+#       GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 #
 # Production (AWS ECS):
 # jobs:

@@ -64,17 +64,17 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
   - GitHub Actions cache for faster builds
   - Pull-ready images for production deployments
 - **Automated Staging Deployment**: GitHub Actions workflow for staging environment
-  - **Staging deployment** (`deploy-staging.yml`): Automatically deploys to Render when code is merged to `develop` branch
+  - **Staging deployment** (`deploy-staging.yml`): Automatically deploys to GCP Cloud Run when code is merged to `develop` branch
   - Runs database migrations before deployment
-  - Triggers Render deployment via deploy hook
+  - Deploys to Cloud Run via `gcloud run deploy`
   - Supports optional health checks
   - See [Deployment Guide](./DEPLOYMENT.md#automated-staging-deployment) for setup instructions
 - **Automated Production Deployment**: GitHub Actions workflow for production environment with manual approval
-  - **Production deployment** (`deploy-production.yml`): Automatically deploys to Render when code is merged to `main` branch
+  - **Production deployment** (`deploy-production.yml`): Automatically deploys to GCP Cloud Run when code is merged to `main` branch
   - **Manual approval required** via GitHub Environment protection rules
   - Supports manual dispatch for custom image tags and rollbacks
   - Runs database migrations after approval
-  - Triggers Render deployment via deploy hook
+  - Deploys to Cloud Run via `gcloud run deploy`
   - Supports optional health checks
   - See [Deployment Guide](./DEPLOYMENT.md#automated-production-deployment) for setup instructions
 - **Swagger Documentation**: Interactive API docs at `/api/docs/v1`
@@ -800,17 +800,17 @@ The backend includes a production-ready multi-stage Dockerfile optimized for Nes
 
 - **Production builds** (`.github/workflows/build.yml`): Triggers on pushes to `develop` and `main` branches with 30-minute timeout and build caching
 - **Development builds** (`.github/workflows/build-push.yml`): Triggers on pushes to all branches for testing and development
-- **Staging deployment** (`.github/workflows/deploy-staging.yml`): Automatically deploys to Render staging environment when code is merged to `develop` branch
+- **Staging deployment** (`.github/workflows/deploy-staging.yml`): Automatically deploys to GCP Cloud Run staging when code is merged to `develop` branch
   - Runs database migrations before deployment
-  - Triggers Render deployment via deploy hook
-  - Requires `RENDER_DEPLOY_HOOK_URL_STAGING` secret to be configured
+  - Deploys to Cloud Run via `gcloud run deploy`
+  - Requires `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE_STAGING`, `GCP_SA_KEY` (and optionally `STAGING_SERVICE_URL` for health checks)
   - See [Deployment Guide](./DEPLOYMENT.md#automated-staging-deployment) for detailed setup
-- **Production deployment** (`.github/workflows/deploy-production.yml`): Automatically deploys to Render production environment when code is merged to `main` branch
+- **Production deployment** (`.github/workflows/deploy-production.yml`): Automatically deploys to GCP Cloud Run production when code is merged to `main` branch
   - **Manual approval required** via GitHub Environment protection rules
   - Supports manual dispatch for custom image tags and rollbacks
   - Runs database migrations after approval
-  - Triggers Render deployment via deploy hook
-  - Requires `RENDER_DEPLOY_HOOK_URL_PRODUCTION` secret and GitHub Environment "production" to be configured
+  - Deploys to Cloud Run via `gcloud run deploy`
+  - Requires `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE`, `GCP_SA_KEY` and GitHub Environment "production" (and optionally `PRODUCTION_SERVICE_URL` for health checks)
   - See [Deployment Guide](./DEPLOYMENT.md#automated-production-deployment) for detailed setup
 
 ### Getting Docker Images
