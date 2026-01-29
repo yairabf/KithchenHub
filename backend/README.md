@@ -357,7 +357,7 @@ To verify that Row Level Security is correctly isolating data between households
 
 ### Base URL
 - **API**: `http://localhost:3000/api/v1`
-- **Swagger Docs**: `http://localhost:3000/api/docs`
+- **Swagger Docs**: `http://localhost:3000/api/docs/v1`
 
 ### Authentication Endpoints
 
@@ -1026,5 +1026,5 @@ See [Monitoring Setup Guide](./docs/MONITORING_SETUP.md) for detailed setup inst
 
 - Database uses UUID for all user-related identifiers to maintain consistency with Supabase Auth identities
 - Global prefix (`api/v1`), validation pipe, error filter, and response transformer are configured in `src/main.ts`
-- Swagger documentation is available at `/api/docs` when running the server
+- Swagger documentation is available at `/api/docs/v1` when running the server
 - CORS is enabled with credentials support for mobile app access
