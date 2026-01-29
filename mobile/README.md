@@ -123,6 +123,13 @@ The app is configured for Expo Updates so you can ship JavaScript-only changes w
 | `updates.fallbackToCacheTimeout` | `app.json` | Set to `0` so the app always falls back to the cached bundle if the update server is unreachable |
 | `runtimeVersion` | `app.json` | Uses `appVersion` policy so the `version` field in `app.json` is the runtime version; native builds and OTA updates must share the same runtime version |
 
+**Runtime version policy (locked):** This project uses the **appVersion** policy: the runtime version is derived from `expo.version` in `app.json`. **Do not change** the runtime version policy (e.g. to `nativeVersion`, `fingerprint`, or a custom string) without an explicit product/engineering decision. Changing the policy can cause OTA updates to be applied to incompatible native builds (crashes or broken behavior). Native code or dependency changes require a new store build and a version bump in `app.json` before publishing OTA for that build; OTA is for JS-only compatible updates.
+
+| Config | Canonical value |
+|--------|-----------------|
+| `expo.runtimeVersion.policy` | `appVersion` |
+| Runtime version source | `expo.version` (bump on every public release and when native code changes) |
+
 **Update URL:** `updates.url` in `app.json` is set to `https://u.expo.dev/[PROJECT_ID]`. Replace `[PROJECT_ID]` with your EAS project ID when using [EAS Update](https://docs.expo.dev/eas-update/introduction/). **Do not ship production builds with `[PROJECT_ID]` still in place**—replace it before release or production builds will not receive OTA updates (the update URL will be invalid). Development mode (Expo Go, `expo start`) does not use OTA updates.
 
 **Workflow:** Publish an update with `eas update` (after configuring EAS). Production builds will receive the new bundle on the next launch (or after error recovery, per `checkAutomatically`). Only JS/asset changes are delivered via OTA; native code changes require a new store build.
@@ -133,7 +140,7 @@ The app is configured for Expo Updates so you can ship JavaScript-only changes w
 - **App hangs on startup:** With `fallbackToCacheTimeout: 0` and `checkAutomatically: ON_ERROR_RECOVERY`, the app should not block on the network; if it does, verify `app.json` and that you are not overriding update behavior in code.
 - **Development:** OTA is off in dev; use production builds (e.g. EAS Build) to test OTA.
 
-To verify OTA config locally (presence of `updates` and `runtimeVersion`, and that `url` does not still contain the placeholder), run `npm run verify:ota` from the `mobile` directory.
+To verify OTA config locally (presence of `updates`, `runtimeVersion` with `appVersion` policy, and that `url` does not still contain the placeholder), run `npm run verify:ota` from the `mobile` directory.
 
 ## Prerequisites
 

@@ -1,0 +1,45 @@
+# 002 - Runtime Version Policy for OTA Safety - Implementation Summary
+
+**Epic:** Mobile App Configuration
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **.cursor/tasks/mobile-app-configuration/002-runtime-version-ota-policy/002-runtime-version-ota-policy_plan.mdc:** Created task directory and plan document summarizing current status, gaps, architecture, implementation steps, verification plan, and success criteria.
+
+- **mobile/README.md:** Added "Runtime version policy (locked)" subsection under OTA Updates stating that the project uses **appVersion** policy, that the policy must not be changed without an explicit product/engineering decision, and that native/dependency changes require a new store build and version bump. Added a small table for canonical values (`expo.runtimeVersion.policy` = `appVersion`, runtime version source = `expo.version`). Updated the verify:ota reference to mention "appVersion policy."
+
+- **mobile/scripts/verify-ota-config.sh:** Extended to require `"policy": "appVersion"` via grep. Added check that fails with a clear error if the policy is missing or different. Updated header comment and success message to mention the runtimeVersion policy check.
+
+- **.cursor/rules/runtime_version_ota_rule.mdc:** New Cursor rule with `globs: ["mobile/app.json"]` and description "Runtime version and OTA policy — do not change without explicit approval." Content instructs not to change `expo.runtimeVersion` or version semantics without explicit user approval, states canonical policy is appVersion, and references `npm run verify:ota`.
+
+- **mobile/app.json:** No value changes; policy was already `appVersion`. Reverted after temporary test (runtimeVersion set to string) used to verify the script fails when policy is wrong.
+
+## Deviations from Plan
+
+- None. All planned steps were implemented. The optional dedicated policy doc (e.g. mobile/docs/OTA_RUNTIME_VERSION_POLICY.md) was not added; README + rule + script were deemed sufficient per the plan.
+
+## Testing Results
+
+- **verify:ota (valid config):** With current app.json (runtimeVersion policy appVersion), script exits 0 after policy check; the only failure is the existing `[PROJECT_ID]` placeholder in updates.url (expected; not part of this task).
+- **verify:ota (invalid policy):** Temporarily set `runtimeVersion` to `"1.0.0"`; script exited 1 with "Error: app.json runtimeVersion must use policy \"appVersion\"..." as required. Change reverted.
+
+## Code Review (Post-Implementation)
+
+- **Correctness:** Script logic is correct; grep for `"policy": "appVersion"` enforces the policy; verified by failing when runtimeVersion was a string.
+- **Architecture:** Single source of truth (app.json), documentation (README), validation (script), and guardrails (Cursor rule) align with the plan.
+- **Readability:** Script comments and error messages are clear; README and rule are concise and actionable.
+- **Compliance:** No coding_rule violations; changes are documentation, shell script, and rule content. No new production code or tests required for this config/lockdown task.
+
+**Recommendation:** Approve.
+
+## Lessons Learned
+
+- Locking runtimeVersion policy with documentation, a verification script, and a Cursor rule mirrors the app identifiers approach and gives consistent guardrails for mobile/app.json.
+- Grep-based check is sufficient for app.json; if the project later uses app.config.js/ts, the script may need to run Node to resolve the config.
+
+## Next Steps
+
+- Optional: Add a CI step that runs `npm run verify:ota` from the mobile directory (e.g. on changes to mobile/app.json or mobile/scripts/verify-ota-config.sh) to enforce the policy on every PR.
+- When configuring EAS Build, ensure updates.url has a real project ID before production builds.
