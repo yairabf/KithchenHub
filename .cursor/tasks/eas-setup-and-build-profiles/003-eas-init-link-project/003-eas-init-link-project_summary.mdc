@@ -1,0 +1,34 @@
+# 003 - Initialize Expo Project with EAS (eas init) - Implementation Summary
+
+**Epic:** EAS Setup and Build Profiles
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **.cursor/tasks/eas-setup-and-build-profiles/003-eas-init-link-project/:** Task directory with `003-eas-init-link-project_plan.mdc` and this summary.
+- **mobile/app.config.js:** Derives `expo.updates.url` from `app.json.extra.eas.projectId` when set (after `eas init`). Single source of truth: once the user runs `eas init` from `mobile/`, `app.json` gets `extra.eas.projectId` and the OTA URL becomes `https://u.expo.dev/<projectId>` without manually replacing a placeholder in `app.json`.
+- **mobile/scripts/verify-ota-config.sh:** OTA verification now checks the **resolved** config (from `app.config.js`) for the placeholder. If the resolved `updates.url` still contains `[PROJECT_ID]`, the script fails with a message to run `eas init` from the mobile directory. This allows `npm run verify:ota` to pass once the user has run `eas init` and `app.json` has `extra.eas.projectId`.
+- **mobile/README.md:** Updated OTA and EAS Build sections: (1) Update URL paragraph explains that the project connects via `eas init`, and `app.config.js` derives `updates.url` from `extra.eas.projectId`; (2) EAS Build section adds a "Linking the project" note: run `eas init` from `mobile/` after `eas login`, and verify ownership, slug (`kitchen-hub`), and linked account with `eas project:info` and `eas whoami`; (3) verify:ota description now says it checks the resolved `updates.url`.
+
+## Deviations from Plan
+
+- **`eas init` not run in this session:** EAS requires an Expo user account (`eas login`). Running `eas init` non-interactively without an existing project ID or token is not possible in this environment. The implementation is complete so that **once the user runs `eas init`** from `mobile/` (after `eas login`), no further manual edits are needed: `extra.eas.projectId` will be added to `app.json` by EAS, and `app.config.js` will set `updates.url` from it. Verification steps (ownership, slug, account) are documented in the README and plan; the user runs `eas project:info` and `eas whoami` after `eas init`.
+- **Verification script checks resolved config:** Plan said "replace [PROJECT_ID] in app.json or set in app.config.js". We chose the app.config.js approach and updated verify-ota-config.sh to validate the **resolved** config (app.config.js output) instead of only app.json, so a single source of truth (extra.eas.projectId) is sufficient.
+
+## Verification
+
+- **app.config.js:** When `extra.eas.projectId` is absent, `updates.url` falls back to `app.json.expo.updates.url` (placeholder); when present, URL is `https://u.expo.dev/${projectId}`. No change to app identifiers or version source.
+- **verify-ota-config.sh:** From `mobile/`, `npm run verify:ota` fails with the new message when project is not linked; once the user runs `eas init` and app.json has `extra.eas.projectId`, the resolved URL will have no placeholder and verify:ota will pass.
+- **verify:eas** and **verify:identifiers:** Both pass; no regressions.
+- **README:** EAS init, linking, and verification commands are documented.
+
+## Compliance
+
+- **App identifiers:** No changes to `bundleIdentifier` or `package`; .cursor/rules/app_identifiers_rule.mdc respected.
+- **Version source:** User-facing version remains in version.json; app.config.js only adds `updates` derivation and `version` merge.
+
+## Next Steps
+
+- **User action required:** From the `mobile` directory, run `eas login` (if not already logged in), then **`eas init`** to create or link an EAS project. Confirm slug `kitchen-hub` and expected owner; run `eas project:info` and `eas whoami` to verify. After that, `npm run verify:ota` will pass and production builds/OTA will use the correct project ID.
+- Optional: Wire `npm run verify:ota` (and verify:eas, verify:identifiers) into CI on mobile changes.
