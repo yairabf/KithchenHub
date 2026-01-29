@@ -410,13 +410,13 @@ export function ShoppingListsScreen() {
 
   const handleSelectGroceryItem = (groceryItem: GroceryItem) => {
     setSelectedGroceryItem(groceryItem);
-    setQuantityInput(groceryItem.defaultQuantity.toString());
+    setQuantityInput('1');
     setShowQuantityModal(true);
     // Keep dropdown open so user can continue adding items after modal closes
   };
 
   const handleQuickAddItem = async (groceryItem: GroceryItem) => {
-    const quantity = groceryItem.defaultQuantity;
+    const quantity = 1;
 
     // Check if item already exists in the selected list
     const existingItem = allItems.find(
