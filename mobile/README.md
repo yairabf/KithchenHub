@@ -112,6 +112,29 @@ iOS and Android app identifiers are defined in `app.json` and **must remain cons
 
 **Do not change these values** without an explicit product/engineering decision. Changing them after release breaks store continuity and over-the-air updates. To verify identifiers locally, run `npm run verify:identifiers` from the `mobile` directory.
 
+### OTA Updates (Over-the-Air)
+
+The app is configured for Expo Updates so you can ship JavaScript-only changes without app store resubmissions.
+
+| Config | Location | Purpose |
+|--------|----------|---------|
+| `updates.enabled` | `app.json` | Enables OTA updates |
+| `updates.checkAutomatically` | `app.json` | Set to `ON_ERROR_RECOVERY` so the app starts immediately and only checks for updates after error recovery |
+| `updates.fallbackToCacheTimeout` | `app.json` | Set to `0` so the app always falls back to the cached bundle if the update server is unreachable |
+| `runtimeVersion` | `app.json` | Uses `appVersion` policy so the `version` field in `app.json` is the runtime version; native builds and OTA updates must share the same runtime version |
+
+**Update URL:** `updates.url` in `app.json` is set to `https://u.expo.dev/[PROJECT_ID]`. Replace `[PROJECT_ID]` with your EAS project ID when using [EAS Update](https://docs.expo.dev/eas-update/introduction/). **Do not ship production builds with `[PROJECT_ID]` still in place**—replace it before release or production builds will not receive OTA updates (the update URL will be invalid). Development mode (Expo Go, `expo start`) does not use OTA updates.
+
+**Workflow:** Publish an update with `eas update` (after configuring EAS). Production builds will receive the new bundle on the next launch (or after error recovery, per `checkAutomatically`). Only JS/asset changes are delivered via OTA; native code changes require a new store build.
+
+**Troubleshooting:**
+
+- **Updates not applying:** Ensure the published update’s `runtimeVersion` matches the app’s `version` in `app.json`. Run `npx expo doctor` to check config.
+- **App hangs on startup:** With `fallbackToCacheTimeout: 0` and `checkAutomatically: ON_ERROR_RECOVERY`, the app should not block on the network; if it does, verify `app.json` and that you are not overriding update behavior in code.
+- **Development:** OTA is off in dev; use production builds (e.g. EAS Build) to test OTA.
+
+To verify OTA config locally (presence of `updates` and `runtimeVersion`, and that `url` does not still contain the placeholder), run `npm run verify:ota` from the `mobile` directory.
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
@@ -199,6 +222,10 @@ npm run web            # Run in web browser
 
 # Testing
 npm test               # Run tests with Jest
+
+# Verification
+npm run verify:identifiers   # Verify app identifiers in app.json
+npm run verify:ota           # Verify OTA updates config in app.json
 
 # Utilities
 npx expo install       # Install compatible versions of packages
