@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "test": "jest",
     "verify:identifiers": "bash scripts/verify-app-identifiers.sh",
-    "verify:ota": "bash scripts/verify-ota-config.sh"
+    "verify:ota": "bash scripts/verify-ota-config.sh",
+    "verify:eas": "bash scripts/verify-eas-config.sh"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -1,0 +1,78 @@
+# 002 - EAS Auto-Increment for Native Builds
+
+**Epic:** EAS Setup and Build Profiles
+**Task directory:** .cursor/tasks/eas-setup-and-build-profiles/002-eas-auto-increment-native-builds/
+**Created:** 2026-01-29
+**Status:** Planning
+
+---
+
+## Deep research: current status
+
+### Already implemented (no change required)
+
+| Item | Location | Details |
+|------|----------|---------|
+| **Production autoIncrement** | mobile/eas.json | `build.production.autoIncrement: true` — iOS buildNumber and Android versionCode increment on each production build. |
+| **Remote version source** | mobile/eas.json | `cli.appVersionSource: "remote"` — EAS manages versionCode/buildNumber on the server; first build initializes with 1 if not set locally. |
+| **App config** | mobile/app.json, mobile/app.config.js | No `ios.buildNumber` or `android.versionCode` (correct for remote; EAS init with 1). User-facing `version` from repo root version.json. |
+| **Runtime version** | mobile/app.json | `runtimeVersion.policy: "appVersion"` — compatible with autoIncrement (Expo: not supported with `nativeVersion`). |
+| **Previous task** | .cursor/tasks/eas-setup-and-build-profiles/001-initial-eas-config/ | 001 implemented eas.json with production autoIncrement and remote appVersionSource; summary confirms completion. |
+| **README** | mobile/README.md | EAS Build subsection documents profiles and states production uses auto-increment; app version source is remote. |
+
+### Gaps (optional hardening)
+
+| Gap | Description |
+|-----|-------------|
+| **No EAS config verification script** | mobile/scripts/ has verify-app-identifiers.sh and verify-ota-config.sh but no script that validates eas.json (e.g. cli.appVersionSource and build.production.autoIncrement). Accidental removal or typos could go unnoticed. |
+| **No npm script for EAS config** | No npm run verify:eas (or similar) to run such a check; verify:ota and verify:identifiers exist. |
+| **Store submission note** | README could add one explicit sentence that auto-increment avoids store rejection due to duplicate versionCode/buildNumber (per Expo app version docs). |
+
+### Constraints
+
+- **App identifiers:** .cursor/rules/app_identifiers_rule.mdc — do not change bundleIdentifier or package.
+- **Version:** User-facing version stays in version.json; autoIncrement applies only to native build numbers (versionCode/buildNumber).
+- **Preview profile:** Intentionally does not use autoIncrement (001 reserved bumping for production only); no change unless product requests it.
+
+---
+
+## Architecture
+
+- **Source of truth for native build numbers:** EAS servers (remote). Local app config does not set versionCode/buildNumber.
+- **First build:** Remote initializes with 1; subsequent production builds auto-increment.
+
+---
+
+## Implementation steps
+
+1. **Verify current config (read-only)** — Confirm mobile/eas.json has cli.appVersionSource: "remote" and build.production.autoIncrement: true. No edits if already correct.
+2. **Add EAS config verification script (optional but recommended)** — Create mobile/scripts/verify-eas-config.sh (exists, valid JSON, cli.appVersionSource remote, build.production.autoIncrement true). Add verify:eas to mobile/package.json. Follow patterns from verify-ota-config.sh.
+3. **Document store submission in README** — In mobile/README.md EAS Build subsection, add sentence that auto-increment prevents store submission failures; reference Expo app version management.
+4. **Task documentation** — Plan at .cursor/tasks/eas-setup-and-build-profiles/002-eas-auto-increment-native-builds/002-eas-auto-increment-native-builds_plan.mdc; after implementation create 002-eas-auto-increment-native-builds_summary.mdc.
+5. **Post-implementation** — Run .cursor/skills/auto-code-review/SKILL.md on changed files.
+
+---
+
+## Verification
+
+- eas.json: production autoIncrement and remote appVersionSource; verification script passes.
+- Script: npm run verify:eas exits 0 when config is correct, non-zero with clear message when not.
+- README: EAS Build section mentions auto-increment avoids store submission failures.
+- Plan and summary: stored under .cursor/tasks/eas-setup-and-build-profiles/002-eas-auto-increment-native-builds/.
+
+---
+
+## Success criteria
+
+- Current EAS auto-increment setup confirmed and documented.
+- Verification script and npm script protect against regressions.
+- README explicitly states that auto-increment avoids store submission failures.
+- Plan and summary live in the specified task directory; auto-code-review applied after implementation.
+
+---
+
+## Skills and rules applied
+
+- **Epic/task structure:** .cursor/rules/coding_rule.mdc — plan and summary in task directory.
+- **App identifiers:** .cursor/rules/app_identifiers_rule.mdc — no change to bundleIdentifier or package.
+- **Post-implementation:** .cursor/skills/auto-code-review/SKILL.md — run after script, package.json, and README changes.
