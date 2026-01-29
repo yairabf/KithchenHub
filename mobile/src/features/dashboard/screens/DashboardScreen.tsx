@@ -118,11 +118,15 @@ export function DashboardScreen({
   const formattedTime = formatTimeForDisplay(currentTime);
   const formattedDate = formatDateForDisplay(currentTime);
 
-  /** Opens the quick-add shopping modal, measuring the trigger button position for animation. */
+  /** Opens the quick-add shopping modal, measuring the trigger button position for animation when ref is attached. */
   const openShoppingModal = () => {
-    shoppingButtonRef.current?.measureInWindow((x, y, width, height) => {
-      onOpenShoppingModal({ x, y, width, height });
-    });
+    if (shoppingButtonRef.current) {
+      shoppingButtonRef.current.measureInWindow((x, y, width, height) => {
+        onOpenShoppingModal({ x, y, width, height });
+      });
+    } else {
+      onOpenShoppingModal();
+    }
   };
 
   const handleAddToShopping = () => {
@@ -268,6 +272,7 @@ export function DashboardScreen({
                     <Ionicons name="mic-outline" size={22} color={colors.textMuted} />
                   </TouchableOpacity>
                   <TouchableOpacity
+                    ref={shoppingButtonRef}
                     style={styles.addButton}
                     onPress={handleAddToShopping}
                     activeOpacity={0.8}

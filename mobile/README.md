@@ -101,6 +101,17 @@ Kitchen Hub Mobile is a comprehensive household management app that helps famili
 - **TypeScript**: 5.9.2 - Type checking
 - **Jest**: 29.7.0 - Testing framework
 
+### App Identifiers (Locked)
+
+iOS and Android app identifiers are defined in `app.json` and **must remain consistent across all environments** to avoid App Store, Play Store, and OTA update issues.
+
+| Platform | Config key | Canonical value |
+|----------|------------|-----------------|
+| iOS | `expo.ios.bundleIdentifier` | `com.kitchenhub.app` |
+| Android | `expo.android.package` | `com.kitchenhub.app` |
+
+**Do not change these values** without an explicit product/engineering decision. Changing them after release breaks store continuity and over-the-air updates. To verify identifiers locally, run `npm run verify:identifiers` from the `mobile` directory.
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
