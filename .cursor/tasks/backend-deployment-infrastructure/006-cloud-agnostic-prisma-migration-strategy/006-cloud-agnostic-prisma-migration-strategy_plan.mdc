@@ -1,0 +1,81 @@
+# Cloud-agnostic Prisma migration strategy
+
+**Epic:** Backend Deployment Infrastructure  
+**Task:** 006-cloud-agnostic-prisma-migration-strategy  
+**Canonical location:** [.cursor/tasks/backend-deployment-infrastructure/006-cloud-agnostic-prisma-migration-strategy/](.cursor/tasks/backend-deployment-infrastructure/006-cloud-agnostic-prisma-migration-strategy/)
+
+---
+
+## Research summary: current status
+
+### Already implemented
+
+| Area | Status | Location |
+|------|--------|----------|
+| **Prisma schema** | DATABASE_URL + directUrl (DIRECT_URL); binaryTargets for Alpine + Debian | [backend/src/infrastructure/database/prisma/schema.prisma](backend/src/infrastructure/database/prisma/schema.prisma) |
+| **Migrations on disk** | Multiple migrations under `prisma/migrations/` | [backend/src/infrastructure/database/prisma/migrations/](backend/src/infrastructure/database/prisma/migrations/) |
+| **Production env** | DIRECT_URL required in production (validated at startup) | [backend/src/config/env.validation.ts](backend/src/config/env.validation.ts) |
+| **CI migrations job** | Single path: validate URL → pull GHCR image → `docker run ... npx prisma migrate deploy --schema=...` | [.github/workflows/_deploy.yml](.github/workflows/_deploy.yml) (lines 76–126) |
+| **Deploy targets** | `aws-ecs` and `gcp-cloudrun` only; no Render | [.github/workflows/_deploy.yml](.github/workflows/_deploy.yml) |
+| **Staging/Prod workflows** | Call _deploy with GCP; pass DIRECT_URL/DATABASE_URL for migrations | [deploy-staging.yml](.github/workflows/deploy-staging.yml), [deploy-production.yml](.github/workflows/deploy-production.yml) |
+| **Dockerfile** | Multi-stage; Prisma generate in builder; runtime is Debian slim | [backend/Dockerfile](backend/Dockerfile) |
+| **Docs** | Migrations and manual rollback (container only) in DEPLOYMENT.md | [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md) |
+
+### Gaps (missing)
+
+1. **No npm script for deploy** – Production migrate is only invoked inline in CI and docs (`npx prisma migrate deploy --schema=...`). [backend/package.json](backend/package.json) has `prisma:migrate` (dev) and `prisma:generate` but no `prisma:deploy`.
+2. **Render not in CI** – User stated "Render now; AWS/GCP later." Render is only referenced in [scripts/check-secret-hygiene.sh](scripts/check-secret-hygiene.sh) (detecting deploy hook URLs). There is no Render deploy target in _deploy.yml and no documented way to run migrations on Render.
+3. **Rollback incomplete** – [DEPLOYMENT.md Rollback Procedure](backend/DEPLOYMENT.md) (lines 759–790) covers **application** rollback (revert container image) only. Missing: (a) **Database** rollback (snapshots/restore per platform), (b) **Prisma migrate resolve** (e.g. `--rolled-back` / `--applied`) for failed or manually patched migrations.
+4. **No single migrations/rollback doc** – Platform-agnostic migration run and rollback posture are scattered; no dedicated MIGRATIONS.md or equivalent.
+
+---
+
+## Architecture
+
+- **One command for all platforms:** `prisma migrate deploy` with schema path and DIRECT_URL (or DATABASE_URL) is already platform-agnostic. No change to Prisma itself.
+- **CI:** Keep current _deploy.yml migrations job as the single path for GCP/AWS. For Render, do not require GitHub to drive deploy; document "run same migrate deploy on Render" (e.g. via Render Shell, background job, or deploy hook).
+- **Optional:** Add a workflow input to _deploy.yml to **skip** the migrations job when the platform runs migrations itself (e.g. Render deploy hook), so deploy step still runs without duplicate migration runs.
+- **Rollback:** Two layers: (1) Application rollback (existing: revert image/container). (2) Database rollback: snapshot/restore per provider + Prisma `migrate resolve` when needed.
+
+---
+
+## Implementation plan
+
+### 1. Backend: add `prisma:deploy` script
+
+- **File:** [backend/package.json](backend/package.json)
+- Add script: `"prisma:deploy": "prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma"`.
+- Use same schema path as CI and README so local/CI/Render all use one command.
+
+### 2. CI/CD: keep migrations job; optional skip
+
+- **File:** [.github/workflows/_deploy.yml](.github/workflows/_deploy.yml)
+- Add input `skip_migrations` (default false). When true, skip the migrations job and let deploy run (for platforms that run migrations elsewhere, e.g. Render deploy hook). Callers (staging/production) keep current behavior unless they set `skip_migrations: true`.
+
+### 3. Render: document migration run (no new deploy target required)
+
+- Document in MIGRATIONS.md: On Render, set `DIRECT_URL` (or `DATABASE_URL`) in environment. Run migrations via Render Shell or Deploy hook. If using a deploy hook, consider setting `skip_migrations: true` in any GitHub workflow that also deploys to Render.
+
+### 4. Rollback and recovery documentation
+
+- **Artifact:** [backend/docs/MIGRATIONS.md](backend/docs/MIGRATIONS.md) with application rollback pointer, database snapshot/restore per platform (Render, Supabase/Neon, GCP Cloud SQL, AWS RDS), and Prisma migrate resolve (--rolled-back / --applied) with when/how and links to official Prisma docs.
+
+### 5. Docs structure and cross-links
+
+- MIGRATIONS.md: platform-agnostic "Running migrations" + "Rollback and migration recovery".
+- DEPLOYMENT.md: short "Database migrations and rollback" section linking to MIGRATIONS.md and one-line rollback summary.
+
+### 6. Task artifact location
+
+- Directory: `.cursor/tasks/backend-deployment-infrastructure/006-cloud-agnostic-prisma-migration-strategy/`.
+- Plan: `006-cloud-agnostic-prisma-migration-strategy_plan.mdc`.
+- Summary (after implementation): `006-cloud-agnostic-prisma-migration-strategy_summary.mdc`.
+
+---
+
+## Success criteria
+
+- One canonical way to run production migrations (`prisma:deploy` or documented `npx prisma migrate deploy ...`) that works on Render, GCP, and AWS.
+- CI migrations job unchanged for current callers unless `skip_migrations` is used; optional skip documented for Render (or similar) where migrations run on the platform.
+- Rollback posture documented: application rollback + DB snapshot/restore per platform + Prisma migrate resolve (--rolled-back / --applied) with clear when/how.
+- Plan and summary stored under `.cursor/tasks/backend-deployment-infrastructure/006-cloud-agnostic-prisma-migration-strategy/`.

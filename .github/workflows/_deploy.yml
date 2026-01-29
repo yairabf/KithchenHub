@@ -20,6 +20,11 @@ on:
         required: false
         type: string
         default: ""
+      skip_migrations:
+        description: "Skip the migrations job (use when platform runs migrations elsewhere, e.g. Render deploy hook)"
+        required: false
+        type: boolean
+        default: false
     secrets:
       DATABASE_URL:
         description: "Database connection URL for Prisma migrations"
@@ -77,6 +82,7 @@ jobs:
   migrations:
     name: Run database migrations
     runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_migrations }}
 
     steps:
       - name: Validate migration configuration
@@ -129,7 +135,8 @@ jobs:
   deploy:
     name: Deploy to target platform
     runs-on: ubuntu-latest
-    needs: migrations
+    needs: [migrations]
+    if: ${{ always() && (needs.migrations.result == 'success' || needs.migrations.result == 'skipped') }}
 
     steps:
       - name: Validate deploy target

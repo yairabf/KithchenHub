@@ -579,6 +579,13 @@ Before deploying to production:
 
 ---
 
+## Database migrations and rollback
+
+- **Running migrations:** Use `npm run prisma:deploy` (or `npx prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma`) with `DIRECT_URL` or `DATABASE_URL`. Same command works locally, in CI, on Render, GCP, and AWS. See [docs/MIGRATIONS.md](docs/MIGRATIONS.md) for platform-specific steps (including Render).
+- **Rollback posture:** (1) **Application** – revert to previous image/revision (see [Rollback Procedure](#rollback-procedure) below). (2) **Database** – use your provider’s snapshot/restore (Render, Supabase/Neon, GCP Cloud SQL, AWS RDS). (3) **Migration history** – use `prisma migrate resolve --rolled-back` or `--applied` when a migration failed or was applied manually; see [docs/MIGRATIONS.md](docs/MIGRATIONS.md).
+
+---
+
 ## Environment Variables for Production
 
 ### Required Variables
@@ -757,6 +764,8 @@ It means Prisma Client was generated in an Alpine (musl) build environment, but 
 ---
 
 ## Rollback Procedure
+
+**Application-only rollback** (revert to previous container/image). For database snapshot/restore and Prisma migration resolve, see [docs/MIGRATIONS.md](docs/MIGRATIONS.md).
 
 If deployment fails:
 

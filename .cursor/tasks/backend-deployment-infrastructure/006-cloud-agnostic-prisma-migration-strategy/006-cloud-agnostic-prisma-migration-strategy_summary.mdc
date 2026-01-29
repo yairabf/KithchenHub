@@ -1,0 +1,47 @@
+# 006 - Cloud-agnostic Prisma migration strategy - Implementation Summary
+
+**Epic:** Backend Deployment Infrastructure  
+**Completed:** 2026-01-29  
+**Status:** Completed
+
+## What Was Implemented
+
+1. **backend/package.json**
+   - Added `prisma:deploy` script: `prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma`.
+   - Same schema path as CI and docs so local, CI, and Render use one command.
+
+2. **.github/workflows/_deploy.yml**
+   - Added input `skip_migrations` (boolean, default false). When true, the migrations job is skipped.
+   - Migrations job: `if: ${{ !inputs.skip_migrations }}`.
+   - Deploy job: `if: ${{ always() && (needs.migrations.result == 'success' || needs.migrations.result == 'skipped') }}` so deploy runs when migrations succeeded or was skipped (e.g. Render runs migrations via deploy hook).
+
+3. **backend/docs/MIGRATIONS.md** (new)
+   - Platform-agnostic "Running migrations": canonical command, local/Docker, CI, Render (Shell / deploy hook), GCP Cloud Run, AWS ECS.
+   - "Rollback and migration recovery": application rollback pointer, database snapshot/restore per platform (Render, Supabase/Neon, GCP Cloud SQL, AWS RDS), Prisma migrate resolve (--rolled-back / --applied) with when/how and migration name format; links to Prisma docs.
+
+4. **backend/DEPLOYMENT.md**
+   - New section "Database migrations and rollback" before "Environment Variables": links to MIGRATIONS.md, one-line summary for running migrations and rollback posture (app + DB backup/restore + Prisma resolve).
+   - In "Rollback Procedure": added intro sentence pointing to MIGRATIONS.md for database and migration-history rollback.
+
+5. **.cursor/tasks/backend-deployment-infrastructure/006-cloud-agnostic-prisma-migration-strategy/**
+   - Created task directory with `006-cloud-agnostic-prisma-migration-strategy_plan.mdc` (plan copy) and `006-cloud-agnostic-prisma-migration-strategy_summary.mdc` (this file).
+
+## Deviations from Plan
+
+- None. All planned items were implemented as specified.
+
+## Testing Results
+
+- **package.json:** Script runs with `npm run prisma:deploy` when `DIRECT_URL` or `DATABASE_URL` is set (manual check).
+- **Workflows:** No workflow run was executed; logic matches plan (migrations skipped when `skip_migrations: true`, deploy runs when migrations success or skipped).
+- **Docs:** MIGRATIONS.md and DEPLOYMENT.md links and paths verified.
+
+## Lessons Learned
+
+- Single `prisma migrate deploy` command plus `skip_migrations` keeps CI usable for both "CI runs migrations" (GCP/AWS) and "platform runs migrations" (e.g. Render) without duplicating migration runs.
+- Dedicated MIGRATIONS.md gives one place for run + rollback + resolve and keeps DEPLOYMENT.md focused on deployment flows.
+
+## Next Steps
+
+- When using Render: set `DIRECT_URL` in the service env and run migrations via Shell or deploy hook; if a GitHub workflow also deploys to Render, pass `skip_migrations: true` to avoid running migrations twice.
+- After implementation, run the auto-code-review skill on changed files per project rules.
