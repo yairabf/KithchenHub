@@ -399,6 +399,11 @@ aws secretsmanager create-secret \
 - [ ] Network configuration verified
 - [ ] Health check endpoints configured
 - [ ] Monitoring and alerting set up
+  - [ ] Sentry error tracking configured (optional)
+  - [ ] Uptime monitoring service configured
+  - [ ] Health endpoint tested and accessible
+  - [ ] Alerts configured for downtime and errors
+  - [ ] See [Monitoring Setup Guide](./MONITORING_SETUP.md) for details
 
 ### Deployment
 

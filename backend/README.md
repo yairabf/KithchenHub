@@ -987,6 +987,17 @@ The backend API is designed to work seamlessly with the [Kitchen Hub Mobile App]
 - **Sync**: Mobile app uses `/auth/sync` endpoint for offline data synchronization
 - **Offline Support**: Mobile app caches data locally and syncs when online
 
+## Monitoring
+
+The API includes comprehensive monitoring capabilities:
+
+- **Health Check Endpoints**: `/api/health`, `/api/health/ready`, `/api/health/live`, `/api/health/detailed`
+- **Structured Logging**: JSON-formatted logs for log aggregation
+- **Error Tracking**: Sentry integration (optional)
+- **Request Correlation**: Automatic request ID generation and tracking
+
+See [Monitoring Setup Guide](./docs/MONITORING_SETUP.md) for detailed setup instructions.
+
 ## Documentation
 
 - **[Root README](../README.md)** - Monorepo overview
@@ -994,6 +1005,8 @@ The backend API is designed to work seamlessly with the [Kitchen Hub Mobile App]
 - **[Deployment Guide](./DEPLOYMENT.md)** - Quick start deployment guide
 - **[Comprehensive Deployment Guide](./docs/DEPLOYMENT_COMPREHENSIVE.md)** - Complete deployment procedures for all platforms
 - **[Rollback Guide](./docs/ROLLBACK_GUIDE.md)** - Detailed rollback procedures
+- **[Monitoring Setup Guide](./docs/MONITORING_SETUP.md)** - Monitoring and observability setup
+- **[Logging Guide](./docs/LOGGING_GUIDE.md)** - Structured logging best practices
 - **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)** - Complete environment variable checklist
 - **[Platform Migration Guide](./docs/PLATFORM_MIGRATION.md)** - Migration between platforms
 - **[GHCR Quick Reference](./docs/GHCR_QUICK_REFERENCE.md)** - Quick reference for GitHub Container Registry
