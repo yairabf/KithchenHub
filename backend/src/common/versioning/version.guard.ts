@@ -26,14 +26,15 @@ import { SUPPORTED_API_VERSIONS } from './api-version.constants';
 export class VersionGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
-    
+
     // Get URL path - handle both Express and Fastify
     // Fastify: request.routerPath (route path) or request.url (full URL with query)
     // Express: request.url (full URL with query)
     const fastifyRequest = request as any;
-    const urlPath = fastifyRequest.routerPath || request.url?.split('?')[0] || request.url;
+    const urlPath =
+      fastifyRequest.routerPath || request.url?.split('?')[0] || request.url;
     const fullUrl = request.url || '';
-    
+
     // Skip version validation for intentionally unversioned routes
     // /api/version is the version discovery endpoint and must remain unversioned
     // Check both the route path and the full URL to handle both Express and Fastify
@@ -46,7 +47,7 @@ export class VersionGuard implements CanActivate {
     ) {
       return true;
     }
-    
+
     const version = extractVersionFromRequest(request);
 
     if (!version) {
