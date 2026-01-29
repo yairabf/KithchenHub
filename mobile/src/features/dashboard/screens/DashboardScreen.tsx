@@ -1,39 +1,189 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Image,
-  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import { formatTimeForDisplay, formatDateForDisplay } from '../../../common/utils/dateTimeUtils';
 import { useResponsive } from '../../../common/hooks';
+import { useCatalog } from '../../../common/hooks/useCatalog';
 import { colors } from '../../../theme';
+import { SafeImage } from '../../../common/components/SafeImage';
+import { GrocerySearchBar } from '../../shopping/components/GrocerySearchBar';
+import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
+import type { ShoppingItem } from '../../../mocks/shopping';
+import { useDashboardChores } from '../hooks/useDashboardChores';
+import { createShoppingService } from '../../shopping/services/shoppingService';
+import { getActiveListId } from '../../shopping/utils/selectionUtils';
+import { config } from '../../../config';
 import { styles } from './styles';
 import type { DashboardScreenProps } from './types';
 import type { TabKey } from '../../../common/components/BottomPillNav';
 
-export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavigateToTab }: DashboardScreenProps) {
+const SUGGESTED_ITEMS_MAX = 8;
+
+const QUICK_STATS = [
+  {
+    icon: 'basket-outline' as const,
+    label: 'Shopping Lists',
+    value: '2 Active',
+    route: 'Shopping' as TabKey,
+    iconBgStyle: 'shopping' as const,
+  },
+  {
+    icon: 'book-outline' as const,
+    label: 'Saved Recipes',
+    value: '12 Items',
+    route: 'Recipes' as TabKey,
+    iconBgStyle: 'recipes' as const,
+  },
+];
+
+function getChoreRowBackground(completed: boolean): string {
+  return completed ? colors.pastel.green : colors.pastel.peach;
+}
+
+function getAvatarUri(assignee?: string): string {
+  const seed = assignee ?? 'default';
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+}
+
+export function DashboardScreen({
+  onOpenShoppingModal,
+  onOpenChoresModal,
+  onNavigateToTab,
+}: DashboardScreenProps) {
   const { user } = useAuth();
   const { isTablet } = useResponsive();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchValue, setSearchValue] = useState('');
   const shoppingButtonRef = useRef<View>(null);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning!';
-    if (hour < 18) return 'Good Afternoon!';
-    return 'Good Evening!';
+  const { groceryItems, frequentlyAddedItems } = useCatalog();
+  const suggestedItems =
+    frequentlyAddedItems.length > 0
+      ? frequentlyAddedItems.slice(0, SUGGESTED_ITEMS_MAX)
+      : groceryItems.slice(0, SUGGESTED_ITEMS_MAX);
+  const { todayChores, toggleChore, isLoading: choresLoading } = useDashboardChores();
+
+  const shouldUseMockData = config.mockData.enabled || !user || user?.isGuest === true;
+  const shoppingService = useMemo(
+    () => createShoppingService(shouldUseMockData ? 'guest' : 'signed-in'),
+    [shouldUseMockData]
+  );
+  const [activeListId, setActiveListId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadShoppingData = async () => {
+      try {
+        const data = await shoppingService.getShoppingData();
+        if (isMounted) {
+          setActiveListId((current) => getActiveListId(data.shoppingLists, current));
+        }
+      } catch (_err) {
+        if (isMounted) {
+          setActiveListId(null);
+        }
+      }
+    };
+    loadShoppingData();
+    return () => {
+      isMounted = false;
+    };
+  }, [shoppingService]);
+
+  const displayName = user?.name ?? 'Guest';
+  const userRole = user?.isGuest ? 'Guest' : 'KITCHEN LEAD';
+
+  // Live clock and date; timer respects mount state to avoid updates when unmounted
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    const timer = setInterval(() => {
+      if (isMountedRef.current) {
+        setCurrentTime(new Date());
+      }
+    }, 1000);
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const formattedTime = formatTimeForDisplay(currentTime);
+  const formattedDate = formatDateForDisplay(currentTime);
+
+  /** Opens the quick-add shopping modal, measuring the trigger button position for animation. */
+  const openShoppingModal = () => {
+    shoppingButtonRef.current?.measureInWindow((x, y, width, height) => {
+      onOpenShoppingModal({ x, y, width, height });
+    });
   };
 
-  const overviewItems = [
-    { icon: 'basket-outline' as const, title: 'Shopping Lists', sub: '3 active lists', route: 'Shopping' as TabKey },
-    { icon: 'clipboard-outline' as const, title: "Today's Chores", sub: '3 tasks pending', route: 'Chores' as TabKey },
-    { icon: 'restaurant-outline' as const, title: 'Recipes', sub: '6 saved recipes', route: 'Recipes' as TabKey },
-  ];
+  const handleAddToShopping = () => {
+    setSearchValue('');
+    openShoppingModal();
+  };
+
+  const handleSelectGroceryItem = (_item: GroceryItem) => {
+    openShoppingModal();
+  };
+
+  const handleQuickAddGroceryItem = (_item: GroceryItem) => {
+    openShoppingModal();
+  };
+
+  /**
+   * Adds a suggested grocery item to the shopping list.
+   * If the item already exists in the list, increments its quantity by 1.
+   * Otherwise creates a new item with quantity 1.
+   * Opens the shopping modal if there is no active list, or if the operation fails.
+   *
+   * @param item - The grocery item to add
+   */
+  const handleSuggestionPress = async (item: GroceryItem) => {
+    if (!activeListId) {
+      openShoppingModal();
+      return;
+    }
+    const addQuantity = 1;
+    try {
+      const data = await shoppingService.getShoppingData();
+      const normalizedItemName = item.name.trim().toLowerCase();
+      const existingInList = data.shoppingItems.find(
+        (i) => i.listId === activeListId && i.name.trim().toLowerCase() === normalizedItemName
+      );
+      if (existingInList) {
+        const currentQuantity = typeof existingInList.quantity === 'number' ? existingInList.quantity : 0;
+        await shoppingService.updateItem(existingInList.id, {
+          quantity: currentQuantity + addQuantity,
+        });
+      } else {
+        const newItemData: Partial<ShoppingItem> = {
+          listId: activeListId,
+          name: item.name.trim(),
+          quantity: 1,
+          category: item.category ?? 'Other',
+          image: item.image ?? '',
+        };
+        await shoppingService.createItem(newItemData);
+      }
+    } catch (error) {
+      console.error('Failed to add item to shopping list:', error);
+      openShoppingModal();
+    }
+  };
+
+  const handleStatPress = (route: TabKey | null) => {
+    if (route) {
+      onNavigateToTab(route);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,24 +197,30 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
         </View>
 
         <View style={styles.headerRight}>
+          <View style={styles.dateTimeContainer}>
+            <Text style={styles.timeText}>{formattedTime}</Text>
+            {isTablet && <Text style={styles.dateText}>{formattedDate}</Text>}
+          </View>
           <TouchableOpacity style={styles.notificationButton}>
             <Ionicons name="notifications-outline" size={22} color={colors.textSecondary} />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
 
+          <View style={styles.profileSectionSeparator} />
+
           <View style={styles.profileSection}>
             {isTablet && (
               <View style={styles.profileInfo}>
-                <Text style={styles.profileRole}>KITCHEN LEAD</Text>
-                <Text style={styles.profileName}>{user?.name || 'Jessica J.'}</Text>
+                <Text style={styles.profileRole}>{userRole}</Text>
+                <Text style={styles.profileName}>{displayName}</Text>
               </View>
             )}
             <View style={styles.avatarContainer}>
               {user?.photoUrl ? (
-                <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
+                <SafeImage uri={user.photoUrl} style={styles.avatar} />
               ) : (
-                <Image
-                  source={{ uri: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jessica' }}
+                <SafeImage
+                  uri={getAvatarUri(user?.name ?? 'user')}
                   style={styles.avatar}
                 />
               )}
@@ -74,81 +230,198 @@ export function DashboardScreen({ onOpenShoppingModal, onOpenChoresModal, onNavi
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* Greeting Section */}
-        <View style={styles.greetingSection}>
-          <View style={styles.greetingTextContainer}>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.subtitle}>Manage your home seamlessly.</Text>
-          </View>
-        </View>
-
-        {/* Main Content Grid */}
+        {/* Two-column layout */}
         <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
-          {/* Left Column - Overview Section */}
+          {/* Left column: Shopping widget + Quick stats */}
           <View style={[styles.leftColumn, !isTablet && styles.fullWidthColumn]}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Overview</Text>
-              <TouchableOpacity>
-                <Text style={styles.editButton}>Edit</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.overviewCards}>
-              {overviewItems.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.overviewCard}
-                  onPress={() => onNavigateToTab(item.route)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.overviewCardContent}>
-                    <View style={styles.overviewIconContainer}>
-                      <Ionicons name={item.icon} size={24} color={colors.textSecondary} />
-                    </View>
-                    <View style={styles.overviewTextContainer}>
-                      <Text style={styles.overviewTitle}>{item.title}</Text>
-                      <Text style={styles.overviewSub}>{item.sub}</Text>
-                    </View>
+            <View style={styles.leftColumnContent}>
+              {/* Add to Shopping List card */}
+              <View style={styles.shoppingCard}>
+                <View style={styles.shoppingCardHeader}>
+                  <View style={styles.shoppingCardTitleBlock}>
+                    <Text style={styles.shoppingCardTitle}>Add to Shopping List</Text>
+                    <Text style={styles.shoppingCardSubtitle}>
+                      Running low on something? Put it down now.
+                    </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-                </TouchableOpacity>
-              ))}
+                  <View style={styles.mainListBadge}>
+                    <Text style={styles.mainListBadgeText}>Main List</Text>
+                  </View>
+                </View>
 
-              <TouchableOpacity style={styles.addWidgetButton}>
-                <Ionicons name="add" size={24} color={colors.textMuted} />
-                <Text style={styles.addWidgetText}>Add Widget</Text>
-              </TouchableOpacity>
+                <View style={styles.inputRowWithDropdown}>
+                  <View style={styles.grocerySearchBarWrapper}>
+                    <GrocerySearchBar
+                      items={groceryItems}
+                      value={searchValue}
+                      onChangeText={setSearchValue}
+                      onSelectItem={handleSelectGroceryItem}
+                      onQuickAddItem={handleQuickAddGroceryItem}
+                      placeholder="e.g. 2 cartons of organic milk..."
+                      variant="background"
+                      showShadow={false}
+                      allowCustomItems={true}
+                      containerStyle={styles.grocerySearchBarContainer}
+                    />
+                  </View>
+                  <TouchableOpacity style={styles.micButton}>
+                    <Ionicons name="mic-outline" size={22} color={colors.textMuted} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={handleAddToShopping}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="add" size={24} color={colors.textLight} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.suggestedSection}>
+                  <Text style={styles.suggestedLabel}>Suggested Items</Text>
+                  <View style={styles.suggestionChipsRow}>
+                  {suggestedItems.map((item) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.suggestionChip}
+                      onPress={() => handleSuggestionPress(item)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="add" size={14} color={colors.textSecondary} />
+                      <Text style={styles.suggestionChipText}>{item.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  </View>
+                </View>
+              </View>
+
+              {/* Quick stats */}
+              <View style={styles.quickStatsRow}>
+                {QUICK_STATS.map((stat) => (
+                  <TouchableOpacity
+                    key={stat.label}
+                    style={styles.quickStatCard}
+                    onPress={() => handleStatPress(stat.route)}
+                    activeOpacity={0.7}
+                  >
+                    <View
+                      style={[
+                        styles.quickStatIconContainer,
+                        stat.iconBgStyle === 'shopping' && styles.quickStatIconShopping,
+                        stat.iconBgStyle === 'recipes' && styles.quickStatIconRecipes,
+                        stat.iconBgStyle === 'usage' && styles.quickStatIconUsage,
+                      ]}
+                    >
+                      <Ionicons
+                        name={stat.icon}
+                        size={20}
+                        color={
+                          stat.iconBgStyle === 'shopping'
+                            ? colors.primary
+                            : stat.iconBgStyle === 'recipes'
+                              ? colors.secondary
+                              : colors.textSecondary
+                        }
+                      />
+                    </View>
+                    <Text style={styles.quickStatLabel}>{stat.label}</Text>
+                    <View style={styles.quickStatValueRow}>
+                      <Text style={styles.quickStatValue}>{stat.value}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </View>
 
-          {/* Right Column - Widgets Grid */}
+          {/* Right column: Important Chores */}
           <View style={[styles.rightColumn, !isTablet && styles.fullWidthColumn]}>
-            <View style={[styles.widgetsRow, !isTablet && styles.widgetsColumnPhone]}>
-              <TouchableOpacity
-                ref={shoppingButtonRef}
-                style={[styles.widgetCard, !isTablet && styles.widgetCardPhone]}
-                onPress={() => {
-                  shoppingButtonRef.current?.measureInWindow((x, y, width, height) => {
-                    onOpenShoppingModal({ x, y, width, height });
-                  });
-                }}
-                activeOpacity={0.8}
-              >
-                <View style={styles.widgetIconContainer}>
-                  <Ionicons name="basket-outline" size={34} color={colors.textSecondary} />
+            <View style={styles.choresCard}>
+              <View style={styles.choresSectionHeader}>
+                <View style={styles.choresTitleBlock}>
+                  <Text style={styles.choresSectionTitle}>Important Chores</Text>
+                  <Text style={styles.choresSectionSubtitle}>
+                    Assignments for the house
+                  </Text>
                 </View>
-                <Text style={[styles.widgetLabel, !isTablet && styles.widgetLabelPhone]} numberOfLines={3}>Add to Shopping List</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onNavigateToTab('Chores')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.viewAllLink}>View All</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.choreList}>
+                {!choresLoading &&
+                  todayChores.map((chore) => (
+                    <TouchableOpacity
+                      key={chore.id}
+                      style={[
+                        styles.choreRow,
+                        chore.completed && styles.choreRowDone,
+                        { backgroundColor: getChoreRowBackground(chore.completed) },
+                      ]}
+                      onPress={() => toggleChore(chore.id)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.choreAvatarContainer}>
+                        <SafeImage
+                          uri={getAvatarUri(chore.assignee)}
+                          style={styles.choreAvatar}
+                        />
+                      </View>
+                      <View style={styles.choreContent}>
+                        <View style={styles.choreTitleRow}>
+                          <Text
+                            style={[
+                              styles.choreTitle,
+                              chore.completed && styles.choreTitleDone,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {chore.name}
+                          </Text>
+                          <View
+                            style={[
+                              styles.choreStatusBadge,
+                              chore.completed
+                                ? styles.choreStatusDone
+                                : styles.choreStatusPending,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.choreStatusBadgeText,
+                                chore.completed && styles.choreStatusBadgeTextDone,
+                              ]}
+                            >
+                              {chore.completed ? 'Done' : 'Pending'}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.choreMetaRow}>
+                          <Text style={styles.choreMetaText}>
+                            {chore.assignee ?? 'Unassigned'}
+                          </Text>
+                          <View style={styles.choreMetaDot} />
+                          <Text style={styles.choreMetaText}>
+                            {chore.dueDate}
+                            {chore.dueTime ? ` · ${chore.dueTime}` : ''}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+              </View>
 
               <TouchableOpacity
-                style={[styles.widgetCard, !isTablet && styles.widgetCardPhone]}
+                style={styles.addHouseholdTaskButton}
                 onPress={onOpenChoresModal}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
               >
-                <View style={styles.widgetIconContainer}>
-                  <Ionicons name="clipboard-outline" size={34} color={colors.textSecondary} />
-                </View>
-                <Text style={[styles.widgetLabel, !isTablet && styles.widgetLabelPhone]} numberOfLines={3}>Add New Chore</Text>
+                <Ionicons name="add" size={16} color={colors.textMuted} />
+                <Text style={styles.addHouseholdTaskText}>Add Household Task</Text>
               </TouchableOpacity>
             </View>
           </View>
