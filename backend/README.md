@@ -605,8 +605,7 @@ backend/
 │   │       └── supabase.module.ts
 │   │
 │   ├── domain/                      # Domain models (if needed)
-│   ├── health/                     # Health check endpoints
-│   ├── jobs/                       # Background jobs
+│   ├── jobs/                        # Background jobs
 │   │   ├── notifications.processor.ts
 │   │   └── sync.processor.ts
 │   └── tests/                      # Test utilities

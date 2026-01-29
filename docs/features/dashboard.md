@@ -1,5 +1,7 @@
 # Dashboard Feature
 
+**Exports** (from `mobile/src/features/dashboard/index.ts`): `DashboardScreen`, `useDashboardChores`, `UseDashboardChoresReturn`.
+
 ## Overview
 
 The Dashboard feature serves as the home screen of Kitchen Hub, providing users with a quick overview of their household management tasks and quick-action widgets. It displays a header with clock and date, an "Add to Shopping List" card with search and suggested items, quick stat cards (Shopping Lists, Saved Recipes), and an "Important Chores" section with today's chores. No separate greeting section is shown.
@@ -69,7 +71,7 @@ const formattedDate = formatDateForDisplay(currentTime);
 - **File**: `mobile/src/features/dashboard/hooks/useDashboardChores.ts`
 - **Purpose**: Load today's chores and toggle completion for the dashboard. Uses the same data source as ChoresScreen: signed-in uses `CacheAwareChoreRepository` and `useCachedEntities('chores')`; guest uses `createChoresService('guest')` and local state. Today's list is filtered by `section === 'today'` (filterTodayChores).
 - **Returns**: Exported as `UseDashboardChoresReturn`: `{ todayChores, toggleChore, isLoading }`
-- **Data mode**: `determineUserDataMode(user)` and `config.mockData.enabled` drive `userMode`; `createChoresService(userMode)` and (when signed-in) `CacheAwareChoreRepository` are used internally.
+- **Data mode**: `determineUserDataMode(user)` and `config.mockData.enabled` drive `userMode`; `createChoresService(userMode)` and (when signed-in) `CacheAwareChoreRepository` are used internally. Today's list is filtered by `section === 'today'` via internal `filterTodayChores(chores)`.
 
 ## Components
 
