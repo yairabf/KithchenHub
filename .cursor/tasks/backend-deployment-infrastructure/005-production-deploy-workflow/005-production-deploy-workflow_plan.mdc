@@ -15,9 +15,9 @@ Create a production deployment workflow (`.github/workflows/deploy-production.ym
 1. **Reusable Deployment Workflow**:
    - `_deploy.yml` exists and fully supports production environment
    - Accepts `environment=production` input
-   - Supports multiple deployment targets (render, aws-ecs, gcp-cloudrun)
+   - Supports multiple deployment targets (aws-ecs, gcp-cloudrun)
    - Handles database migrations, deployment, and health checks
-   - Production secrets already defined: `RENDER_DEPLOY_HOOK_URL_PRODUCTION`, `PROD_DATABASE_URL`, `PROD_DIRECT_URL`
+   - Production secrets: GCP Cloud Run (GCP_PROJECT_ID, GCP_REGION, GCP_CLOUD_RUN_SERVICE, GCP_SA_KEY), `PROD_DATABASE_URL`, `PROD_DIRECT_URL`
 
 2. **Build Workflow**:
    - `build.yml` builds and pushes Docker images to GHCR for `main` branch
@@ -33,7 +33,7 @@ Create a production deployment workflow (`.github/workflows/deploy-production.ym
 4. **Documentation**:
    - `backend/DEPLOYMENT.md` documents deployment process
    - Production secrets documented
-   - Render deploy hooks documented
+   - GCP Cloud Run deployment documented
 
 ### What's Missing ❌
 
@@ -95,7 +95,7 @@ graph LR
 
 **Configuration:**
 - `environment`: `production`
-- `deploy_target`: `render` (configurable, matches staging pattern)
+- `deploy_target`: `gcp-cloudrun` (configurable, matches staging pattern)
 - `image_tag`: `main-latest` (matches build.yml tagging)
 - `service_url`: Production service URL for health checks
 
@@ -170,9 +170,9 @@ graph LR
 
 **Required GitHub Secrets:**
 
-1. **`RENDER_DEPLOY_HOOK_URL_PRODUCTION`**:
-   - Render deploy hook URL for production service
-   - Get from Render Dashboard → Production Service → Settings → Deploy Hook
+1. **GCP Cloud Run** (see backend/DEPLOYMENT.md):
+   - `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE`, `GCP_SA_KEY` for production Cloud Run service
+   - Get from GCP Console → Cloud Run; service account key from IAM
 
 2. **`PROD_DATABASE_URL`** (for migrations):
    - Production database connection URL (pooled)
@@ -235,8 +235,8 @@ Both workflows should include concurrency control:
    - Verify approval prompt appears in GitHub Actions
    - Approve deployment
    - Verify it calls `_deploy.yml` with correct inputs
-   - Verify Render deployment is triggered
-   - Check Render dashboard for deployment status
+   - Verify Cloud Run deployment is triggered
+   - Check GCP Cloud Run console for deployment status
 
 2. **Test Manual Dispatch**:
    - Go to Actions → Deploy to Production
@@ -269,7 +269,7 @@ Both workflows should include concurrency control:
 - [ ] GitHub Environment "production" is configured with required reviewers
 - [ ] Deployment branches restricted to `main`
 - [ ] Approval prompt appears before deployment
-- [ ] Render deployment is triggered successfully
+- [ ] GCP Cloud Run deployment is triggered successfully
 - [ ] Secrets are properly configured
 - [ ] Concurrency control prevents duplicate deployments
 - [ ] Error handling provides clear feedback
@@ -279,13 +279,13 @@ Both workflows should include concurrency control:
 
 1. ✅ `.github/workflows/deploy-production.yml` exists and triggers on `main`
 2. ✅ Workflow supports manual dispatch with optional `image_tag` input
-3. ✅ Workflow calls `_deploy.yml` with `environment=production` and `deploy_target=render`
+3. ✅ Workflow calls `_deploy.yml` with `environment=production` and `deploy_target=gcp-cloudrun`
 4. ✅ Job references GitHub Environment "production" for approval protection
 5. ✅ GitHub Environment "production" configured with required reviewers
 6. ✅ Deployment branches restricted to `main` branch
 7. ✅ Manual approval prompt appears before deployment proceeds
 8. ✅ Production secrets are properly configured
-9. ✅ Render deployment is triggered successfully via deploy hook
+9. ✅ GCP Cloud Run deployment completes successfully
 10. ✅ Health checks work (if `service_url` is configured)
 11. ✅ Concurrency control prevents duplicate deployments
 12. ✅ Documentation is updated with production deployment process
