@@ -27,6 +27,24 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  /**
+   * Logging configuration
+   */
+  LOG_LEVEL: z
+    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
+    .default('info'),
+  LOG_FORMAT: z.enum(['json', 'pretty']).default('json'),
+  /**
+   * Sentry error tracking (optional)
+   */
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_ENVIRONMENT: z.string().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().min(0).max(1))
+    .optional()
+    .default('0.1'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

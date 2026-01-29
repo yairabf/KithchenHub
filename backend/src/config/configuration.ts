@@ -16,6 +16,15 @@ export interface AppConfig {
     clientId?: string;
     clientSecret?: string;
   };
+  logging: {
+    level: string;
+    format: 'json' | 'pretty';
+  };
+  sentry?: {
+    dsn?: string;
+    environment?: string;
+    tracesSampleRate: number;
+  };
 }
 
 let config: AppConfig | null = null;
@@ -48,6 +57,17 @@ export const loadConfiguration = (): AppConfig => {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
+    logging: {
+      level: env.LOG_LEVEL,
+      format: env.LOG_FORMAT,
+    },
+    sentry: env.SENTRY_DSN
+      ? {
+          dsn: env.SENTRY_DSN,
+          environment: env.SENTRY_ENVIRONMENT || env.NODE_ENV,
+          tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
+        }
+      : undefined,
   };
 
   return config;

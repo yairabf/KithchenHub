@@ -77,6 +77,11 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
   - Deploys to Cloud Run via `gcloud run deploy`
   - Supports optional health checks
   - See [Deployment Guide](./DEPLOYMENT.md#automated-production-deployment) for setup instructions
+- **Comprehensive Deployment Documentation**: Complete guides for deployment, rollback, and platform migration
+  - **[Comprehensive Deployment Guide](./docs/DEPLOYMENT_COMPREHENSIVE.md)**: Complete deployment procedures for GCP Cloud Run and AWS ECS/Fargate
+  - **[Rollback Guide](./docs/ROLLBACK_GUIDE.md)**: Detailed rollback procedures for all platforms
+  - **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)**: Complete checklist for all environments and platforms
+  - **[Platform Migration Guide](./docs/PLATFORM_MIGRATION.md)**: Step-by-step migration between GCP Cloud Run and AWS ECS/Fargate
 - **Swagger Documentation**: Interactive API docs at `/api/docs/v1`
 - **API Versioning**: URI-based versioning (`/api/v1`, `/api/v2`, etc.)
 - **Version Discovery**: `GET /api/version` endpoint for version information
@@ -982,11 +987,28 @@ The backend API is designed to work seamlessly with the [Kitchen Hub Mobile App]
 - **Sync**: Mobile app uses `/auth/sync` endpoint for offline data synchronization
 - **Offline Support**: Mobile app caches data locally and syncs when online
 
+## Monitoring
+
+The API includes comprehensive monitoring capabilities:
+
+- **Health Check Endpoints**: `/api/health`, `/api/health/ready`, `/api/health/live`, `/api/health/detailed`
+- **Structured Logging**: JSON-formatted logs for log aggregation
+- **Error Tracking**: Sentry integration (optional)
+- **Request Correlation**: Automatic request ID generation and tracking
+
+See [Monitoring Setup Guide](./docs/MONITORING_SETUP.md) for detailed setup instructions.
+
 ## Documentation
 
 - **[Root README](../README.md)** - Monorepo overview
 - **[Mobile App](../mobile/README.md)** - Mobile application documentation
-- **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment instructions with GHCR
+- **[Deployment Guide](./DEPLOYMENT.md)** - Quick start deployment guide
+- **[Comprehensive Deployment Guide](./docs/DEPLOYMENT_COMPREHENSIVE.md)** - Complete deployment procedures for all platforms
+- **[Rollback Guide](./docs/ROLLBACK_GUIDE.md)** - Detailed rollback procedures
+- **[Monitoring Setup Guide](./docs/MONITORING_SETUP.md)** - Monitoring and observability setup
+- **[Logging Guide](./docs/LOGGING_GUIDE.md)** - Structured logging best practices
+- **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)** - Complete environment variable checklist
+- **[Platform Migration Guide](./docs/PLATFORM_MIGRATION.md)** - Migration between platforms
 - **[GHCR Quick Reference](./docs/GHCR_QUICK_REFERENCE.md)** - Quick reference for GitHub Container Registry
 - **[Detailed Docs](../README-DETAILED.md)** - Comprehensive project documentation
 - **[CLAUDE.md](../CLAUDE.md)** - AI assistant development guidance

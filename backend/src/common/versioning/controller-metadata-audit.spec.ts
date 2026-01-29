@@ -13,6 +13,7 @@ import * as path from 'path';
 describe('Controller Metadata Audit', () => {
   const ALLOWLISTED_CONTROLLERS = [
     'VersionController', // /api/version is intentionally unversioned
+    'HealthController', // /api/health is intentionally unversioned
   ];
 
   /**
@@ -144,7 +145,7 @@ describe('Controller Metadata Audit', () => {
           `  - ${v.className} in ${v.file}${v.path ? ` (path: ${v.path})` : ''}`,
       );
 
-      fail(
+      throw new Error(
         `Found ${violations.length} controller(s) without version metadata:\n${violationMessages.join('\n')}\n\n` +
           'All controllers must use @Controller({ path: "...", version: "1" }) format.\n' +
           `Exception: ${ALLOWLISTED_CONTROLLERS.join(', ')} can be unversioned.`,
@@ -185,7 +186,7 @@ describe('Controller Metadata Audit', () => {
         (v) => `  - ${v.className} in ${v.file} (version: ${v.version})`,
       );
 
-      fail(
+      throw new Error(
         `Found ${invalidVersions.length} controller(s) with invalid version numbers:\n${violationMessages.join('\n')}\n\n` +
           'Version must be a positive integer (e.g., "1", "2", "3").',
       );

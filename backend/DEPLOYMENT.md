@@ -2,6 +2,16 @@
 
 This guide covers deploying the Kitchen Hub backend API to production.
 
+> **📚 Comprehensive Documentation Available**: For detailed deployment procedures, rollback steps, environment variable checklists, and platform migration guides, see the [comprehensive deployment documentation](./docs/DEPLOYMENT_COMPREHENSIVE.md).
+
+## Quick Links
+
+- **[Comprehensive Deployment Guide](./docs/DEPLOYMENT_COMPREHENSIVE.md)**: Complete deployment procedures for all platforms
+- **[Rollback Guide](./docs/ROLLBACK_GUIDE.md)**: Detailed rollback procedures for GCP Cloud Run and AWS ECS
+- **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)**: Complete checklist for all environments
+- **[Platform Migration Guide](./docs/PLATFORM_MIGRATION.md)**: Step-by-step migration between platforms
+- **[Database Migrations](./docs/MIGRATIONS.md)**: Database migration and rollback procedures
+
 ## Prerequisites
 
 - ✅ Production Dockerfile (already exists)

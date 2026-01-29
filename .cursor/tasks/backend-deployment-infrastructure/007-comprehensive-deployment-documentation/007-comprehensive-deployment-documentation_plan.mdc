@@ -1,0 +1,80 @@
+# 007 - Comprehensive Deployment Documentation
+
+**Epic:** Backend Deployment Infrastructure  
+**Created:** 2026-01-29  
+**Status:** Completed
+
+## Overview
+
+Create comprehensive deployment documentation covering deploy process, rollback steps, environment variable checklist, and migration guides for AWS ECS/Fargate and GCP Cloud Run with minimal workflow changes.
+
+## Current Status Analysis
+
+### ✅ What's Already Implemented
+
+1. **Deployment Infrastructure:**
+   - Production Dockerfile with multi-stage builds
+   - GitHub Actions build workflow (`build.yml`) that builds and pushes to GHCR
+   - Reusable deployment workflow (`_deploy.yml`) supporting both GCP Cloud Run and AWS ECS
+   - Staging deployment workflow (`deploy-staging.yml`) for GCP Cloud Run
+   - Production deployment workflow (`deploy-production.yml`) with manual approval
+
+2. **Documentation:**
+   - `backend/DEPLOYMENT.md` - Basic deployment guide with GCP Cloud Run setup
+   - `backend/docs/MIGRATIONS.md` - Database migration and rollback procedures
+   - `backend/ENV_SETUP_GUIDE.md` - Environment variable setup for local development
+   - `backend/.env.production.example` - Production environment variable template
+
+3. **Rollback Support:**
+   - Application rollback procedures documented (basic)
+   - Database rollback procedures documented (platform-specific)
+   - Prisma migration resolve documented
+
+### ❌ What's Missing
+
+1. **Comprehensive Deployment Documentation:**
+   - Consolidated deploy process documentation
+   - Step-by-step rollback procedures for each platform (GCP Cloud Run, AWS ECS/Fargate)
+   - Complete environment variable checklist for all scenarios
+   - Migration guide from GCP Cloud Run to AWS ECS/Fargate
+   - Migration guide from AWS ECS to GCP Cloud Run
+   - Platform comparison and decision guide
+
+2. **Rollback Procedures:**
+   - Detailed step-by-step rollback for GCP Cloud Run (revision management)
+   - Detailed step-by-step rollback for AWS ECS (task definition rollback)
+   - Automated rollback workflows
+   - Rollback verification procedures
+
+3. **Environment Variable Management:**
+   - Complete checklist for staging environment
+   - Complete checklist for production environment
+   - Platform-specific environment variable setup (GCP Cloud Run vs AWS ECS)
+   - Secrets management best practices
+   - Environment variable validation checklist
+
+4. **Migration Guides:**
+   - Step-by-step migration from GCP Cloud Run to AWS ECS/Fargate
+   - Step-by-step migration from AWS ECS to GCP Cloud Run
+   - Minimal workflow changes during migration
+   - Testing procedures during migration
+   - Rollback plan during migration
+
+## Implementation Plan
+
+### Phase 1: Comprehensive Deployment Guide (`DEPLOYMENT_COMPREHENSIVE.md`)
+### Phase 2: Rollback Guide (`ROLLBACK_GUIDE.md`)
+### Phase 3: Environment Variable Checklist (`ENV_VAR_CHECKLIST.md`)
+### Phase 4: Platform Migration Guide (`PLATFORM_MIGRATION.md`)
+
+## Files to Create
+
+1. `backend/docs/DEPLOYMENT_COMPREHENSIVE.md` - Main comprehensive deployment guide
+2. `backend/docs/ROLLBACK_GUIDE.md` - Detailed rollback procedures
+3. `backend/docs/ENV_VAR_CHECKLIST.md` - Complete environment variable checklist
+4. `backend/docs/PLATFORM_MIGRATION.md` - Platform migration guide
+
+## Files to Update
+
+1. `backend/DEPLOYMENT.md` - Add references to comprehensive documentation
+2. `backend/README.md` - Update deployment section with links to new docs
