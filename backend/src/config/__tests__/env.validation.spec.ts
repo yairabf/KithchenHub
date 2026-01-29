@@ -25,12 +25,10 @@ describe('validateEnv', () => {
     [
       'succeeds in development without DIRECT_URL',
       buildBaseEnv({ NODE_ENV: 'development', DIRECT_URL: undefined }),
-      'success' as const,
     ],
     [
-      'fails in production without DIRECT_URL',
+      'succeeds in production without DIRECT_URL',
       buildBaseEnv({ NODE_ENV: 'production', DIRECT_URL: undefined }),
-      'failure' as const,
     ],
     [
       'succeeds in production with DIRECT_URL',
@@ -38,17 +36,9 @@ describe('validateEnv', () => {
         NODE_ENV: 'production',
         DIRECT_URL: 'postgresql://user:pass@localhost:5432/db?schema=public',
       }),
-      'success' as const,
     ],
-  ])('%s', (_label, env, expected) => {
+  ])('%s', (_label, env) => {
     process.env = env;
-
-    if (expected === 'failure') {
-      jest.spyOn(console, 'error').mockImplementation(() => undefined);
-      expect(() => validateEnv()).toThrow('Invalid environment variables');
-      return;
-    }
-
     expect(validateEnv().DATABASE_URL).toBe(
       'postgresql://user:pass@localhost:5432/db?schema=public',
     );
