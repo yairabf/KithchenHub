@@ -82,6 +82,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
   - **[Rollback Guide](./docs/ROLLBACK_GUIDE.md)**: Detailed rollback procedures for all platforms
   - **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)**: Complete checklist for all environments and platforms
   - **[Platform Migration Guide](./docs/PLATFORM_MIGRATION.md)**: Step-by-step migration between GCP Cloud Run and AWS ECS/Fargate
+- **Local Staging Verification**: Optional `docker-compose.staging.yml` and `verify-staging.sh` for running a staging-like stack locally (Postgres + API), running migrations, and smoke-testing `/api/version` and `/api/docs/v1`. Requires `.env.staging`. See [Deployment Guide](./DEPLOYMENT.md) for CI/CD staging; run `./verify-staging.sh` from `backend/` for local verification.
 - **Swagger Documentation**: Interactive API docs at `/api/docs/v1`
 - **API Versioning**: URI-based versioning (`/api/v1`, `/api/v2`, etc.)
 - **Version Discovery**: `GET /api/version` endpoint for version information
@@ -589,6 +590,10 @@ backend/
 │   │   │   ├── repositories/       # ImportRepository
 │   │   │   ├── dto/                # Import DTOs
 │   │   │   └── import.module.ts
+│   │   ├── health/                 # Health and version discovery
+│   │   │   ├── controllers/        # HealthController, VersionController (/api/health, /api/version)
+│   │   │   ├── services/           # HealthService
+│   │   │   └── health.module.ts
 │   │   └── supabase/               # Supabase client service (global)
 │   │       ├── services/           # SupabaseService
 │   │       └── supabase.module.ts
@@ -1005,11 +1010,13 @@ See [Monitoring Setup Guide](./docs/MONITORING_SETUP.md) for detailed setup inst
 - **[Deployment Guide](./DEPLOYMENT.md)** - Quick start deployment guide
 - **[Comprehensive Deployment Guide](./docs/DEPLOYMENT_COMPREHENSIVE.md)** - Complete deployment procedures for all platforms
 - **[Rollback Guide](./docs/ROLLBACK_GUIDE.md)** - Detailed rollback procedures
+- **[Sync API Quick Reference](./docs/SYNC_API_QUICK_REFERENCE.md)** - Quick reference for sync API terminology, contract, and common issues
 - **[Monitoring Setup Guide](./docs/MONITORING_SETUP.md)** - Monitoring and observability setup
 - **[Logging Guide](./docs/LOGGING_GUIDE.md)** - Structured logging best practices
 - **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)** - Complete environment variable checklist
 - **[Platform Migration Guide](./docs/PLATFORM_MIGRATION.md)** - Migration between platforms
 - **[GHCR Quick Reference](./docs/GHCR_QUICK_REFERENCE.md)** - Quick reference for GitHub Container Registry
+- **[Backend Docs Index](./docs/README_DOCS.md)** - Documentation index and recommended reading order
 - **[Detailed Docs](../README-DETAILED.md)** - Comprehensive project documentation
 - **[CLAUDE.md](../CLAUDE.md)** - AI assistant development guidance
 
