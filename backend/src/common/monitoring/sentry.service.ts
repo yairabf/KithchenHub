@@ -45,10 +45,7 @@ export class SentryService implements OnModuleInit {
         dsn: this.config.sentry.dsn,
         environment: this.config.sentry.environment || this.config.env,
         tracesSampleRate: this.config.sentry.tracesSampleRate,
-        integrations: [
-          // Enable HTTP request tracing
-          new Sentry.Integrations.Http({ tracing: true }),
-        ],
+        // HTTP request tracing is automatically enabled in Sentry v8
         // Filter out health check endpoints from performance monitoring
         ignoreTransactions: ['GET /api/health', 'GET /api/health/live'],
       });

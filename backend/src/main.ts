@@ -22,10 +22,7 @@ function initializeSentry(config: ReturnType<typeof loadConfiguration>): void {
       dsn: config.sentry.dsn,
       environment: config.sentry.environment || config.env,
       tracesSampleRate: config.sentry.tracesSampleRate,
-      integrations: [
-        // Enable HTTP request tracing
-        new Sentry.Integrations.Http({ tracing: true }),
-      ],
+      // HTTP request tracing is automatically enabled in Sentry v8
       // Filter out health check endpoints from performance monitoring
       ignoreTransactions: ['GET /api/health', 'GET /api/health/live'],
     });

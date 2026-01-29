@@ -9,7 +9,7 @@
     "schema": "src/infrastructure/database/prisma/schema.prisma"
   },
   "scripts": {
-    "build": "nest build",
+    "build": "nest build --tsc -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
