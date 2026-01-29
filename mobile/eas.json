@@ -5,15 +5,19 @@
   "build": {
     "preview": {
       "distribution": "internal",
-      "channel": "preview",
+      "channel": "develop",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "distribution": "store",
-      "channel": "production",
-      "autoIncrement": true
+      "channel": "main",
+      "autoIncrement": true,
+      "credentialsSource": "remote",
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   }
 }

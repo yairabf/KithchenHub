@@ -1,5 +1,9 @@
 # Shopping Feature
 
+**Exports** (from `mobile/src/features/shopping/index.ts`): `ShoppingListsScreen`, `CategoryModal`, `AllItemsModal`, `ShoppingQuickActionModal`, `GrocerySearchBar`, `GroceryItem` (type from GrocerySearchBar).
+
+**Source**: `mobile/src/features/shopping/` — 1 screen (ShoppingListsScreen), 7 components (ShoppingListPanel, GrocerySearchBar, CategoriesGrid, FrequentlyAddedGrid, CategoryModal, AllItemsModal, ShoppingQuickActionModal), hooks (useShoppingRealtime), services, utils.
+
 ## Overview
 
 The Shopping feature provides comprehensive shopping list management with the ability to create multiple lists, browse groceries by category, search and add items, and track quantities. It's the most complex feature in the app with multiple components and modals.

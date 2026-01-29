@@ -1,0 +1,33 @@
+# 001 - Expo Update Channels (develop / main) - Implementation Summary
+
+**Epic:** environments-and-channels
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **.cursor/tasks/environments-and-channels/001-expo-update-channels-develop-main/:** Task directory with `001-expo-update-channels-develop-main_plan.mdc` (plan and deep research) and this summary.
+- **mobile/eas.json:** Set `build.preview.channel` to `"develop"` and `build.production.channel` to `"main"`. Profile names (preview, production), distribution, and autoIncrement unchanged.
+- **mobile/README.md:** Added "OTA update channels" subsection under OTA Updates (table: develop = staging/testing, main = production; which profile uses which channel; reference to docs/OTA_CHANNELS.md). Updated EAS Build table to show channels develop and main. Updated verify:eas description to mention channel names.
+- **mobile/docs/OTA_CHANNELS.md:** New doc with channel summary, one-time channel/branch setup (`eas channel:create develop`, `eas channel:create main`, link branches in dashboard), and how to publish updates (`eas update --branch develop`, `eas update --branch main`).
+- **mobile/scripts/verify-eas-config.sh:** Extended Node inline script to assert `build.preview.channel === "develop"` and `build.production.channel === "main"`. Updated header comment and success message.
+- **.cursor/rules/eas_update_channels_rule.mdc:** New rule (globs: mobile/eas.json) locking channel names to develop (staging) and main (production); states that changing them requires explicit approval.
+
+## Deviations from Plan
+
+- None. All steps implemented as specified, including optional Cursor rule and optional OTA_CHANNELS.md.
+
+## Testing Results
+
+- **npm run verify:eas:** Passes from mobile directory; output includes "channels develop (preview) and main (production)".
+- **eas.json:** Valid JSON; preview.channel and production.channel are develop and main.
+
+## Lessons Learned
+
+- Keeping profile names (preview, production) and only changing channel values preserves backward compatibility for CI and docs that reference profile names.
+- Verification script prevents accidental channel renames; Cursor rule reinforces the policy for AI and humans.
+
+## Next Steps
+
+- One-time: Run `eas channel:create develop` and `eas channel:create main` from mobile directory (if not already created); link channels to branches in Expo dashboard per mobile/docs/OTA_CHANNELS.md.
+- Optional: Wire `npm run verify:eas` into CI when building or releasing mobile.

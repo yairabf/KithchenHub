@@ -360,6 +360,7 @@ To verify that Row Level Security is correctly isolating data between households
 ### Base URL
 - **API**: `http://localhost:3000/api/v1`
 - **Swagger Docs**: `http://localhost:3000/api/docs/v1`
+- **Version discovery**: `http://localhost:3000/api/version` (unversioned; use to discover supported API versions)
 
 ### Authentication Endpoints
 
@@ -566,7 +567,7 @@ backend/
 │   │   │   ├── dtos/               # Household DTOs
 │   │   │   └── households.module.ts
 │   │   ├── shopping/               # Shopping lists and items
-│   │   │   ├── controllers/        # ShoppingController, GroceriesController
+│   │   │   ├── controllers/        # GroceriesController, ShoppingListsController, ShoppingItemsController (shopping.controller.ts)
 │   │   │   ├── services/           # ShoppingService
 │   │   │   ├── repositories/       # ShoppingRepository
 │   │   │   ├── dtos/               # Shopping DTOs
@@ -605,8 +606,7 @@ backend/
 │   │       └── supabase.module.ts
 │   │
 │   ├── domain/                      # Domain models (if needed)
-│   ├── health/                     # Health check endpoints
-│   ├── jobs/                       # Background jobs
+│   ├── jobs/                        # Background jobs
 │   │   ├── notifications.processor.ts
 │   │   └── sync.processor.ts
 │   └── tests/                      # Test utilities

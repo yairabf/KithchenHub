@@ -1,0 +1,46 @@
+# 002 - Staging (Preview) Build Profiles – Implementation Summary
+
+**Epic:** environments-and-channels
+**Task:** 002-staging-preview-build-profiles
+**Completed:** 2026-01-29
+**Status:** Completed
+
+## What Was Implemented
+
+- **Task directory:** `.cursor/tasks/environments-and-channels/002-staging-preview-build-profiles/` with `002-staging-preview-build-profiles_plan.mdc` and this summary.
+- **EAS config validation** ([mobile/scripts/validate-eas-config.js](mobile/scripts/validate-eas-config.js)): Added checks for `build.preview.distribution === "internal"` and `build.preview.android.buildType === "apk"`; updated JSDoc and success log. Updated [mobile/scripts/verify-eas-config.sh](mobile/scripts/verify-eas-config.sh) header comment to mention preview distribution and Android APK.
+- **Unit tests** ([mobile/scripts/__tests__/validate-eas-config.test.js](mobile/scripts/__tests__/validate-eas-config.test.js)): Added parameterized cases for "preview distribution not internal" and "preview android buildType not apk". All 12 tests pass.
+- **Documentation:**
+  - **README:** EAS Build section now states that the **preview** profile is the staging build profile; added subsection **Internal distribution (preview builds)** with Android (APK via URL/QR) and iOS (`eas device:create` then install via link), plus link to [Expo Internal distribution](https://docs.expo.dev/build/internal-distribution/). Updated verify:eas description to include preview distribution and APK.
+  - **OTA_CHANNELS.md:** Added subsection **Installing preview builds on real devices** (Android APK via build page/QR; iOS device registration with `eas device:create`, then install from build URL) and reference to Expo docs and README.
+- **Cursor rule** ([.cursor/rules/eas_update_channels_rule.mdc](.cursor/rules/eas_update_channels_rule.mdc)): Extended to lock preview profile: do not change `build.preview.distribution` from `"internal"` or `build.preview.android.buildType` from `"apk"` without explicit approval. Rule description updated; title set to "EAS Update Channels and Preview Profile (Locked)".
+
+## Deviations from Plan
+
+- None. All steps implemented as specified. Chose to extend the existing `eas_update_channels_rule.mdc` rather than create a separate rule, to keep a single source of truth for `mobile/eas.json` constraints.
+
+## Testing Results
+
+- **npm run verify:eas:** Passes from mobile directory; output includes "preview internal distribution and Android APK" and channel names.
+- **Unit tests:** All 12 tests in `validate-eas-config.test.js` pass, including the two new cases for invalid distribution and invalid Android buildType.
+- **Validation behavior:** Removing `distribution: "internal"` or setting `android.buildType` to `"app-bundle"` causes `npm run verify:eas` to fail with the expected error messages.
+
+## Code Review (Auto Code Review)
+
+- **Correctness:** Validation logic and optional chaining are correct; missing or wrong preview distribution/APK are caught.
+- **Architecture:** Single responsibility preserved; validation script remains focused on eas.json requirements.
+- **Readability:** Error messages and comments are clear and self-explanatory.
+- **Testing:** New cases are parameterized and cover the added validation rules.
+- **Compliance:** Matches project coding rules (descriptive names, parameterized tests, no unnecessary complexity).
+- **Recommendation:** Approve.
+
+## Lessons Learned
+
+- Extending the existing EAS channels rule (rather than adding a second rule for eas.json) keeps all eas.json constraints in one place and avoids overlapping globs.
+- Validating both distribution and Android buildType in the same script ensures that CI and local `npm run verify:eas` catch regressions before builds are triggered.
+
+## Next Steps
+
+- One-time: Ensure EAS channels **develop** and **main** exist and are linked to branches per [mobile/docs/OTA_CHANNELS.md](mobile/docs/OTA_CHANNELS.md) if not already done.
+- Optional: Wire `npm run verify:eas` into CI when building or releasing the mobile app.
+- For iOS internal installs: Register test devices with `eas device:create` before building; new devices require a new preview build to be added to the ad hoc profile.

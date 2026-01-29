@@ -1,0 +1,72 @@
+# 003 - Production Build Profiles (App Store / Google Play)
+
+**Epic:** environments-and-channels
+**Task:** 003-production-build-profiles
+**Created:** 2026-01-29
+**Status:** Planning
+
+## Overview
+
+Configure and lock the production EAS build profile for App Store and Google Play submissions: make credentials and Android AAB explicit, add validation and documentation, and extend the Cursor rule. The production profile already has distribution store, channel main, and autoIncrement; this task fills gaps in validation, explicitness, and docs.
+
+## 1. Deep research: current status
+
+### Already implemented
+
+| Item | Location | Details |
+|------|----------|---------|
+| **Production profile** | mobile/eas.json | `distribution: "store"`, `channel: "main"`, `autoIncrement: true`. No `credentialsSource` or platform overrides. |
+| **Channel and OTA** | Task 001 | Production uses channel **main**; validated by validate-eas-config.js (`build.production.channel === "main"`). |
+| **Version and build numbers** | eas.json, version.json, app.config.js | `cli.appVersionSource: "remote"`; production `autoIncrement: true`; version from repo root version.json. Validated. |
+| **App identifiers** | app_identifiers_rule.mdc | Locked to `com.kitchenhub.app` for all environments. |
+| **Channel rule** | eas_update_channels_rule.mdc | Locks preview channel/distribution/APK and production channel **main**; does not lock production distribution or Android buildType. |
+| **Docs** | mobile/README.md, mobile/docs/OTA_CHANNELS.md | EAS Build table lists production as store/main; no dedicated "Production build profile" or "Store submission" section. |
+
+**EAS defaults:** credentialsSource defaults to "remote"; Android store defaults to AAB; iOS store uses App Store provisioning.
+
+### Gaps (what is missing)
+
+| Gap | Description |
+|-----|-------------|
+| **No validation of production distribution / Android AAB** | validate-eas-config.js does not assert `build.production.distribution === "store"` or production Android `buildType === "app-bundle"`. |
+| **Production config not explicit** | credentialsSource and production android.buildType are implied by EAS defaults. Making them explicit clarifies intent and allows validation. |
+| **No doc for production builds and store submission** | README/OTA_CHANNELS do not describe credentials, first-time setup, or that production must use AAB for Play. |
+| **Cursor rule does not lock production profile** | Production `distribution: "store"` and production Android AAB are not locked. |
+
+## 2. Architecture
+
+- **Production profile:** Store distribution, main channel, remote credentials, Android AAB; all validated by script and locked by Cursor rule.
+- **Credentials:** Explicit `credentialsSource: "remote"` in production.
+- **Android:** Explicit `production.android.buildType: "app-bundle"` for Google Play.
+
+## 3. Implementation steps
+
+1. Task directory: Create 003-production-build-profiles/ and save this plan.
+2. EAS config: Add credentialsSource "remote", production.android.buildType "app-bundle".
+3. Validation: Require production.distribution === "store", production.android?.buildType === "app-bundle".
+4. Unit tests: Production distribution not store; production android buildType not app-bundle; production android missing.
+5. Documentation: README "Production build profile (store submissions)" subsection; optional OTA_CHANNELS note.
+6. Cursor rule: Extend to lock production distribution and production Android app-bundle.
+7. Post-implementation: Auto-code-review; create summary.
+
+## 4. Verification
+
+- `npm run verify:eas` passes and fails on invalid production distribution or buildType.
+- README describes production profile, credentials, store submission.
+- New tests cover invalid production distribution and buildType.
+- Cursor rule locks production profile.
+
+## 5. Success criteria
+
+- Production profile explicitly configured for store, main channel, remote credentials, Android AAB.
+- Validation enforces production distribution and production Android app-bundle.
+- Documentation describes production builds and store submission.
+- Plan and summary under .cursor/tasks/environments-and-channels/003-production-build-profiles/.
+- Cursor rule locks production profile; auto-code-review applied.
+
+## 6. References
+
+- [Configure EAS Build with eas.json](https://docs.expo.dev/build/eas-json/)
+- [EAS Build schema](https://docs.expo.dev/eas/json/)
+- [Using automatically managed credentials](https://docs.expo.dev/app-signing/managed-credentials/)
+- [EAS Submit](https://docs.expo.dev/submit/introduction/)

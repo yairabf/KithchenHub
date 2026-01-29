@@ -134,6 +134,15 @@ The app is configured for Expo Updates so you can ship JavaScript-only changes w
 
 **Update URL:** The project connects to EAS via **`eas init`** (run from the `mobile` directory after logging in with `eas login`). Once linked, `app.json` gets `extra.eas.projectId` and **`app.config.js`** derives `updates.url` from it (`https://u.expo.dev/<projectId>`), so you do not need to manually replace a placeholder. **Do not ship production builds without running `eas init`**—production builds will not receive OTA updates until the project is linked. Development mode (Expo Go, `expo start`) does not use OTA updates.
 
+**OTA update channels:** EAS builds reference a channel so the correct OTA updates are delivered per environment:
+
+| Channel | Environment | Build profile | Publish updates with |
+|---------|-------------|---------------|------------------------|
+| **develop** | Staging and testing | `preview` | `eas update --branch develop` |
+| **main** | Production users | `production` | `eas update --branch main` |
+
+After one-time channel/branch setup (see [docs/OTA_CHANNELS.md](docs/OTA_CHANNELS.md)), publish staging updates to the `develop` branch and production updates to the `main` branch. Builds from `eas build --profile preview` receive updates from channel **develop**; builds from `eas build --profile production` receive updates from channel **main**.
+
 **Workflow:** Publish an update with `eas update` (after configuring EAS). Production builds will receive the new bundle on the next launch (or after error recovery, per `checkAutomatically`). Only JS/asset changes are delivered via OTA; native code changes require a new store build.
 
 **Troubleshooting:**
@@ -148,18 +157,26 @@ To verify OTA config locally (presence of `updates`, `runtimeVersion` with `appV
 
 Build configuration lives in **`eas.json`** in the mobile directory. Two profiles are defined:
 
-| Profile      | Distribution | Channel     | Use case |
-|-------------|--------------|-------------|----------|
-| **preview** | internal     | preview     | Internal testing; shareable install links (APK on Android). Run: `eas build --profile preview` |
-| **production** | store    | production  | App Store / Play Store releases. Native build numbers (Android versionCode, iOS buildNumber) auto-increment. Run: `eas build --profile production` |
+| Profile      | Distribution | Channel   | Use case |
+|-------------|--------------|-----------|----------|
+| **preview** | internal     | develop   | Staging and testing; shareable install links (APK on Android). Run: `eas build --profile preview` |
+| **production** | store    | main      | App Store / Play Store releases. Native build numbers (Android versionCode, iOS buildNumber) auto-increment. Run: `eas build --profile production` |
+
+The **preview** profile is the staging build profile. It uses internal distribution so builds are installable on real devices without going through the stores.
+
+**Internal distribution (preview builds):** Preview builds are installable on real devices via shareable EAS build URLs (or QR codes from the [Expo dashboard](https://expo.dev)). **Android:** Builds are APKs; open the build page link on the device (or scan the QR code) to download and install. **iOS:** Register test devices first with `eas device:create` (each device’s UDID must be in the ad hoc provisioning profile), then run `eas build --profile preview --platform ios` and install from the build URL. See [Expo Internal distribution](https://docs.expo.dev/build/internal-distribution/) for details.
 
 Only the **production** profile uses auto-increment for native build numbers; **preview** does not. Auto-increment prevents store submission failures from duplicate Android `versionCode` or iOS build number (see [Expo app version management](https://docs.expo.dev/build-reference/app-versions/)).
+
+### Production build profile (store submissions)
+
+The **production** profile is configured for App Store and Google Play submissions. It uses `distribution: "store"` and OTA channel **main**. Credentials are EAS-managed (`credentialsSource: "remote"`): on the first `eas build --profile production` (or when credentials are missing), EAS will prompt you to sign in with your Apple Developer and/or Google Play accounts and generate or reuse distribution certificates and provisioning profiles. **Android:** Production builds use `buildType: "app-bundle"` (AAB), which is required for Google Play. **iOS:** Production builds use App Store provisioning. To inspect or manage credentials, run `eas credentials` from the mobile directory. After building, submit to the stores manually from the [Expo dashboard](https://expo.dev) build page or via `eas submit` (see [EAS Submit](https://docs.expo.dev/submit/introduction/)). For more detail, see [Using automatically managed credentials](https://docs.expo.dev/app-signing/managed-credentials/) and [Production builds](https://docs.expo.dev/build/eas-json/#production-builds).
 
 **App version source:** `cli.appVersionSource` is set to `remote` so EAS manages build numbers; the first build initializes with 1 if not set in app config. User-facing version remains in repo root **version.json** (see OTA Updates above).
 
 **Linking the project:** Run **`eas init`** from the `mobile` directory (after `eas login`). This adds `extra.eas.projectId` to `app.json`; `app.config.js` then sets `updates.url` from it so OTA and builds work. Verify project ownership, slug (`kitchen-hub`), and linked account with **`eas project:info`** and **`eas whoami`**.
 
-To verify EAS config locally (remote app version source and production auto-increment), run `npm run verify:eas` from the mobile directory.
+To verify EAS config locally (remote app version source; production store distribution, Android app-bundle, and auto-increment; preview internal distribution and Android APK; OTA channel names develop/main), run `npm run verify:eas` from the mobile directory.
 
 ## Prerequisites
 
