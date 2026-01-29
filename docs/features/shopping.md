@@ -167,7 +167,7 @@ interface CategoriesGridProps {
 
 - **Features**:
   - Grid of category cards with images and item counts
-  - **Show more/less**: Displays up to 9 categories initially; "Show more" / "Show less" toggle reveals or collapses the rest (pill-style button with chevron)
+  - **Show more/less**: Uses `INITIAL_CATEGORIES_LIMIT = 9`; displays up to 9 categories initially; "Show more" / "Show less" toggle reveals or collapses the rest (pill-style button with chevron)
   - "See all" button for full item view
   - Category background overlays
   - **Image Validation**: Uses `isValidImageUrl()` utility to validate category images before rendering
