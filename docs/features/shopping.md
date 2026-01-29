@@ -1,6 +1,8 @@
 # Shopping Feature
 
-**Exports** (from `mobile/src/features/shopping/index.ts`): `ShoppingListsScreen`, `CategoryModal`, `AllItemsModal`, `ShoppingQuickActionModal`, `GrocerySearchBar`, `GroceryItem`.
+**Exports** (from `mobile/src/features/shopping/index.ts`): `ShoppingListsScreen`, `CategoryModal`, `AllItemsModal`, `ShoppingQuickActionModal`, `GrocerySearchBar`, `GroceryItem` (type from GrocerySearchBar).
+
+**Source**: `mobile/src/features/shopping/` — 1 screen (ShoppingListsScreen), 7 components (ShoppingListPanel, GrocerySearchBar, CategoriesGrid, FrequentlyAddedGrid, CategoryModal, AllItemsModal, ShoppingQuickActionModal), hooks (useShoppingRealtime), services, utils.
 
 ## Overview
 

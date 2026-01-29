@@ -2,6 +2,8 @@
 
 **Exports** (from `mobile/src/features/dashboard/index.ts`): `DashboardScreen`, `useDashboardChores`, `UseDashboardChoresReturn`.
 
+**Source**: `mobile/src/features/dashboard/` — screens (DashboardScreen), hooks (useDashboardChores). No feature-specific components; uses GrocerySearchBar and SafeImage from shopping and common.
+
 ## Overview
 
 The Dashboard feature serves as the home screen of Kitchen Hub, providing users with a quick overview of their household management tasks and quick-action widgets. It displays a header with clock and date, an "Add to Shopping List" card with search and suggested items, quick stat cards (Shopping Lists, Saved Recipes), and an "Important Chores" section with today's chores. No separate greeting section is shown.
