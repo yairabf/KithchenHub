@@ -360,6 +360,7 @@ To verify that Row Level Security is correctly isolating data between households
 ### Base URL
 - **API**: `http://localhost:3000/api/v1`
 - **Swagger Docs**: `http://localhost:3000/api/docs/v1`
+- **Version discovery**: `http://localhost:3000/api/version` (unversioned; use to discover supported API versions)
 
 ### Authentication Endpoints
 
