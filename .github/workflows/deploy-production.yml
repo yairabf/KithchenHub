@@ -30,14 +30,15 @@ jobs:
     uses: ./.github/workflows/_deploy.yml
     with:
       environment: production
-      deploy_target: render
+      deploy_target: gcp-cloudrun
       image_tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag || 'main-latest' }}
-      # Note: service_url is omitted to skip health checks
-      # If health checks are desired, uncomment and set the production service URL:
-      # service_url: ${{ secrets.PRODUCTION_SERVICE_URL }}
+      # Health checks are optional. If PRODUCTION_SERVICE_URL is unset, checks are skipped.
+      service_url: ${{ secrets.PRODUCTION_SERVICE_URL }}
+    # Required for Cloud Run: GCP_PROJECT_ID, GCP_REGION, GCP_CLOUD_RUN_SERVICE, GCP_SA_KEY. See backend/DEPLOYMENT.md.
     secrets:
-      # Render deploy hook for production environment
-      RENDER_DEPLOY_HOOK_URL_PRODUCTION: ${{ secrets.RENDER_DEPLOY_HOOK_URL_PRODUCTION }}
-      # Map production-specific secrets to generic names expected by _deploy.yml
       DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
       DIRECT_URL: ${{ secrets.PROD_DIRECT_URL }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ secrets.GCP_REGION }}
+      GCP_CLOUD_RUN_SERVICE: ${{ secrets.GCP_CLOUD_RUN_SERVICE }}
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}

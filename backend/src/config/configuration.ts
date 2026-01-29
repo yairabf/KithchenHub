@@ -31,6 +31,7 @@ export const loadConfiguration = (): AppConfig => {
 
   const env = validateEnv();
 
+  // port comes from process.env.PORT (Cloud Run uses 8080; local default 3000)
   config = {
     env: env.NODE_ENV,
     port: env.PORT,

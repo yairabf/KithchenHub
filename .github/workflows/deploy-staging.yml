@@ -22,14 +22,15 @@ jobs:
     uses: ./.github/workflows/_deploy.yml
     with:
       environment: staging
-      deploy_target: render
+      deploy_target: gcp-cloudrun
       image_tag: develop-latest
-      # Note: service_url is omitted to skip health checks
-      # If health checks are desired, uncomment and set the staging service URL:
-      # service_url: https://your-staging-service.onrender.com
+      # Health checks are optional. If STAGING_SERVICE_URL is unset, checks are skipped.
+      service_url: ${{ secrets.STAGING_SERVICE_URL }}
+    # Required for Cloud Run: GCP_PROJECT_ID, GCP_REGION, GCP_CLOUD_RUN_SERVICE_STAGING, GCP_SA_KEY. See backend/DEPLOYMENT.md.
     secrets:
-      # Render deploy hook for staging environment
-      RENDER_DEPLOY_HOOK_URL_STAGING: ${{ secrets.RENDER_DEPLOY_HOOK_URL_STAGING }}
-      # Map staging-specific secrets to generic names expected by _deploy.yml
       DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
       DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ secrets.GCP_REGION }}
+      GCP_CLOUD_RUN_SERVICE: ${{ secrets.GCP_CLOUD_RUN_SERVICE_STAGING }}
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}

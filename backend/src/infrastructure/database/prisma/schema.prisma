@@ -3,7 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  // Render runs our container on Debian (node:*-slim), but our Docker build generates Prisma on Alpine.
+  // Cloud Run and our Docker build use Debian (node:*-slim); include both for compatibility.
   // Include both targets so the runtime can select the correct query engine.
   //
   // - builder image (Alpine): linux-musl-openssl-3.0.x

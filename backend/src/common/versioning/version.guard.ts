@@ -20,11 +20,34 @@ import { SUPPORTED_API_VERSIONS } from './api-version.constants';
  * - Returns 404 for unknown/unsupported versions (matches "route not found" semantics)
  * - Returns 410 Gone for sunset versions (with clear error message)
  * - Allows requests through for supported/deprecated versions
+ * - Skips validation for intentionally unversioned routes (e.g., /api/version)
  */
 @Injectable()
 export class VersionGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
+
+    // Get URL path - handle both Express and Fastify
+    // Fastify: request.routerPath (route path) or request.url (full URL with query)
+    // Express: request.url (full URL with query)
+    const fastifyRequest = request as any;
+    const urlPath =
+      fastifyRequest.routerPath || request.url?.split('?')[0] || request.url;
+    const fullUrl = request.url || '';
+
+    // Skip version validation for intentionally unversioned routes
+    // /api/version is the version discovery endpoint and must remain unversioned
+    // Check both the route path and the full URL to handle both Express and Fastify
+    if (
+      urlPath === '/api/version' ||
+      urlPath === '/version' ||
+      fullUrl === '/api/version' ||
+      fullUrl.startsWith('/api/version?') ||
+      fullUrl.startsWith('/api/version#')
+    ) {
+      return true;
+    }
+
     const version = extractVersionFromRequest(request);
 
     if (!version) {

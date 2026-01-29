@@ -6,7 +6,7 @@
 
 ## Overview
 
-Create a staging deployment workflow (`.github/workflows/deploy-staging.yml`) that automatically deploys to staging environment when code is merged to the `develop` branch. This workflow will call a reusable `_deploy.yml` workflow with `environment=staging` and `deploy_target=render`, establishing a cloud-agnostic deployment pattern that can be extended for other environments and deployment targets.
+Create a staging deployment workflow (`.github/workflows/deploy-staging.yml`) that automatically deploys to staging environment when code is merged to the `develop` branch. This workflow calls a reusable `_deploy.yml` workflow with `environment=staging` and `deploy_target=gcp-cloudrun`, establishing a cloud-agnostic deployment pattern that can be extended for other environments and deployment targets.
 
 ## Current Status Analysis
 
@@ -23,8 +23,8 @@ Create a staging deployment workflow (`.github/workflows/deploy-staging.yml`) th
   - Images are automatically built and pushed to GHCR
   - Images available at `ghcr.io/${{ github.repository_owner }}/kitchen-hub-api:TAG`
 4. **Deployment Documentation**:
-  - `backend/DEPLOYMENT.md` documents Render deployment process
-  - Render supports deploy hooks (HTTP POST/GET) and API-based deployment
+  - `backend/DEPLOYMENT.md` documents GCP Cloud Run deployment process
+  - Cloud Run is deployed directly from GitHub Actions via `gcloud run deploy`
 
 ### What's Missing ❌
 
@@ -43,11 +43,11 @@ The deployment infrastructure will consist of two workflows:
 1. `**_deploy.yml**` (Reusable Workflow):
   - Cloud-agnostic deployment workflow
   - Accepts inputs: `environment`, `deploy_target`, `image_tag`
-  - Supports multiple deployment targets (Render, Railway, AWS, etc.)
+  - Supports multiple deployment targets (gcp-cloudrun, aws-ecs, etc.)
   - Handles deployment logic based on `deploy_target` input
 2. `**deploy-staging.yml**` (Caller Workflow):
   - Triggers on pushes to `develop` branch
-  - Calls `_deploy.yml` with `environment=staging` and `deploy_target=render`
+  - Calls `_deploy.yml` with `environment=staging` and `deploy_target=gcp-cloudrun`
   - Waits for build workflow to complete (if needed)
   - Handles staging-specific configuration
 
@@ -61,12 +61,10 @@ graph LR
     D --> E[deploy-staging.yml triggers]
     E --> F[Call _deploy.yml]
     F --> G{deploy_target?}
-    G -->|render| H[Render Deploy Hook]
-    G -->|railway| I[Railway API]
-    G -->|aws| J[AWS ECS]
-    H --> K[Staging Environment]
-    I --> K
-    J --> K
+    G -->|gcp-cloudrun| H[Deploy to Cloud Run]
+    G -->|aws-ecs| I[AWS ECS]
+    H --> J[Staging Environment]
+    I --> J
 ```
 
 ### Reusable Workflow Design (`_deploy.yml`)
@@ -74,7 +72,7 @@ graph LR
 **Inputs:**
 
 - `environment` (required, string): Environment name (staging, production, etc.)
-- `deploy_target` (required, string): Deployment target (render, railway, aws, etc.)
+- `deploy_target` (required, string): Deployment target (gcp-cloudrun, aws-ecs, etc.)
 - `image_tag` (optional, string): Docker image tag to deploy (defaults to `develop-latest` for staging)
 
 **Jobs:**
@@ -83,9 +81,8 @@ graph LR
 
 **Deployment Target Logic:**
 
-- **render**: Uses Render deploy hook URL (from secrets)
-- **railway**: Uses Railway API (future)
-- **aws**: Uses AWS ECS deployment (future)
+- **gcp-cloudrun**: Deploys to GCP Cloud Run via `gcloud run deploy` (uses GCP_PROJECT_ID, GCP_REGION, GCP_CLOUD_RUN_SERVICE, GCP_SA_KEY)
+- **aws-ecs**: Uses AWS ECS deployment
 - **other**: Extensible for additional targets
 
 ### Staging Workflow Design (`deploy-staging.yml`)
@@ -102,7 +99,7 @@ graph LR
 **Configuration:**
 
 - `environment`: `staging`
-- `deploy_target`: `render`
+- `deploy_target`: `gcp-cloudrun`
 - `image_tag`: `develop-latest` (matches build.yml tagging)
 
 ## Implementation Steps
@@ -121,7 +118,7 @@ graph LR
 - `workflow_call` trigger with inputs
 - Environment-specific job configuration
 - Conditional deployment logic based on `deploy_target`
-- Render deploy hook implementation
+- GCP Cloud Run deployment via `gcloud run deploy`
 - Extensible structure for future deployment targets
 
 **Inputs Definition:**
@@ -137,7 +134,7 @@ on:
       deploy_target:
         required: true
         type: string
-        description: 'Deployment target (render, railway, aws, etc.)'
+        description: 'Deployment target (gcp-cloudrun, aws-ecs, etc.)'
       image_tag:
         required: false
         type: string
@@ -145,12 +142,11 @@ on:
         default: ''
 ```
 
-**Render Deployment Implementation:**
+**GCP Cloud Run Deployment Implementation:**
 
-- Use Render deploy hook URL from secrets
-- Send HTTP POST request to trigger deployment
-- Handle response and verify deployment trigger
-- Support both staging and production Render services
+- Use GCP secrets: GCP_PROJECT_ID, GCP_REGION, GCP_CLOUD_RUN_SERVICE (or GCP_CLOUD_RUN_SERVICE_STAGING for staging), GCP_SA_KEY
+- Run `gcloud run deploy` with image from GHCR
+- Support both staging and production via different Cloud Run service names
 
 ### Step 3: Create Staging Deployment Workflow (`deploy-staging.yml`)
 
@@ -171,23 +167,24 @@ jobs:
     uses: ./.github/workflows/_deploy.yml
     with:
       environment: staging
-      deploy_target: render
+      deploy_target: gcp-cloudrun
       image_tag: develop-latest
     secrets: inherit
 ```
 
 ### Step 4: Configure Secrets
 
-**Required GitHub Secrets:**
+**Required GitHub Secrets (GCP Cloud Run):**
 
-- `RENDER_DEPLOY_HOOK_URL_STAGING`: Render deploy hook URL for staging environment
-- (Future) `RENDER_DEPLOY_HOOK_URL_PRODUCTION`: For production deployments
-- (Future) `RENDER_API_KEY`: For API-based deployments
+- `GCP_PROJECT_ID`: GCP project ID
+- `GCP_REGION`: Cloud Run region (e.g. us-central1)
+- `GCP_CLOUD_RUN_SERVICE_STAGING`: Staging Cloud Run service name
+- `GCP_SA_KEY`: Service account JSON key for GitHub Actions
 
 **Secret Setup Instructions:**
 
-1. Get deploy hook URL from Render Dashboard → Service Settings → Deploy Hook
-2. Add secret in GitHub: Settings → Secrets and variables → Actions → New repository secret
+1. Complete GCP Cloud Run one-time setup (see backend/DEPLOYMENT.md)
+2. Add secrets in GitHub: Settings → Secrets and variables → Actions → New repository secret
 
 ### Step 5: Add Concurrency Control
 
@@ -240,8 +237,8 @@ Both workflows should include concurrency control:
   - Push a change to `develop` branch
   - Verify `deploy-staging.yml` triggers
   - Verify it calls `_deploy.yml` with correct inputs
-  - Verify Render deployment is triggered
-  - Check Render dashboard for deployment status
+  - Verify Cloud Run deployment is triggered
+  - Check GCP Cloud Run console for deployment status
 3. **Test Error Handling**:
   - Test with invalid inputs
   - Test with missing secrets
@@ -253,7 +250,7 @@ Both workflows should include concurrency control:
 - `deploy-staging.yml` exists and triggers on `develop` branch
 - Workflow call syntax is correct
 - Inputs are properly defined and used
-- Render deploy hook integration works
+- GCP Cloud Run deployment integration works
 - Secrets are configured correctly
 - Concurrency control prevents duplicate deployments
 - Error handling provides clear feedback
@@ -263,8 +260,8 @@ Both workflows should include concurrency control:
 
 1. ✅ `.github/workflows/_deploy.yml` exists as reusable workflow
 2. ✅ `.github/workflows/deploy-staging.yml` exists and triggers on `develop`
-3. ✅ `deploy-staging.yml` calls `_deploy.yml` with `environment=staging` and `deploy_target=render`
-4. ✅ Render deployment is triggered successfully via deploy hook
+3. ✅ `deploy-staging.yml` calls `_deploy.yml` with `environment=staging` and `deploy_target=gcp-cloudrun`
+4. ✅ GCP Cloud Run deployment completes successfully
 5. ✅ Workflow is cloud-agnostic and extensible for other targets
 6. ✅ Secrets are properly configured
 7. ✅ Concurrency control prevents duplicate deployments
@@ -272,28 +269,28 @@ Both workflows should include concurrency control:
 
 ## Considerations
 
-### Render Deploy Hook Method
+### GCP Cloud Run Deployment
 
 **Advantages:**
 
-- Simple HTTP POST/GET request
-- No API key management required
-- Render handles deployment orchestration
-- Works well for automated deployments
+- Direct deploy from GitHub Actions via `gcloud run deploy`
+- No deploy hook; workflow controls the full deploy
+- Cloud Run scales to zero and supports GHCR images
+- Works well for automated staging and production
 
 **Implementation:**
 
-- Use `curl` or GitHub Actions HTTP action
-- Send POST request to deploy hook URL
-- Verify response status
-- Log deployment trigger confirmation
+- Use `google-github-actions/auth` and `setup-gcloud` with GCP_SA_KEY
+- Run `gcloud run deploy` with image from GHCR
+- Staging and production use different Cloud Run service names (e.g. GCP_CLOUD_RUN_SERVICE_STAGING vs GCP_CLOUD_RUN_SERVICE)
 
 ### Cloud-Agnostic Design
 
 The `_deploy.yml` workflow is designed to support multiple deployment targets:
 
-- **Current**: Render (via deploy hook)
-- **Future**: Railway (API), AWS ECS (CLI), Google Cloud Run (API), etc.
+- **Current**: GCP Cloud Run (via gcloud run deploy)
+- **Also supported**: AWS ECS
+- **Future**: Railway (API), etc.
 
 Each target can be added as a conditional step in the deploy job.
 
@@ -321,7 +318,7 @@ Each target can be added as a conditional step in the deploy job.
 
 ### Environment Variables
 
-Render deployments require environment variables to be configured in Render dashboard:
+Cloud Run deployments require environment variables to be configured in Cloud Run (or Secret Manager):
 
 - Database URLs
 - JWT secrets
@@ -333,7 +330,7 @@ These should NOT be passed through GitHub Actions workflows for security.
 ## Security Considerations
 
 1. **Secrets Management**:
-  - Deploy hook URLs stored as GitHub secrets
+  - GCP service account key and Cloud Run config stored as GitHub secrets
   - Never expose secrets in logs
   - Use `secrets: inherit` for reusable workflows
 2. **Deployment Permissions**:
@@ -370,5 +367,5 @@ These should NOT be passed through GitHub Actions workflows for security.
 
 - Existing build workflow: [`.github/workflows/build.yml`](.github/workflows/build.yml)
 - Deployment documentation: [`backend/DEPLOYMENT.md`](backend/DEPLOYMENT.md)
-- Render deploy hooks: [Render Deploy Hooks Documentation](https://docs.render.com/deploy-hooks)
+- GCP Cloud Run: [Cloud Run Documentation](https://cloud.google.com/run/docs)
 - GitHub reusable workflows: [GitHub Actions Reusable Workflows](https://docs.github.com/en/actions/using-workflows/reusing-workflows)

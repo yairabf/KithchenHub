@@ -49,46 +49,15 @@ The staging environment is automatically deployed when code is merged to the `de
    - Triggers on pushes to `develop` branch (runs independently, assumes image exists from `build.yml`)
    - Calls reusable `_deploy.yml` workflow with:
      - `environment: staging`
-     - `deploy_target: render`
+     - `deploy_target: gcp-cloudrun`
      - `image_tag: develop-latest`
    - Automatically runs database migrations
-   - Triggers Render deployment via deploy hook
+   - Deploys to GCP Cloud Run (direct deploy from Actions; no deploy hook)
    - Optionally performs health checks
 
 ### Prerequisites
 
-Before automated staging deployment can work, you need to configure GitHub secrets:
-
-#### Required GitHub Secrets
-
-1. **`RENDER_DEPLOY_HOOK_URL_STAGING`**:
-   - Get this from Render Dashboard → Your Staging Service → Settings → Deploy Hook
-   - Copy the deploy hook URL
-   - Add to GitHub: Repository Settings → Secrets and variables → Actions → New repository secret
-
-2. **`STAGING_DATABASE_URL`** (Optional, for migrations):
-   - Staging database connection URL (pooled connection)
-   - Used for running migrations before deployment
-   - Add to GitHub secrets if you want automated migrations
-
-3. **`STAGING_DIRECT_URL`** (Optional, for migrations):
-   - Direct staging database connection URL
-   - Preferred over `STAGING_DATABASE_URL` for migrations
-   - Add to GitHub secrets if you want automated migrations
-
-#### Setting Up Render Deploy Hook
-
-1. **In Render Dashboard**:
-   - Navigate to your staging service
-   - Go to Settings → Deploy Hook
-   - Copy the deploy hook URL (looks like `https://api.render.com/deploy/srv-xxx?key=yyy`)
-
-2. **In GitHub**:
-   - Go to your repository → Settings → Secrets and variables → Actions
-   - Click "New repository secret"
-   - Name: `RENDER_DEPLOY_HOOK_URL_STAGING`
-   - Value: Paste the deploy hook URL
-   - Click "Add secret"
+Before automated staging deployment can work, you need to configure GitHub secrets and complete the [GCP Cloud Run one-time setup](#gcp-cloud-run). See that section for required secrets: `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE_STAGING`, `GCP_SA_KEY`, and optionally `STAGING_DATABASE_URL` / `STAGING_DIRECT_URL` for migrations and `STAGING_SERVICE_URL` for health checks.
 
 ### Deployment Flow
 
@@ -100,7 +69,7 @@ graph LR
     D --> E[deploy-staging.yml triggers]
     E --> F[Call _deploy.yml]
     F --> G[Run migrations]
-    G --> H[Trigger Render deploy]
+    G --> H[Deploy to Cloud Run]
     H --> I[Staging Environment]
 ```
 
@@ -113,21 +82,19 @@ graph LR
 
 2. **Deploy Job**:
    - Validates deployment configuration
-   - Triggers Render deployment via deploy hook
-   - Render pulls the latest `develop-latest` image from GHCR
-   - Render starts the new container with updated code
+   - Deploys to GCP Cloud Run via `gcloud run deploy` using the staging service name
+   - Cloud Run pulls the `develop-latest` image from GHCR and runs the new revision
 
-3. **Health Check Job** (if `service_url` is provided):
+3. **Health Check Job** (if `STAGING_SERVICE_URL` is provided):
    - Waits for service to become healthy
    - Checks `/api/version` endpoint
    - Verifies deployment success
-   - **Note**: Currently disabled in `deploy-staging.yml` (service_url not set). To enable, add `service_url` input with your staging service URL.
 
 ### Monitoring Deployments
 
 - **GitHub Actions**: Check `.github/workflows/deploy-staging.yml` runs in Actions tab
-- **Render Dashboard**: Monitor deployment status in Render dashboard
-- **Logs**: View deployment logs in Render dashboard or GitHub Actions logs
+- **GCP Cloud Run**: Monitor deployment status in Google Cloud Console → Cloud Run
+- **Logs**: View deployment and application logs in Cloud Run or GitHub Actions logs
 
 ### Troubleshooting Staging Deployments
 
@@ -136,10 +103,10 @@ graph LR
 - Check path filters: workflow only triggers on `backend/**` changes
 - Verify workflow file exists: `.github/workflows/deploy-staging.yml`
 
-**Render deployment fails:**
-- Verify `RENDER_DEPLOY_HOOK_URL_STAGING` secret is set correctly
-- Check Render dashboard for deployment errors
-- Verify Render service is configured to use GHCR image: `ghcr.io/YOUR_USERNAME/kitchen-hub-api:develop-latest`
+**Cloud Run deployment fails:**
+- Verify `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE_STAGING`, and `GCP_SA_KEY` secrets are set
+- Check GCP Cloud Run console for deployment errors
+- Ensure the service account has Cloud Run Admin (and optionally Artifact Registry or GHCR access if needed)
 
 **Migrations fail:**
 - Verify `STAGING_DIRECT_URL` or `STAGING_DATABASE_URL` secrets are set
@@ -147,9 +114,9 @@ graph LR
 - Verify database is accessible from GitHub Actions runners
 
 **Health check fails:**
-- Verify staging service URL is correct (if `service_url` is configured)
+- Verify `STAGING_SERVICE_URL` is correct (Cloud Run service URL)
 - Check application is running and accessible
-- Review application logs in Render dashboard
+- Review application logs in Cloud Run console
 
 ### Manual Staging Deployment
 
@@ -158,10 +125,6 @@ If you need to manually trigger a staging deployment:
 1. **Via GitHub Actions**:
    - Go to Actions → Deploy to Staging
    - Click "Run workflow" → Select `develop` branch → Run workflow
-
-2. **Via Render Dashboard**:
-   - Go to your staging service
-   - Click "Manual Deploy" → Select commit → Deploy
 
 ---
 
@@ -180,11 +143,11 @@ The production environment is automatically deployed when code is merged to the 
    - Triggers on pushes to `main` branch (runs independently, assumes image exists from `build.yml`)
    - Calls reusable `_deploy.yml` workflow with:
      - `environment: production`
-     - `deploy_target: render`
+     - `deploy_target: gcp-cloudrun`
      - `image_tag: main-latest`
    - **Requires manual approval** before deployment proceeds (via GitHub Environment protection)
    - Automatically runs database migrations after approval
-   - Triggers Render deployment via deploy hook
+   - Deploys to GCP Cloud Run (direct deploy from Actions)
    - Optionally performs health checks
 
 ### Prerequisites
@@ -231,19 +194,20 @@ You can optionally store production secrets at the environment level instead of 
 
 1. In the production environment settings, scroll to **"Environment secrets"**
 2. Click **"Add secret"**
-3. Add secrets like `RENDER_DEPLOY_HOOK_URL_PRODUCTION`, `PROD_DATABASE_URL`, etc.
+3. Add secrets like `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE`, `GCP_SA_KEY`, `PROD_DATABASE_URL`, etc.
 4. These secrets are scoped to the production environment only
 
 ### Required GitHub Secrets for Production
 
+See [GCP Cloud Run](#gcp-cloud-run) for one-time setup. Production workflow expects these secrets (repository or production environment):
+
 #### Required Secrets
 
-1. **`RENDER_DEPLOY_HOOK_URL_PRODUCTION`**:
-   - Render deploy hook URL for production service
-   - Get from Render Dashboard → Production Service → Settings → Deploy Hook
-   - Copy the deploy hook URL
-   - Add to GitHub: Repository Settings → Secrets and variables → Actions → New repository secret
-   - Or add at Environment level: Repository Settings → Environments → production → Secrets
+1. **GCP Cloud Run** (for deployment):
+   - `GCP_PROJECT_ID` – GCP project ID
+   - `GCP_REGION` – Cloud Run region (e.g. `us-central1`)
+   - `GCP_CLOUD_RUN_SERVICE` – Production Cloud Run service name (e.g. `kitchen-hub-api`)
+   - `GCP_SA_KEY` – Service account JSON key for GitHub Actions
 
 2. **`PROD_DATABASE_URL`** (for migrations):
    - Production database connection URL (pooled connection)
@@ -305,9 +269,8 @@ graph LR
 
 4. **Deploy Job**:
    - Validates deployment configuration
-   - Triggers Render deployment via deploy hook
-   - Render pulls the latest `main-latest` image from GHCR
-   - Render starts the new container with updated code
+   - Deploys to GCP Cloud Run via `gcloud run deploy` with image from GHCR
+   - Cloud Run runs the new revision with the `main-latest` image
 
 5. **Health Check Job** (if `PRODUCTION_SERVICE_URL` is configured):
    - Waits for service to become healthy
@@ -338,8 +301,8 @@ You can also manually trigger a production deployment:
 
 - **GitHub Actions**: Check `.github/workflows/deploy-production.yml` runs in Actions tab
 - **Approval Status**: View pending approvals in the workflow run
-- **Render Dashboard**: Monitor deployment status in Render dashboard
-- **Logs**: View deployment logs in Render dashboard or GitHub Actions logs
+- **GCP Cloud Run**: Monitor deployment status in Google Cloud Console → Cloud Run
+- **Logs**: View deployment and application logs in Cloud Run or GitHub Actions logs
 
 ### Troubleshooting Production Deployments
 
@@ -354,10 +317,10 @@ You can also manually trigger a production deployment:
 - Verify job references `environment: production` in workflow file
 - Check that you have permission to view the environment
 
-**Render deployment fails:**
-- Verify `RENDER_DEPLOY_HOOK_URL_PRODUCTION` secret is set correctly
-- Check Render dashboard for deployment errors
-- Verify Render service is configured to use GHCR image: `ghcr.io/YOUR_USERNAME/kitchen-hub-api:main-latest`
+**Cloud Run deployment fails:**
+- Verify `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE`, and `GCP_SA_KEY` secrets are set (in production environment or repo)
+- Check GCP Cloud Run console for deployment errors
+- Ensure the service account has Cloud Run Admin and can pull the image from GHCR if needed
 
 **Migrations fail:**
 - Verify `PROD_DIRECT_URL` or `PROD_DATABASE_URL` secrets are set
@@ -366,9 +329,9 @@ You can also manually trigger a production deployment:
 - Ensure database user has migration permissions
 
 **Health check fails:**
-- Verify `PRODUCTION_SERVICE_URL` secret is set correctly (if health checks are enabled)
+- Verify `PRODUCTION_SERVICE_URL` secret is set correctly (Cloud Run production URL)
 - Check application is running and accessible
-- Review application logs in Render dashboard
+- Review application logs in Cloud Run console
 - Verify `/api/version` endpoint is responding
 
 ---
@@ -565,12 +528,11 @@ docker-compose -f docker-compose.prod.yml up -d
 
 **Common platforms:**
 - **AWS**: ECS, EKS, App Runner, Elastic Beanstalk
-- **Google Cloud**: Cloud Run, GKE
+- **Google Cloud**: Cloud Run, GKE (see [GCP Cloud Run](#gcp-cloud-run) for automated deploy)
 - **Azure**: Container Instances, AKS
 - **DigitalOcean**: App Platform, Droplets
 - **Heroku**: Container Registry
 - **Railway**: Direct Dockerfile support
-- **Render**: Dockerfile support
 
 **General steps:**
 1. Pull image from GHCR (already pushed automatically) or use your platform's container registry
@@ -614,6 +576,13 @@ Before deploying to production:
 - [ ] CORS settings verified for production domain
 - [ ] Monitoring and logging set up
 - [ ] Backup strategy in place
+
+---
+
+## Database migrations and rollback
+
+- **Running migrations:** Use `npm run prisma:deploy` (or `npx prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma`) with `DIRECT_URL` or `DATABASE_URL`. Same command works locally, in CI, on Render, GCP, and AWS. See [docs/MIGRATIONS.md](docs/MIGRATIONS.md) for platform-specific steps (including Render).
+- **Rollback posture:** (1) **Application** – revert to previous image/revision (see [Rollback Procedure](#rollback-procedure) below). (2) **Database** – use your provider’s snapshot/restore (Render, Supabase/Neon, GCP Cloud SQL, AWS RDS). (3) **Migration history** – use `prisma migrate resolve --rolled-back` or `--applied` when a migration failed or was applied manually; see [docs/MIGRATIONS.md](docs/MIGRATIONS.md).
 
 ---
 
@@ -684,309 +653,55 @@ Before deploying to production:
 3. Add environment variables in dashboard
 4. Deploy!
 
-### Render
+### GCP Cloud Run
 
-**Automated Deployment (Recommended):**
+Staging and production deployments use **GCP Cloud Run**. GitHub Actions builds the Docker image, pushes it to GHCR, runs migrations, then deploys directly to Cloud Run via `gcloud run deploy` (no deploy hook).
 
-Staging deployments are automated via GitHub Actions. See [Automated Staging Deployment](#automated-staging-deployment) section above.
+#### One-time setup
 
-**Complete Render Setup Guide:**
+1. **GCP project**
+   - Create or select a project in [Google Cloud Console](https://console.cloud.google.com).
+   - Enable the [Cloud Run API](https://console.cloud.google.com/apis/library/run.googleapis.com).
 
-This section provides step-by-step instructions for setting up Render account, connecting GitHub repository, and configuring Docker-based services for staging and production environments.
+2. **Service account for GitHub Actions**
+   - Create a service account with roles: **Cloud Run Admin** (and, if needed, **Artifact Registry Reader** or access to pull from GHCR).
+   - Create a JSON key and store it in GitHub secret `GCP_SA_KEY`. Do not commit the key.
 
-#### Step 1: Create Render Account
+3. **Cloud Run services**
+   - Create two services in the same project (or use two projects):
+     - **Staging**: e.g. `kitchen-hub-api-staging` (used by `deploy-staging.yml`).
+     - **Production**: e.g. `kitchen-hub-api` (used by `deploy-production.yml`).
+   - Configure env vars (e.g. `DATABASE_URL`, `JWT_SECRET`) in Cloud Run or via Secret Manager.
+   - Cloud Run sets `PORT=8080` by default; the app binds to `process.env.PORT` on `0.0.0.0`.
+   - For public API access, set the service to allow unauthenticated invocations if required.
 
-1. **Sign Up/Login**:
-   - Go to [Render Dashboard](https://dashboard.render.com)
-   - Sign up for a new account or log in to existing account
-   - Verify email if required
+#### Required GitHub secrets
 
-2. **Account Verification**:
-   - Complete account setup
-   - Choose appropriate plan (Free tier available for testing)
-   - **Note**: Free tier has limitations (sleeps after inactivity, limited resources)
+| Secret | Used by | Description |
+|--------|--------|-------------|
+| `GCP_PROJECT_ID` | Staging + Production | GCP project ID |
+| `GCP_REGION` | Staging + Production | Cloud Run region (e.g. `us-central1`) |
+| `GCP_CLOUD_RUN_SERVICE_STAGING` | Staging | Staging Cloud Run service name |
+| `GCP_CLOUD_RUN_SERVICE` | Production | Production Cloud Run service name |
+| `GCP_SA_KEY` | Staging + Production | Service account JSON key |
+| `STAGING_DIRECT_URL` / `STAGING_DATABASE_URL` | Staging | For migrations (optional but recommended) |
+| `PROD_DIRECT_URL` / `PROD_DATABASE_URL` | Production | For migrations |
+| `STAGING_SERVICE_URL` | Staging | Staging Cloud Run URL (optional, for health checks) |
+| `PRODUCTION_SERVICE_URL` | Production | Production Cloud Run URL (optional, for health checks) |
 
-#### Step 2: Connect GitHub Repository
+Production secrets can be set at repository level or in the **production** GitHub Environment.
 
-1. **Connect GitHub Account**:
-   - Navigate to Render Dashboard → Account Settings → Connected Accounts
-   - Click "Connect GitHub" or "Connect Account"
-   - Authorize Render to access GitHub repositories
-   - Select appropriate permissions:
-     - ✅ Read repository contents
-     - ✅ Read package registry (for GHCR access)
+#### Deployment flow
 
-2. **Verify Connection**:
-   - Confirm repository appears in Render dashboard
-   - Verify repository access permissions
+1. Push to `develop` or `main` triggers `build.yml` → image pushed to GHCR (`develop-latest` or `main-latest`).
+2. `deploy-staging.yml` or `deploy-production.yml` calls `_deploy.yml` with `deploy_target: gcp-cloudrun`.
+3. `_deploy.yml` runs Prisma migrations (using `DIRECT_URL` or `DATABASE_URL`), then runs `gcloud run deploy` with the image from GHCR.
+4. Cloud Run deploys the new revision. No deploy hook; deployment is done from GitHub Actions.
 
-#### Step 3: Create GitHub Personal Access Token for GHCR
+#### Optional
 
-1. **Generate Token**:
-   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-   - Click "Generate new token (classic)"
-   - Name: "Render GHCR Access"
-   - Select scopes:
-     - ✅ `read:packages` (required to pull images from GHCR)
-   - Click "Generate token"
-   - **Copy token immediately** (won't be visible again)
-
-2. **Store Token Securely**:
-   - Keep token safe for use in Render service configuration
-   - Token will be used as GHCR password in Render
-
-#### Step 4: Create Staging Service
-
-1. **Service Creation**:
-   - In Render Dashboard, click "+ New" → "Web Service"
-   - Under "Source Code", select "Existing Image"
-   - Image URL: `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:develop-latest`
-     - Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username or organization name
-     - Example: `ghcr.io/myusername/kitchen-hub-api:develop-latest`
-
-2. **Configure Image Pull**:
-   - Registry: Select "GitHub Container Registry"
-   - Username: Enter your GitHub username
-   - Password: Enter the GitHub Personal Access Token created in Step 3
-   - Click "Add credential" or "Save credential"
-
-3. **Service Settings**:
-   - **Name**: `kitchen-hub-api-staging` (or your preferred name)
-   - **Region**: Choose appropriate region (e.g., US East)
-   - **Environment**: `Docker`
-   - **Instance Type**: Choose based on needs (Free tier available for testing)
-   - **Auto-Deploy**: **Disable** (deployments triggered via GitHub Actions)
-
-4. **Health Check Configuration**:
-   - **Health Check Path**: `/api/version`
-   - **Health Check Interval**: Default (30 seconds)
-   - **Health Check Timeout**: Default (10 seconds)
-   - **Health Check Grace Period**: Default (40 seconds)
-
-5. **Environment Variables**:
-   Add the following staging-specific environment variables in Render dashboard:
-   
-   **Required Variables:**
-   - `NODE_ENV=production`
-   - `PORT` is provided by Render automatically. Set the **Render service Port** to `3000` (the app listens on 3000 in the Docker image) and do **not** manually override `PORT` as an environment variable.
-   - `DATABASE_URL` - Staging database connection string (pooled)
-   - `DIRECT_URL` - Staging direct database connection string (for migrations)
-   - `JWT_SECRET` - Staging JWT secret (minimum 32 characters)
-   - `JWT_REFRESH_SECRET` - Staging refresh token secret (minimum 32 characters)
-   - `SUPABASE_URL` - Supabase project URL (e.g., `https://xxx.supabase.co`)
-   - `SUPABASE_ANON_KEY` - Supabase anonymous key
-   
-   **Optional Variables:**
-   - `JWT_EXPIRES_IN=15m` (default: 15 minutes)
-   - `JWT_REFRESH_EXPIRES_IN=7d` (default: 7 days)
-   - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (if needed)
-   - `GOOGLE_CLIENT_ID` - Google OAuth client ID (if using Google sign-in)
-   - `GOOGLE_CLIENT_SECRET` - Google OAuth secret (if using Google sign-in)
-
-6. **Deploy Hook Configuration**:
-   - After creating the service, navigate to Settings → Deploy Hook
-   - Copy the deploy hook URL (format: `https://api.render.com/deploy/srv-xxx?key=yyy`)
-   - **Save this URL** - you'll add it to GitHub secrets in Step 6
-
-7. **Create Service**:
-   - Review all settings
-   - Click "Create Web Service"
-   - Wait for initial deployment to complete
-   - Verify service is running and health check passes
-
-#### Step 5: Create Production Service
-
-1. **Service Creation**:
-   - In Render Dashboard, click "+ New" → "Web Service"
-   - Under "Source Code", select "Existing Image"
-   - Image URL: `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest`
-     - Replace `YOUR_GITHUB_USERNAME` with your actual GitHub username or organization name
-     - Example: `ghcr.io/myusername/kitchen-hub-api:main-latest`
-
-2. **Configure Image Pull**:
-   - Registry: Select "GitHub Container Registry"
-   - Username: Enter your GitHub username
-   - Password: Enter the GitHub Personal Access Token (can reuse from staging)
-   - Click "Add credential" or "Save credential"
-
-3. **Service Settings**:
-   - **Name**: `kitchen-hub-api-production` (or your preferred name)
-   - **Region**: Choose appropriate region (should match staging or production requirements)
-   - **Environment**: `Docker`
-   - **Instance Type**: Choose production-appropriate instance (**not Free tier**)
-   - **Auto-Deploy**: **Disable** (deployments triggered via GitHub Actions)
-
-4. **Health Check Configuration**:
-   - **Health Check Path**: `/api/version`
-   - **Health Check Interval**: Default (30 seconds)
-   - **Health Check Timeout**: Default (10 seconds)
-   - **Health Check Grace Period**: Default (40 seconds)
-
-5. **Environment Variables**:
-   Add the following production-specific environment variables in Render dashboard:
-   
-   **Required Variables:**
-   - `NODE_ENV=production`
-   - `PORT` is provided by Render automatically. Set the **Render service Port** to `3000` (the app listens on 3000 in the Docker image) and do **not** manually override `PORT` as an environment variable.
-   - `DATABASE_URL` - Production database connection string (pooled)
-   - `DIRECT_URL` - Production direct database connection string (for migrations)
-   - `JWT_SECRET` - Production JWT secret (**different from staging**, minimum 32 characters)
-   - `JWT_REFRESH_SECRET` - Production refresh token secret (**different from staging**, minimum 32 characters)
-   - `SUPABASE_URL` - Supabase project URL (e.g., `https://xxx.supabase.co`)
-   - `SUPABASE_ANON_KEY` - Supabase anonymous key
-   
-   **Optional Variables:**
-   - `JWT_EXPIRES_IN=15m` (default: 15 minutes)
-   - `JWT_REFRESH_EXPIRES_IN=7d` (default: 7 days)
-   - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (if needed)
-   - `GOOGLE_CLIENT_ID` - Google OAuth client ID (if using Google sign-in)
-   - `GOOGLE_CLIENT_SECRET` - Google OAuth secret (if using Google sign-in)
-
-6. **Deploy Hook Configuration**:
-   - After creating the service, navigate to Settings → Deploy Hook
-   - Copy the deploy hook URL (format: `https://api.render.com/deploy/srv-xxx?key=yyy`)
-   - **Save this URL** - you'll add it to GitHub secrets in Step 6
-
-7. **Create Service**:
-   - Review all settings
-   - Click "Create Web Service"
-   - Wait for initial deployment to complete
-   - Verify service is running and health check passes
-
-#### Step 6: Configure GitHub Secrets
-
-1. **Add Staging Deploy Hook Secret**:
-   - Go to GitHub Repository → Settings → Secrets and variables → Actions
-   - Click "New repository secret"
-   - Name: `RENDER_DEPLOY_HOOK_URL_STAGING`
-   - Value: Deploy hook URL from staging service (Step 4.6)
-   - Click "Add secret"
-
-2. **Add Production Deploy Hook Secret**:
-   - Click "New repository secret"
-   - Name: `RENDER_DEPLOY_HOOK_URL_PRODUCTION`
-   - Value: Deploy hook URL from production service (Step 5.6)
-   - Click "Add secret"
-
-3. **Add Database Secrets (Optional, for automated migrations)**:
-   - `STAGING_DATABASE_URL` - Staging database connection URL (pooled)
-   - `STAGING_DIRECT_URL` - Staging direct database connection URL (preferred for migrations)
-   - `PROD_DATABASE_URL` - Production database connection URL (pooled)
-   - `PROD_DIRECT_URL` - Production direct database connection URL (preferred for migrations)
-
-4. **Add Service URL Secrets (Optional, for health checks)**:
-   - `STAGING_SERVICE_URL` - Staging service URL (e.g., `https://kitchen-hub-api-staging.onrender.com`)
-   - `PRODUCTION_SERVICE_URL` - Production service URL (e.g., `https://kitchen-hub-api-production.onrender.com`)
-
-#### Step 7: Verify Service Configuration
-
-1. **Verify Staging Service**:
-   - Check service is running in Render dashboard
-   - Test health endpoint: `https://YOUR_STAGING_URL.onrender.com/api/version`
-   - Should return JSON with version information
-   - Verify environment variables are set correctly
-   - Check logs for any startup errors
-
-2. **Verify Production Service**:
-   - Check service is running in Render dashboard
-   - Test health endpoint: `https://YOUR_PRODUCTION_URL.onrender.com/api/version`
-   - Should return JSON with version information
-   - Verify environment variables are set correctly
-   - Check logs for any startup errors
-
-3. **Test Deploy Hooks**:
-   - Manually trigger staging deploy hook via curl:
-     ```bash
-     curl -X POST RENDER_DEPLOY_HOOK_URL_STAGING
-     ```
-   - Verify deployment triggers in Render dashboard
-   - Repeat for production deploy hook
-
-#### Step 8: Test Automated Deployment
-
-1. **Test Staging Deployment**:
-   - Push a change to `develop` branch
-   - Verify `build.yml` workflow builds and pushes image to GHCR
-   - Verify `deploy-staging.yml` workflow triggers
-   - Check Render dashboard for new deployment
-   - Verify service health check passes
-
-2. **Test Production Deployment**:
-   - Merge code to `main` branch
-   - Verify `build.yml` workflow builds and pushes image to GHCR
-   - Verify `deploy-production.yml` workflow triggers
-   - Approve deployment in GitHub Actions (if approval required)
-   - Check Render dashboard for new deployment
-   - Verify service health check passes
-
-#### Render Setup Checklist
-
-**Staging Service:**
-- [ ] Render account created
-- [ ] GitHub repository connected to Render
-- [ ] GitHub PAT created with `read:packages` scope
-- [ ] Staging service created in Render
-- [ ] Docker image URL configured: `ghcr.io/USERNAME/kitchen-hub-api:develop-latest`
-- [ ] GHCR credentials configured (username + PAT)
-- [ ] Health check path set: `/api/version`
-- [ ] Environment variables configured
-- [ ] Deploy hook URL copied
-- [ ] Auto-deploy disabled
-- [ ] Service deployed successfully
-- [ ] Health endpoint accessible: `/api/version`
-- [ ] Deploy hook secret added to GitHub: `RENDER_DEPLOY_HOOK_URL_STAGING`
-
-**Production Service:**
-- [ ] Production service created in Render
-- [ ] Docker image URL configured: `ghcr.io/USERNAME/kitchen-hub-api:main-latest`
-- [ ] GHCR credentials configured (can reuse from staging)
-- [ ] Health check path set: `/api/version`
-- [ ] Environment variables configured (production values)
-- [ ] Deploy hook URL copied
-- [ ] Auto-deploy disabled
-- [ ] Service deployed successfully
-- [ ] Health endpoint accessible: `/api/version`
-- [ ] Deploy hook secret added to GitHub: `RENDER_DEPLOY_HOOK_URL_PRODUCTION`
-
-**GitHub Secrets:**
-- [ ] `RENDER_DEPLOY_HOOK_URL_STAGING` added
-- [ ] `RENDER_DEPLOY_HOOK_URL_PRODUCTION` added
-- [ ] `STAGING_DATABASE_URL` added (optional, for migrations)
-- [ ] `STAGING_DIRECT_URL` added (optional, for migrations)
-- [ ] `PROD_DATABASE_URL` added (optional, for migrations)
-- [ ] `PROD_DIRECT_URL` added (optional, for migrations)
-- [ ] `STAGING_SERVICE_URL` added (optional, for health checks)
-- [ ] `PRODUCTION_SERVICE_URL` added (optional, for health checks)
-
-#### Important Notes
-
-**Render Free Tier Limitations:**
-- Free tier services sleep after 15 minutes of inactivity
-- First request after sleep takes ~30 seconds (cold start)
-- Limited CPU and memory resources
-- **Recommendation**: Use Free tier for staging, paid tier for production
-
-**GHCR Authentication:**
-- Public images don't require authentication
-- Private images require GitHub PAT with `read:packages` scope
-- Store PAT securely and rotate periodically
-- Same PAT can be used for multiple services
-
-**Health Check Configuration:**
-- Path: `/api/version` (public endpoint, no auth required)
-- Render checks this endpoint to verify service health
-- Service marked unhealthy after multiple failures
-
-**Deploy Hook Security:**
-- Deploy hook URLs are sensitive - anyone with URL can trigger deployment
-- Store URLs as GitHub secrets, never commit to repository
-- Can regenerate deploy hooks if compromised
-
-**Environment Variables:**
-- Never commit secrets to repository
-- Use different secrets for staging and production
-- Set via Render dashboard UI
-- Ensure all required variables from `backend/src/config/env.validation.ts` are set
+- **Min instances / concurrency**: Configure in Cloud Run for cost or latency.
+- **Workload Identity Federation**: Use OIDC instead of `GCP_SA_KEY` for production (see Google Cloud docs).
 
 ### Fly.io
 
@@ -1039,7 +754,7 @@ It means Prisma Client was generated in an Alpine (musl) build environment, but 
 **Fix:**
 - Update `src/infrastructure/database/prisma/schema.prisma` Prisma generator to include both binary targets (Debian + musl).
 - Rebuild and push the Docker image to GHCR.
-- Redeploy on Render so the new image is pulled.
+- Redeploy on Cloud Run so the new image is used.
 
 ### Health check failures
 - Verify `/api/version` endpoint is accessible
@@ -1049,6 +764,8 @@ It means Prisma Client was generated in an Alpine (musl) build environment, but 
 ---
 
 ## Rollback Procedure
+
+**Application-only rollback** (revert to previous container/image). For database snapshot/restore and Prisma migration resolve, see [docs/MIGRATIONS.md](docs/MIGRATIONS.md).
 
 If deployment fails:
 
