@@ -15,14 +15,9 @@ import { StructuredLoggerService } from '../logger/structured-logger.service';
  */
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  constructor(
-    private readonly structuredLogger: StructuredLoggerService,
-  ) {}
+  constructor(private readonly structuredLogger: StructuredLoggerService) {}
 
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<unknown> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest<FastifyRequest>();
     const response = ctx.getResponse<FastifyReply>();

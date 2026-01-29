@@ -54,8 +54,7 @@ export class HealthService {
   }> {
     const databaseCheck = await this.checkDatabase();
 
-    const status =
-      databaseCheck.status === 'up' ? 'healthy' : 'unhealthy';
+    const status = databaseCheck.status === 'up' ? 'healthy' : 'unhealthy';
 
     return {
       status,

@@ -16,10 +16,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
  */
 @Injectable()
 export class RequestContextInterceptor implements NestInterceptor {
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<unknown> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest<FastifyRequest>();
     const response = ctx.getResponse<FastifyReply>();

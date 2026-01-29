@@ -53,9 +53,11 @@ export class SentryExceptionFilter implements ExceptionFilter {
       (request as FastifyRequest & { user?: { id?: string } }).user?.id ||
       undefined;
     const householdId =
-      (request as FastifyRequest & {
-        user?: { householdId?: string };
-      }).user?.householdId || undefined;
+      (
+        request as FastifyRequest & {
+          user?: { householdId?: string };
+        }
+      ).user?.householdId || undefined;
 
     // Report to Sentry only for server errors (5xx)
     // Client errors (4xx) are expected and don't need tracking

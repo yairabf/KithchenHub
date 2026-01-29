@@ -147,8 +147,8 @@ describe('Controller Metadata Audit', () => {
 
       throw new Error(
         `Found ${violations.length} controller(s) without version metadata:\n${violationMessages.join('\n')}\n\n` +
-        'All controllers must use @Controller({ path: "...", version: "1" }) format.\n' +
-        `Exception: ${ALLOWLISTED_CONTROLLERS.join(', ')} can be unversioned.`,
+          'All controllers must use @Controller({ path: "...", version: "1" }) format.\n' +
+          `Exception: ${ALLOWLISTED_CONTROLLERS.join(', ')} can be unversioned.`,
       );
     }
 
@@ -188,7 +188,7 @@ describe('Controller Metadata Audit', () => {
 
       throw new Error(
         `Found ${invalidVersions.length} controller(s) with invalid version numbers:\n${violationMessages.join('\n')}\n\n` +
-        'Version must be a positive integer (e.g., "1", "2", "3").',
+          'Version must be a positive integer (e.g., "1", "2", "3").',
       );
     }
 

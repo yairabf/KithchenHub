@@ -37,9 +37,7 @@ export class StructuredLoggerService implements LoggerService {
         this.logger = pino(pinoOptions, stream);
       } catch (error) {
         // Fallback to JSON if pino-pretty not available
-        console.warn(
-          'pino-pretty not available, using JSON format for logs',
-        );
+        console.warn('pino-pretty not available, using JSON format for logs');
         this.logger = pino(pinoOptions);
       }
     } else {
