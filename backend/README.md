@@ -566,7 +566,7 @@ backend/
 │   │   │   ├── dtos/               # Household DTOs
 │   │   │   └── households.module.ts
 │   │   ├── shopping/               # Shopping lists and items
-│   │   │   ├── controllers/        # ShoppingController, GroceriesController
+│   │   │   ├── controllers/        # GroceriesController, ShoppingListsController, ShoppingItemsController (shopping.controller.ts)
 │   │   │   ├── services/           # ShoppingService
 │   │   │   ├── repositories/       # ShoppingRepository
 │   │   │   ├── dtos/               # Shopping DTOs
