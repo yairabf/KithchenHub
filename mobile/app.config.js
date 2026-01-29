@@ -32,10 +32,21 @@ if (typeof version !== 'string' || !version.trim()) {
 
 const appJson = require('./app.json');
 
+/** Build updates.url from extra.eas.projectId when set (after eas init). Single source of truth for EAS project ID. Falls back to app.json expo.updates.url when projectId is unset or not a non-empty string. */
+const projectId = appJson.expo?.extra?.eas?.projectId ?? appJson.extra?.eas?.projectId;
+const updatesUrl =
+  typeof projectId === 'string' && projectId.trim()
+    ? `https://u.expo.dev/${projectId.trim()}`
+    : appJson.expo?.updates?.url;
+
 module.exports = {
   ...appJson,
   expo: {
     ...appJson.expo,
     version,
+    updates:
+      appJson.expo?.updates != null
+        ? { ...appJson.expo.updates, url: updatesUrl }
+        : { url: updatesUrl },
   },
 };

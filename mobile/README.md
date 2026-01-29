@@ -132,7 +132,7 @@ The app is configured for Expo Updates so you can ship JavaScript-only changes w
 | `expo.runtimeVersion.policy` | `appVersion` |
 | Runtime version source | `expo.version` from repo root **version.json** (bump only for store releases and native changes) |
 
-**Update URL:** `updates.url` in `app.json` is set to `https://u.expo.dev/[PROJECT_ID]`. Replace `[PROJECT_ID]` with your EAS project ID when using [EAS Update](https://docs.expo.dev/eas-update/introduction/). **Do not ship production builds with `[PROJECT_ID]` still in place**—replace it before release or production builds will not receive OTA updates (the update URL will be invalid). Development mode (Expo Go, `expo start`) does not use OTA updates.
+**Update URL:** The project connects to EAS via **`eas init`** (run from the `mobile` directory after logging in with `eas login`). Once linked, `app.json` gets `extra.eas.projectId` and **`app.config.js`** derives `updates.url` from it (`https://u.expo.dev/<projectId>`), so you do not need to manually replace a placeholder. **Do not ship production builds without running `eas init`**—production builds will not receive OTA updates until the project is linked. Development mode (Expo Go, `expo start`) does not use OTA updates.
 
 **Workflow:** Publish an update with `eas update` (after configuring EAS). Production builds will receive the new bundle on the next launch (or after error recovery, per `checkAutomatically`). Only JS/asset changes are delivered via OTA; native code changes require a new store build.
 
@@ -142,7 +142,7 @@ The app is configured for Expo Updates so you can ship JavaScript-only changes w
 - **App hangs on startup:** With `fallbackToCacheTimeout: 0` and `checkAutomatically: ON_ERROR_RECOVERY`, the app should not block on the network; if it does, verify `app.json` and that you are not overriding update behavior in code.
 - **Development:** OTA is off in dev; use production builds (e.g. EAS Build) to test OTA.
 
-To verify OTA config locally (presence of `updates`, `runtimeVersion` with `appVersion` policy, version from `version.json`, no `version` in `app.json`, and that `url` does not still contain the placeholder), run `npm run verify:ota` from the `mobile` directory.
+To verify OTA config locally (presence of `updates`, `runtimeVersion` with `appVersion` policy, version from `version.json`, no `version` in `app.json`, and that the resolved `updates.url` has no placeholder), run `npm run verify:ota` from the `mobile` directory.
 
 ### EAS Build
 
@@ -157,7 +157,7 @@ Only the **production** profile uses auto-increment for native build numbers; **
 
 **App version source:** `cli.appVersionSource` is set to `remote` so EAS manages build numbers; the first build initializes with 1 if not set in app config. User-facing version remains in repo root **version.json** (see OTA Updates above).
 
-Before running production builds or shipping OTA, replace `[PROJECT_ID]` in `app.json` with your EAS project ID (e.g. after `eas init` or linking the project in the Expo dashboard).
+**Linking the project:** Run **`eas init`** from the `mobile` directory (after `eas login`). This adds `extra.eas.projectId` to `app.json`; `app.config.js` then sets `updates.url` from it so OTA and builds work. Verify project ownership, slug (`kitchen-hub`), and linked account with **`eas project:info`** and **`eas whoami`**.
 
 To verify EAS config locally (remote app version source and production auto-increment), run `npm run verify:eas` from the mobile directory.
 

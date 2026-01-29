@@ -1,6 +1,6 @@
 /**
- * Tests that app.config.js exposes expo.version from version.json (single source of truth).
- * Ensures the merged Expo config has a non-empty version and that it matches repo root version.json.
+ * Tests that app.config.js exposes expo.version from version.json (single source of truth)
+ * and expo.updates.url from extra.eas.projectId when set (EAS init).
  */
 const path = require('path');
 const fs = require('fs');
@@ -29,5 +29,23 @@ describe('app.config.js', () => {
     const versionData = JSON.parse(fs.readFileSync(versionJsonPath, 'utf8'));
     expect(versionData.version).toBeDefined();
     expect(config.expo.version).toBe(versionData.version);
+  });
+
+  describe('EAS project ID and updates.url', () => {
+    it('sets expo.updates.url from extra.eas.projectId when present', () => {
+      const projectId = config.expo?.extra?.eas?.projectId;
+      if (typeof projectId !== 'string' || !projectId.trim()) {
+        return; // Skip when project not linked (no extra.eas.projectId in app.json)
+      }
+      expect(config.expo.updates).toBeDefined();
+      expect(config.expo.updates.url).toBe(`https://u.expo.dev/${projectId.trim()}`);
+    });
+
+    it('expo.extra.eas.projectId is present in merged config when set in app.json', () => {
+      const appJson = require('../../app.json');
+      const expectedId = appJson.expo?.extra?.eas?.projectId ?? appJson.extra?.eas?.projectId;
+      if (expectedId == null) return;
+      expect(config.expo.extra?.eas?.projectId).toBe(expectedId);
+    });
   });
 });
