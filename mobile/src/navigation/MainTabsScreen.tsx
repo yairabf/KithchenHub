@@ -18,8 +18,15 @@ import { RecipeDetailScreen } from '../features/recipes/screens/RecipeDetailScre
 import type { Recipe } from '../mocks/recipes';
 import { OfflineBanner } from '../common/components/OfflineBanner';
 import { OfflinePill } from '../common/components/OfflinePill';
+import type { AddChoreHandler } from '../features/chores/screens/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+/** Duration in ms for tab transition animation */
+const SCREEN_TRANSITION_DURATION_MS = 200;
+
+/** Easing curve for tab transitions (Material Design standard) */
+const SCREEN_TRANSITION_EASING = Easing.bezier(0.25, 0.1, 0.25, 1);
 
 // Tab order for determining swipe direction
 const TAB_ORDER: TabKey[] = ['Dashboard', 'Shopping', 'Chores', 'Recipes', 'Settings'];
@@ -34,11 +41,22 @@ export function MainTabsScreen() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   // Store reference to ChoresScreen's handleAddChore
-  const choreHandlerRef = useRef<((newChore: any) => void) | null>(null);
+  const choreHandlerRef = useRef<AddChoreHandler | null>(null);
 
-  // Animation value for screen position
-  const translateX = useSharedValue(0);
-  const previousTabRef = useRef<TabKey>('Dashboard');
+  // Animation values for screen positions - keep all screens mounted for smooth transitions
+  const dashboardPosition = useSharedValue(0);
+  const shoppingPosition = useSharedValue(SCREEN_WIDTH);
+  const choresPosition = useSharedValue(SCREEN_WIDTH);
+  const recipesPosition = useSharedValue(SCREEN_WIDTH);
+  const settingsPosition = useSharedValue(SCREEN_WIDTH);
+
+  const screenPositions: Record<TabKey, Animated.SharedValue<number>> = {
+    Dashboard: dashboardPosition,
+    Shopping: shoppingPosition,
+    Chores: choresPosition,
+    Recipes: recipesPosition,
+    Settings: settingsPosition,
+  };
 
   const handleTabPress = useCallback((tabKey: TabKey) => {
     if (tabKey === activeTab) return;
@@ -46,9 +64,6 @@ export function MainTabsScreen() {
     const currentIndex = getTabIndex(activeTab);
     const nextIndex = getTabIndex(tabKey);
     const isMovingRight = nextIndex > currentIndex;
-
-    // Store previous tab for rendering during animation
-    previousTabRef.current = activeTab;
 
     // Clear selected recipe when leaving Recipes tab
     if (activeTab === 'Recipes') {
@@ -58,15 +73,21 @@ export function MainTabsScreen() {
     // Update active tab immediately
     setActiveTab(tabKey);
 
-    // Start animation from offset position
-    translateX.value = isMovingRight ? SCREEN_WIDTH : -SCREEN_WIDTH;
+    // Animate all screens
+    TAB_ORDER.forEach((tab) => {
+      const tabIndex = getTabIndex(tab);
+      const targetPosition = tabIndex === nextIndex 
+        ? 0 
+        : tabIndex < nextIndex 
+          ? -SCREEN_WIDTH 
+          : SCREEN_WIDTH;
 
-    // Animate to center
-    translateX.value = withTiming(0, {
-      duration: 300,
-      easing: Easing.out(Easing.cubic),
+      screenPositions[tab].value = withTiming(targetPosition, {
+        duration: SCREEN_TRANSITION_DURATION_MS,
+        easing: SCREEN_TRANSITION_EASING,
+      });
     });
-  }, [activeTab, translateX]);
+  }, [activeTab, screenPositions]);
 
   const handleOpenShoppingModal = useCallback((buttonPosition?: { x: number; y: number; width: number; height: number }) => {
     setShoppingButtonPosition(buttonPosition);
@@ -85,27 +106,41 @@ export function MainTabsScreen() {
     setChoresModalVisible(false);
   }, []);
 
-  const handleAddChore = useCallback((newChore: {
-    name: string;
-    icon: string;
-    assignee?: string;
-    dueDate: string;
-    dueTime?: string;
-    section: 'today' | 'thisWeek';
-  }) => {
+  const handleAddChore: AddChoreHandler = useCallback((newChore) => {
     // This will be called by the modal and passed to ChoresScreen
     if (choreHandlerRef.current) {
       choreHandlerRef.current(newChore);
     }
   }, []);
 
-  const setChoreHandler = useCallback((handler: ((newChore: any) => void) | null) => {
+  const setChoreHandler = useCallback((handler: AddChoreHandler | null) => {
     choreHandlerRef.current = handler;
   }, []);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
+  // Create animated styles for each screen
+  const dashboardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: dashboardPosition.value }],
   }));
+  const shoppingStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shoppingPosition.value }],
+  }));
+  const choresStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: choresPosition.value }],
+  }));
+  const recipesStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: recipesPosition.value }],
+  }));
+  const settingsStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: settingsPosition.value }],
+  }));
+
+  const screenStyles: Record<TabKey, ReturnType<typeof useAnimatedStyle>> = {
+    Dashboard: dashboardStyle,
+    Shopping: shoppingStyle,
+    Chores: choresStyle,
+    Recipes: recipesStyle,
+    Settings: settingsStyle,
+  };
 
   const renderScreen = (tab: TabKey) => {
     switch (tab) {
@@ -147,9 +182,19 @@ export function MainTabsScreen() {
     <View style={styles.container}>
       <OfflineBanner />
       <View style={styles.screenContainer}>
-        <Animated.View style={[styles.screen, animatedStyle]}>
-          {renderScreen(activeTab)}
-        </Animated.View>
+        {TAB_ORDER.map((tab) => (
+          <Animated.View
+            key={tab}
+            style={[
+              styles.screen,
+              screenStyles[tab],
+              { position: tab === activeTab ? 'relative' : 'absolute' },
+            ]}
+            pointerEvents={tab === activeTab ? 'auto' : 'none'}
+          >
+            {renderScreen(tab)}
+          </Animated.View>
+        ))}
       </View>
 
       <OfflinePill position="bottom-right" />
@@ -179,5 +224,7 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
 });

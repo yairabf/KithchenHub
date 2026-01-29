@@ -1,21 +1,26 @@
 import { StyleSheet } from 'react-native';
-import { colors, spacing, borderRadius, typography, shadows, componentSize } from '../../../theme';
+import { colors, spacing, borderRadius, typography, shadows, componentSize, zIndex } from '../../../theme';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
+  // Header (sticky look)
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.md,
   },
   logoContainer: {
     width: componentSize.button.md,
@@ -30,30 +35,36 @@ export const styles = StyleSheet.create({
     ...typography.h3,
     marginLeft: spacing.md,
   },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.widgetBackground,
-    borderRadius: borderRadius.xxl,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + spacing.xxs,
-    marginHorizontal: spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: spacing.sm,
-    ...typography.bodySmall,
-    fontWeight: '500',
-  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
+  dateTimeContainer: {
+    alignItems: 'flex-end',
+    marginRight: spacing.sm,
+  },
+  timeText: {
+    ...typography.h4,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    lineHeight: 24,
+  },
+  dateText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
   notificationButton: {
     padding: spacing.sm,
     position: 'relative',
+  },
+  profileSectionSeparator: {
+    width: 1,
+    height: 24,
+    backgroundColor: colors.border,
+    marginLeft: spacing.sm,
+    marginRight: spacing.sm,
   },
   notificationBadge: {
     position: 'absolute',
@@ -61,10 +72,10 @@ export const styles = StyleSheet.create({
     right: spacing.sm,
     width: 10,
     height: 10,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.error,
     borderRadius: 5,
     borderWidth: 2,
-    borderColor: colors.background,
+    borderColor: colors.surface,
   },
   profileSection: {
     flexDirection: 'row',
@@ -77,6 +88,7 @@ export const styles = StyleSheet.create({
   profileRole: {
     ...typography.tiny,
     marginBottom: spacing.xxs,
+    color: colors.textMuted,
   },
   profileName: {
     ...typography.labelBold,
@@ -100,178 +112,325 @@ export const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.lg,
     paddingBottom: 120,
   },
-  greetingSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.xl,
-  },
-  greetingTextContainer: {
-    flex: 1,
-  },
-  greeting: {
-    ...typography.display,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.bodyLarge,
-    color: colors.textSecondary,
-  },
+  // Two-column layout
   mainGrid: {
     flexDirection: 'row',
     gap: spacing.xl,
   },
   leftColumn: {
-    flex: 1,
+    flex: 7,
   },
   rightColumn: {
-    flex: 1.2,
-  },
-  widgetsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
-  },
-  sectionTitle: {
-    ...typography.h4,
-    fontWeight: '900',
-    letterSpacing: -0.3,
-  },
-  editButton: {
-    ...typography.labelBold,
-    color: colors.primary,
-  },
-  overviewCards: {
-    gap: spacing.md,
-  },
-  overviewCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xxxl,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg - spacing.xs,
-    ...shadows.lg,
-  },
-  overviewCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  overviewIconContainer: {
-    width: componentSize.icon.container.md,
-    height: componentSize.icon.container.md,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  overviewTextContainer: {
-    gap: spacing.xs,
-  },
-  overviewTitle: {
-    ...typography.body,
-    fontWeight: '700',
-  },
-  overviewSub: {
-    ...typography.sectionTitleMuted,
-  },
-  addWidgetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xl,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.borderDashed,
-    borderRadius: borderRadius.pill,
-  },
-  addWidgetText: {
-    ...typography.labelBold,
-    color: colors.textMuted,
-  },
-  widgetCard: {
-    flex: 1,
-    aspectRatio: 1,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.pill,
-    padding: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.sm,
-    maxWidth: 217,
-    maxHeight: 217,
-    minHeight: 217,
-    ...shadows.lg,
-  },
-  widgetIconContainer: {
-    width: componentSize.icon.container.md,
-    height: componentSize.icon.container.md,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  widgetLabel: {
-    ...typography.widgetTitle,
-    textAlign: 'center',
-    minHeight: 84, // Fixed height for 3 lines of text (numberOfLines applied as prop)
-  },
-  // Phone-specific styles
-  headerPhone: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  searchBarPhone: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.widgetBackground,
-    borderRadius: borderRadius.xxl,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + spacing.xxs,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
+    flex: 5,
   },
   mainGridPhone: {
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: spacing.xl,
   },
   fullWidthColumn: {
     flex: undefined,
     width: '100%',
   },
-  widgetsColumnPhone: {
-    flexDirection: 'column',
-    gap: spacing.md,
+  leftColumnContent: {
+    gap: spacing.lg,
   },
-  widgetCardPhone: {
-    flex: undefined,
-    width: '100%',
-    aspectRatio: undefined,
+  // Shopping widget card
+  shoppingCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xxxl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.lg,
+  },
+  shoppingCardHeader: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  shoppingCardTitleBlock: {
+    flex: 1,
+  },
+  shoppingCardTitle: {
+    ...typography.h2,
+    marginBottom: spacing.xs,
+  },
+  shoppingCardSubtitle: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
+  mainListBadge: {
+    backgroundColor: colors.pastel.green,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    alignSelf: 'flex-start',
+  },
+  mainListBadgeText: {
+    ...typography.tiny,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  inputRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    maxWidth: undefined,
-    maxHeight: undefined,
-    minHeight: undefined,
+    backgroundColor: colors.quantityBg,
+    borderRadius: borderRadius.xxl,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
+  },
+  inputRowWithDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.quantityBg,
+    borderRadius: borderRadius.xxl,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
+    zIndex: zIndex.dropdown + 1,
+  },
+  grocerySearchBarWrapper: {
+    flex: 1,
+    minWidth: 0,
+  },
+  grocerySearchBarContainer: {
+    flex: 1,
+  },
+  suggestedSection: {
+    zIndex: 0,
+  },
+  inputActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  micButton: {
+    padding: spacing.sm,
+  },
+  addButton: {
+    backgroundColor: colors.primary,
+    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+    ...shadows.md,
+  },
+  suggestedLabel: {
+    ...typography.tiny,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: spacing.sm,
+  },
+  suggestionChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  suggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.xl,
+  },
+  suggestionChipText: {
+    ...typography.labelBold,
+    color: colors.textSecondary,
+  },
+  // Quick stats row
+  quickStatsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
-  widgetLabelPhone: {
-    minHeight: undefined,
-    textAlign: 'left',
+  quickStatCard: {
+    flex: 1,
+    minWidth: 100,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.xxl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.lg,
+  },
+  quickStatIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  quickStatIconShopping: {
+    backgroundColor: colors.pastel.green,
+  },
+  quickStatIconRecipes: {
+    backgroundColor: colors.pastel.peach,
+  },
+  quickStatIconUsage: {
+    backgroundColor: colors.quantityBg,
+  },
+  quickStatLabel: {
+    ...typography.tiny,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  quickStatValueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  quickStatValue: {
+    ...typography.h4,
+    fontWeight: '800',
+  },
+  // Chores section (right column)
+  choresCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xxxl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.lg,
+  },
+  choresSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  choresTitleBlock: {
+    flex: 1,
+  },
+  choresSectionTitle: {
+    ...typography.h2,
+    marginBottom: spacing.xs,
+  },
+  choresSectionSubtitle: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
+  viewAllLink: {
+    ...typography.labelBold,
+    color: colors.primary,
+  },
+  choreList: {
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  choreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.xxl,
+    gap: spacing.md,
+  },
+  choreRowDone: {
+    opacity: 0.7,
+  },
+  choreAvatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.avatarBackground,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  choreAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+  choreContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  choreTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  choreTitle: {
+    ...typography.body,
+    fontWeight: '700',
+    flex: 1,
+  },
+  choreTitleDone: {
+    textDecorationLine: 'line-through',
+    color: colors.textMuted,
+  },
+  choreStatusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    ...typography.tiny,
+    textTransform: 'uppercase',
+    overflow: 'hidden',
+  },
+  choreStatusPending: {
+    backgroundColor: colors.quantityBg,
+  },
+  choreStatusDone: {
+    backgroundColor: colors.success,
+  },
+  choreStatusBadgeText: {
+    ...typography.tiny,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  choreStatusBadgeTextDone: {
+    color: colors.textLight,
+  },
+  choreMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  choreMetaText: {
+    ...typography.tiny,
+    color: colors.textSecondary,
+  },
+  choreMetaDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.textMuted,
+  },
+  addHouseholdTaskButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.borderDashed,
+    borderRadius: borderRadius.xl,
+  },
+  addHouseholdTaskText: {
+    ...typography.labelBold,
+    color: colors.textMuted,
+  },
+  // Phone-specific
+  headerPhone: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
 });

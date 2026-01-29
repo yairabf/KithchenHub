@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, shadows } from '../../../../theme';
+import { colors, shadows, spacing, borderRadius, typography } from '../../../../theme';
 
 export const styles = StyleSheet.create({
   categoriesSection: {
@@ -55,5 +55,23 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  showMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    alignSelf: 'center',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  showMoreText: {
+    ...typography.labelBold,
+    color: colors.textSecondary,
   },
 });
