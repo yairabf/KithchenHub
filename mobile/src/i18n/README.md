@@ -28,7 +28,11 @@ i18n is initialized by importing `./src/i18n` at the **earliest executed entrypo
 
 RTL is not implemented in this setup. When you add RTL support (e.g. for Hebrew or Arabic), **RTL will require `I18nManager.forceRTL` + app restart** (per i18n epic).
 
+## Key structure and namespaces
+
+Translation key format, namespaces per feature, placeholder and pluralization rules, and what must not be translated are defined in **[KEY_STRUCTURE.md](./KEY_STRUCTURE.md)**. Use it as the single source of truth when adding or changing keys.
+
 ## Usage
 
-- **In components:** `import { useTranslation } from 'react-i18next';` then `const { t } = useTranslation();` and `t('common:appName')` or `t('common.appName')` depending on namespace usage.
+- **In components:** `import { useTranslation } from 'react-i18next';` then `const { t } = useTranslation();`. Prefer `useTranslation('shopping')` then `t('listPanel.title')`; or `t('shopping:listPanel.title')` when explicit. For default namespace (common): `t('buttons.save')`.
 - **Change language:** Use `setAppLanguage(locale)` from `./i18n` (persists to AsyncStorage and calls `i18n.changeLanguage`). Do not call `i18n.changeLanguage` directly in app code.

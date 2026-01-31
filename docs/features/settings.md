@@ -1,8 +1,8 @@
 # Settings Feature
 
-**Exports** (from `mobile/src/features/settings/index.ts`): `SettingsScreen`, `ManageHouseholdModal`.
+**Exports** (from `mobile/src/features/settings/index.ts`): `SettingsScreen`, `ManageHouseholdModal`, `LanguageSelectorModal`.
 
-**Source**: `mobile/src/features/settings/` — 1 screen (SettingsScreen), 2 components (ManageHouseholdModal, ImportDataModal).
+**Source**: `mobile/src/features/settings/` — 1 screen (SettingsScreen), 3 components (ManageHouseholdModal, ImportDataModal, LanguageSelectorModal).
 
 ## Overview
 
@@ -23,6 +23,7 @@ The Settings feature provides user account management, notification preferences,
 - **File**: `mobile/src/features/settings/screens/SettingsScreen.tsx`
 - **Purpose**: Comprehensive settings interface with multiple sections
 - **Key functionality**:
+  - **Language Section**: Row showing current language (native name); opens LanguageSelectorModal to change app language (persisted to AsyncStorage, applied app-wide via i18n)
   - **Account Section**: User profile card, sign-in prompt for guests, sign out button
   - **Notifications Section**: Push notifications and daily summary email toggles
   - **Household Section**: Button to manage household members
@@ -33,15 +34,19 @@ The Settings feature provides user account management, notification preferences,
 #### Code Snippet - State Management
 
 ```typescript
+const { t } = useTranslation('settings');
 const { user, signOut, signInWithGoogle, hasGuestData, importGuestData, clearGuestData } = useAuth();
 const [pushNotifications, setPushNotifications] = React.useState(true);
 const [dailySummary, setDailySummary] = React.useState(false);
 const [cloudSync, setCloudSync] = React.useState(true);
+const [showLanguageSelector, setShowLanguageSelector] = React.useState(false);
 const [showManageHousehold, setShowManageHousehold] = React.useState(false);
 const [showImportData, setShowImportData] = React.useState(false);
 const [showClearDataConfirm, setShowClearDataConfirm] = React.useState(false);
 const [toastMessage, setToastMessage] = React.useState<string | null>(null);
 const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
+const currentLanguageCode = normalizeLocale(i18n.language ?? '');
+const currentLanguageDisplayName = getNativeNameForCode(currentLanguageCode);
 ```
 
 #### Code Snippet - Guest Data Management
@@ -115,7 +120,32 @@ interface ImportDataModalProps {
   - Shows error state with "Retry" capability
   - Integration with `AuthContext` to clear guest data on user confirmation
 
+### LanguageSelectorModal
+
+- **File**: `mobile/src/features/settings/components/LanguageSelectorModal/`
+- **Purpose**: Lists available languages with native names; user selects one to change app language (persisted to AsyncStorage, applied app-wide)
+- **Props**:
+
+```typescript
+interface LanguageSelectorModalProps {
+  visible: boolean;
+  onClose: () => void;
+  /** Normalized current language code (e.g. from normalizeLocale(i18n.language)). */
+  currentLanguageCode: string;
+}
+```
+
+- **Features**:
+  - Scrollable list from `AVAILABLE_LANGUAGES` (i18n constants); each row shows native name and checkmark when selected
+  - On row press: calls `setAppLanguage(code)` then `onClose()`; on failure still closes modal
+  - Uses `CenteredModal` with `showActions={false}`; title from `t('settings:language')`
+  - Accessibility: `accessibilityRole="button"`, `accessibilityLabel` (e.g. "Select language: English"), `accessibilityState={{ selected: true }}` for current language
+  - Min row height 44pt; uses theme (colors, spacing, borderRadius, typography)
+
 ## UI Sections
+
+### Language Section
+- **Language**: Row labeled "Language" (from `t('settings:language')`) with current language’s native name (e.g. "English") and chevron; opens LanguageSelectorModal on press. Display name resolved via `getNativeNameForCode(normalizeLocale(i18n.language))` with defensive fallback.
 
 ### Account Section
 - **Profile Card**:
@@ -167,11 +197,13 @@ interface ImportDataModalProps {
   - `pushNotifications` - Push notification toggle state
   - `dailySummary` - Email summary toggle state
   - `cloudSync` - Cloud sync toggle state
+  - `showLanguageSelector` - Language selector modal visibility
   - `showManageHousehold` - Manage household modal visibility
   - `showImportData` - Import data modal visibility
   - `showClearDataConfirm` - Guest data deletion confirmation modal visibility
   - `toastMessage` - Toast notification message (null when hidden)
   - `toastType` - Toast type ('success' or 'error')
+- **Derived (i18n)**: `currentLanguageCode` = `normalizeLocale(i18n.language ?? '')`; `currentLanguageDisplayName` = `getNativeNameForCode(currentLanguageCode)` for the Language row
 
 ## Key Dependencies
 
@@ -185,8 +217,10 @@ interface ImportDataModalProps {
   - Validates entity modes before migration using `validateModeMigration()` and `isGuestEntity()`
   - Returns empty arrays when no guest data exists
 - `ScreenHeader` - Shared header component for consistent navigation
-- `CenteredModal` - Shared modal component (used by ManageHouseholdModal, ImportDataModal, and guest data deletion confirmation)
+- `CenteredModal` - Shared modal component (used by ManageHouseholdModal, ImportDataModal, LanguageSelectorModal, and guest data deletion confirmation)
 - `Toast` - Shared toast component for user feedback (success/error messages)
+- `react-i18next` - `useTranslation('settings')` for screen title and Language section labels
+- `i18n` (mobile/src/i18n) - Current language and `setAppLanguage()`; `normalizeLocale()` and `getNativeNameForCode()` from localeNormalization and constants
 - Theme system (`colors`, `spacing`, `borderRadius`, `typography`, `shadows`) - Centralized design tokens
 
 ## Conditional Rendering

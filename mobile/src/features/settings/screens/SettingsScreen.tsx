@@ -10,25 +10,34 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography, shadows } from '../../../theme';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ManageHouseholdModal } from '../components/ManageHouseholdModal';
+import { LanguageSelectorModal } from '../components/LanguageSelectorModal';
 import { CenteredModal } from '../../../common/components/CenteredModal';
 import { ImportDataModal } from '../components/ImportDataModal';
 import { Toast } from '../../../common/components/Toast';
-
+import { i18n } from '../../../i18n';
+import { normalizeLocale } from '../../../i18n/localeNormalization';
+import { getNativeNameForCode } from '../../../i18n/constants';
 
 export function SettingsScreen() {
+  const { t } = useTranslation('settings');
   const { user, signOut, signInWithGoogle, hasGuestData, importGuestData, clearGuestData } = useAuth();
   const [pushNotifications, setPushNotifications] = React.useState(true);
   const [dailySummary, setDailySummary] = React.useState(false);
   const [cloudSync, setCloudSync] = React.useState(true);
+  const [showLanguageSelector, setShowLanguageSelector] = React.useState(false);
   const [showManageHousehold, setShowManageHousehold] = React.useState(false);
   const [showImportData, setShowImportData] = React.useState(false);
   const [showClearDataConfirm, setShowClearDataConfirm] = React.useState(false);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
+
+  const currentLanguageCode = normalizeLocale(i18n.language ?? '');
+  const currentLanguageDisplayName = getNativeNameForCode(currentLanguageCode);
 
   const handleImportGuestData = () => {
     setShowImportData(true);
@@ -53,9 +62,25 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScreenHeader title="Settings" />
+      <ScreenHeader title={t('title')} />
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        {/* Language Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('language')}</Text>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => setShowLanguageSelector(true)}
+          >
+            <View style={styles.settingInfo}>
+              <Ionicons name="language-outline" size={22} color={colors.textPrimary} />
+              <Text style={styles.settingLabel}>{t('language')}</Text>
+            </View>
+            <Text style={styles.settingValue}>{currentLanguageDisplayName}</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
         {/* Account Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
@@ -232,6 +257,12 @@ export function SettingsScreen() {
         onClose={() => setShowImportData(false)}
       />
 
+      <LanguageSelectorModal
+        visible={showLanguageSelector}
+        onClose={() => setShowLanguageSelector(false)}
+        currentLanguageCode={currentLanguageCode}
+      />
+
       <CenteredModal
         visible={showClearDataConfirm}
         onClose={() => setShowClearDataConfirm(false)}
@@ -364,6 +395,11 @@ const styles = StyleSheet.create({
   settingLabel: {
     ...typography.body,
     marginLeft: spacing.md,
+  },
+  settingValue: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginRight: spacing.xs,
   },
   versionText: {
     ...typography.body,

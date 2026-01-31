@@ -1,0 +1,57 @@
+---
+type: summary
+epic: i18n
+task: define-translation-key-structure-and-namespaces
+---
+
+# Define translation key structure and namespaces - Implementation Summary
+
+**Epic:** Internationalization (i18n)  
+**Completed:** 2026-01-31  
+**Status:** Completed
+
+## What Was Implemented
+
+### 1. KEY_STRUCTURE.md
+
+- **File:** [mobile/src/i18n/KEY_STRUCTURE.md](mobile/src/i18n/KEY_STRUCTURE.md)
+- **Content:** Single source of truth for:
+  - Key format: namespace = feature, key = component.element.context (no feature prefix in keys)
+  - Key structure: 2–4 segments; group by stable UI categories or components
+  - What must not be translated (UI vs backend vs user content)
+  - Namespace table (common, auth, dashboard, shopping, recipes, chores, settings, categories, errors, validation)
+  - Categories: backend-stable IDs + fallback order
+  - Placeholder and interpolation rules (including units in translation, no markup in strings)
+  - Pluralization rules (i18next suffixes, count variable)
+  - Do / Don't section
+  - Key lifecycle (no rename without codemod; deprecate old keys when needed)
+
+### 2. Stub locale files
+
+- **Path:** `mobile/src/i18n/locales/en/`
+- **Created:** auth.json, dashboard.json, shopping.json, recipes.json, chores.json, settings.json, categories.json, errors.json, validation.json
+- **Updated:** common.json with buttons, labels, messages (and kept appName)
+- **Content:** Minimal example keys per namespace so `useTranslation('shopping')` and `t('shopping:...')` work without missing-namespace errors; shopping.json includes itemCount/itemCount_plural for pluralization example.
+
+### 3. i18n index registration
+
+- **File:** [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts)
+- **Changes:** Import all new namespace JSON files; added `NamespaceResource` type; extended `resources.en` with auth, dashboard, shopping, recipes, chores, settings, categories, errors, validation; extended `ns` array with all namespaces. `defaultNS` remains `common`.
+
+### 4. README update
+
+- **File:** [mobile/src/i18n/README.md](mobile/src/i18n/README.md)
+- **Changes:** New section "Key structure and namespaces" with pointer to KEY_STRUCTURE.md; Usage section updated to recommend `useTranslation('shopping')` then `t('listPanel.title')` and `t('buttons.save')` for default namespace.
+
+## Deviations from Plan
+
+- None. All deliverables (KEY_STRUCTURE.md, stub locale files, index registration, README pointer) were implemented as specified.
+
+## Testing
+
+- No new code logic; documentation and JSON/stub files only. Existing i18n unit tests (localeNormalization, storage, languageDetector, setAppLanguage) remain valid. Manual verification: run app and call `useTranslation('shopping')` and `t('listPanel.title')` to confirm namespace resolution.
+
+## Next Steps
+
+- Use KEY_STRUCTURE.md when extracting UI strings in Phase 2 epic tasks (auth, dashboard, shopping, recipes, chores, settings, common, errors, validation).
+- Optional follow-on: TypeScript type-generation for translation keys from JSON (epic Task 1.2).
