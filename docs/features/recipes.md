@@ -363,7 +363,8 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
     - **Recipe Loading**: Uses `useEffect` to load recipes from `service.getRecipes()` when `!isSignedIn`
     - Maintains separate state (`guestRecipes`, `isGuestLoading`, `guestError`) for guest mode
     - Handles loading and error states for guest mode recipe fetching
-    - `addRecipe` and `updateRecipe` automatically persist to guest storage
+    - `addRecipe` and `updateRecipe` persist to guest storage and update `guestRecipes` state immediately after successful service calls so the UI reflects new/updated recipes without refetch
+    - On failure, state is unchanged; error propagates to caller
     - `updateRecipe` merges updates with existing recipe data to prevent data loss
 
 ## Service Layer

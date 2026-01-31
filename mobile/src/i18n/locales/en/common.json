@@ -1,3 +1,26 @@
 {
-  "appName": "Kitchen Hub"
+  "appName": "Kitchen Hub",
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove",
+    "share": "Share",
+    "close": "Close"
+  },
+  "labels": {
+    "name": "Name",
+    "quantity": "Quantity",
+    "category": "Category",
+    "date": "Date",
+    "time": "Time"
+  },
+  "messages": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "success": "Success!",
+    "error": "Error occurred"
+  }
 }
