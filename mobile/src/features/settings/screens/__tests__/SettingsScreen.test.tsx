@@ -72,6 +72,48 @@ jest.mock('../../components/ImportDataModal', () => ({
     })() : null),
 }));
 
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => ({ title: 'Settings', language: 'Language' }[key] ?? key),
+    i18n: { language: 'en' },
+  }),
+}));
+
+const mockSetAppLanguage = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../../../i18n', () => ({
+  i18n: { language: 'en' },
+  setAppLanguage: mockSetAppLanguage,
+}));
+
+jest.mock('../../components/LanguageSelectorModal', () => {
+  const React = require('react');
+  const { View, Text, TouchableOpacity } = require('react-native');
+  const { setAppLanguage } = require('../../../../i18n');
+  return {
+    LanguageSelectorModal: ({
+      visible,
+      onClose,
+    }: {
+      visible: boolean;
+      onClose: () => void;
+    }) => {
+      if (!visible) return null;
+      return React.createElement(
+        View,
+        { testID: 'language-selector-modal' },
+        React.createElement(Text, null, 'English'),
+        React.createElement(TouchableOpacity, {
+          testID: 'select-english',
+          onPress: async () => {
+            await setAppLanguage('en');
+            onClose();
+          },
+        }, React.createElement(Text, null, 'Select'))
+      );
+    },
+  };
+});
+
 const { SettingsScreen } = require('../SettingsScreen');
 const { useAuth } = require('../../../../contexts/AuthContext');
 
@@ -235,6 +277,37 @@ describe('SettingsScreen', () => {
 
       const { queryByText } = render(<SettingsScreen />);
       expect(queryByText('Guest Data')).toBeNull();
+    });
+  });
+
+  describe('Language selector', () => {
+    it('renders Language row with current language native name (English)', () => {
+      const { getAllByText, getByText } = render(<SettingsScreen />);
+      expect(getAllByText('Language').length).toBeGreaterThanOrEqual(1);
+      expect(getByText('English')).toBeTruthy();
+    });
+
+    it('opens language selector modal when Language row is pressed', async () => {
+      const { getByText, queryByTestId } = render(<SettingsScreen />);
+      fireEvent.press(getByText('English'));
+      await waitFor(() => {
+        expect(queryByTestId('language-selector-modal')).toBeTruthy();
+      });
+    });
+
+    it('calls setAppLanguage and closes modal when selecting English in modal', async () => {
+      const { getByText, getByTestId, queryByTestId } = render(<SettingsScreen />);
+      fireEvent.press(getByText('English'));
+      await waitFor(() => {
+        expect(queryByTestId('language-selector-modal')).toBeTruthy();
+      });
+      fireEvent.press(getByTestId('select-english'));
+      await waitFor(() => {
+        expect(mockSetAppLanguage).toHaveBeenCalledWith('en');
+      });
+      await waitFor(() => {
+        expect(queryByTestId('language-selector-modal')).toBeNull();
+      });
     });
   });
 

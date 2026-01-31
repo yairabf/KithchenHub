@@ -8,6 +8,7 @@ import { initReactI18next } from 'react-i18next';
 import { createLanguageDetector } from './languageDetector';
 import { setStoredLanguage } from './storage';
 import { normalizeLocale } from './localeNormalization';
+import { SUPPORTED_LANGUAGE_CODES } from './constants';
 
 import enCommon from './locales/en/common.json';
 import enAuth from './locales/en/auth.json';
@@ -19,8 +20,6 @@ import enSettings from './locales/en/settings.json';
 import enCategories from './locales/en/categories.json';
 import enErrors from './locales/en/errors.json';
 import enValidation from './locales/en/validation.json';
-
-const SUPPORTED_LANGS = ['en'] as const;
 
 /** Type for namespace JSON: nested key-value; i18next accepts Record<string, unknown>. */
 type NamespaceResource = Record<string, unknown>;
@@ -48,7 +47,7 @@ i18n
   .init({
     resources,
     fallbackLng: 'en',
-    supportedLngs: [...SUPPORTED_LANGS],
+    supportedLngs: [...SUPPORTED_LANGUAGE_CODES],
     ns: [
       'common',
       'auth',
@@ -92,7 +91,7 @@ export async function setAppLanguage(locale: string): Promise<void> {
   if (normalized === '') {
     return;
   }
-  const supported = i18n.options.supportedLngs ?? SUPPORTED_LANGS;
+  const supported = i18n.options.supportedLngs ?? SUPPORTED_LANGUAGE_CODES;
   const list = Array.isArray(supported)
     ? supported
     : supported === true
