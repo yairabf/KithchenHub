@@ -113,6 +113,98 @@ describe('RecipesService - Soft-Delete Behavior', () => {
     });
   });
 
+  describe('createRecipe', () => {
+    it('should return full RecipeDetailDto with id, title, prepTime, ingredients, instructions, imageUrl', async () => {
+      const createDto = {
+        title: 'New Pasta',
+        prepTime: 25,
+        ingredients: [
+          { name: 'Spaghetti', quantity: 400, unit: 'g' },
+          { name: 'Olive oil', quantity: 2, unit: 'tbsp' },
+        ],
+        instructions: [
+          { step: 1, instruction: 'Boil water.' },
+          { step: 2, instruction: 'Add pasta.' },
+        ],
+        imageUrl: 'https://example.com/pasta.jpg',
+      };
+
+      const createdEntity = {
+        id: 'recipe-new-1',
+        householdId: mockHouseholdId,
+        title: createDto.title,
+        prepTime: createDto.prepTime,
+        ingredients: createDto.ingredients,
+        instructions: createDto.instructions,
+        imageUrl: createDto.imageUrl,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest
+        .spyOn(repository, 'createRecipe')
+        .mockResolvedValue(createdEntity as any);
+
+      const result = await service.createRecipe(mockHouseholdId, createDto);
+
+      expect(repository.createRecipe).toHaveBeenCalledWith(
+        mockHouseholdId,
+        expect.objectContaining({
+          title: createDto.title,
+          prepTime: createDto.prepTime,
+          ingredients: createDto.ingredients,
+          instructions: createDto.instructions,
+          imageUrl: createDto.imageUrl,
+        }),
+      );
+      expect(result).toEqual({
+        id: 'recipe-new-1',
+        title: 'New Pasta',
+        prepTime: 25,
+        ingredients: createDto.ingredients,
+        instructions: createDto.instructions,
+        imageUrl: 'https://example.com/pasta.jpg',
+      });
+      expect(Array.isArray(result.ingredients)).toBe(true);
+      expect(Array.isArray(result.instructions)).toBe(true);
+    });
+
+    it('should return empty arrays when repository returns non-array ingredients or instructions', async () => {
+      const createDto = {
+        title: 'Minimal Recipe',
+        ingredients: [],
+        instructions: [],
+      };
+
+      const createdEntity = {
+        id: 'recipe-min-1',
+        householdId: mockHouseholdId,
+        title: createDto.title,
+        prepTime: null,
+        ingredients: null,
+        instructions: {},
+        imageUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest
+        .spyOn(repository, 'createRecipe')
+        .mockResolvedValue(createdEntity as any);
+
+      const result = await service.createRecipe(mockHouseholdId, createDto);
+
+      expect(result.id).toBe('recipe-min-1');
+      expect(result.title).toBe('Minimal Recipe');
+      expect(result.ingredients).toEqual([]);
+      expect(result.instructions).toEqual([]);
+      expect(result.prepTime).toBeUndefined();
+      expect(result.imageUrl).toBeUndefined();
+    });
+  });
+
   describe('cookRecipe', () => {
     it('should add recipe ingredients to active shopping list', async () => {
       const mockRecipe = {
