@@ -75,8 +75,10 @@ export function useRecipes() {
 
     const addRecipe = async (recipeData: Partial<Recipe>) => {
         if (!repository) {
-            // Guest mode: use service directly
-            return service.createRecipe(recipeData);
+            // Guest mode: create recipe and update local state. On failure, state is unchanged; error propagates to caller.
+            const newRecipe = await service.createRecipe(recipeData);
+            setGuestRecipes(prev => [...prev, newRecipe]);
+            return newRecipe;
         }
         
         // Signed-in mode: use repository (cache events will trigger UI update)
@@ -85,8 +87,12 @@ export function useRecipes() {
 
     const updateRecipe = async (recipeId: string, updates: Partial<Recipe>) => {
         if (!repository) {
-            // Guest mode: use service directly
-            return service.updateRecipe(recipeId, updates);
+            // Guest mode: update recipe and update local state. On failure, state is unchanged; error propagates to caller.
+            const updatedRecipe = await service.updateRecipe(recipeId, updates);
+            setGuestRecipes(prev => 
+                prev.map(recipe => recipe.id === recipeId ? updatedRecipe : recipe)
+            );
+            return updatedRecipe;
         }
         
         // Signed-in mode: use repository (cache events will trigger UI update)

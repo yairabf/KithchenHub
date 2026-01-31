@@ -1,5 +1,9 @@
 # Chores Feature
 
+**Exports** (from `mobile/src/features/chores/index.ts`): `ChoresScreen`, `ProgressRing`, `ChoreDetailsModal`, `ChoresQuickActionModal`.
+
+**Source**: `mobile/src/features/chores/` — 1 screen (ChoresScreen), 3 components (ProgressRing, ChoreDetailsModal, ChoresQuickActionModal), services (choresService), utils (choreFactory).
+
 ## Overview
 
 The Chores feature provides household chore tracking with a visual progress ring, swipeable cards for today's and upcoming chores, and the ability to assign chores to household members. It features a responsive layout that adapts between single-column (mobile) and two-column (tablet) layouts.

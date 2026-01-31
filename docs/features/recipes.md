@@ -1,5 +1,9 @@
 # Recipes Feature
 
+**Exports** (from `mobile/src/features/recipes/index.ts`): `RecipesScreen`, `RecipeCard`, `AddRecipeModal`, `NewRecipeData` (type).
+
+**Source**: `mobile/src/features/recipes/` — 2 screens (RecipesScreen, RecipeDetailScreen), 8 components (RecipeCard, AddRecipeModal, RecipeHeader, RecipeContentWrapper, RecipeIngredients, RecipeSteps, IngredientCard, InstructionStep), hooks (useRecipes), services (recipeService), utils (recipeFactory).
+
 ## Overview
 
 The Recipes feature allows users to browse, search, filter, and create recipes. It displays recipes in a card grid with category filtering and provides a comprehensive recipe creation form with ingredients and step-by-step instructions.

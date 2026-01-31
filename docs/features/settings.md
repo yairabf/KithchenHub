@@ -1,5 +1,9 @@
 # Settings Feature
 
+**Exports** (from `mobile/src/features/settings/index.ts`): `SettingsScreen`, `ManageHouseholdModal`.
+
+**Source**: `mobile/src/features/settings/` — 1 screen (SettingsScreen), 2 components (ManageHouseholdModal, ImportDataModal).
+
 ## Overview
 
 The Settings feature provides user account management, notification preferences, household member management, data controls, and app information. It displays the current user's profile and offers various configuration options.

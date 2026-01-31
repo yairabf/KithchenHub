@@ -1,0 +1,172 @@
+---
+type: plan
+epic: i18n
+task: set-up-i18next-for-react-native
+---
+
+# Set up i18next for React Native (mobile-only)
+
+**Epic:** Internationalization (i18n)  
+**Task:** set-up-i18next-for-react-native  
+**Store plan/summary under:** [.cursor/tasks/i18n/set-up-i18next-for-react-native/](.cursor/tasks/i18n/set-up-i18next-for-react-native/)  
+**Status:** Planning
+
+---
+
+## Overview
+
+- **Goal:** Add i18n foundation to the Kitchen Hub mobile app (iOS/Android) using i18next and react-i18next, with language persistence in AsyncStorage and device locale detection via react-native-localize. No browser-based language detection.
+- **Scope:** Mobile app only; no backend or web i18n in this task.
+- **References:** Existing epic [.cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md](.cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md) (Task 1.1 is aligned but must use react-native-localize instead of `i18next-browser-languagedetector`).
+
+---
+
+## Current state
+
+| Item                       | Status                                                                                                                                                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| i18next / react-i18next    | Not installed                                                                                                                                                                                        |
+| react-native-localize      | Not installed                                                                                                                                                                                        |
+| AsyncStorage               | In use ([mobile/src/contexts/AuthContext.tsx](mobile/src/contexts/AuthContext.tsx), [mobile/src/common/utils/cacheStorage.ts](mobile/src/common/utils/cacheStorage.ts)); key prefix `@kitchen_hub_*` |
+| Browser language detection | Not in codebase (only mentioned in epic doc; do not add)                                                                                                                                             |
+| App root                   | [mobile/App.tsx](mobile/App.tsx) – i18n must be initialized before or at root so `useTranslation()` is available everywhere                                                                          |
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph init [App startup]
+    A[index.ts] --> B[App.tsx]
+    B --> C[i18n init]
+    C --> D[LanguageDetector]
+  end
+  subgraph detector [Language detection order]
+    D --> E[1. AsyncStorage]
+    E --> F[2. react-native-localize]
+    F --> G[3. fallback en]
+  end
+  subgraph usage [Usage]
+    H[useTranslation]
+    I[I18nextProvider]
+    C --> I
+    I --> H
+  end
+```
+
+- **Persistence:** One AsyncStorage key (e.g. `@kitchen_hub_language`) for the saved language code. Read on init; write when user (later) changes language.
+- **Detection:** Custom language detector (no `i18next-browser-languagedetector`): (1) read stored language from AsyncStorage, (2) else use `react-native-localize.getLocales()[0]`, (3) else `en`. Map device locales to supported app locales (e.g. `en-US` → `en`).
+- **Placement:** Initialize i18n in a dedicated module imported at the **actual earliest executed entrypoint** for the app (verify in Expo: often [mobile/index.ts](mobile/index.ts), but confirm `main` in package.json / Expo config) so it runs before any component that uses `useTranslation()`.
+
+---
+
+## Implementation steps
+
+### 1. Dependencies (mobile only)
+
+- **Add:** `i18next`, `react-i18next`, `react-native-localize`.
+- **Do not add:** `i18next-browser-languagedetector` or any browser language detection; do **not** add `@types/react-i18next` — react-i18next ships its own types; adding @types can cause version/type conflicts.
+- Use Expo-compatible versions: `npx expo install i18next react-i18next react-native-localize` (or npm equivalent) so native linking is correct for Expo SDK 54.
+
+### 2. Language detector (AsyncStorage + react-native-localize)
+
+- **File:** `mobile/src/i18n/languageDetector.ts` (or equivalent under `mobile/src/i18n/`).
+- **Behavior:**
+  - Implement an i18next language detector that runs at init.
+  - **Async:** Use detector with `async: true` and a callback. Detection order: (1) AsyncStorage, (2) device locale via react-native-localize, (3) fallback (e.g. `en`).
+  - **AsyncStorage validation:** When reading from AsyncStorage, **normalize** the value (see Locale normalization below), then **validate against `supportedLngs`**. If the stored value is missing or invalid, **ignore it** and continue to step 2 (device locale). Do not use invalid stored values.
+  - **Device locale:** Call `react-native-localize.getLocales()` and take the first preferred locale; normalize and map to a supported language code; if none match supportedLngs, use fallback.
+  - **No browser APIs:** Do not use `navigator.language` or any web-only API.
+- **Expose:** A `detect(callback)` (or equivalent) that i18next can use so init completes after async read.
+
+**Locale normalization (document + test):**
+
+- **Rules to implement and test:**
+  - Normalize separator: `en_US` → `en-US` (hyphen); then take the language part for matching (e.g. `en-US` → `en`).
+  - Case: normalize to lowercase for comparison (e.g. `EN-us` → `en`).
+  - Mapping examples: `en-US`, `en_US`, `EN-us` → `en`; `es-ES`, `es_ES` → `es`.
+  - **Hebrew:** Persist and use `he`, not legacy `iw`; be consistent in stored value and supportedLngs.
+  - **Arabic:** Use `ar`. When you add RTL later, keep codes consistent (he, ar).
+- **Tests:** Add unit tests (including parameterized) for the normalization function: `en-US`/`en_US`/`EN-us` → `en`; invalid or unsupported stored value is ignored and detector falls back to device locale.
+
+### 3. i18n configuration
+
+- **File:** `mobile/src/i18n/index.ts`.
+- **Contents:**
+  - Use the custom language detector (from step 2). With a detector, **do not hardcode `lng`** — rely on the detector to set the initial language and use `fallbackLng` when nothing matches.
+  - Use `initReactI18next` from `react-i18next`.
+  - Set `fallbackLng` (e.g. `en`), `supportedLngs` (e.g. `['en']` for now), `interpolation: { escapeValue: false }` for React.
+  - **React Native:** Set `react: { useSuspense: false }` in init. Suspense can cause "blank screen while loading" in RN unless you explicitly build around it; turning it off avoids that.
+  - **(Optional)** In development, enable missing-key logging (per epic acceptance criteria) so missing translation keys are visible (e.g. `saveMissing` or debug option as appropriate for i18next).
+  - Load minimal initial resources (e.g. one namespace or one JSON per language) so the app runs without missing keys. Structure can match the epic's `mobile/src/i18n/locales/en/common.json` later.
+- **Export:** Initialized `i18n` instance and ensure the module is side-effect imported at app entry.
+
+### 4. App entry integration
+
+- **Import i18n in the actual earliest executed entrypoint.** In Expo, the entry file is usually [mobile/index.ts](mobile/index.ts) (or whatever `main` in [mobile/package.json](mobile/package.json) / Expo config points to). **Verify** which file runs first (e.g. `index.ts` vs `App.tsx`) and add `import './src/i18n';` (or the path to `mobile/src/i18n/index.ts`) **before** any component imports so i18n (and async detector) run before the React tree. Expo projects sometimes don't use `index.ts` the way you expect — ensure the import is in the real entry file.
+- **Optional:** If needed for React tree, wrap root in `I18nextProvider` in [mobile/App.tsx](mobile/App.tsx); typically not required if `initReactI18next` is used and import order is correct.
+
+### 5. Persistence and language-change helpers
+
+- **File:** `mobile/src/i18n/storage.ts` (or inside `i18n/index.ts`).
+- **API:** `getStoredLanguage(): Promise<string | null>`, `setStoredLanguage(lng: string): Promise<void>` using AsyncStorage key `@kitchen_hub_language`. Use in detector.
+- **(Optional but recommended)** Add `setAppLanguage(locale: string): Promise<void>` early (epic Phase 1 calls out a language selector). Even without Settings UI yet, this helper: persists to AsyncStorage, calls `i18n.changeLanguage(locale)`, and optionally validates against `supportedLngs`. Avoids ad-hoc `i18n.changeLanguage` scattered later.
+
+### 6. Minimal translation resources
+
+- **Paths:** e.g. `mobile/src/i18n/locales/en/common.json` (and optionally `es` or others as placeholders).
+- **Content:** Minimal keys (e.g. `common.appName: "Kitchen Hub"`) so that `useTranslation()` and `t()` work and tests can rely on fallbacks. Full key structure and namespaces can follow the epic's Task 1.2 in a later task.
+
+### 7. Tests and verification
+
+- **Unit tests (TDD):**
+  - **Locale normalization:** Parameterized tests for the normalization function: `en-US` / `en_US` / `EN-us` → `en`; `es-ES` → `es`; invalid or unsupported stored value is ignored.
+  - **Language detector:** With mocked AsyncStorage and mocked `react-native-localize`, assert detection order (stored → device → fallback), validation against `supportedLngs` (invalid stored value ignored), and locale mapping.
+  - **Storage helper:** get/set with AsyncStorage mock.
+- **Parameterized cases:** No stored language + no device locale; stored language present (valid); stored language invalid/unsupported (ignored, fallback to device or `en`); device locale present (e.g. `en-US`, `es-ES`).
+- **Manual:** Run app on iOS/Android; change device language and restart app; confirm initial UI language (and that no browser detector is used). No web-only code paths.
+
+### 8. Documentation and task docs
+
+- **In-repo:** Add a short `mobile/src/i18n/README.md` describing: init order, detector order, AsyncStorage key, locale normalization rules, and that browser detection is not used. **RTL:** Note that RTL is a separate phase; when you add it, "RTL will require `I18nManager.forceRTL` + app restart" (per epic).
+- **Task docs (per [.cursor/rules/coding_rule.mdc](.cursor/rules/coding_rule.mdc)):** Save plan under `.cursor/tasks/i18n/set-up-i18next-for-react-native/set-up-i18next-for-react-native_plan.mdc`. After implementation, add `set-up-i18next-for-react-native_summary.mdc` in the same folder.
+
+**Optional niceties (non-blocking):**
+
+- **setAppLanguage(locale):** Add early (Phase 1); even without Settings UI, the helper avoids ad-hoc `i18n.changeLanguage` later (see step 5).
+- **Missing-key logging in dev:** Enable in i18n init so missing translation keys are visible during development (epic acceptance criteria).
+
+---
+
+## Files to add or touch
+
+| Action | Path                                                                                                      |
+| ------ | --------------------------------------------------------------------------------------------------------- |
+| Add    | `mobile/src/i18n/index.ts`                                                                                |
+| Add    | `mobile/src/i18n/languageDetector.ts`                                                                     |
+| Add    | `mobile/src/i18n/storage.ts`                                                                              |
+| Add    | `mobile/src/i18n/locales/en/common.json` (minimal)                                                        |
+| Add    | `mobile/src/i18n/README.md`                                                                               |
+| Add    | `mobile/src/i18n/__tests__/languageDetector.test.ts` (and storage test if separate)                       |
+| Modify | `mobile/package.json` (dependencies)                                                                      |
+| Modify | `mobile/index.ts` (import i18n)                                                                           |
+| Add    | `.cursor/tasks/i18n/set-up-i18next-for-react-native/set-up-i18next-for-react-native_plan.mdc` (this plan) |
+
+---
+
+## Success criteria
+
+- i18next and react-i18next are installed and configured; no browser-based language detector.
+- Device locale is detected via react-native-localize only; AsyncStorage is used for persistence.
+- App starts without i18n errors; `useTranslation()` and `t()` work in any component.
+- Unit tests cover detector and storage; manual check on device confirms behavior.
+- Plan and (after implementation) summary stored under `.cursor/tasks/i18n/set-up-i18next-for-react-native/`.
+
+---
+
+## Rules and skills applied
+
+- **Coding rules ([.cursor/rules/coding_rule.mdc](.cursor/rules/coding_rule.mdc)):** TDD (tests for detector/storage first), descriptive names, no `any`, strict TypeScript, edge-case handling, plan/summary under task path (rules 13–17).
+- **Composer workflow ([.cursor/rules/COMPOSER_WORKFLOW.md](.cursor/rules/COMPOSER_WORKFLOW.md)):** Plan before implementation; summary after; task path `i18n/set-up-i18next-for-react-native`.
+- **CLAUDE.md / mobile README:** Feature-based structure; shared i18n under `src/i18n/`; AsyncStorage key prefix `@kitchen_hub_*`; no backend or web in this task.

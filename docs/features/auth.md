@@ -1,5 +1,9 @@
 # Auth Feature
 
+**Exports** (from `mobile/src/features/auth/index.ts`): `LoginScreen`, `GoogleSignInButton`.
+
+**Source**: `mobile/src/features/auth/` — 1 screen (LoginScreen), 2 components (GoogleSignInButton, GuestDataImportModal), no hooks or services.
+
 ## Overview
 
 The Auth feature handles user authentication for Kitchen Hub, providing two sign-in methods: Google authentication and guest mode. It serves as the entry point for new users and manages the authentication flow.

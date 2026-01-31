@@ -20,6 +20,40 @@ import {
 } from '../dtos/recipe-detail-response.dto';
 
 /**
+ * Shape of recipe entity as returned by the repository (Prisma JSON columns are untyped).
+ */
+type RecipeEntityShape = {
+  id: string;
+  title: string;
+  prepTime?: number | null;
+  ingredients?: unknown;
+  instructions?: unknown;
+  imageUrl?: string | null;
+};
+
+/**
+ * Maps a repository recipe entity to RecipeDetailDto.
+ * Prisma JSON columns (ingredients, instructions) are untyped; we normalize to DTO shape here.
+ *
+ * @param recipe - Recipe entity from repository
+ * @returns RecipeDetailDto for API response
+ */
+function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
+  return {
+    id: recipe.id,
+    title: recipe.title,
+    prepTime: recipe.prepTime ?? undefined,
+    ingredients: Array.isArray(recipe.ingredients)
+      ? (recipe.ingredients as unknown as RecipeIngredientDto[])
+      : [],
+    instructions: Array.isArray(recipe.instructions)
+      ? (recipe.instructions as unknown as RecipeInstructionDto[])
+      : [],
+    imageUrl: recipe.imageUrl ?? undefined,
+  };
+}
+
+/**
  * Recipes service managing recipe CRUD operations and cooking functionality.
  *
  * Responsibilities:
@@ -83,18 +117,7 @@ export class RecipesService {
       throw new ForbiddenException('Access denied');
     }
 
-    return {
-      id: recipe.id,
-      title: recipe.title,
-      prepTime: recipe.prepTime,
-      ingredients: Array.isArray(recipe.ingredients)
-        ? (recipe.ingredients as unknown as RecipeIngredientDto[])
-        : [],
-      instructions: Array.isArray(recipe.instructions)
-        ? (recipe.instructions as unknown as RecipeInstructionDto[])
-        : [],
-      imageUrl: recipe.imageUrl,
-    };
+    return mapRecipeToDetailDto(recipe);
   }
 
   /**
@@ -102,12 +125,12 @@ export class RecipesService {
    *
    * @param householdId - The household ID
    * @param dto - Recipe creation data
-   * @returns Created recipe ID
+   * @returns Created recipe with full details
    */
   async createRecipe(
     householdId: string,
     dto: CreateRecipeDto,
-  ): Promise<{ id: string }> {
+  ): Promise<RecipeDetailDto> {
     const recipe = await this.recipesRepository.createRecipe(householdId, {
       title: dto.title,
       prepTime: dto.prepTime,
@@ -116,7 +139,7 @@ export class RecipesService {
       imageUrl: dto.imageUrl,
     });
 
-    return { id: recipe.id };
+    return mapRecipeToDetailDto(recipe);
   }
 
   /**
@@ -152,7 +175,7 @@ export class RecipesService {
       imageUrl: dto.imageUrl,
     });
 
-    return this.getRecipe(updatedRecipe.id, householdId);
+    return mapRecipeToDetailDto(updatedRecipe);
   }
 
   /**

@@ -138,7 +138,60 @@ Docker Compose provides an easy way to run the backend API and PostgreSQL databa
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
 - Docker Compose (included with Docker Desktop)
 
-### Quick Start
+### Option 1: Database Only (Recommended for Development)
+
+Run only PostgreSQL in Docker while running the backend locally with `npm run start:dev`. This provides the fastest development experience with hot reload.
+
+**Prerequisites**: Make sure Docker Desktop is installed and running.
+
+1. **Start PostgreSQL database**:
+   ```bash
+   npm run db:start
+   ```
+   This uses `docker-compose.db.yml` and `.env.db` to start only the PostgreSQL container.
+
+2. **Verify database is running**:
+   ```bash
+   npm run db:ps
+   ```
+   Wait until postgres shows as "healthy" (usually 5-10 seconds).
+
+3. **Configure local environment**:
+   Create a `.env` file with:
+   ```bash
+   DATABASE_URL="postgresql://kitchen_hub:kitchen_hub_dev@localhost:5432/kitchen_hub?schema=public"
+   DIRECT_URL="postgresql://kitchen_hub:kitchen_hub_dev@localhost:5432/kitchen_hub?schema=public"
+   # ... other environment variables (JWT_SECRET, SUPABASE_URL, etc.)
+   ```
+   See `.env.example` for a complete list of required variables.
+
+4. **Run database migrations**:
+   ```bash
+   npm run prisma:migrate
+   ```
+
+5. **Start backend locally**:
+   ```bash
+   npm run start:dev
+   ```
+
+**Useful database commands**:
+- Stop database: `npm run db:stop`
+- View logs: `npm run db:logs`
+- Check status: `npm run db:ps`
+
+**Database connection details** (default from `.env.db`):
+- Host: `localhost`
+- Port: `5432`
+- Database: `kitchen_hub`
+- User: `kitchen_hub`
+- Password: `kitchen_hub_dev`
+
+### Option 2: Full Stack with Docker Compose
+
+Run both the backend API and PostgreSQL database in Docker containers.
+
+#### Quick Start
 
 1. **Copy environment file template**:
    ```bash
@@ -495,6 +548,16 @@ To verify that Row Level Security is correctly isolating data between households
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `POST` | `/import` | Protected | Import recipes and shopping lists from guest mode |
+
+### Health & Version Endpoints (unversioned)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/health` | Public | Basic health check (liveness) |
+| `GET` | `/api/health/live` | Public | Liveness probe for orchestration |
+| `GET` | `/api/health/ready` | Public | Readiness probe (DB connectivity) |
+| `GET` | `/api/health/detailed` | Public | Detailed health status |
+| `GET` | `/api/version` | Public | Version discovery (lists supported/deprecated versions and docs) |
 
 ### Authentication Requirements
 
