@@ -28,7 +28,11 @@
     "prisma:generate": "prisma generate --schema=src/infrastructure/database/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema=src/infrastructure/database/prisma/schema.prisma",
     "prisma:deploy": "prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma",
-    "prisma:studio": "prisma studio --schema=src/infrastructure/database/prisma/schema.prisma"
+    "prisma:studio": "prisma studio --schema=src/infrastructure/database/prisma/schema.prisma",
+    "db:start": "docker-compose -f docker-compose.db.yml --env-file .env.db up -d",
+    "db:stop": "docker-compose -f docker-compose.db.yml --env-file .env.db down",
+    "db:logs": "docker-compose -f docker-compose.db.yml --env-file .env.db logs -f",
+    "db:ps": "docker-compose -f docker-compose.db.yml --env-file .env.db ps"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
