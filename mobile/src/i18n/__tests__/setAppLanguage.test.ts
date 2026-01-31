@@ -162,7 +162,7 @@ describe('setAppLanguage', () => {
       changeLanguageSpy.mockRestore();
     });
 
-    it('shows Alert when reloadAsync fails', async () => {
+    it('reverts forceRTL and shows Alert when reloadAsync fails', async () => {
       const RN = getRN();
       const Updates = require('expo-updates') as { reloadAsync: jest.Mock };
       Updates.reloadAsync.mockRejectedValueOnce(new Error('Reload failed'));
@@ -170,7 +170,9 @@ describe('setAppLanguage', () => {
 
       await setAppLanguage('he');
 
-      expect(RN.I18nManager.forceRTL).toHaveBeenCalledWith(true);
+      expect(RN.I18nManager.forceRTL).toHaveBeenCalledTimes(2);
+      expect(RN.I18nManager.forceRTL).toHaveBeenNthCalledWith(1, true);
+      expect(RN.I18nManager.forceRTL).toHaveBeenNthCalledWith(2, false);
       expect(Updates.reloadAsync).toHaveBeenCalled();
       expect(RN.Alert.alert).toHaveBeenCalledWith(
         'Direction Changed',

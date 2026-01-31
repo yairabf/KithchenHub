@@ -169,6 +169,7 @@ export async function setAppLanguage(locale: string): Promise<void> {
     try {
       await Updates.reloadAsync();
     } catch {
+      I18nManager.forceRTL(currentIsRtl);
       Alert.alert(
         'Direction Changed',
         'Please restart the app to apply the new text direction.',
