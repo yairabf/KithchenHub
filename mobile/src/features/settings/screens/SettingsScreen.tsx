@@ -22,6 +22,7 @@ import { Toast } from '../../../common/components/Toast';
 import { i18n } from '../../../i18n';
 import { normalizeLocale } from '../../../i18n/localeNormalization';
 import { getNativeNameForCode } from '../../../i18n/constants';
+import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
 
 export function SettingsScreen() {
   const { t } = useTranslation('settings');
@@ -77,7 +78,7 @@ export function SettingsScreen() {
               <Text style={styles.settingLabel}>{t('language')}</Text>
             </View>
             <Text style={styles.settingValue}>{currentLanguageDisplayName}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -109,7 +110,7 @@ export function SettingsScreen() {
             <TouchableOpacity style={styles.signInPrompt} onPress={signInWithGoogle}>
               <Ionicons name="logo-google" size={20} color={colors.google} />
               <Text style={styles.signInPromptText}>Sign in to sync your data</Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
 
@@ -159,7 +160,7 @@ export function SettingsScreen() {
               <Ionicons name="people-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Manage household members</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -172,7 +173,7 @@ export function SettingsScreen() {
                 <Ionicons name="cloud-upload-outline" size={22} color={colors.primary} />
                 <Text style={styles.settingLabel}>Import local guest data</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -183,7 +184,7 @@ export function SettingsScreen() {
                 <Ionicons name="trash-outline" size={22} color={colors.error} />
                 <Text style={[styles.settingLabel, { color: colors.error }]}>Delete local guest data</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         )}
@@ -209,14 +210,14 @@ export function SettingsScreen() {
               <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Export my data</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <Ionicons name="trash-outline" size={22} color={colors.error} />
               <Text style={[styles.settingLabel, { color: colors.error }]}>Delete account</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -228,14 +229,14 @@ export function SettingsScreen() {
               <Ionicons name="document-text-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Terms of Service</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <Ionicons name="shield-checkmark-outline" size={22} color={colors.textPrimary} />
               <Text style={styles.settingLabel}>Privacy Policy</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
   signInPromptText: {
     ...typography.body,
     flex: 1,
-    marginLeft: spacing.md,
+    marginStart: spacing.md,
   },
   signOutButton: {
     flexDirection: 'row',
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
   signOutText: {
     ...typography.button,
     color: colors.error,
-    marginLeft: spacing.sm,
+    marginStart: spacing.sm,
   },
   settingRow: {
     flexDirection: 'row',
@@ -394,12 +395,12 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     ...typography.body,
-    marginLeft: spacing.md,
+    marginStart: spacing.md,
   },
   settingValue: {
     ...typography.body,
     color: colors.textSecondary,
-    marginRight: spacing.xs,
+    marginEnd: spacing.xs,
   },
   versionText: {
     ...typography.body,

@@ -1,0 +1,8 @@
+{
+  "network": {
+    "offline": "You're offline"
+  },
+  "auth": {
+    "signInFailed": "Sign in failed"
+  }
+}

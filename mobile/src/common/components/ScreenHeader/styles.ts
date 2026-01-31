@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
   },
   leftIconButton: {
     padding: spacing.xs,
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
   },
   centerSection: {
     flex: 1,

@@ -23,7 +23,7 @@ The Settings feature provides user account management, notification preferences,
 - **File**: `mobile/src/features/settings/screens/SettingsScreen.tsx`
 - **Purpose**: Comprehensive settings interface with multiple sections
 - **Key functionality**:
-  - **Language Section**: Row showing current language (native name); opens LanguageSelectorModal to change app language (persisted to AsyncStorage, applied app-wide via i18n)
+  - **Language Section**: Row showing current language (native name) and RTL-aware chevron (`getDirectionalIcon('chevron-forward')`); opens LanguageSelectorModal to change app language (persisted to AsyncStorage, applied app-wide via i18n; RTL languages may trigger app restart)
   - **Account Section**: User profile card, sign-in prompt for guests, sign out button
   - **Notifications Section**: Push notifications and daily summary email toggles
   - **Household Section**: Button to manage household members
@@ -123,7 +123,7 @@ interface ImportDataModalProps {
 ### LanguageSelectorModal
 
 - **File**: `mobile/src/features/settings/components/LanguageSelectorModal/`
-- **Purpose**: Lists available languages with native names; user selects one to change app language (persisted to AsyncStorage, applied app-wide)
+- **Purpose**: Lists available languages with native names; user selects one to change app language (persisted to AsyncStorage, applied app-wide). Shows "(Restart required)" when switching between LTR and RTL languages (Hebrew, Arabic).
 - **Props**:
 
 ```typescript
@@ -137,15 +137,17 @@ interface LanguageSelectorModalProps {
 
 - **Features**:
   - Scrollable list from `AVAILABLE_LANGUAGES` (i18n constants); each row shows native name and checkmark when selected
-  - On row press: calls `setAppLanguage(code)` then `onClose()`; on failure still closes modal
+  - **RTL restart badge**: When current language direction (LTR/RTL) differs from the selected option, shows `t('restartRequired')` (e.g. "(Restart required)") via `isRtlLanguage(currentLanguageCode)` and `isRtlLanguage(entry.code)`; `showRestartBadge = currentIsRtl !== entryIsRtl`
+  - On row press: calls `setAppLanguage(code)` then `onClose()`; on failure still closes modal (switching to/from RTL may trigger app restart via `Updates.reloadAsync()`)
   - Uses `CenteredModal` with `showActions={false}`; title from `t('settings:language')`
+  - Row layout: `labelBlock` (column) with `nativeName` and optional `restartBadge`; checkmark on the right when selected
   - Accessibility: `accessibilityRole="button"`, `accessibilityLabel` (e.g. "Select language: English"), `accessibilityState={{ selected: true }}` for current language
   - Min row height 44pt; uses theme (colors, spacing, borderRadius, typography)
 
 ## UI Sections
 
 ### Language Section
-- **Language**: Row labeled "Language" (from `t('settings:language')`) with current language’s native name (e.g. "English") and chevron; opens LanguageSelectorModal on press. Display name resolved via `getNativeNameForCode(normalizeLocale(i18n.language))` with defensive fallback.
+- **Language**: Row labeled "Language" (from `t('settings:language')`) with current language’s native name (e.g. "English") and directional chevron (`getDirectionalIcon('chevron-forward')` for RTL-aware layout); opens LanguageSelectorModal on press. Display name resolved via `getNativeNameForCode(normalizeLocale(i18n.language))` with defensive fallback.
 
 ### Account Section
 - **Profile Card**:
@@ -219,8 +221,10 @@ interface LanguageSelectorModalProps {
 - `ScreenHeader` - Shared header component for consistent navigation
 - `CenteredModal` - Shared modal component (used by ManageHouseholdModal, ImportDataModal, LanguageSelectorModal, and guest data deletion confirmation)
 - `Toast` - Shared toast component for user feedback (success/error messages)
-- `react-i18next` - `useTranslation('settings')` for screen title and Language section labels
+- `react-i18next` - `useTranslation('settings')` for screen title, Language section labels, and `restartRequired` (LanguageSelectorModal badge)
 - `i18n` (mobile/src/i18n) - Current language and `setAppLanguage()`; `normalizeLocale()` and `getNativeNameForCode()` from localeNormalization and constants
+- `isRtlLanguage` (mobile/src/i18n/rtl) - RTL language detection (Hebrew, Arabic) for LanguageSelectorModal restart badge
+- `getDirectionalIcon` (mobile/src/common/utils/rtlIcons) - RTL-aware chevron/arrow icon names for Settings rows
 - Theme system (`colors`, `spacing`, `borderRadius`, `typography`, `shadows`) - Centralized design tokens
 
 ## Conditional Rendering
