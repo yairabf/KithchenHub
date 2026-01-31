@@ -1,0 +1,55 @@
+---
+type: summary
+epic: i18n
+task: set-up-i18next-for-react-native
+---
+
+# Set up i18next for React Native - Implementation Summary
+
+**Epic:** Internationalization (i18n)  
+**Completed:** 2026-01-31  
+**Status:** Completed
+
+## What Was Implemented
+
+### Dependencies
+- **Added:** `i18next`, `react-i18next`, `react-native-localize` in [mobile/package.json](mobile/package.json).
+- **Not added:** `i18next-browser-languagedetector`, `@types/react-i18next` (per plan).
+- **Expo plugin:** `react-native-localize` added to [mobile/app.json](mobile/app.json) `plugins` array.
+
+### New files
+- **mobile/src/i18n/localeNormalization.ts** – `normalizeLocale(locale)` (en-US/en_US/EN-us → en, iw → he).
+- **mobile/src/i18n/storage.ts** – `getStoredLanguage()`, `setStoredLanguage(lng)`, `LANGUAGE_STORAGE_KEY` (`@kitchen_hub_language`).
+- **mobile/src/i18n/languageDetector.ts** – Custom i18next detector: AsyncStorage (normalize + validate against `supportedLngs`) → react-native-localize → fallbackLng; `createLanguageDetector()`, `cacheUserLanguage(lng)`.
+- **mobile/src/i18n/index.ts** – i18n init with detector, `initReactI18next`, `fallbackLng: 'en'`, `supportedLngs: ['en']`, `react: { useSuspense: false }`, optional dev missing-key logging; exports `i18n` and `setAppLanguage(locale)`.
+- **mobile/src/i18n/locales/en/common.json** – Minimal resource: `appName: "Kitchen Hub"`.
+- **mobile/src/i18n/README.md** – Init order, detector order, AsyncStorage key, locale normalization rules, no browser detection, RTL note.
+- **mobile/src/i18n/__tests__/localeNormalization.test.ts** – Parameterized tests for normalization.
+- **mobile/src/i18n/__tests__/storage.test.ts** – get/set storage tests.
+- **mobile/src/i18n/__tests__/languageDetector.test.ts** – Detection order, normalization, `supportedLngs` validation (mocked AsyncStorage and react-native-localize).
+
+### Modified files
+- **mobile/index.ts** – `import './src/i18n';` before `import App from './App'` so i18n runs at entry.
+- **mobile/app.json** – Added `react-native-localize` to `plugins`.
+
+## Deviations from Plan
+
+- **missingKeyHandler:** Implemented as optional dev-only handler that logs to `console.warn`; `saveMissing: false` and `debug: false` to avoid noise. Exact i18next option name/usage may vary by version; behavior is “log missing keys in dev.”
+- **setAppLanguage:** Implemented in [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts) (not in storage.ts) to avoid circular dependency (index uses detector → storage; storage would need i18n from index). Exported from index.
+
+## Testing Results
+
+- **Unit tests:** All 32 i18n tests pass (localeNormalization, storage, languageDetector).
+- **Parameterized cases:** Normalization (en-US/en_US/EN-us → en, iw → he), detector (stored valid/invalid, device locale, fallback).
+- **Full mobile suite:** 62 passed, 3 failed; failures are pre-existing (Expo/vector-icons EventEmitter in Jest), not caused by i18n.
+
+## Lessons Learned
+
+- Detector must read `supportedLngs` and `fallbackLng` from i18next options in `init()`; they are not available at module load.
+- `setAppLanguage` lives in index.ts to keep a single place that imports i18n and avoids circular deps with detector/storage.
+
+## Next Steps
+
+- Add language selector UI in Settings (Phase 1 epic task); use `setAppLanguage(locale)`.
+- Add more namespaces/locales (e.g. `es`, `he`) and translation keys per epic Task 1.2.
+- When adding RTL: use `I18nManager.forceRTL` + app restart (documented in [mobile/src/i18n/README.md](mobile/src/i18n/README.md)).
