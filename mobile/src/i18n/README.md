@@ -24,9 +24,18 @@ i18n is initialized by importing `./src/i18n` at the **earliest executed entrypo
 - **Hebrew:** Persist and use `he`, not legacy `iw`. Be consistent in stored value and `supportedLngs`.
 - **Arabic:** Use `ar`. When RTL is added later, keep codes consistent (`he`, `ar`).
 
-## RTL (separate phase)
+## RTL Support
 
-RTL is not implemented in this setup. When you add RTL support (e.g. for Hebrew or Arabic), **RTL will require `I18nManager.forceRTL` + app restart** (per i18n epic).
+RTL is implemented for Hebrew (he) and Arabic (ar):
+
+- At app bootstrap (`mobile/index.ts`), stored or device language determines RTL state.
+- `I18nManager.allowRTL(true)` and `forceRTL(isRTL)` are set before the React tree mounts.
+- Switching language to/from he or ar triggers `I18nManager.forceRTL` and app restart via `Updates.reloadAsync()`.
+- In dev mode, if reload fails, the user sees an Alert to restart manually.
+- Directional icons (chevron-forward, arrow-back, etc.) flip via the `getDirectionalIcon` helper.
+- Use `marginStart`/`marginEnd` (not `marginLeft`/`marginRight`) for RTL-safe layouts.
+
+Reference: `.cursor/tasks/i18n/rtl-handling-with-app-restart/` (Task INTL-4).
 
 ## Key structure and namespaces
 

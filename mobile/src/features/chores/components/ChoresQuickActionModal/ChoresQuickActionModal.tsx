@@ -18,6 +18,7 @@ import { ChoresQuickActionModalProps, ChoreTemplate } from './types';
 import { createChoresService } from '../../services/choresService';
 import { config } from '../../../../config';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { getDirectionalIcon } from '../../../../common/utils/rtlIcons';
 
 // Mock Chores Database - Common household chores
 const mockChoresDB: ChoreTemplate[] = [
@@ -266,7 +267,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
                     <Text style={styles.searchResultName}>{chore.name}</Text>
                     <Text style={styles.searchResultCategory}>{chore.category}</Text>
                   </View>
-                  <Ionicons name="arrow-forward" size={20} color={colors.textMuted} />
+                  <Ionicons name={getDirectionalIcon('arrow-forward')} size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               ))}
             </ScrollView>

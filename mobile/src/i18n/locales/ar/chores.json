@@ -1,0 +1,8 @@
+{
+  "title": "Chores",
+  "status": {
+    "pending": "Pending",
+    "done": "Done",
+    "overdue": "Overdue"
+  }
+}

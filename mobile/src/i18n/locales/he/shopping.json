@@ -1,0 +1,13 @@
+{
+  "listPanel": {
+    "title": "Shopping Lists",
+    "emptyState": "No items yet"
+  },
+  "search": {
+    "placeholder": "Search groceries..."
+  },
+  "itemCount": "{{count}} item",
+  "itemCount_one": "{{count}} item",
+  "itemCount_other": "{{count}} items",
+  "itemCount_plural": "{{count}} items"
+}

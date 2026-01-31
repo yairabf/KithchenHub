@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatTimeForDisplay, formatDateForDisplay } from '../../../common/utils/dateTimeUtils';
+import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
 import { useResponsive } from '../../../common/hooks';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { colors } from '../../../theme';
@@ -328,7 +329,7 @@ export function DashboardScreen({
                     <Text style={styles.quickStatLabel}>{stat.label}</Text>
                     <View style={styles.quickStatValueRow}>
                       <Text style={styles.quickStatValue}>{stat.value}</Text>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                      <Ionicons name={getDirectionalIcon('chevron-forward')} size={16} color={colors.textMuted} />
                     </View>
                   </TouchableOpacity>
                 ))}

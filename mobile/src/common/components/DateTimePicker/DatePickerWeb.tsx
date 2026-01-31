@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../../../theme';
+import { getDirectionalIcon } from '../../utils/rtlIcons';
 
 interface DatePickerWebProps {
   value: Date;
@@ -123,7 +124,7 @@ export function DatePickerWeb({
           style={styles.navButton}
           accessibilityLabel="Previous month"
         >
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name={getDirectionalIcon('chevron-back')} size={24} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <Text style={styles.monthYearText}>
@@ -135,7 +136,7 @@ export function DatePickerWeb({
           style={styles.navButton}
           accessibilityLabel="Next month"
         >
-          <Ionicons name="chevron-forward" size={24} color={colors.textPrimary} />
+          <Ionicons name={getDirectionalIcon('chevron-forward')} size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
 

@@ -377,6 +377,17 @@ Development-specific differences:
 - Supabase: prefer a direct connection string in `DIRECT_URL` for migrations; use the session pooler in `DATABASE_URL` if your network is IPv4-only.
 - **DIRECT_URL**: Optional. Set when `DATABASE_URL` is a pooled connection so migrations use a direct connection; otherwise Prisma uses `DATABASE_URL`.
 
+### Seeding the grocery catalog
+
+To populate `master_grocery_catalog` from the generated JSON (e.g. from `sandbox/final_zero_risk_db.json`):
+
+1. Start the local DB: `npm run db:start`
+2. Apply migrations: `npm run prisma:migrate`
+3. Ensure `.env` has `DATABASE_URL` pointing at the local DB (e.g. `postgresql://kitchen_hub:kitchen_hub_dev@localhost:5432/kitchen_hub`)
+4. Run the seed: `npm run db:seed`
+
+The script replaces all existing catalog rows with the JSON contents. To use a different file: `npm run db:seed -- --file=../path/to/catalog.json` or set `GROCERY_CATALOG_JSON` in `.env`.
+
 ### Idempotency Key Management
 - **Table**: `sync_idempotency_keys` tracks processed sync operations
 - **Retention**: Old completed keys are cleaned up automatically (default: 30 days)

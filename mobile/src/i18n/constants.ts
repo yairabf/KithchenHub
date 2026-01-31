@@ -3,7 +3,7 @@
  * Add new languages here and in i18n resources; index.ts uses SUPPORTED_LANGUAGE_CODES for supportedLngs.
  */
 
-export const SUPPORTED_LANGUAGE_CODES = ['en'] as const;
+export const SUPPORTED_LANGUAGE_CODES = ['en', 'he', 'ar'] as const;
 
 export type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGE_CODES)[number];
 
@@ -15,6 +15,8 @@ export interface AvailableLanguage {
 /** One entry per SUPPORTED_LANGUAGE_CODES with native display name for the language selector. */
 export const AVAILABLE_LANGUAGES: readonly AvailableLanguage[] = [
   { code: 'en', nativeName: 'English' },
+  { code: 'he', nativeName: 'עברית' },
+  { code: 'ar', nativeName: 'العربية' },
 ] as const;
 
 /**

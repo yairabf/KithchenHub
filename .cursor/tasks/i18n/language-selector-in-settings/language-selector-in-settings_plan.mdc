@@ -1,0 +1,175 @@
+---
+type: plan
+epic: i18n
+task: language-selector-in-settings
+---
+
+# Language selector in Settings (i18n)
+
+**Epic:** Internationalization (i18n)  
+**Task:** language-selector-in-settings  
+**Store under:** [.cursor/tasks/i18n/language-selector-in-settings/](.cursor/tasks/i18n/language-selector-in-settings/)  
+**Status:** Planning
+
+---
+
+## Current state
+
+| Item | Status |
+|------|--------|
+| i18n runtime | Done: [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts) – detector, storage, `setAppLanguage(locale)` |
+| Persistence | Done: [mobile/src/i18n/storage.ts](mobile/src/i18n/storage.ts) – `@kitchen_hub_language`, `getStoredLanguage` / `setStoredLanguage` |
+| Language change | Done: `setAppLanguage()` normalizes, validates `supportedLngs`, persists, then calls `i18n.changeLanguage()` |
+| Supported langs | Only `en` in [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts) (`SUPPORTED_LANGS`) |
+| Settings screen | [mobile/src/features/settings/screens/SettingsScreen.tsx](mobile/src/features/settings/screens/SettingsScreen.tsx) – hardcoded strings; no Language section |
+| settings namespace | [mobile/src/i18n/locales/en/settings.json](mobile/src/i18n/locales/en/settings.json) – has `language`, `household`, `account` |
+
+**Gap:** No UI to choose language; no single source of “available languages + native names” for the selector. Persistence and app-wide apply are already implemented.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph settings [Settings Screen]
+    LangRow[Language row]
+    Modal[Language selector modal]
+  end
+  subgraph i18n [i18n layer]
+    setAppLanguage[setAppLanguage]
+    storage[AsyncStorage]
+    i18next[i18n.changeLanguage]
+  end
+  LangRow -->|opens| Modal
+  Modal -->|on select| setAppLanguage
+  setAppLanguage --> storage
+  setAppLanguage --> i18next
+  i18next -->|re-render| App[App with useTranslation]
+```
+
+- **Single source of truth (non-optional):** All supported language data lives in one module. [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts) must use it for `supportedLngs`; no duplicate definitions.
+- **UI:** Add a “Language” section on Settings; tapping opens a modal (reuse [CenteredModal](mobile/src/common/components/CenteredModal/)) listing available languages with native names and a checkmark for the current one. On selection: call `setAppLanguage(code)`, then close modal. No app restart; react-i18next re-renders components using `useTranslation()`.
+
+---
+
+## Implementation steps
+
+### 1. Single source of truth: constants module
+
+- **Create** [mobile/src/i18n/constants.ts](mobile/src/i18n/constants.ts):
+  - **`SUPPORTED_LANGUAGE_CODES`:** readonly array of codes (e.g. `['en']`). This is the only place that defines “which languages are supported.”
+  - **`AVAILABLE_LANGUAGES`:** `{ code: string; nativeName: string }[]` – one entry per code in `SUPPORTED_LANGUAGE_CODES`, with native display names (e.g. `[{ code: 'en', nativeName: 'English' }]`). When adding a new language later, add the code here and the native name; no separate list.
+- **Modify** [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts):
+  - **Remove** local `SUPPORTED_LANGS`.
+  - **Set** `supportedLngs: SUPPORTED_LANGUAGE_CODES` (import from `./constants`).
+  - In `setAppLanguage`, use the same constant for validation (e.g. `i18n.options.supportedLngs` will already reflect it).
+
+This prevents adding a language in one place and forgetting the other.
+
+### 2. Normalize current language for display and comparison
+
+- **`i18n.language`** can be region variants (e.g. `en-US`) from the detector. Use [mobile/src/i18n/localeNormalization.ts](mobile/src/i18n/localeNormalization.ts) consistently:
+  - **In Settings row and modal:** `const currentCode = normalizeLocale(i18n.language)` (or the exported helper name).
+  - **Compare:** `entry.code === currentCode` when deciding which row shows the checkmark.
+  - **Resolve native name:** Look up in `AVAILABLE_LANGUAGES` by `currentCode`, not by `i18n.language` raw. This avoids “no checkmark” or “Unknown” when the device returns `en-US` or `en_GB`.
+
+### 3. Defensive display when current code is not in AVAILABLE_LANGUAGES
+
+- If the normalized current code is **not** found in `AVAILABLE_LANGUAGES` (e.g. resources/constants momentarily out of sync):
+  - **Preferred:** Show the **fallback language’s native name** (e.g. English), using the first entry in `AVAILABLE_LANGUAGES` or a dedicated fallback (e.g. `en`).
+  - **Last resort:** Show the **code** (e.g. `en`) so the row is never blank.
+- Apply this in both the Settings row label (“Current: …”) and inside the modal when resolving “current” for the checkmark.
+
+### 4. Settings translation keys and strings
+
+- Use **`settings`** namespace and [KEY_STRUCTURE.md](mobile/src/i18n/KEY_STRUCTURE.md) (`component.element.context`).
+- **Reuse** `t('settings:language')` for both the Language section/row label and the **modal title** – no extra key unless a different modal title is needed later.
+- **Replace hardcoded text** for everything touched in this task:
+  - Screen title: `t('settings:title')` (“Settings”).
+  - Language section: `t('settings:language')`.
+  - Modal title: `t('settings:language')`.
+- Other section labels (Account, Notifications, etc.) can remain hardcoded for now, but the **new Language row and modal must be fully translated** via the settings namespace.
+
+### 5. Language selector UI component
+
+- **Location:** [mobile/src/features/settings/components/](mobile/src/features/settings/components/) (e.g. `LanguageSelectorModal` or a dedicated subfolder).
+- **Behavior:**
+  - Props: `visible`, `onClose`, and current language (pass **normalized** code from parent, or normalize inside: `normalizeLocale(i18n.language)`).
+  - List from `AVAILABLE_LANGUAGES`; each row shows `nativeName` and a checkmark when `entry.code === currentCode` (using normalized current).
+  - On row press: `await setAppLanguage(entry.code)`, then `onClose()`. No callback needed for “refresh”; i18n change triggers re-renders.
+- **Layout:** Use [CenteredModal](mobile/src/common/components/CenteredModal/) with `showActions={false}`, title `t('settings:language')`, and **scrollable** list of rows with **adequate tap targets** (min touch area). Reuse Settings-style row styling for consistency.
+- **Safe Area:** Rely on CenteredModal if it already respects Safe Area; otherwise ensure content (especially list) is inset so it’s not clipped on notched devices.
+
+### 6. UX and accessibility
+
+- **Scrollable list** with adequate tap targets (e.g. min 44pt height per row).
+- **Accessibility:**
+  - Each row: `accessibilityRole="button"` (or `"radio"` if you treat it as a single-choice group).
+  - **Label:** `accessibilityLabel={t('settings:language')}: ${entry.nativeName}` (e.g. “Select language: English”) so screen readers announce intent and option.
+  - **Selected state:** `accessibilityState={{ selected: true }}` on the row that matches the current language so “selected” is announced.
+
+### 7. Integrate into Settings screen
+
+- In [mobile/src/features/settings/screens/SettingsScreen.tsx](mobile/src/features/settings/screens/SettingsScreen.tsx):
+  - Use `useTranslation('settings')`; replace screen title with `t('title')`.
+  - Add state: `showLanguageSelector` (boolean).
+  - Add a **Language** section (e.g. at top or after Account): one row labeled `t('language')`, value = **current language’s native name** (from `AVAILABLE_LANGUAGES` by normalized `i18n.language`; apply defensive fallback per step 3). Chevron; on press set `showLanguageSelector(true)`.
+  - Render the language selector modal with `visible={showLanguageSelector}`, `onClose={() => setShowLanguageSelector(false)}`, and current language = `normalizeLocale(i18n.language)` (pass normalized code).
+
+### 8. Persistence and app-wide apply
+
+- **Persistence:** No new code. `setAppLanguage()` already calls `setStoredLanguage()` in [mobile/src/i18n/storage.ts](mobile/src/i18n/storage.ts).
+- **Apply across app:** No new code. `setAppLanguage()` calls `i18n.changeLanguage()`; components using `useTranslation()` re-render. No app restart for LTR-only; RTL is out of scope.
+
+### 9. Tests
+
+- **Single source of truth:** Unit test (e.g. in [mobile/src/i18n/__tests__/](mobile/src/i18n/__tests__/)): every code in `SUPPORTED_LANGUAGE_CODES` has exactly one entry in `AVAILABLE_LANGUAGES` with a non-empty `nativeName`; no extra codes in `AVAILABLE_LANGUAGES`. Optionally: mocked scenario with multiple codes (e.g. `['en', 'es']`) without requiring actual locale resources, to assert “current” resolution and checkmark logic.
+- **Integration (Settings + selector):** Do **not** overfit to “multiple languages.” With **only `en`** supported:
+  - Assert Language row renders and shows “English.”
+  - Open modal; assert one item is shown and it is marked selected (checkmark / `accessibilityState`).
+  - Assert selecting it (or tapping the only option) calls `setAppLanguage('en')` and closes modal.
+- Mock `setAppLanguage` and i18n as needed; keep tests passing with a single option so they don’t break before more locales are added.
+
+---
+
+## Files to create
+
+| File | Purpose |
+|------|---------|
+| [mobile/src/i18n/constants.ts](mobile/src/i18n/constants.ts) | `SUPPORTED_LANGUAGE_CODES`, `AVAILABLE_LANGUAGES`; single source of truth |
+| [mobile/src/features/settings/components/LanguageSelectorModal/](mobile/src/features/settings/components/LanguageSelectorModal/) (or single file) | Modal: scrollable list, native names, checkmark, `setAppLanguage`, accessibility |
+
+---
+
+## Files to modify
+
+| File | Changes |
+|------|---------|
+| [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts) | Remove local `SUPPORTED_LANGS`; `supportedLngs: SUPPORTED_LANGUAGE_CODES` from constants |
+| [mobile/src/i18n/locales/en/settings.json](mobile/src/i18n/locales/en/settings.json) | Ensure `title`, `language` exist; no extra key for modal (reuse `language`) |
+| [mobile/src/features/settings/screens/SettingsScreen.tsx](mobile/src/features/settings/screens/SettingsScreen.tsx) | Language section, `useTranslation('settings')`, normalized current, defensive display, modal |
+| [mobile/src/features/settings/index.ts](mobile/src/features/settings/index.ts) | Export new component if needed (optional) |
+
+---
+
+## Success criteria
+
+- Single source of truth: `SUPPORTED_LANGUAGE_CODES` and `AVAILABLE_LANGUAGES` live in constants; `i18n/index.ts` uses them for `supportedLngs`; no duplicate definitions.
+- Current language is always normalized for display and comparison; region variants (e.g. `en-US`) show the correct native name and checkmark.
+- If current code is not in `AVAILABLE_LANGUAGES`, Settings row and modal show fallback native name or code (no blank UI).
+- User sees a “Language” row in Settings with the current language’s native name; tapping opens a modal with all available languages, native names, checkmark on current, scrollable list, and adequate tap targets.
+- Modal and Language row use `t('settings:language')` (and `t('settings:title')` for screen); no hardcoded strings for new UI.
+- Accessibility: row labels like “Select language: English”; selected state with `accessibilityState={{ selected: true }}`.
+- Selecting a language persists to AsyncStorage, updates i18n, closes the modal, and the app reflects the new language without restart.
+- Tests: constants validated; integration test passes with only `en` (row, “English”, modal, one item checked, `setAppLanguage` called).
+
+---
+
+## References
+
+- [mobile/src/i18n/README.md](mobile/src/i18n/README.md) – detection order, AsyncStorage key, `setAppLanguage()`
+- [mobile/src/i18n/KEY_STRUCTURE.md](mobile/src/i18n/KEY_STRUCTURE.md) – namespaces, key format
+- [mobile/src/i18n/localeNormalization.ts](mobile/src/i18n/localeNormalization.ts) – `normalizeLocale()` for display and comparison
+- [.cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md](.cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md) – Task 1.3 (INTL-3)
+- [docs/features/settings.md](docs/features/settings.md) – Settings sections and patterns

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { AVAILABLE_LANGUAGES } from '../../../../i18n/constants';
 import { setAppLanguage } from '../../../../i18n';
+import { isRtlLanguage } from '../../../../i18n/rtl';
 import { colors, spacing, borderRadius, typography } from '../../../../theme';
 import type { LanguageSelectorModalProps } from './types';
 
@@ -50,6 +51,9 @@ export function LanguageSelectorModal({
       >
         {AVAILABLE_LANGUAGES.map((entry) => {
           const isSelected = entry.code === currentLanguageCode;
+          const currentIsRtl = isRtlLanguage(currentLanguageCode);
+          const entryIsRtl = isRtlLanguage(entry.code);
+          const showRestartBadge = currentIsRtl !== entryIsRtl;
           const label = `${t('language')}: ${entry.nativeName}`;
           return (
             <TouchableOpacity
@@ -62,7 +66,12 @@ export function LanguageSelectorModal({
               accessibilityState={{ selected: isSelected }}
             >
               <View style={styles.rowContent}>
-                <Text style={styles.nativeName}>{entry.nativeName}</Text>
+                <View style={styles.labelBlock}>
+                  <Text style={styles.nativeName}>{entry.nativeName}</Text>
+                  {showRestartBadge ? (
+                    <Text style={styles.restartBadge}>{t('restartRequired')}</Text>
+                  ) : null}
+                </View>
                 {isSelected ? (
                   <Ionicons
                     name="checkmark-circle"
@@ -102,8 +111,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     flex: 1,
   },
+  labelBlock: {
+    flexDirection: 'column',
+    gap: spacing.xs,
+  },
   nativeName: {
     ...typography.body,
     color: colors.textPrimary,
+  },
+  restartBadge: {
+    ...typography.tinyMuted,
   },
 });

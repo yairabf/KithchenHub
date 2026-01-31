@@ -5,6 +5,7 @@ import { ScreenHeaderProps } from './types';
 import { styles } from './styles';
 import { colors } from '../../../theme';
 import { HeaderActions } from '../HeaderActions';
+import { getDirectionalIcon } from '../../utils/rtlIcons';
 
 /**
  * ScreenHeader - Unified header component for all app screens
@@ -60,7 +61,7 @@ export function ScreenHeader({
     // Don't render icon if it's 'none' or if there's no press handler
     if (leftIcon === 'none' || !onLeftPress) return null;
 
-    const iconName = leftIcon === 'back' ? 'arrow-back' : 'home-outline';
+    const iconName = leftIcon === 'back' ? getDirectionalIcon('arrow-back') : 'home-outline';
     const accessibilityLabel = leftIcon === 'back' ? 'Go back' : 'Go to home';
 
     return (
