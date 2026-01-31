@@ -50,6 +50,19 @@ describe('language detector', () => {
       expect(mockGetLocales).not.toHaveBeenCalled();
     });
 
+    it('invokes callback exactly once when stored language is valid (no fallback)', async () => {
+      (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
+        key === '@kitchen_hub_language' ? Promise.resolve('es') : Promise.resolve(null)
+      );
+      mockGetLocales.mockReturnValue([]);
+      const detector = createLanguageDetector();
+      detector.init(undefined as never, { supportedLngs: ['en', 'es'], fallbackLng: 'en' });
+      const calls: string[] = [];
+      detector.detect((lng: string) => calls.push(lng));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(calls).toEqual(['es']);
+    });
+
     it('ignores stored language when not in supportedLngs and falls back to device', async () => {
       (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
         key === '@kitchen_hub_language' ? Promise.resolve('zz') : Promise.resolve(null)

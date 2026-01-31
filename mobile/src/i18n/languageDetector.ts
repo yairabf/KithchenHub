@@ -50,6 +50,9 @@ function isSupported(normalized: string, supportedLngs: string[]): boolean {
   return supportedLngs.includes(normalized);
 }
 
+/** Sentinel: stored language was accepted; do not run device/fallback step. */
+const STORED_ACCEPTED = Symbol('stored_accepted');
+
 /**
  * Creates an i18next language detector for React Native.
  * Use with i18next.use(detector).init({ ... }).
@@ -78,12 +81,14 @@ export function createLanguageDetector(): LanguageDetectorModule {
             const normalized = normalizeLocale(stored);
             if (normalized !== '' && isSupported(normalized, supportedLngs)) {
               resolve(normalized);
-              return;
+              return STORED_ACCEPTED;
             }
           }
           return getDeviceLocale();
         })
-        .then((deviceLng) => {
+        .then((value) => {
+          if (value === STORED_ACCEPTED) return;
+          const deviceLng = value;
           if (deviceLng != null && isSupported(deviceLng, supportedLngs)) {
             resolve(deviceLng);
             return;
