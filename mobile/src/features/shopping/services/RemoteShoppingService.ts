@@ -335,7 +335,8 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   private async getShoppingLists(): Promise<ShoppingList[]> {
-    const lists = await api.get<ShoppingListSummaryDto[]>('/shopping-lists');
+    const raw = await api.get<ShoppingListSummaryDto[] | undefined>('/shopping-lists');
+    const lists = Array.isArray(raw) ? raw : [];
     return lists.map(mapShoppingListSummary);
   }
 
@@ -349,8 +350,12 @@ export class RemoteShoppingService implements IShoppingService {
       )
     );
 
-    return listDetails.flatMap((listDetail) =>
-      buildShoppingItemsFromDetails(listDetail.id, listDetail.items, groceryItems)
-    );
+    return listDetails.flatMap((detail) => {
+      const listDetail = detail && typeof detail === 'object' && 'id' in detail && 'items' in detail
+        ? detail
+        : { id: '', items: [] as ShoppingListDetailDto['items'] };
+      const items = Array.isArray(listDetail.items) ? listDetail.items : [];
+      return buildShoppingItemsFromDetails(listDetail.id, items, groceryItems);
+    });
   }
 }

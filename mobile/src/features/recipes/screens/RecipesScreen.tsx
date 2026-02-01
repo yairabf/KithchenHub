@@ -122,6 +122,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   };
 
   const handleSaveRecipe = async (data: NewRecipeData) => {
+    setShowAddRecipeModal(false);
     try {
       const baseRecipe = createRecipe({ ...data, imageUrl: undefined });
       const createdRecipe = await addRecipe({ ...baseRecipe, imageUrl: undefined });
@@ -144,8 +145,6 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
           });
         }
       }
-
-      setShowAddRecipeModal(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
       Alert.alert('Unable to save recipe', message);

@@ -1,16 +1,18 @@
 import { Platform } from 'react-native';
 
-// Use 10.0.2.2 for Android Emulator, localhost for iOS Simulator
-const DEV_API_BASE_URL = Platform.select({
+// Default base URL when EXPO_PUBLIC_API_URL is not set: 10.0.2.2 for Android Emulator, localhost for iOS
+const DEFAULT_API_BASE_URL = Platform.select({
     android: 'http://10.0.2.2:3000',
     ios: 'http://localhost:3000',
     default: 'http://localhost:3000',
 });
 
-// Get API version from environment variable, default to '1'
+const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+const API_BASE_URL = rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/, '') : DEFAULT_API_BASE_URL;
+
 const API_VERSION = process.env.EXPO_PUBLIC_API_VERSION || '1';
 
-const BASE_URL = `${DEV_API_BASE_URL}/api`;
+const BASE_URL = `${API_BASE_URL}/api`;
 
 interface ApiOptions extends RequestInit {
     token?: string;
@@ -105,7 +107,9 @@ class ApiClient {
                 throw this.createApiError(response.status, data);
             }
 
-            return data as T;
+            // Backend wraps success responses as { success: true, data: T }; unwrap for callers
+            const unwrapped = this.unwrapSuccessData(data);
+            return unwrapped as T;
         } catch (error: unknown) {
             if (this.isAbortError(error)) {
                 throw new NetworkError('Request timed out');
@@ -169,6 +173,21 @@ class ApiClient {
 
         const message = (data as ApiErrorResponse).message;
         return typeof message === 'string' ? message : undefined;
+    }
+
+    /**
+     * Unwraps backend success format { success: true, data: T } so callers receive T.
+     * If the response is not in that format, returns the original payload.
+     */
+    private unwrapSuccessData(data: unknown): unknown {
+        if (typeof data !== 'object' || data === null) {
+            return data;
+        }
+        const body = data as Record<string, unknown>;
+        if ('data' in body && body.data !== undefined) {
+            return body.data;
+        }
+        return data;
     }
 
     private isAbortError(error: unknown): boolean {

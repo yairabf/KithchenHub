@@ -320,13 +320,13 @@ export async function updateEntityInCache<T extends EntityTimestamps>(
 
 /**
  * Invalidates cache for an entity type (clears cache and metadata)
- * 
+ *
  * @param entityType - The entity type to invalidate
  */
 export async function invalidateCache(entityType: SyncEntityType): Promise<void> {
   const storageEntity = entityTypeToStorageKey[entityType];
   const storageKey = getSignedInCacheKey(storageEntity);
-  
+
   try {
     await AsyncStorage.removeItem(storageKey);
     await clearCacheMetadata(entityType);
@@ -334,4 +334,21 @@ export async function invalidateCache(entityType: SyncEntityType): Promise<void>
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to invalidate cache for ${entityType}: ${errorMessage}`, { cause: error });
   }
+}
+
+/** All entity types that use signed-in cache. */
+const SIGNED_IN_ENTITY_TYPES: SyncEntityType[] = [
+  'recipes',
+  'shoppingLists',
+  'shoppingItems',
+  'chores',
+];
+
+/**
+ * Invalidates all signed-in entity caches.
+ * Use on web app mount so each tab/refresh fetches fresh data from the server
+ * and multiple browser tabs show consistent data.
+ */
+export async function invalidateAllSignedInCaches(): Promise<void> {
+  await Promise.all(SIGNED_IN_ENTITY_TYPES.map((entityType) => invalidateCache(entityType)));
 }
