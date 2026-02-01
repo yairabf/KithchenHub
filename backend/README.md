@@ -128,7 +128,7 @@ npm run start:dev         # start API with watch mode
 - Build for production: `npm run build`
 - Start built app: `npm run start:prod` (runs `dist/main.js`)
 - Lint: `npm run lint`
-- Tests: `npm test`, `npm run test:e2e`, coverage via `npm run test:cov`
+- Tests: `npm test` (excludes RLS; passes without Supabase), `npm run test:rls` (RLS only), `npm run test:all` (full suite), `npm run test:e2e`, coverage via `npm run test:cov`
 
 ## Local Development with Docker Compose
 
@@ -420,11 +420,12 @@ The script replaces all existing catalog rows with the JSON contents. To use a d
 
 ## Security Testing (RLS)
 To verify that Row Level Security is correctly isolating data between households:
-1. **Prerequisites**: Ensure you have applied migrations (`npm run prisma:migrate`).
+1. **Prerequisites**: Ensure you have applied migrations (`npm run prisma:migrate`) and your database has the `authenticated` role (e.g. Supabase; plain PostgreSQL does not create this role).
 2. **Run Tests**:
    ```bash
-   npm run test src/infrastructure/database/rls.spec.ts
+   npm run test:rls
    ```
+   Or run the full suite including RLS: `npm run test:all`. By default, `npm test` excludes RLS tests so it passes without a Supabase-style DB.
 3. **Internal Logic**: These tests simulate the Supabase environment by:
    - Setting the PostgreSQL role to `authenticated`.
    - Injecting JWT claims (e.g., `SET LOCAL "request.jwt.claims" = '{"sub": "..."}'`) within a transaction.
@@ -820,8 +821,14 @@ Errors are transformed by `HttpExceptionFilter` into consistent error responses:
 ### Running Tests
 
 ```bash
-# Unit tests
+# Unit tests (excludes RLS; use when DB has no 'authenticated' role)
 npm test
+
+# RLS integration tests only (requires DB with 'authenticated' role, e.g. Supabase)
+npm run test:rls
+
+# Full suite including RLS
+npm run test:all
 
 # Watch mode
 npm run test:watch
@@ -841,10 +848,10 @@ npm run test:e2e
 
 ### RLS Testing
 
-To verify Row Level Security is correctly isolating data:
+To verify Row Level Security is correctly isolating data (requires DB with `authenticated` role):
 
 ```bash
-npm run test src/infrastructure/database/rls.spec.ts
+npm run test:rls
 ```
 
 These tests simulate the Supabase environment by:
