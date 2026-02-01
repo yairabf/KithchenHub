@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -22,7 +23,7 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 @Controller({ path: 'chores', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class ChoresController {
-  constructor(private choresService: ChoresService) {}
+  constructor(private choresService: ChoresService) { }
 
   @Get()
   async getChores(
@@ -80,5 +81,17 @@ export class ChoresController {
       throw new BadRequestException('User must belong to a household');
     }
     return this.choresService.getStats(user.householdId, date);
+  }
+
+  @Delete(':id')
+  async deleteChore(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') choreId: string,
+  ) {
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+    await this.choresService.deleteChore(choreId, user.householdId);
+    return { success: true };
   }
 }

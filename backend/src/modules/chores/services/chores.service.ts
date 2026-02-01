@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
+import { Chore } from '@prisma/client';
 import { ChoresRepository } from '../repositories/chores.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import {
@@ -31,7 +32,7 @@ export class ChoresService {
   constructor(
     private choresRepository: ChoresRepository,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Gets chores for a household, organized by today and upcoming.
@@ -195,9 +196,34 @@ export class ChoresService {
   }
 
   /**
-   * Maps chore entity to DTO.
+   * Deletes a chore.
+   *
+   * @param choreId - The chore ID
+   * @param householdId - The household ID for authorization
+   * @throws NotFoundException if chore doesn't exist
+   * @throws ForbiddenException if user doesn't have access
    */
-  private mapChoreToDto(chore: any): ChoreDto {
+  async deleteChore(choreId: string, householdId: string): Promise<void> {
+    const chore = await this.choresRepository.findChoreById(choreId);
+
+    if (!chore) {
+      throw new NotFoundException('Chore not found');
+    }
+
+    if (chore.householdId !== householdId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.choresRepository.deleteChore(choreId);
+  }
+
+  /**
+   * Maps chore entity to DTO.
+   * Accepts chore with or without assignee (e.g. from updateChore vs findChoresByHousehold).
+   */
+  private mapChoreToDto(
+    chore: Chore & { assignee?: { name: string } | null },
+  ): ChoreDto {
     return {
       id: chore.id,
       title: chore.title,

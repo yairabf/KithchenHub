@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -22,7 +23,7 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 @Controller({ path: 'recipes', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class RecipesController {
-  constructor(private recipesService: RecipesService) {}
+  constructor(private recipesService: RecipesService) { }
 
   @Get()
   async getRecipes(
@@ -83,5 +84,17 @@ export class RecipesController {
       throw new BadRequestException('User must belong to a household');
     }
     return this.recipesService.cookRecipe(recipeId, user.householdId, dto);
+  }
+
+  @Delete(':id')
+  async deleteRecipe(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') recipeId: string,
+  ) {
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+    await this.recipesService.deleteRecipe(recipeId, user.householdId);
+    return { success: true };
   }
 }
