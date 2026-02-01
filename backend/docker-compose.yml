@@ -22,6 +22,48 @@ services:
       - kitchen-hub-network
     restart: unless-stopped
 
+  minio:
+    image: minio/minio:latest
+    container_name: kitchen-hub-minio
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # Allow web app (Expo web, etc.) to load catalog images
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ORIGIN:-*}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - kitchen-hub-network
+    restart: unless-stopped
+
+  catalog-storage-init:
+    image: minio/mc:latest
+    container_name: kitchen-hub-catalog-storage-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO...';
+      until mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin} 2>/dev/null; do sleep 2; done;
+      mc mb myminio/catalog-icons --ignore-existing;
+      mc mirror --overwrite /data/icons/ myminio/catalog-icons/downloaded_icons/;
+      mc anonymous set download myminio/catalog-icons;
+      echo 'Catalog icons uploaded to MinIO bucket catalog-icons.';
+      exit 0;
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ../sandbox/downloaded_icons:/data/icons:ro
+    networks:
+      - kitchen-hub-network
+    restart: "no"
+
   backend:
     build:
       context: .
@@ -42,6 +84,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://kitchen_hub:kitchen_hub_dev@postgres:5432/kitchen_hub?schema=public
       DIRECT_URL: postgresql://kitchen_hub:kitchen_hub_dev@postgres:5432/kitchen_hub?schema=public
+      CATALOG_ICONS_BASE_URL: ${CATALOG_ICONS_BASE_URL:-http://localhost:9000/catalog-icons}
     env_file:
       - .env
     depends_on:
@@ -59,6 +102,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  minio_data:
     driver: local
   backend_dist:
     driver: local

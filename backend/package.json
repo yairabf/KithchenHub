@@ -32,7 +32,8 @@
     "db:start": "docker-compose -f docker-compose.db.yml --env-file .env.db up -d",
     "db:stop": "docker-compose -f docker-compose.db.yml --env-file .env.db down",
     "db:logs": "docker-compose -f docker-compose.db.yml --env-file .env.db logs -f",
-    "db:ps": "docker-compose -f docker-compose.db.yml --env-file .env.db ps"
+    "db:ps": "docker-compose -f docker-compose.db.yml --env-file .env.db ps",
+    "db:seed": "ts-node -r dotenv/config scripts/seed-grocery-catalog.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

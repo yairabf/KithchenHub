@@ -17,6 +17,7 @@ import {
   UpdateItemDto,
   ShoppingItemDto,
 } from '../dtos';
+import { loadConfiguration } from '../../../config/configuration';
 
 /**
  * Shopping service handling shopping lists, items, and grocery search.
@@ -93,6 +94,26 @@ export class ShoppingService {
   }
 
   /**
+   * Rewrites relative catalog image URLs to the configured storage base URL
+   * (e.g. downloaded_icons/chicken.png → http://localhost:9000/catalog-icons/downloaded_icons/chicken.png).
+   */
+  private resolveCatalogImageUrl(imageUrl: string | null | undefined): string | undefined {
+    if (imageUrl == null || imageUrl === '') {
+      return undefined;
+    }
+    const trimmed = imageUrl.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    const { catalogIconsBaseUrl } = loadConfiguration();
+    if (!catalogIconsBaseUrl) {
+      return trimmed;
+    }
+    const path = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+    return `${catalogIconsBaseUrl}/${path}`;
+  }
+
+  /**
    * Searches groceries by name (case-insensitive).
    *
    * @param query - Search query string
@@ -100,7 +121,7 @@ export class ShoppingService {
    */
   async searchGroceries(query: string): Promise<GrocerySearchItemDto[]> {
     const searchTerm = query?.trim() ?? '';
-    return this.prisma.masterGroceryCatalog.findMany({
+    const rows = await this.prisma.masterGroceryCatalog.findMany({
       where: {
         name: {
           contains: searchTerm,
@@ -117,6 +138,14 @@ export class ShoppingService {
         defaultQuantity: true,
       },
     });
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      defaultUnit: row.defaultUnit ?? undefined,
+      imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
+      defaultQuantity: row.defaultQuantity ?? 1,
+    }));
   }
 
   /**

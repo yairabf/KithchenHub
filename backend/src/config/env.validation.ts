@@ -45,6 +45,12 @@ const envSchema = z.object({
     .pipe(z.number().min(0).max(1))
     .optional()
     .default('0.1'),
+  /**
+   * Base URL for catalog icon storage (e.g. MinIO bucket).
+   * When set, relative image_url values (e.g. downloaded_icons/chicken.png) are
+   * rewritten to {CATALOG_ICONS_BASE_URL}/{image_url} in API responses.
+   */
+  CATALOG_ICONS_BASE_URL: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

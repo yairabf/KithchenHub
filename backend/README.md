@@ -234,6 +234,14 @@ Run both the backend API and PostgreSQL database in Docker containers.
 
 The API will be available at `http://localhost:3000` with Swagger docs at `http://localhost:3000/api/docs/v1`.
 
+**Catalog icon storage (MinIO)**  
+The full stack includes MinIO and a one-time init step that uploads `../sandbox/downloaded_icons` into the `catalog-icons` bucket. Ensure `sandbox/downloaded_icons` exists (e.g. from running the icon generator). The backend rewrites relative catalog `image_url` values to `CATALOG_ICONS_BASE_URL` (default `http://localhost:9000/catalog-icons`) so the mobile app can load icons. Optional: set `CATALOG_ICONS_BASE_URL` in `.env` if you use a different URL.
+
+**Catalog icons not loading?**  
+1. Ensure icons are in MinIO: from `backend/` run `docker-compose run --rm catalog-storage-init` (requires `../sandbox/downloaded_icons`).  
+2. For Expo web, MinIO CORS is set via `MINIO_API_CORS_ALLOW_ORIGIN` (default `*`). If needed, set `MINIO_CORS_ORIGIN=http://localhost:8081` in `.env`.  
+3. Restart MinIO after changing CORS: `docker-compose restart minio`.
+
 ### Development Workflow
 
 **Start all services in background**:
@@ -295,6 +303,7 @@ docker-compose down -v
 | Deploy migrations (prod) | `docker-compose exec backend npx prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma` |
 | Generate Prisma Client | `docker-compose exec backend npm run prisma:generate` |
 | Open Prisma Studio | `docker-compose exec backend npm run prisma:studio` |
+| Re-upload catalog icons to MinIO | `docker-compose run --rm catalog-storage-init` (from backend/, needs ../sandbox/downloaded_icons) |
 | Stop services | `docker-compose down` |
 | Stop and remove volumes | `docker-compose down -v` |
 | Reset everything | `docker-compose down -v && docker-compose up -d` |
@@ -309,6 +318,8 @@ docker-compose down -v
   - User: `kitchen_hub`
   - Password: `kitchen_hub_dev`
   - Database: `kitchen_hub`
+- **MinIO (catalog icons)**: `http://localhost:9000` (API), `http://localhost:9001` (Console)
+  - On first `docker-compose up`, the `catalog-storage-init` service uploads `../sandbox/downloaded_icons` into the `catalog-icons` bucket so grocery catalog items from `final_zero_risk_db.json` can load their icons. Set `CATALOG_ICONS_BASE_URL=http://localhost:9000/catalog-icons` (or in `.env`) so the API returns full icon URLs.
 
 ### Troubleshooting
 
