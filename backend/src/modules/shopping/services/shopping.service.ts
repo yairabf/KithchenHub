@@ -34,7 +34,7 @@ export class ShoppingService {
   constructor(
     private shoppingRepository: ShoppingRepository,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Resolves a catalog item by ID and throws if not found.
@@ -263,6 +263,7 @@ export class ShoppingService {
   async addItems(
     listId: string,
     householdId: string,
+    userId: string,
     dto: AddItemsDto,
   ): Promise<{ addedItems: ShoppingItemDto[] }> {
     const list = await this.shoppingRepository.findListById(listId);
@@ -276,7 +277,9 @@ export class ShoppingService {
     }
 
     const addedItems = await Promise.all(
-      dto.items.map((item) => this.createItemFromInput(listId, item)),
+      dto.items.map((item) =>
+        this.createItemFromInput(listId, userId, item),
+      ),
     );
 
     return {
@@ -387,8 +390,9 @@ export class ShoppingService {
    * @param item - Item input
    * @returns Persisted shopping item
    */
-  private async createItemFromInput(
+  async createItemFromInput(
     listId: string,
+    userId: string,
     item: {
       catalogItemId?: string;
       masterItemId?: string;
@@ -404,11 +408,46 @@ export class ShoppingService {
     }
 
     const catalogItemId = item.catalogItemId ?? item.masterItemId;
-    const catalogItem = catalogItemId
-      ? await this.getCatalogItemOrThrow(catalogItemId)
-      : null;
+    let catalogItem = null;
+    let userItemId: string | undefined;
+
+    if (catalogItemId) {
+      catalogItem = await this.getCatalogItemOrThrow(catalogItemId);
+    } else {
+      const normalizedName = item.name?.trim();
+      if (normalizedName) {
+        const userItem = await this.shoppingRepository.findUserItemByName(
+          userId,
+          normalizedName,
+        );
+        if (userItem) {
+          userItemId = userItem.id;
+        } else {
+          const newItem = await this.shoppingRepository.createUserItem(
+            userId,
+            normalizedName,
+            item.category,
+          );
+          userItemId = newItem.id;
+        }
+      }
+    }
+
     const itemData = this.buildItemData(item, catalogItem, catalogItemId);
 
-    return this.shoppingRepository.createItem(listId, itemData);
+    return this.shoppingRepository.createItem(listId, {
+      ...itemData,
+      userItemId,
+    });
+  }
+
+  /**
+   * Gets all custom user items.
+   *
+   * @param userId - The user ID
+   * @returns List of user items
+   */
+  async getUserItems(userId: string) {
+    return this.shoppingRepository.findUserItems(userId);
   }
 }
