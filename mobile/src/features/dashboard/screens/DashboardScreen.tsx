@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatTimeForDisplay, formatDateForDisplay } from '../../../common/utils/dateTimeUtils';
@@ -18,6 +19,7 @@ import { GrocerySearchBar } from '../../shopping/components/GrocerySearchBar';
 import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
 import type { ShoppingItem } from '../../../mocks/shopping';
 import { useDashboardChores } from '../hooks/useDashboardChores';
+import { useRecipes } from '../../recipes/hooks/useRecipes';
 import { createShoppingService } from '../../shopping/services/shoppingService';
 import { getActiveListId } from '../../shopping/utils/selectionUtils';
 import { config } from '../../../config';
@@ -26,23 +28,6 @@ import type { DashboardScreenProps } from './types';
 import type { TabKey } from '../../../common/components/BottomPillNav';
 
 const SUGGESTED_ITEMS_MAX = 8;
-
-const QUICK_STATS = [
-  {
-    icon: 'basket-outline' as const,
-    label: 'Shopping Lists',
-    value: '2 Active',
-    route: 'Shopping' as TabKey,
-    iconBgStyle: 'shopping' as const,
-  },
-  {
-    icon: 'book-outline' as const,
-    label: 'Saved Recipes',
-    value: '12 Items',
-    route: 'Recipes' as TabKey,
-    iconBgStyle: 'recipes' as const,
-  },
-];
 
 function getChoreRowBackground(completed: boolean): string {
   return completed ? colors.pastel.green : colors.pastel.peach;
@@ -75,27 +60,50 @@ export function DashboardScreen({
     () => createShoppingService(shouldUseMockData ? 'guest' : 'signed-in'),
     [shouldUseMockData]
   );
+  const { recipes } = useRecipes();
   const [activeListId, setActiveListId] = useState<string | null>(null);
+  const [shoppingListsCount, setShoppingListsCount] = useState(0);
+
+  const loadShoppingData = useCallback(async () => {
+    try {
+      const data = await shoppingService.getShoppingData();
+      setActiveListId((current) => getActiveListId(data.shoppingLists, current));
+      setShoppingListsCount(data.shoppingLists.length);
+    } catch (_err) {
+      setActiveListId(null);
+      setShoppingListsCount(0);
+    }
+  }, [shoppingService]);
 
   useEffect(() => {
-    let isMounted = true;
-    const loadShoppingData = async () => {
-      try {
-        const data = await shoppingService.getShoppingData();
-        if (isMounted) {
-          setActiveListId((current) => getActiveListId(data.shoppingLists, current));
-        }
-      } catch (_err) {
-        if (isMounted) {
-          setActiveListId(null);
-        }
-      }
-    };
     loadShoppingData();
-    return () => {
-      isMounted = false;
-    };
-  }, [shoppingService]);
+  }, [loadShoppingData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadShoppingData();
+    }, [loadShoppingData])
+  );
+
+  const quickStats = useMemo(
+    () => [
+      {
+        icon: 'basket-outline' as const,
+        label: 'Shopping Lists',
+        value: shoppingListsCount === 1 ? '1 Active' : `${shoppingListsCount} Active`,
+        route: 'Shopping' as TabKey,
+        iconBgStyle: 'shopping' as const,
+      },
+      {
+        icon: 'book-outline' as const,
+        label: 'Saved Recipes',
+        value: recipes.length === 1 ? '1 Item' : `${recipes.length} Items`,
+        route: 'Recipes' as TabKey,
+        iconBgStyle: 'recipes' as const,
+      },
+    ],
+    [shoppingListsCount, recipes.length]
+  );
 
   const displayName = user?.name ?? 'Guest';
   const userRole = user?.isGuest ? 'Guest' : 'KITCHEN LEAD';
@@ -302,7 +310,7 @@ export function DashboardScreen({
 
               {/* Quick stats */}
               <View style={styles.quickStatsRow}>
-                {QUICK_STATS.map((stat) => (
+                {quickStats.map((stat) => (
                   <TouchableOpacity
                     key={stat.label}
                     style={styles.quickStatCard}

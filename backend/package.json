@@ -19,8 +19,10 @@
     "lint:check": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings=0",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "jest",
+    "test": "jest --testPathIgnorePatterns=\"rls\\\\.spec\\\\.ts$\"",
     "test:unit": "jest --testPathIgnorePatterns=\"rls\\\\.spec\\\\.ts$\"",
+    "test:rls": "jest --testPathPattern=rls\\.spec\\.ts",
+    "test:all": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -32,7 +34,8 @@
     "db:start": "docker-compose -f docker-compose.db.yml --env-file .env.db up -d",
     "db:stop": "docker-compose -f docker-compose.db.yml --env-file .env.db down",
     "db:logs": "docker-compose -f docker-compose.db.yml --env-file .env.db logs -f",
-    "db:ps": "docker-compose -f docker-compose.db.yml --env-file .env.db ps"
+    "db:ps": "docker-compose -f docker-compose.db.yml --env-file .env.db ps",
+    "db:seed": "ts-node -r dotenv/config scripts/seed-grocery-catalog.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

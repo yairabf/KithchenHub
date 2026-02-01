@@ -33,6 +33,9 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
             createList: jest.fn(),
             createItem: jest.fn(),
             updateItem: jest.fn(),
+            findUserItemByName: jest.fn(),
+            createUserItem: jest.fn(),
+            findUserItems: jest.fn(),
           },
         },
         {
@@ -111,6 +114,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
         id: mockItemId,
         listId: mockListId,
         catalogItemId: null,
+        userItemId: null,
         name: 'Test Item',
         quantity: 1,
         unit: null,
@@ -155,6 +159,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
         id: mockItemId,
         listId: mockListId,
         catalogItemId: null,
+        userItemId: null,
         name: 'Test Item',
         quantity: 1,
         unit: null,
@@ -241,6 +246,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
             id: 'item-1',
             listId: mockListId,
             catalogItemId: null,
+            userItemId: null,
             name: 'Active Item',
             quantity: 1,
             unit: null,
@@ -261,6 +267,33 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
 
       expect(result.items).toHaveLength(1);
       expect(result.items[0].name).toBe('Active Item');
+    });
+  });
+
+  describe('getUserItems', () => {
+    it('should return user items from repository', async () => {
+      const mockUserId = 'user-456';
+      const mockUserItems = [
+        {
+          id: 'ui-1',
+          userId: mockUserId,
+          householdId: null,
+          name: 'Custom Item',
+          category: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      jest
+        .spyOn(repository, 'findUserItems')
+        .mockResolvedValue(mockUserItems as any);
+
+      const result = await service.getUserItems(mockUserId);
+
+      expect(repository.findUserItems).toHaveBeenCalledWith(mockUserId);
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Custom Item');
     });
   });
 });

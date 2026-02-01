@@ -42,14 +42,15 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 
 ### Household Management
 - Multi-user household support
+- **Create household**: `POST /household` for users without a household (JWT only; no household required)
 - Member invitation and management
 - Household-level data isolation
 - Row Level Security (RLS) via Supabase
 
 ### Core Modules
-- **Shopping Lists**: Multi-list management with items and grocery catalog integration
-- **Recipes**: Recipe CRUD with ingredients and instructions
-- **Chores**: Task management with assignees and completion tracking
+- **Shopping Lists**: Multi-list management with items, grocery catalog integration, and **custom user items** (user-defined items linked to list items; `GET /shopping-items/custom`)
+- **Recipes**: Recipe CRUD with ingredients, instructions, and soft-delete (`DELETE /recipes/:id`)
+- **Chores**: Task management with assignees, completion tracking, and soft-delete (`DELETE /chores/:id`)
 - **Dashboard**: Aggregated household activity summaries
 - **Import**: Guest mode data import with deduplication
 
@@ -127,7 +128,7 @@ npm run start:dev         # start API with watch mode
 - Build for production: `npm run build`
 - Start built app: `npm run start:prod` (runs `dist/main.js`)
 - Lint: `npm run lint`
-- Tests: `npm test`, `npm run test:e2e`, coverage via `npm run test:cov`
+- Tests: `npm test` (excludes RLS; passes without Supabase), `npm run test:rls` (RLS only), `npm run test:all` (full suite), `npm run test:e2e`, coverage via `npm run test:cov`
 
 ## Local Development with Docker Compose
 
@@ -234,6 +235,14 @@ Run both the backend API and PostgreSQL database in Docker containers.
 
 The API will be available at `http://localhost:3000` with Swagger docs at `http://localhost:3000/api/docs/v1`.
 
+**Catalog icon storage (MinIO)**  
+The full stack includes MinIO and a one-time init step that uploads `../sandbox/downloaded_icons` into the `catalog-icons` bucket. Ensure `sandbox/downloaded_icons` exists (e.g. from running the icon generator). The backend rewrites relative catalog `image_url` values to `CATALOG_ICONS_BASE_URL` (default `http://localhost:9000/catalog-icons`) so the mobile app can load icons. Optional: set `CATALOG_ICONS_BASE_URL` in `.env` if you use a different URL.
+
+**Catalog icons not loading?**  
+1. Ensure icons are in MinIO: from `backend/` run `docker-compose run --rm catalog-storage-init` (requires `../sandbox/downloaded_icons`).  
+2. For Expo web, MinIO CORS is set via `MINIO_API_CORS_ALLOW_ORIGIN` (default `*`). If needed, set `MINIO_CORS_ORIGIN=http://localhost:8081` in `.env`.  
+3. Restart MinIO after changing CORS: `docker-compose restart minio`.
+
 ### Development Workflow
 
 **Start all services in background**:
@@ -295,6 +304,7 @@ docker-compose down -v
 | Deploy migrations (prod) | `docker-compose exec backend npx prisma migrate deploy --schema=src/infrastructure/database/prisma/schema.prisma` |
 | Generate Prisma Client | `docker-compose exec backend npm run prisma:generate` |
 | Open Prisma Studio | `docker-compose exec backend npm run prisma:studio` |
+| Re-upload catalog icons to MinIO | `docker-compose run --rm catalog-storage-init` (from backend/, needs ../sandbox/downloaded_icons) |
 | Stop services | `docker-compose down` |
 | Stop and remove volumes | `docker-compose down -v` |
 | Reset everything | `docker-compose down -v && docker-compose up -d` |
@@ -309,6 +319,8 @@ docker-compose down -v
   - User: `kitchen_hub`
   - Password: `kitchen_hub_dev`
   - Database: `kitchen_hub`
+- **MinIO (catalog icons)**: `http://localhost:9000` (API), `http://localhost:9001` (Console)
+  - On first `docker-compose up`, the `catalog-storage-init` service uploads `../sandbox/downloaded_icons` into the `catalog-icons` bucket so grocery catalog items from `final_zero_risk_db.json` can load their icons. Set `CATALOG_ICONS_BASE_URL=http://localhost:9000/catalog-icons` (or in `.env`) so the API returns full icon URLs.
 
 ### Troubleshooting
 
@@ -408,11 +420,12 @@ The script replaces all existing catalog rows with the JSON contents. To use a d
 
 ## Security Testing (RLS)
 To verify that Row Level Security is correctly isolating data between households:
-1. **Prerequisites**: Ensure you have applied migrations (`npm run prisma:migrate`).
+1. **Prerequisites**: Ensure you have applied migrations (`npm run prisma:migrate`) and your database has the `authenticated` role (e.g. Supabase; plain PostgreSQL does not create this role).
 2. **Run Tests**:
    ```bash
-   npm run test src/infrastructure/database/rls.spec.ts
+   npm run test:rls
    ```
+   Or run the full suite including RLS: `npm run test:all`. By default, `npm test` excludes RLS tests so it passes without a Supabase-style DB.
 3. **Internal Logic**: These tests simulate the Supabase environment by:
    - Setting the PostgreSQL role to `authenticated`.
    - Injecting JWT claims (e.g., `SET LOCAL "request.jwt.claims" = '{"sub": "..."}'`) within a transaction.
@@ -495,6 +508,7 @@ To verify that Row Level Security is correctly isolating data between households
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
+| `POST` | `/household` | JWT only | Create new household (user must not already have a household) |
 | `GET` | `/household` | Protected | Get current user's household with members |
 | `PUT` | `/household` | Protected | Update household details (admin only) |
 | `POST` | `/household/invite` | Protected | Invite member to household (admin only) |
@@ -508,7 +522,8 @@ To verify that Row Level Security is correctly isolating data between households
 | `POST` | `/shopping-lists` | Protected | Create new shopping list |
 | `GET` | `/shopping-lists/:id` | Protected | Get shopping list with items |
 | `DELETE` | `/shopping-lists/:id` | Protected | Soft-delete shopping list |
-| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list |
+| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list (catalog or custom names; custom items create/link UserItem) |
+| `GET` | `/shopping-items/custom` | Protected | Get current user's custom (user-defined) items |
 | `PATCH` | `/shopping-items/:id` | Protected | Update shopping item |
 | `DELETE` | `/shopping-items/:id` | Protected | Soft-delete shopping item |
 
@@ -528,6 +543,7 @@ To verify that Row Level Security is correctly isolating data between households
 | `GET` | `/recipes/:id` | Protected | Get recipe details |
 | `PUT` | `/recipes/:id` | Protected | Update recipe |
 | `POST` | `/recipes/:id/cook` | Protected | Add recipe ingredients to shopping list |
+| `DELETE` | `/recipes/:id` | Protected | Soft-delete recipe |
 
 **Query Parameters:**
 - `category`: Filter by category (Breakfast, Lunch, Dinner, Dessert, Snack)
@@ -542,6 +558,7 @@ To verify that Row Level Security is correctly isolating data between households
 | `PATCH` | `/chores/:id` | Protected | Update chore details |
 | `PATCH` | `/chores/:id/status` | Protected | Toggle chore completion status |
 | `GET` | `/chores/stats?date=` | Protected | Get chore statistics for date |
+| `DELETE` | `/chores/:id` | Protected | Soft-delete chore |
 
 **Query Parameters:**
 - `start`: Start date (ISO format)
@@ -560,15 +577,15 @@ To verify that Row Level Security is correctly isolating data between households
 |--------|----------|------|-------------|
 | `POST` | `/import` | Protected | Import recipes and shopping lists from guest mode |
 
-### Health & Version Endpoints (unversioned)
+### Health & Version Endpoints
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `GET` | `/api/health` | Public | Basic health check (liveness) |
-| `GET` | `/api/health/live` | Public | Liveness probe for orchestration |
-| `GET` | `/api/health/ready` | Public | Readiness probe (DB connectivity) |
-| `GET` | `/api/health/detailed` | Public | Detailed health status |
-| `GET` | `/api/version` | Public | Version discovery (lists supported/deprecated versions and docs) |
+| `GET` | `/api/v1/health` | Public | Basic health check (liveness) |
+| `GET` | `/api/v1/health/live` | Public | Liveness probe for orchestration |
+| `GET` | `/api/v1/health/ready` | Public | Readiness probe (DB connectivity) |
+| `GET` | `/api/v1/health/detailed` | Public | Detailed health status |
+| `GET` | `/api/version` | Public | Version discovery (unversioned; lists supported/deprecated versions and docs) |
 
 ### Authentication Requirements
 
@@ -634,13 +651,13 @@ backend/
 │   │   │   ├── dtos/               # Auth DTOs
 │   │   │   ├── constants/          # Sync entity type constants
 │   │   │   └── auth.module.ts
-│   │   ├── households/             # Household management
+│   │   ├── households/             # Household management (create, get, update, invite, remove member)
 │   │   │   ├── controllers/        # HouseholdsController
 │   │   │   ├── services/           # HouseholdsService
 │   │   │   ├── repositories/       # HouseholdsRepository
-│   │   │   ├── dtos/               # Household DTOs
+│   │   │   ├── dtos/               # CreateHouseholdDto, UpdateHouseholdDto, InviteMemberDto, etc.
 │   │   │   └── households.module.ts
-│   │   ├── shopping/               # Shopping lists and items
+│   │   ├── shopping/               # Shopping lists, items, grocery catalog, custom user items (UserItem)
 │   │   │   ├── controllers/        # GroceriesController, ShoppingListsController, ShoppingItemsController (shopping.controller.ts)
 │   │   │   ├── services/           # ShoppingService
 │   │   │   ├── repositories/       # ShoppingRepository
@@ -670,7 +687,7 @@ backend/
 │   │   │   ├── dto/                # Import DTOs
 │   │   │   └── import.module.ts
 │   │   ├── health/                 # Health and version discovery
-│   │   │   ├── controllers/        # HealthController, VersionController (/api/health, /api/version)
+│   │   │   ├── controllers/        # HealthController (/api/v1/health*), VersionController (/api/version)
 │   │   │   ├── services/           # HealthService
 │   │   │   └── health.module.ts
 │   │   ├── settings/              # Settings module (app preferences)
@@ -804,8 +821,14 @@ Errors are transformed by `HttpExceptionFilter` into consistent error responses:
 ### Running Tests
 
 ```bash
-# Unit tests
+# Unit tests (excludes RLS; use when DB has no 'authenticated' role)
 npm test
+
+# RLS integration tests only (requires DB with 'authenticated' role, e.g. Supabase)
+npm run test:rls
+
+# Full suite including RLS
+npm run test:all
 
 # Watch mode
 npm run test:watch
@@ -825,10 +848,10 @@ npm run test:e2e
 
 ### RLS Testing
 
-To verify Row Level Security is correctly isolating data:
+To verify Row Level Security is correctly isolating data (requires DB with `authenticated` role):
 
 ```bash
-npm run test src/infrastructure/database/rls.spec.ts
+npm run test:rls
 ```
 
 These tests simulate the Supabase environment by:
@@ -1076,7 +1099,7 @@ The backend API is designed to work seamlessly with the [Kitchen Hub Mobile App]
 
 The API includes comprehensive monitoring capabilities:
 
-- **Health Check Endpoints**: `/api/health`, `/api/health/ready`, `/api/health/live`, `/api/health/detailed`
+- **Health Check Endpoints**: `/api/v1/health`, `/api/v1/health/ready`, `/api/v1/health/live`, `/api/v1/health/detailed`
 - **Structured Logging**: JSON-formatted logs for log aggregation
 - **Error Tracking**: Sentry integration (optional)
 - **Request Correlation**: Automatic request ID generation and tracking

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { ShoppingList, ShoppingItem } from '@prisma/client';
+import { ShoppingList, ShoppingItem, UserItem } from '@prisma/client';
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 
 @Injectable()
@@ -90,6 +90,7 @@ export class ShoppingRepository {
     listId: string,
     data: {
       catalogItemId?: string;
+      userItemId?: string;
       name: string;
       quantity: number;
       unit?: string;
@@ -101,12 +102,49 @@ export class ShoppingRepository {
       data: {
         listId,
         catalogItemId: data.catalogItemId,
+        userItemId: data.userItemId,
         name: data.name,
         quantity: data.quantity,
         unit: data.unit,
         category: data.category,
         isChecked: data.isChecked || false,
       },
+    });
+  }
+
+  async findUserItemByName(
+    userId: string,
+    name: string,
+  ): Promise<UserItem | null> {
+    return this.prisma.userItem.findFirst({
+      where: {
+        userId,
+        name: {
+          equals: name,
+          mode: 'insensitive',
+        },
+      },
+    });
+  }
+
+  async createUserItem(
+    userId: string,
+    name: string,
+    category?: string,
+  ): Promise<UserItem> {
+    return this.prisma.userItem.create({
+      data: {
+        userId,
+        name,
+        category,
+      },
+    });
+  }
+
+  async findUserItems(userId: string): Promise<UserItem[]> {
+    return this.prisma.userItem.findMany({
+      where: { userId },
+      orderBy: { name: 'asc' },
     });
   }
 

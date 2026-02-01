@@ -31,7 +31,7 @@ import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSelectedList } from '../utils/selectionUtils';
 import { determineUserDataMode } from '../../../common/types/dataModes';
-import { api } from '../../../services/api';
+import { useCatalog } from '../../../common/hooks/useCatalog';
 import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareShoppingRepository } from '../../../common/repositories/cacheAwareShoppingRepository';
 import {
@@ -49,10 +49,8 @@ type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 export function ShoppingListsScreen() {
   const { isTablet } = useResponsive();
   const { user } = useAuth();
+  const { groceryItems, categories, frequentlyAddedItems } = useCatalog();
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
-  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [frequentlyAddedItems, setFrequentlyAddedItems] = useState<GroceryItem[]>([]);
   const [selectedGroceryItem, setSelectedGroceryItem] = useState<GroceryItem | null>(null);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [quantityInput, setQuantityInput] = useState('1');
@@ -110,34 +108,16 @@ export function ShoppingListsScreen() {
   
   const listIdFilter = buildListIdFilter(shoppingLists.map((list) => list.id));
 
-  // Load data for guest mode or initial load for signed-in
+  // Load shopping lists and items for guest mode (catalog: groceryItems, categories, frequentlyAdded from useCatalog → API)
   useEffect(() => {
-    if (isSignedIn && repository) {
-      // For signed-in, use repository to load grocery items and build categories
-      const loadGroceryData = async () => {
-        try {
-          const data = await repository.getShoppingData();
-          setGroceryItems(data.groceryItems);
-          setCategories(data.categories);
-          setFrequentlyAddedItems(data.frequentlyAddedItems);
-        } catch (error) {
-          console.error('Failed to load grocery data:', error);
-        }
-      };
-      loadGroceryData();
-    } else {
-      // Guest mode: use service directly
+    if (!isSignedIn) {
       let isMounted = true;
       const loadShoppingData = async () => {
         try {
           const data = await shoppingService.getShoppingData();
           if (!isMounted) return;
-          
           setGuestLists(data.shoppingLists);
           setGuestItems(data.shoppingItems);
-          setGroceryItems(data.groceryItems);
-          setCategories(data.categories);
-          setFrequentlyAddedItems(data.frequentlyAddedItems);
           setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
         } catch (error) {
           if (!isMounted) return;
@@ -147,24 +127,7 @@ export function ShoppingListsScreen() {
       loadShoppingData();
       return () => { isMounted = false; };
     }
-  }, [shoppingService, repository, isSignedIn]);
-  
-  // For signed-in mode, load grocery data when lists/items change
-  useEffect(() => {
-    if (isSignedIn && repository && shoppingLists.length > 0) {
-      const loadGroceryData = async () => {
-        try {
-          const data = await repository.getShoppingData();
-          setGroceryItems(data.groceryItems);
-          setCategories(data.categories);
-          setFrequentlyAddedItems(data.frequentlyAddedItems);
-        } catch (error) {
-          console.error('Failed to load grocery data:', error);
-        }
-      };
-      loadGroceryData();
-    }
-  }, [repository, isSignedIn, shoppingLists.length]);
+  }, [shoppingService, isSignedIn]);
 
   // Update list item counts when items change (for guest mode)
   useEffect(() => {

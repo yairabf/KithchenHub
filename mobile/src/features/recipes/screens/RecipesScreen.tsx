@@ -95,6 +95,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
+  const [isSavingRecipe, setIsSavingRecipe] = useState(false);
 
   // Calculate card width dynamically based on screen size
   // Account for container padding and gap between columns
@@ -123,6 +124,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
 
   const handleSaveRecipe = async (data: NewRecipeData) => {
     try {
+      setIsSavingRecipe(true);
       const baseRecipe = createRecipe({ ...data, imageUrl: undefined });
       const createdRecipe = await addRecipe({ ...baseRecipe, imageUrl: undefined });
 
@@ -149,6 +151,8 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
       Alert.alert('Unable to save recipe', message);
+    } finally {
+      setIsSavingRecipe(false);
     }
   };
 
@@ -227,6 +231,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         visible={showAddRecipeModal}
         onClose={() => setShowAddRecipeModal(false)}
         onSave={handleSaveRecipe}
+        isSaving={isSavingRecipe}
         categories={recipeCategories.filter((c) => c !== 'All')}
         groceryItems={groceryItems}
       />

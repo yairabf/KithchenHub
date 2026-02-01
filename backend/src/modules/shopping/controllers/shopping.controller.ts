@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { ShoppingService } from '../services/shopping.service';
 import { CreateListDto, AddItemsDto, UpdateItemDto } from '../dtos';
@@ -50,7 +51,7 @@ export class ShoppingListsController {
   @Get()
   async getLists(@CurrentUser() user: CurrentUserPayload) {
     if (!user.householdId) {
-      throw new Error('User must belong to a household');
+      throw new BadRequestException('User must belong to a household');
     }
     return this.shoppingService.getLists(user.householdId);
   }
@@ -61,7 +62,7 @@ export class ShoppingListsController {
     @Body() dto: CreateListDto,
   ) {
     if (!user.householdId) {
-      throw new Error('User must belong to a household');
+      throw new BadRequestException('User must belong to a household');
     }
     return this.shoppingService.createList(user.householdId, dto);
   }
@@ -72,7 +73,7 @@ export class ShoppingListsController {
     @Param('id') listId: string,
   ) {
     if (!user.householdId) {
-      throw new Error('User must belong to a household');
+      throw new BadRequestException('User must belong to a household');
     }
     return this.shoppingService.getListDetails(listId, user.householdId);
   }
@@ -83,7 +84,7 @@ export class ShoppingListsController {
     @Param('id') listId: string,
   ) {
     if (!user.householdId) {
-      throw new Error('User must belong to a household');
+      throw new BadRequestException('User must belong to a household');
     }
     await this.shoppingService.deleteList(listId, user.householdId);
     return { success: true };
@@ -96,9 +97,14 @@ export class ShoppingListsController {
     @Body() dto: AddItemsDto,
   ) {
     if (!user.householdId) {
-      throw new Error('User must belong to a household');
+      throw new BadRequestException('User must belong to a household');
     }
-    return this.shoppingService.addItems(listId, user.householdId, dto);
+    return this.shoppingService.addItems(
+      listId,
+      user.householdId,
+      user.userId,
+      dto,
+    );
   }
 }
 
@@ -112,6 +118,11 @@ export class ShoppingListsController {
 export class ShoppingItemsController {
   constructor(private shoppingService: ShoppingService) {}
 
+  @Get('custom')
+  async getCustomItems(@CurrentUser() user: CurrentUserPayload) {
+    return this.shoppingService.getUserItems(user.userId);
+  }
+
   @Patch(':id')
   async updateItem(
     @CurrentUser() user: CurrentUserPayload,
@@ -119,7 +130,7 @@ export class ShoppingItemsController {
     @Body() dto: UpdateItemDto,
   ) {
     if (!user.householdId) {
-      throw new Error('User must belong to a household');
+      throw new BadRequestException('User must belong to a household');
     }
     return this.shoppingService.updateItem(itemId, user.householdId, dto);
   }
@@ -130,7 +141,7 @@ export class ShoppingItemsController {
     @Param('id') itemId: string,
   ) {
     if (!user.householdId) {
-      throw new Error('User must belong to a household');
+      throw new BadRequestException('User must belong to a household');
     }
     await this.shoppingService.deleteItem(itemId, user.householdId);
     return { success: true };

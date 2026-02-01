@@ -174,11 +174,14 @@ describe('setAppLanguage', () => {
       expect(RN.I18nManager.forceRTL).toHaveBeenNthCalledWith(1, true);
       expect(RN.I18nManager.forceRTL).toHaveBeenNthCalledWith(2, false);
       expect(Updates.reloadAsync).toHaveBeenCalled();
-      expect(RN.Alert.alert).toHaveBeenCalledWith(
-        'Direction Changed',
-        'Please restart the app to apply the new text direction.',
-        [{ text: 'OK' }],
-      );
+      expect(RN.Alert.alert).toHaveBeenCalledTimes(1);
+      const [title, message, buttons] = RN.Alert.alert.mock.calls[0] as [string, string, { text: string }[]];
+      expect(typeof title).toBe('string');
+      expect(title.length).toBeGreaterThan(0);
+      expect(typeof message).toBe('string');
+      expect(message.length).toBeGreaterThan(0);
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0]).toMatchObject({ text: expect.any(String) });
       changeLanguageSpy.mockRestore();
     });
   });

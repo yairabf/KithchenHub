@@ -1,3 +1,18 @@
+-- Stub for local/shadow DB: Supabase provides auth.uid() in production.
+-- Prisma shadow DB and plain Postgres do not have the auth schema, so create it here
+-- when missing. On Supabase, schema and function already exist; we only create if not present.
+CREATE SCHEMA IF NOT EXISTS auth;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'auth' AND p.proname = 'uid'
+  ) THEN
+    EXECUTE 'CREATE FUNCTION auth.uid() RETURNS uuid AS $body$ SELECT NULL::uuid $body$ LANGUAGE sql STABLE';
+  END IF;
+END $$;
+
 -- Enable RLS on all tables
 ALTER TABLE "households" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;

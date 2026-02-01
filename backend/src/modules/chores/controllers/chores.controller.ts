@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -80,5 +81,17 @@ export class ChoresController {
       throw new BadRequestException('User must belong to a household');
     }
     return this.choresService.getStats(user.householdId, date);
+  }
+
+  @Delete(':id')
+  async deleteChore(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') choreId: string,
+  ) {
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+    await this.choresService.deleteChore(choreId, user.householdId);
+    return { success: true };
   }
 }

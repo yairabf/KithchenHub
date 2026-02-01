@@ -248,4 +248,26 @@ export class RecipesService {
       })),
     };
   }
+
+  /**
+   * Deletes a recipe.
+   *
+   * @param recipeId - The recipe ID
+   * @param householdId - The household ID for authorization
+   * @throws NotFoundException if recipe doesn't exist
+   * @throws ForbiddenException if user doesn't have access
+   */
+  async deleteRecipe(recipeId: string, householdId: string): Promise<void> {
+    const recipe = await this.recipesRepository.findRecipeById(recipeId);
+
+    if (!recipe) {
+      throw new NotFoundException('Recipe not found');
+    }
+
+    if (recipe.householdId !== householdId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.recipesRepository.deleteRecipe(recipeId);
+  }
 }

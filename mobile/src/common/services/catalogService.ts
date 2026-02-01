@@ -175,8 +175,9 @@ export class CatalogService {
 
     // Try API first
     try {
-      const results = await api.get<GrocerySearchItemDto[]>('/groceries/search?q=');
-      const items = results.map(mapGroceryItem);
+      const results = await api.get<GrocerySearchItemDto[] | undefined>('/groceries/search?q=');
+      const list = Array.isArray(results) ? results : [];
+      const items = list.map(mapGroceryItem);
       
       // Cache successful response
       await this.cacheGroceryItems(items);

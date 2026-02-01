@@ -25,6 +25,8 @@ export interface AppConfig {
     environment?: string;
     tracesSampleRate: number;
   };
+  /** Base URL for catalog icons (e.g. http://localhost:9000/catalog-icons). When set, relative image_url are rewritten. */
+  catalogIconsBaseUrl?: string;
 }
 
 let config: AppConfig | null = null;
@@ -68,6 +70,10 @@ export const loadConfiguration = (): AppConfig => {
           tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
         }
       : undefined,
+    catalogIconsBaseUrl:
+      env.CATALOG_ICONS_BASE_URL && env.CATALOG_ICONS_BASE_URL.trim() !== ''
+        ? env.CATALOG_ICONS_BASE_URL.replace(/\/$/, '')
+        : undefined,
   };
 
   return config;

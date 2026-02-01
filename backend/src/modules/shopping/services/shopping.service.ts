@@ -17,6 +17,7 @@ import {
   UpdateItemDto,
   ShoppingItemDto,
 } from '../dtos';
+import { loadConfiguration } from '../../../config/configuration';
 
 /**
  * Shopping service handling shopping lists, items, and grocery search.
@@ -93,6 +94,28 @@ export class ShoppingService {
   }
 
   /**
+   * Rewrites relative catalog image URLs to the configured storage base URL
+   * (e.g. downloaded_icons/chicken.png → http://localhost:9000/catalog-icons/downloaded_icons/chicken.png).
+   */
+  private resolveCatalogImageUrl(
+    imageUrl: string | null | undefined,
+  ): string | undefined {
+    if (imageUrl == null || imageUrl === '') {
+      return undefined;
+    }
+    const trimmed = imageUrl.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    const { catalogIconsBaseUrl } = loadConfiguration();
+    if (!catalogIconsBaseUrl) {
+      return trimmed;
+    }
+    const path = trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+    return `${catalogIconsBaseUrl}/${path}`;
+  }
+
+  /**
    * Searches groceries by name (case-insensitive).
    *
    * @param query - Search query string
@@ -100,7 +123,7 @@ export class ShoppingService {
    */
   async searchGroceries(query: string): Promise<GrocerySearchItemDto[]> {
     const searchTerm = query?.trim() ?? '';
-    return this.prisma.masterGroceryCatalog.findMany({
+    const rows = await this.prisma.masterGroceryCatalog.findMany({
       where: {
         name: {
           contains: searchTerm,
@@ -117,6 +140,14 @@ export class ShoppingService {
         defaultQuantity: true,
       },
     });
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      defaultUnit: row.defaultUnit ?? undefined,
+      imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
+      defaultQuantity: row.defaultQuantity ?? 1,
+    }));
   }
 
   /**
@@ -234,6 +265,7 @@ export class ShoppingService {
   async addItems(
     listId: string,
     householdId: string,
+    userId: string,
     dto: AddItemsDto,
   ): Promise<{ addedItems: ShoppingItemDto[] }> {
     const list = await this.shoppingRepository.findListById(listId);
@@ -247,7 +279,7 @@ export class ShoppingService {
     }
 
     const addedItems = await Promise.all(
-      dto.items.map((item) => this.createItemFromInput(listId, item)),
+      dto.items.map((item) => this.createItemFromInput(listId, userId, item)),
     );
 
     return {
@@ -358,8 +390,9 @@ export class ShoppingService {
    * @param item - Item input
    * @returns Persisted shopping item
    */
-  private async createItemFromInput(
+  async createItemFromInput(
     listId: string,
+    userId: string,
     item: {
       catalogItemId?: string;
       masterItemId?: string;
@@ -375,11 +408,46 @@ export class ShoppingService {
     }
 
     const catalogItemId = item.catalogItemId ?? item.masterItemId;
-    const catalogItem = catalogItemId
-      ? await this.getCatalogItemOrThrow(catalogItemId)
-      : null;
+    let catalogItem = null;
+    let userItemId: string | undefined;
+
+    if (catalogItemId) {
+      catalogItem = await this.getCatalogItemOrThrow(catalogItemId);
+    } else {
+      const normalizedName = item.name?.trim();
+      if (normalizedName) {
+        const userItem = await this.shoppingRepository.findUserItemByName(
+          userId,
+          normalizedName,
+        );
+        if (userItem) {
+          userItemId = userItem.id;
+        } else {
+          const newItem = await this.shoppingRepository.createUserItem(
+            userId,
+            normalizedName,
+            item.category,
+          );
+          userItemId = newItem.id;
+        }
+      }
+    }
+
     const itemData = this.buildItemData(item, catalogItem, catalogItemId);
 
-    return this.shoppingRepository.createItem(listId, itemData);
+    return this.shoppingRepository.createItem(listId, {
+      ...itemData,
+      userItemId,
+    });
+  }
+
+  /**
+   * Gets all custom user items.
+   *
+   * @param userId - The user ID
+   * @returns List of user items
+   */
+  async getUserItems(userId: string) {
+    return this.shoppingRepository.findUserItems(userId);
   }
 }

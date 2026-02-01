@@ -19,6 +19,7 @@ jobs:
   build_and_push:
     name: Build and push Docker image to GHCR
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout

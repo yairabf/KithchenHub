@@ -1,0 +1,200 @@
+---
+name: RTL handling with app restart
+overview: Implement RTL detection for Hebrew and Arabic, apply I18nManager.forceRTL at startup and on language switch (with app restart when LTR/RTL flips), flip directional icons via a small utility, and validate layouts so the app behaves correctly in RTL.
+todos: []
+isProject: false
+---
+
+# RTL handling with app restart (i18n)
+
+**Epic:** Internationalization (i18n)  
+**Task:** rtl-handling-with-app-restart  
+**Store under:** [.cursor/tasks/i18n/rtl-handling-with-app-restart/](.cursor/tasks/i18n/rtl-handling-with-app-restart/)  
+**Status:** Planning
+
+---
+
+## Current state
+
+
+| Item              | Status                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| i18n              | Done: [mobile/src/i18n/](mobile/src/i18n/) – detector, storage, `setAppLanguage()`, `SUPPORTED_LANGUAGE_CODES = ['en']`                                            |
+| Language selector | Done: [LanguageSelectorModal](mobile/src/features/settings/components/LanguageSelectorModal/LanguageSelectorModal.tsx), Settings row, `setAppLanguage()` on select |
+| App entry         | [mobile/index.ts](mobile/index.ts) – sync: `import './src/i18n'` then `registerRootComponent(App)`                                                                 |
+| RTL / I18nManager | Not implemented; [mobile/src/i18n/README.md](mobile/src/i18n/README.md) notes "RTL will require I18nManager.forceRTL + app restart"                                |
+| Directional icons | Hardcoded: `chevron-forward`, `arrow-back`, `arrow-forward`, `chevron-back` in Settings, ScreenHeader, Dashboard, ChoresQuickActionModal, DatePickerWeb            |
+| expo-updates      | Present: [mobile/package.json](mobile/package.json) – `expo-updates ~29.0.16`                                                                                      |
+
+
+**Gap:** No RTL detection, no `I18nManager.forceRTL` at startup or on switch, no app restart when LTR/RTL flips, no directional icon flipping, no layout validation for RTL.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TB
+  subgraph bootstrap [App bootstrap - index.ts]
+    A[Read stored language or device locale]
+    B[Compute isRTL for he/ar]
+    C[I18nManager.allowRTL + forceRTL]
+    D[Dynamic import i18n]
+    E[registerRootComponent App]
+    A --> B --> C --> D --> E
+  end
+  subgraph languageSwitch [Language switch - setAppLanguage]
+    F[Persist + i18n.changeLanguage]
+    G{RTL changed?}
+    H[forceRTL + Updates.reloadAsync]
+    I[Fallback: Alert restart]
+    F --> G -->|yes| H
+    H -->|reload fails| I
+  end
+  subgraph ui [UI layer]
+    J[Directional icon helper]
+    K[ScreenHeader, Settings, etc.]
+    J --> K
+  end
+```
+
+
+
+- **Startup:** Before any UI, determine language (stored else device), set `I18nManager.allowRTL(true)` and `I18nManager.forceRTL(isRTL(lang))`, then load i18n and mount App.
+- **Switch:** When user selects a new language, persist and update i18n; if RTL vs LTR changes, call `forceRTL` and trigger restart (`Updates.reloadAsync()`); if reload fails (e.g. dev), show Alert asking user to restart.
+- **Icons:** Central helper that returns the correct directional icon name based on `I18nManager.isRTL` (e.g. chevron-forward in LTR → chevron-back in RTL).
+
+---
+
+## Implementation steps
+
+### 1. RTL constants and helper (i18n)
+
+- **File:** [mobile/src/i18n/rtl.ts](mobile/src/i18n/rtl.ts) (new).
+- **Contents:**
+  - `RTL_LANGUAGE_CODES: readonly ['he', 'ar']`.
+  - `function isRtlLanguage(locale: string): boolean` – normalize with existing `normalizeLocale`, then return true if code is in `RTL_LANGUAGE_CODES`.
+- **Tests:** [mobile/src/i18n/**tests**/rtl.test.ts](mobile/src/i18n/__tests__/rtl.test.ts) – parameterized: `en`/`es` false, `he`/`ar`/`he-IL`/`ar-SA` true, empty/invalid false.
+
+### 2. Bootstrap: apply RTL before first paint (index.ts)
+
+- **Constraint:** `I18nManager.forceRTL` must run before the React tree mounts; layout direction is fixed at native init.
+- **File:** [mobile/index.ts](mobile/index.ts).
+- **Current:** Sync import of i18n then `registerRootComponent(App)`.
+- **Change:** Async bootstrap:
+  1. Read stored language: `getStoredLanguage()` from [mobile/src/i18n/storage.ts](mobile/src/i18n/storage.ts).
+  2. If null, get device locale: use `react-native-localize.getLocales()[0].languageTag` (or equivalent), normalize with `normalizeLocale`.
+  3. Compute `isRTL = isRtlLanguage(lang)`.
+  4. Call `I18nManager.allowRTL(true)` and `I18nManager.forceRTL(isRTL)`.
+  5. Dynamic import: `await import('./src/i18n')` so i18n init runs after RTL is set.
+  6. `registerRootComponent(App)`.
+- **Device locale helper:** Either export from i18n a small `getInitialLocaleForRTL(): Promise<string>` that returns stored ?? first device locale (normalized), or inline the read in index.ts using existing storage + react-native-localize. Prefer a small function in i18n (e.g. `getInitialLocaleForRTL`) so index.ts stays simple and logic is testable.
+- **Tests:** Unit test `getInitialLocaleForRTL` with mocked AsyncStorage and getLocales.
+
+### 3. Add he and ar to supported languages (optional for this task)
+
+- **Scope:** Plan says "Detect RTL languages (he, ar) and apply I18nManager.forceRTL". Applying RTL at startup and on switch does not require full locale resources; we can add `he` and `ar` to `SUPPORTED_LANGUAGE_CODES` and `AVAILABLE_LANGUAGES` so the selector offers them and switching to he/ar triggers RTL + restart. Locale JSON files for he/ar can be placeholders (e.g. copy en or minimal keys) so the app does not break.
+- **Files:** [mobile/src/i18n/constants.ts](mobile/src/i18n/constants.ts) – add `'he'` and `'ar'` to `SUPPORTED_LANGUAGE_CODES` and corresponding entries to `AVAILABLE_LANGUAGES` (e.g. Hebrew, العربية). Add minimal [mobile/src/i18n/locales/he/](mobile/src/i18n/locales/he/) and [mobile/src/i18n/locales/ar/](mobile/src/i18n/locales/ar/) (e.g. same namespaces as en, copy from en or minimal keys) and register in [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts) resources so `changeLanguage('he')` / `'ar'` works. If you prefer to keep this task RTL-only and add he/ar in a follow-up, document that in the plan and only implement RTL logic and icon/layout behavior for when he/ar are later added; then bootstrap can still use `isRtlLanguage(stored ?? deviceLocale)` for a future-proof path.
+
+**Recommendation:** Add he/ar to constants and minimal locale resources so "switching between LTR and RTL" is testable in-app (user selects Hebrew → restart → RTL layout).
+
+### 4. setAppLanguage: restart when LTR/RTL flips
+
+- **File:** [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts) – `setAppLanguage`.
+- **After** `setStoredLanguage(normalized)` and `await i18n.changeLanguage(normalized)`:
+  - If `isRtlLanguage(normalized) !== I18nManager.isRTL`: call `I18nManager.forceRTL(isRtlLanguage(normalized))`, then trigger restart.
+  - Restart: `import * as Updates from 'expo-updates'` and `await Updates.reloadAsync()`. In dev, `reloadAsync()` may no-op; catch and show an Alert (e.g. "Direction changed. Please restart the app.").
+- **Tests:** Mock I18nManager and Updates; assert that when switching to he/ar from en we call forceRTL(true) and reloadAsync; when switching to en from he we call forceRTL(false) and reloadAsync; when switching en→es no forceRTL/reload.
+
+### 5. Directional icon helper and usage
+
+- **New utility:** e.g. [mobile/src/common/utils/rtlIcons.ts](mobile/src/common/utils/rtlIcons.ts) or under [mobile/src/theme/](mobile/src/theme/) if preferred.
+  - Map directional icon names to their RTL flip: e.g. `chevron-forward` ↔ `chevron-back`, `arrow-back` ↔ `arrow-forward`, `arrow-forward` ↔ `arrow-back`.
+  - `function getDirectionalIcon(ltrIconName: string): string` – if `I18nManager.isRTL` return flipped name, else return `ltrIconName`. Use a small map for the few icons used in the app.
+- **Replace hardcoded directional icons:**
+  - [ScreenHeader](mobile/src/common/components/ScreenHeader/ScreenHeader.tsx): `arrow-back` / `home-outline` → use helper so in RTL "back" becomes arrow-forward (or keep semantic "back" and only flip chevrons; confirm UX – usually "back" arrow flips in RTL).
+  - [SettingsScreen](mobile/src/features/settings/screens/SettingsScreen.tsx): all `chevron-forward` → `getDirectionalIcon('chevron-forward')`.
+  - [DashboardScreen](mobile/src/features/dashboard/screens/DashboardScreen.tsx): `chevron-forward` → helper.
+  - [ChoresQuickActionModal](mobile/src/features/chores/components/ChoresQuickActionModal/ChoresQuickActionModal.tsx): `arrow-forward` → helper.
+  - [DatePickerWeb](mobile/src/common/components/DateTimePicker/DatePickerWeb.tsx): `chevron-back` / `chevron-forward` (month nav) → helper.
+- **Semantic note:** For "back" in headers, React Native RTL often mirrors the layout, so the back button moves to the right; the icon itself may still be "arrow-back" (pointing to the logical back direction). Prefer flipping to "arrow-forward" in RTL so the arrow points toward the leading edge. Align with one convention and document in plan.
+
+### 6. Layout validation (RTL-aware styles)
+
+- **React Native:** When `I18nManager.isRTL` is true, `flexDirection: 'row'` is effectively mirrored in many cases. Explicit `marginLeft`/`marginRight` do not auto-flip; prefer `marginStart`/`marginEnd` where direction-dependent spacing is used, or a small style helper that returns left/right based on `I18nManager.isRTL`.
+- **Audit:** Grep for `marginLeft`|`marginRight`|`paddingLeft`|`paddingRight` in [mobile/src](mobile/src) (components and styles). Replace with `marginStart`/`marginEnd` (and padding) where the intent is "leading/trailing" so RTL flips correctly. If only a few files, list them in the plan; otherwise add a short "RTL style guide" in i18n README and fix the most visible screens (Settings, ScreenHeader, auth, dashboard).
+- **ScreenHeader:** [mobile/src/common/components/ScreenHeader/styles.ts](mobile/src/common/components/ScreenHeader/styles.ts) uses `leftSection`/`rightSection` and `marginRight` on leftIconButton – switch to start/end so RTL mirrors the header.
+
+### 7. Language selector UX when restart is required
+
+- When user selects a language that changes RTL (e.g. en → he): after `setAppLanguage` the app will call `reloadAsync()` and reload. Optionally show a short toast or Alert before reload ("Applying direction…") so the reload is not surprising. If reload fails, Alert already says to restart manually.
+- [LanguageSelectorModal](mobile/src/features/settings/components/LanguageSelectorModal/LanguageSelectorModal.tsx): No change required unless you want to show "Restart required" for he/ar when current is LTR (or vice versa); can be a follow-up.
+
+### 8. Documentation and README
+
+- **File:** [mobile/src/i18n/README.md](mobile/src/i18n/README.md).
+- **Update:** Replace the "RTL (separate phase)" paragraph with: RTL is implemented for he and ar; `I18nManager.allowRTL(true)` and `forceRTL(isRTL)` are set at app bootstrap from stored or device locale; switching language to/from he/ar triggers an app restart via `Updates.reloadAsync()`; directional icons are flipped via a common helper; use start/end margins for RTL-safe layouts.
+- **Reference:** [.cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md](.cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md) Task 1.4 (INTL-4).
+
+### 9. Testing and validation
+
+- **Unit:** `isRtlLanguage` (and `getInitialLocaleForRTL` if added) parameterized tests; `setAppLanguage` with RTL flip and reload mocked.
+- **Manual:** Start app in en (LTR); switch to Hebrew → app restarts → layout RTL, chevrons/arrows flipped. Switch to English → restart → LTR. Test on one iOS and one Android if possible.
+- **Layout:** Visually check Settings, ScreenHeader, Dashboard, ChoresQuickActionModal, and DatePicker in RTL for correct alignment and no clipped content.
+
+---
+
+## Files to create
+
+
+| File                                                                                                                                                    | Purpose                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [mobile/src/i18n/rtl.ts](mobile/src/i18n/rtl.ts)                                                                                                        | RTL_LANGUAGE_CODES, isRtlLanguage()                             |
+| [mobile/src/i18n/**tests**/rtl.test.ts](mobile/src/i18n/__tests__/rtl.test.ts)                                                                          | Tests for isRtlLanguage (and getInitialLocaleForRTL if in i18n) |
+| [mobile/src/common/utils/rtlIcons.ts](mobile/src/common/utils/rtlIcons.ts)                                                                              | getDirectionalIcon(ltrIconName) using I18nManager.isRTL         |
+| Optional: [mobile/src/i18n/getInitialLocaleForRTL.ts](mobile/src/i18n/getInitialLocaleForRTL.ts) or in rtl.ts                                           | Stored ?? device locale for bootstrap                           |
+| Optional: locales [mobile/src/i18n/locales/he/](mobile/src/i18n/locales/he/), [mobile/src/i18n/locales/ar/](mobile/src/i18n/locales/ar/) (minimal JSON) | If he/ar added in this task                                     |
+
+
+---
+
+## Files to modify
+
+
+| File                                                                                                                                                                               | Changes                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [mobile/index.ts](mobile/index.ts)                                                                                                                                                 | Async bootstrap: getInitialLocaleForRTL → forceRTL/allowRTL → dynamic import i18n → registerRootComponent |
+| [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts)                                                                                                                               | setAppLanguage: when isRTL changes, forceRTL + Updates.reloadAsync (with catch/Alert)                     |
+| [mobile/src/i18n/constants.ts](mobile/src/i18n/constants.ts)                                                                                                                       | Add he, ar to SUPPORTED_LANGUAGE_CODES and AVAILABLE_LANGUAGES (if scoped in)                             |
+| [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts) resources                                                                                                                     | Register he/ar resources if adding locales                                                                |
+| [mobile/src/common/components/ScreenHeader/ScreenHeader.tsx](mobile/src/common/components/ScreenHeader/ScreenHeader.tsx)                                                           | Use getDirectionalIcon for arrow-back / home (or document semantic)                                       |
+| [mobile/src/common/components/ScreenHeader/styles.ts](mobile/src/common/components/ScreenHeader/styles.ts)                                                                         | Use marginStart/End, paddingStart/End where direction-dependent                                           |
+| [mobile/src/features/settings/screens/SettingsScreen.tsx](mobile/src/features/settings/screens/SettingsScreen.tsx)                                                                 | chevron-forward → getDirectionalIcon('chevron-forward')                                                   |
+| [mobile/src/features/dashboard/screens/DashboardScreen.tsx](mobile/src/features/dashboard/screens/DashboardScreen.tsx)                                                             | chevron-forward → getDirectionalIcon                                                                      |
+| [mobile/src/features/chores/components/ChoresQuickActionModal/ChoresQuickActionModal.tsx](mobile/src/features/chores/components/ChoresQuickActionModal/ChoresQuickActionModal.tsx) | arrow-forward → getDirectionalIcon                                                                        |
+| [mobile/src/common/components/DateTimePicker/DatePickerWeb.tsx](mobile/src/common/components/DateTimePicker/DatePickerWeb.tsx)                                                     | chevron-back/forward → getDirectionalIcon                                                                 |
+| [mobile/src/i18n/README.md](mobile/src/i18n/README.md)                                                                                                                             | Document RTL bootstrap, restart on switch, icon helper, start/end margins                                 |
+
+
+---
+
+## Success criteria
+
+- Stored or device language determines RTL at startup; `I18nManager.allowRTL(true)` and `forceRTL(isRTL)` run before the first paint; i18n loads after RTL is set.
+- Selecting he or ar (when supported) persists language and, if RTL state changes, triggers forceRTL and app restart (reloadAsync); on reload failure, user sees Alert to restart manually.
+- Directional icons (chevron-forward, chevron-back, arrow-back, arrow-forward) flip correctly in RTL via a single helper.
+- ScreenHeader and other key screens use start/end-based spacing where direction matters; no broken or mirrored layouts in RTL.
+- Unit tests cover isRtlLanguage and setAppLanguage RTL+restart behavior; manual QA confirms LTR ↔ RTL switch and layout/icon correctness.
+- i18n README describes RTL implementation and usage.
+
+---
+
+## References
+
+- [mobile/src/i18n/README.md](mobile/src/i18n/README.md) – current RTL note
+- [.cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md](.cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md) – Task 1.4 INTL-4
+- [React Native I18nManager](https://reactnative.dev/docs/i18nmanager) – allowRTL, forceRTL, isRTL
+- [expo-updates reloadAsync](https://docs.expo.dev/versions/latest/sdk/updates/) – programmatic reload
+- [.cursor/rules/coding_rule.mdc](.cursor/rules/coding_rule.mdc) – TDD, pure functions, naming
+- [.cursor/skills/auto-code-review/SKILL.md](.cursor/skills/auto-code-review/SKILL.md) – run code review after implementation
+

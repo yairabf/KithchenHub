@@ -8,7 +8,8 @@
     "add": "Add",
     "remove": "Remove",
     "share": "Share",
-    "close": "Close"
+    "close": "Close",
+    "ok": "אישור"
   },
   "labels": {
     "name": "Name",

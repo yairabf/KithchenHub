@@ -241,4 +241,66 @@ describe('ChoresService - Soft-Delete Behavior', () => {
       expect(result.progress.pending).toBe(4);
     });
   });
+
+  describe('deleteChore', () => {
+    it('should throw NotFoundException when chore does not exist', async () => {
+      jest.spyOn(repository, 'findChoreById').mockResolvedValue(null);
+
+      await expect(
+        service.deleteChore(mockChoreId, mockHouseholdId),
+      ).rejects.toThrow(NotFoundException);
+      expect(repository.deleteChore).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when chore belongs to different household', async () => {
+      const mockChore = {
+        id: mockChoreId,
+        householdId: 'other-household',
+        title: 'Test Chore',
+        assigneeId: null,
+        assignee: null,
+        dueDate: new Date(),
+        isCompleted: false,
+        completedAt: null,
+        repeat: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+      jest
+        .spyOn(repository, 'findChoreById')
+        .mockResolvedValue(mockChore as any);
+
+      await expect(
+        service.deleteChore(mockChoreId, mockHouseholdId),
+      ).rejects.toThrow(ForbiddenException);
+      expect(repository.deleteChore).not.toHaveBeenCalled();
+    });
+
+    it('should call repository deleteChore when chore exists and household matches', async () => {
+      const mockChore = {
+        id: mockChoreId,
+        householdId: mockHouseholdId,
+        title: 'Test Chore',
+        assigneeId: null,
+        assignee: null,
+        dueDate: new Date(),
+        isCompleted: false,
+        completedAt: null,
+        repeat: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+      jest
+        .spyOn(repository, 'findChoreById')
+        .mockResolvedValue(mockChore as any);
+      jest.spyOn(repository, 'deleteChore').mockResolvedValue(undefined);
+
+      await service.deleteChore(mockChoreId, mockHouseholdId);
+
+      expect(repository.findChoreById).toHaveBeenCalledWith(mockChoreId);
+      expect(repository.deleteChore).toHaveBeenCalledWith(mockChoreId);
+    });
+  });
 });

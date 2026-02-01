@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RecipesService } from './recipes.service';
 import { RecipesRepository } from '../repositories/recipes.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 /**
  * Recipes Service Unit Tests
@@ -312,6 +312,64 @@ describe('RecipesService - Soft-Delete Behavior', () => {
           targetListId: 'deleted-list',
         }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('deleteRecipe', () => {
+    it('should throw NotFoundException when recipe does not exist', async () => {
+      jest.spyOn(repository, 'findRecipeById').mockResolvedValue(null);
+
+      await expect(
+        service.deleteRecipe(mockRecipeId, mockHouseholdId),
+      ).rejects.toThrow(NotFoundException);
+      expect(repository.deleteRecipe).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when recipe belongs to different household', async () => {
+      const mockRecipe = {
+        id: mockRecipeId,
+        householdId: 'other-household',
+        title: 'Test Recipe',
+        prepTime: 30,
+        ingredients: [],
+        instructions: [],
+        imageUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+      jest
+        .spyOn(repository, 'findRecipeById')
+        .mockResolvedValue(mockRecipe as any);
+
+      await expect(
+        service.deleteRecipe(mockRecipeId, mockHouseholdId),
+      ).rejects.toThrow(ForbiddenException);
+      expect(repository.deleteRecipe).not.toHaveBeenCalled();
+    });
+
+    it('should call repository deleteRecipe when recipe exists and household matches', async () => {
+      const mockRecipe = {
+        id: mockRecipeId,
+        householdId: mockHouseholdId,
+        title: 'Test Recipe',
+        prepTime: 30,
+        ingredients: [],
+        instructions: [],
+        imageUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+      jest
+        .spyOn(repository, 'findRecipeById')
+        .mockResolvedValue(mockRecipe as any);
+      jest.spyOn(repository, 'deleteRecipe').mockResolvedValue(undefined);
+
+      await service.deleteRecipe(mockRecipeId, mockHouseholdId);
+
+      expect(repository.findRecipeById).toHaveBeenCalledWith(mockRecipeId);
+      expect(repository.deleteRecipe).toHaveBeenCalledWith(mockRecipeId);
     });
   });
 });

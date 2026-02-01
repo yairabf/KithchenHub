@@ -4,5 +4,7 @@
   },
   "auth": {
     "signInFailed": "Sign in failed"
-  }
+  },
+  "directionChangeTitle": "Direction Changed",
+  "directionChangeMessage": "Please restart the app to apply the new text direction."
 }
