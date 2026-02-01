@@ -42,14 +42,15 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 
 ### Household Management
 - Multi-user household support
+- **Create household**: `POST /household` for users without a household (JWT only; no household required)
 - Member invitation and management
 - Household-level data isolation
 - Row Level Security (RLS) via Supabase
 
 ### Core Modules
-- **Shopping Lists**: Multi-list management with items and grocery catalog integration
-- **Recipes**: Recipe CRUD with ingredients and instructions
-- **Chores**: Task management with assignees and completion tracking
+- **Shopping Lists**: Multi-list management with items, grocery catalog integration, and **custom user items** (user-defined items linked to list items; `GET /shopping-items/custom`)
+- **Recipes**: Recipe CRUD with ingredients, instructions, and soft-delete (`DELETE /recipes/:id`)
+- **Chores**: Task management with assignees, completion tracking, and soft-delete (`DELETE /chores/:id`)
 - **Dashboard**: Aggregated household activity summaries
 - **Import**: Guest mode data import with deduplication
 
@@ -506,6 +507,7 @@ To verify that Row Level Security is correctly isolating data between households
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
+| `POST` | `/household` | JWT only | Create new household (user must not already have a household) |
 | `GET` | `/household` | Protected | Get current user's household with members |
 | `PUT` | `/household` | Protected | Update household details (admin only) |
 | `POST` | `/household/invite` | Protected | Invite member to household (admin only) |
@@ -519,7 +521,8 @@ To verify that Row Level Security is correctly isolating data between households
 | `POST` | `/shopping-lists` | Protected | Create new shopping list |
 | `GET` | `/shopping-lists/:id` | Protected | Get shopping list with items |
 | `DELETE` | `/shopping-lists/:id` | Protected | Soft-delete shopping list |
-| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list |
+| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list (catalog or custom names; custom items create/link UserItem) |
+| `GET` | `/shopping-items/custom` | Protected | Get current user's custom (user-defined) items |
 | `PATCH` | `/shopping-items/:id` | Protected | Update shopping item |
 | `DELETE` | `/shopping-items/:id` | Protected | Soft-delete shopping item |
 
@@ -539,6 +542,7 @@ To verify that Row Level Security is correctly isolating data between households
 | `GET` | `/recipes/:id` | Protected | Get recipe details |
 | `PUT` | `/recipes/:id` | Protected | Update recipe |
 | `POST` | `/recipes/:id/cook` | Protected | Add recipe ingredients to shopping list |
+| `DELETE` | `/recipes/:id` | Protected | Soft-delete recipe |
 
 **Query Parameters:**
 - `category`: Filter by category (Breakfast, Lunch, Dinner, Dessert, Snack)
@@ -553,6 +557,7 @@ To verify that Row Level Security is correctly isolating data between households
 | `PATCH` | `/chores/:id` | Protected | Update chore details |
 | `PATCH` | `/chores/:id/status` | Protected | Toggle chore completion status |
 | `GET` | `/chores/stats?date=` | Protected | Get chore statistics for date |
+| `DELETE` | `/chores/:id` | Protected | Soft-delete chore |
 
 **Query Parameters:**
 - `start`: Start date (ISO format)
@@ -571,15 +576,15 @@ To verify that Row Level Security is correctly isolating data between households
 |--------|----------|------|-------------|
 | `POST` | `/import` | Protected | Import recipes and shopping lists from guest mode |
 
-### Health & Version Endpoints (unversioned)
+### Health & Version Endpoints
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `GET` | `/api/health` | Public | Basic health check (liveness) |
-| `GET` | `/api/health/live` | Public | Liveness probe for orchestration |
-| `GET` | `/api/health/ready` | Public | Readiness probe (DB connectivity) |
-| `GET` | `/api/health/detailed` | Public | Detailed health status |
-| `GET` | `/api/version` | Public | Version discovery (lists supported/deprecated versions and docs) |
+| `GET` | `/api/v1/health` | Public | Basic health check (liveness) |
+| `GET` | `/api/v1/health/live` | Public | Liveness probe for orchestration |
+| `GET` | `/api/v1/health/ready` | Public | Readiness probe (DB connectivity) |
+| `GET` | `/api/v1/health/detailed` | Public | Detailed health status |
+| `GET` | `/api/version` | Public | Version discovery (unversioned; lists supported/deprecated versions and docs) |
 
 ### Authentication Requirements
 
@@ -645,13 +650,13 @@ backend/
 │   │   │   ├── dtos/               # Auth DTOs
 │   │   │   ├── constants/          # Sync entity type constants
 │   │   │   └── auth.module.ts
-│   │   ├── households/             # Household management
+│   │   ├── households/             # Household management (create, get, update, invite, remove member)
 │   │   │   ├── controllers/        # HouseholdsController
 │   │   │   ├── services/           # HouseholdsService
 │   │   │   ├── repositories/       # HouseholdsRepository
-│   │   │   ├── dtos/               # Household DTOs
+│   │   │   ├── dtos/               # CreateHouseholdDto, UpdateHouseholdDto, InviteMemberDto, etc.
 │   │   │   └── households.module.ts
-│   │   ├── shopping/               # Shopping lists and items
+│   │   ├── shopping/               # Shopping lists, items, grocery catalog, custom user items (UserItem)
 │   │   │   ├── controllers/        # GroceriesController, ShoppingListsController, ShoppingItemsController (shopping.controller.ts)
 │   │   │   ├── services/           # ShoppingService
 │   │   │   ├── repositories/       # ShoppingRepository
@@ -681,7 +686,7 @@ backend/
 │   │   │   ├── dto/                # Import DTOs
 │   │   │   └── import.module.ts
 │   │   ├── health/                 # Health and version discovery
-│   │   │   ├── controllers/        # HealthController, VersionController (/api/health, /api/version)
+│   │   │   ├── controllers/        # HealthController (/api/v1/health*), VersionController (/api/version)
 │   │   │   ├── services/           # HealthService
 │   │   │   └── health.module.ts
 │   │   ├── settings/              # Settings module (app preferences)
@@ -1087,7 +1092,7 @@ The backend API is designed to work seamlessly with the [Kitchen Hub Mobile App]
 
 The API includes comprehensive monitoring capabilities:
 
-- **Health Check Endpoints**: `/api/health`, `/api/health/ready`, `/api/health/live`, `/api/health/detailed`
+- **Health Check Endpoints**: `/api/v1/health`, `/api/v1/health/ready`, `/api/v1/health/live`, `/api/v1/health/detailed`
 - **Structured Logging**: JSON-formatted logs for log aggregation
 - **Error Tracking**: Sentry integration (optional)
 - **Request Correlation**: Automatic request ID generation and tracking
