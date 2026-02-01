@@ -7,10 +7,10 @@ import { HealthService } from '../services/health.service';
  * Provides endpoints for monitoring application health.
  * All endpoints are public (no authentication required) for uptime monitoring.
  */
-@Controller('health')
+@Controller({ path: 'health', version: '1' })
 @Public()
 export class HealthController {
-  constructor(private readonly healthService: HealthService) {}
+  constructor(private readonly healthService: HealthService) { }
 
   /**
    * Basic health check endpoint.
