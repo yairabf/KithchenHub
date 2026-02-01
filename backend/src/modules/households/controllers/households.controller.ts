@@ -1,15 +1,17 @@
 import {
-  Controller,
-  Get,
-  Put,
-  Post,
-  Delete,
+  BadRequestException,
   Body,
+  Controller,
+  Delete,
+  Get,
   Param,
+  Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { HouseholdsService } from '../services/households.service';
-import { UpdateHouseholdDto, InviteMemberDto } from '../dtos';
+import { CreateHouseholdDto } from '../dtos/create-household.dto';
+import { InviteMemberDto, UpdateHouseholdDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 
