@@ -19,14 +19,30 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
  * All endpoints require authentication and household membership.
  */
 @Controller({ path: 'household', version: '1' })
-@UseGuards(JwtAuthGuard, HouseholdGuard)
 export class HouseholdsController {
-  constructor(private householdsService: HouseholdsService) {}
+  constructor(private householdsService: HouseholdsService) { }
+
+  /**
+   * Creates a new household for the user.
+   */
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  async createHousehold(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: CreateHouseholdDto,
+  ) {
+    const trimmedName = typeof dto.name === 'string' ? dto.name.trim() : '';
+    if (!trimmedName) {
+      throw new BadRequestException('Name is required');
+    }
+    return this.householdsService.createHousehold(user.userId, trimmedName);
+  }
 
   /**
    * Gets the current user's household with all members.
    */
   @Get()
+  @UseGuards(JwtAuthGuard, HouseholdGuard)
   async getHousehold(@CurrentUser() user: CurrentUserPayload) {
     return this.householdsService.getHousehold(user.userId);
   }
@@ -35,6 +51,7 @@ export class HouseholdsController {
    * Updates household settings (admin only).
    */
   @Put()
+  @UseGuards(JwtAuthGuard, HouseholdGuard)
   async updateHousehold(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: UpdateHouseholdDto,
@@ -46,6 +63,7 @@ export class HouseholdsController {
    * Invites a new member to the household (admin only).
    */
   @Post('invite')
+  @UseGuards(JwtAuthGuard, HouseholdGuard)
   async inviteMember(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: InviteMemberDto,
@@ -57,6 +75,7 @@ export class HouseholdsController {
    * Removes a member from the household (admin only).
    */
   @Delete('members/:id')
+  @UseGuards(JwtAuthGuard, HouseholdGuard)
   async removeMember(
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') memberId: string,

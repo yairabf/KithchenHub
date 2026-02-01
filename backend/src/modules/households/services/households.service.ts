@@ -28,7 +28,7 @@ export class HouseholdsService {
   constructor(
     private householdsRepository: HouseholdsRepository,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Gets the household for a user with all members.
@@ -68,6 +68,51 @@ export class HouseholdsService {
         name: member.name,
         avatarUrl: member.avatarUrl,
         role: member.role,
+      })),
+    };
+  }
+
+  /**
+   * Creates a new household for a user.
+   *
+   * @param userId - The user ID
+   * @param name - Household name
+   * @returns Created household details
+   */
+  async createHousehold(userId: string, name: string): Promise<HouseholdResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.householdId) throw new ForbiddenException('User already has a household');
+
+    const household = await this.prisma.household.create({
+      data: {
+        name,
+        users: {
+          connect: { id: userId },
+        },
+      },
+      include: {
+        users: true,
+      },
+    });
+
+    // Update user to be Admin
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { role: 'Admin' },
+    });
+
+    return {
+      id: household.id,
+      name: household.name,
+      members: household.users.map((member) => ({
+        id: member.id,
+        email: member.email,
+        name: member.name,
+        avatarUrl: member.avatarUrl,
+        role: member.role ?? 'Admin',
       })),
     };
   }
