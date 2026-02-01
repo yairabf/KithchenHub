@@ -4,5 +4,7 @@
   },
   "auth": {
     "signInFailed": "Sign in failed"
-  }
+  },
+  "directionChangeTitle": "כיוון השתנה",
+  "directionChangeMessage": "אנא הפעל מחדש את האפליקציה כדי להחיל את כיוון הטקסט החדש."
 }

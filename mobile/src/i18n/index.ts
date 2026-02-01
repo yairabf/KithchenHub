@@ -171,9 +171,9 @@ export async function setAppLanguage(locale: string): Promise<void> {
     } catch {
       I18nManager.forceRTL(currentIsRtl);
       Alert.alert(
-        'Direction Changed',
-        'Please restart the app to apply the new text direction.',
-        [{ text: 'OK' }],
+        i18n.t('directionChangeTitle', { ns: 'errors' }),
+        i18n.t('directionChangeMessage', { ns: 'errors' }),
+        [{ text: i18n.t('buttons.ok') }],
       );
     }
   }
