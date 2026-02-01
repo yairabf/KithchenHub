@@ -102,12 +102,16 @@ describe('HouseholdsService', () => {
       };
 
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
-      jest
-        .spyOn(prisma.household, 'create')
-        .mockResolvedValue({ ...mockHousehold, users: mockHousehold.users } as any);
+      jest.spyOn(prisma.household, 'create').mockResolvedValue({
+        ...mockHousehold,
+        users: mockHousehold.users,
+      } as any);
       jest.spyOn(prisma.user, 'update').mockResolvedValue(undefined as any);
 
-      const result = await service.createHousehold(mockUserId, mockHouseholdName);
+      const result = await service.createHousehold(
+        mockUserId,
+        mockHouseholdName,
+      );
 
       expect(prisma.household.create).toHaveBeenCalledWith({
         data: {

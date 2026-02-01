@@ -10,7 +10,7 @@ import { HealthService } from '../services/health.service';
 @Controller({ path: 'health', version: '1' })
 @Public()
 export class HealthController {
-  constructor(private readonly healthService: HealthService) { }
+  constructor(private readonly healthService: HealthService) {}
 
   /**
    * Basic health check endpoint.

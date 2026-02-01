@@ -7,7 +7,7 @@ import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/
 export class ShoppingRepository {
   private readonly logger = new Logger(ShoppingRepository.name);
 
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async findListsByHousehold(householdId: string): Promise<ShoppingList[]> {
     return this.prisma.shoppingList.findMany({

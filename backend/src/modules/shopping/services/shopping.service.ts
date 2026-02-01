@@ -34,7 +34,7 @@ export class ShoppingService {
   constructor(
     private shoppingRepository: ShoppingRepository,
     private prisma: PrismaService,
-  ) { }
+  ) {}
 
   /**
    * Resolves a catalog item by ID and throws if not found.
@@ -97,7 +97,9 @@ export class ShoppingService {
    * Rewrites relative catalog image URLs to the configured storage base URL
    * (e.g. downloaded_icons/chicken.png → http://localhost:9000/catalog-icons/downloaded_icons/chicken.png).
    */
-  private resolveCatalogImageUrl(imageUrl: string | null | undefined): string | undefined {
+  private resolveCatalogImageUrl(
+    imageUrl: string | null | undefined,
+  ): string | undefined {
     if (imageUrl == null || imageUrl === '') {
       return undefined;
     }
@@ -277,9 +279,7 @@ export class ShoppingService {
     }
 
     const addedItems = await Promise.all(
-      dto.items.map((item) =>
-        this.createItemFromInput(listId, userId, item),
-      ),
+      dto.items.map((item) => this.createItemFromInput(listId, userId, item)),
     );
 
     return {

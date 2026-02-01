@@ -23,7 +23,7 @@ import { Public } from '../../../common/decorators/public.decorator';
  */
 @Controller({ path: 'groceries', version: '1' })
 export class GroceriesController {
-  constructor(private shoppingService: ShoppingService) { }
+  constructor(private shoppingService: ShoppingService) {}
 
   @Get('search')
   @Public()
@@ -46,7 +46,7 @@ export class GroceriesController {
 @Controller({ path: 'shopping-lists', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class ShoppingListsController {
-  constructor(private shoppingService: ShoppingService) { }
+  constructor(private shoppingService: ShoppingService) {}
 
   @Get()
   async getLists(@CurrentUser() user: CurrentUserPayload) {
@@ -99,7 +99,12 @@ export class ShoppingListsController {
     if (!user.householdId) {
       throw new BadRequestException('User must belong to a household');
     }
-    return this.shoppingService.addItems(listId, user.householdId, user.userId, dto);
+    return this.shoppingService.addItems(
+      listId,
+      user.householdId,
+      user.userId,
+      dto,
+    );
   }
 }
 
@@ -111,7 +116,7 @@ export class ShoppingListsController {
 @Controller({ path: 'shopping-items', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class ShoppingItemsController {
-  constructor(private shoppingService: ShoppingService) { }
+  constructor(private shoppingService: ShoppingService) {}
 
   @Get('custom')
   async getCustomItems(@CurrentUser() user: CurrentUserPayload) {

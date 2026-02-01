@@ -23,7 +23,7 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 @Controller({ path: 'recipes', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class RecipesController {
-  constructor(private recipesService: RecipesService) { }
+  constructor(private recipesService: RecipesService) {}
 
   @Get()
   async getRecipes(

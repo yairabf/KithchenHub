@@ -28,7 +28,7 @@ export class HouseholdsService {
   constructor(
     private householdsRepository: HouseholdsRepository,
     private prisma: PrismaService,
-  ) { }
+  ) {}
 
   /**
    * Gets the household for a user with all members.
@@ -79,12 +79,16 @@ export class HouseholdsService {
    * @param name - Household name
    * @returns Created household details
    */
-  async createHousehold(userId: string, name: string): Promise<HouseholdResponseDto> {
+  async createHousehold(
+    userId: string,
+    name: string,
+  ): Promise<HouseholdResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
     if (!user) throw new NotFoundException('User not found');
-    if (user.householdId) throw new ForbiddenException('User already has a household');
+    if (user.householdId)
+      throw new ForbiddenException('User already has a household');
 
     const household = await this.prisma.household.create({
       data: {

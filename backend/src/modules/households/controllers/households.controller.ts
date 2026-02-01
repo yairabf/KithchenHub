@@ -20,7 +20,7 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
  */
 @Controller({ path: 'household', version: '1' })
 export class HouseholdsController {
-  constructor(private householdsService: HouseholdsService) { }
+  constructor(private householdsService: HouseholdsService) {}
 
   /**
    * Creates a new household for the user.

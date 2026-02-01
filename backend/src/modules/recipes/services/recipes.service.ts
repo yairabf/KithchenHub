@@ -69,7 +69,7 @@ export class RecipesService {
   constructor(
     private recipesRepository: RecipesRepository,
     private prisma: PrismaService,
-  ) { }
+  ) {}
 
   /**
    * Gets all recipes for a household with optional filtering.

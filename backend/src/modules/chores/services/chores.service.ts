@@ -32,7 +32,7 @@ export class ChoresService {
   constructor(
     private choresRepository: ChoresRepository,
     private prisma: PrismaService,
-  ) { }
+  ) {}
 
   /**
    * Gets chores for a household, organized by today and upcoming.
