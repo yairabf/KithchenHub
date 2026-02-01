@@ -33,6 +33,7 @@ export function AddRecipeModal({
   visible,
   onClose,
   onSave,
+  isSaving = false,
   categories = DEFAULT_CATEGORIES,
   groceryItems = [],
 }: AddRecipeModalProps) {
@@ -56,7 +57,7 @@ export function AddRecipeModal({
 
   // Handlers
   const handleSave = () => {
-    if (isValid) {
+    if (isValid && !isSaving) {
       // Filter out empty ingredients and instructions
       const cleanedRecipe: NewRecipeData = {
         ...recipe,
@@ -153,11 +154,12 @@ export function AddRecipeModal({
       visible={visible}
       onClose={onClose}
       title="New Recipe"
-      confirmText="Save Recipe"
+      confirmText={isSaving ? 'Saving...' : 'Save Recipe'}
       cancelText="Cancel"
       onConfirm={handleSave}
       confirmColor={colors.recipes}
-      confirmDisabled={!isValid}
+      confirmDisabled={!isValid || isSaving}
+      confirmLoading={isSaving}
     >
       <ScrollView
         style={styles.scrollContent}

@@ -9,4 +9,5 @@ export interface CenteredModalProps {
   confirmColor?: string;
   showActions?: boolean;
   confirmDisabled?: boolean;
+  confirmLoading?: boolean;
 }

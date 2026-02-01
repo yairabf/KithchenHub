@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Pressable,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -54,6 +55,7 @@ export function CenteredModal({
   confirmColor = colors.primary,
   showActions = true,
   confirmDisabled = false,
+  confirmLoading = false,
 }: CenteredModalProps) {
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
@@ -124,12 +126,17 @@ export function CenteredModal({
                   style={[
                     styles.confirmButton,
                     { backgroundColor: confirmColor },
-                    confirmDisabled && styles.confirmButtonDisabled,
+                    (confirmDisabled || confirmLoading) && styles.confirmButtonDisabled,
                   ]}
                   onPress={onConfirm}
-                  disabled={confirmDisabled}
+                  disabled={confirmDisabled || confirmLoading}
                 >
-                  <Text style={styles.confirmText}>{confirmText}</Text>
+                  <View style={styles.confirmContent}>
+                    {confirmLoading ? (
+                      <ActivityIndicator size="small" color={colors.textLight} />
+                    ) : null}
+                    <Text style={styles.confirmText}>{confirmText}</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             )}

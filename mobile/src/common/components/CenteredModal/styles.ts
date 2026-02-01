@@ -71,4 +71,9 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textLight,
   },
+  confirmContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
 });
