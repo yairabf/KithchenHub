@@ -21,12 +21,12 @@ export interface DecodedOAuthState {
 
 /**
  * Service for managing OAuth state tokens with CSRF protection.
- * 
+ *
  * State tokens are signed using HMAC-SHA256 to prevent tampering and include:
  * - Random nonce for uniqueness
  * - Timestamp for expiration checking (5 minute TTL)
  * - Optional metadata (e.g., householdId for join flows)
- * 
+ *
  * Format: base64(nonce:timestamp:metadata).signature
  */
 @Injectable()
@@ -42,10 +42,10 @@ export class OAuthStateService {
 
   /**
    * Generates a signed state token for CSRF protection.
-   * 
+   *
    * @param metadata - Optional metadata to include in state (e.g., householdId)
    * @returns Signed state token as base64-encoded string
-   * 
+   *
    * @example
    * const state = generateState({ householdId: '123' });
    * // Returns: "nonce:timestamp:metadata.signature"
@@ -80,11 +80,11 @@ export class OAuthStateService {
 
   /**
    * Validates and decodes a state token.
-   * 
+   *
    * @param state - State token to validate
    * @returns Decoded state with nonce and metadata
    * @throws UnauthorizedException if state is invalid, expired, or tampered with
-   * 
+   *
    * @example
    * const decoded = validateState(stateFromUrl);
    * console.log(decoded.nonce); // Random nonce
@@ -109,7 +109,9 @@ export class OAuthStateService {
     const expectedSignature = this.generateSignature(payloadString);
     if (receivedSignature !== expectedSignature) {
       this.logger.warn('OAuth state validation failed: signature mismatch');
-      throw new UnauthorizedException('Invalid OAuth state: signature mismatch');
+      throw new UnauthorizedException(
+        'Invalid OAuth state: signature mismatch',
+      );
     }
 
     // Decode payload
@@ -138,9 +140,7 @@ export class OAuthStateService {
 
     if (age < 0) {
       this.logger.warn('OAuth state validation failed: timestamp in future');
-      throw new UnauthorizedException(
-        'Invalid OAuth state: invalid timestamp',
-      );
+      throw new UnauthorizedException('Invalid OAuth state: invalid timestamp');
     }
 
     this.logger.debug(`Validated OAuth state with nonce: ${payload.nonce}`);
@@ -149,13 +149,11 @@ export class OAuthStateService {
 
   /**
    * Generates HMAC-SHA256 signature for a payload.
-   * 
+   *
    * @param payload - Payload string to sign
    * @returns Hex-encoded signature
    */
   private generateSignature(payload: string): string {
-    return createHmac('sha256', this.stateSecret)
-      .update(payload)
-      .digest('hex');
+    return createHmac('sha256', this.stateSecret).update(payload).digest('hex');
   }
 }

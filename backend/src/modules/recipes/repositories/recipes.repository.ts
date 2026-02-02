@@ -15,7 +15,7 @@ export class RecipesRepository {
   ): Promise<Recipe[]> {
     this.logger.log(`Finding recipes for household ${householdId}`);
     this.logger.debug(`Filters: ${JSON.stringify(filters, null, 2)}`);
-    
+
     const where: any = {
       householdId,
       ...ACTIVE_RECORDS_FILTER,
@@ -35,12 +35,16 @@ export class RecipesRepository {
         where,
         orderBy: { createdAt: 'desc' },
       });
-      
-      this.logger.log(`Found ${recipes.length} recipes in database for household ${householdId}`);
-      this.logger.debug(`Recipe IDs: ${recipes.map(r => r.id).join(', ')}`);
+
+      this.logger.log(
+        `Found ${recipes.length} recipes in database for household ${householdId}`,
+      );
+      this.logger.debug(`Recipe IDs: ${recipes.map((r) => r.id).join(', ')}`);
       return recipes;
     } catch (error) {
-      this.logger.error(`Failed to find recipes: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Failed to find recipes: ${error instanceof Error ? error.message : String(error)}`,
+      );
       this.logger.error(`Error details: ${JSON.stringify(error, null, 2)}`);
       throw error;
     }
@@ -64,7 +68,7 @@ export class RecipesRepository {
   ): Promise<Recipe> {
     this.logger.log(`Creating recipe in database for household ${householdId}`);
     this.logger.debug(`Recipe data: ${JSON.stringify(data, null, 2)}`);
-    
+
     try {
       const recipe = await this.prisma.recipe.create({
         data: {
@@ -76,12 +80,16 @@ export class RecipesRepository {
           imageUrl: data.imageUrl,
         },
       });
-      
+
       this.logger.log(`Recipe created in database with ID: ${recipe.id}`);
-      this.logger.debug(`Created recipe entity: ${JSON.stringify(recipe, null, 2)}`);
+      this.logger.debug(
+        `Created recipe entity: ${JSON.stringify(recipe, null, 2)}`,
+      );
       return recipe;
     } catch (error) {
-      this.logger.error(`Failed to create recipe in database: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(
+        `Failed to create recipe in database: ${error instanceof Error ? error.message : String(error)}`,
+      );
       this.logger.error(`Error details: ${JSON.stringify(error, null, 2)}`);
       throw error;
     }

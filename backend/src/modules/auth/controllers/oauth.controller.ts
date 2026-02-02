@@ -15,11 +15,11 @@ import { loadConfiguration } from '../../../config/configuration';
 
 /**
  * Controller handling OAuth authentication flows.
- * 
+ *
  * This controller implements backend-driven OAuth flows where all OAuth secrets
  * and token exchanges happen on the server side. The mobile app simply opens
  * a WebBrowser session to the start endpoint and receives a JWT via deep link.
- * 
+ *
  * Flow:
  * 1. Client opens /auth/google/start in browser
  * 2. Backend generates state token and redirects to Google
@@ -50,20 +50,20 @@ export class OAuthController {
 
   /**
    * Initiates Google OAuth flow.
-   * 
+   *
    * GET /auth/google/start?householdId=xxx (optional)
-   * 
+   *
    * Generates a state token with CSRF protection and redirects to Google's
    * authorization endpoint. The state token includes optional metadata like
    * householdId for join flows.
-   * 
+   *
    * @param householdId - Optional household ID for join flow
    * @returns Redirect to Google authorization URL
-   * 
+   *
    * @example
    * // Normal sign in
    * GET /auth/google/start
-   * 
+   *
    * @example
    * // Sign in and join household
    * GET /auth/google/start?householdId=abc-123
@@ -96,14 +96,14 @@ export class OAuthController {
 
     // Generate state token with optional metadata
     const state = this.oauthStateService.generateState(
-      householdId || redirectUri
-        ? { householdId, redirectUri }
-        : undefined,
+      householdId || redirectUri ? { householdId, redirectUri } : undefined,
     );
 
     // Build Google authorization URL
     const callbackUrl = `${this.backendBaseUrl}/api/v1/auth/google/callback`;
-    const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    const googleAuthUrl = new URL(
+      'https://accounts.google.com/o/oauth2/v2/auth',
+    );
     googleAuthUrl.searchParams.set('client_id', this.googleClientId);
     googleAuthUrl.searchParams.set('redirect_uri', callbackUrl);
     googleAuthUrl.searchParams.set('response_type', 'code');
@@ -124,22 +124,22 @@ export class OAuthController {
 
   /**
    * Handles Google OAuth callback.
-   * 
+   *
    * GET /auth/google/callback?code=...&state=...
-   * 
+   *
    * Validates the state token (CSRF protection), exchanges the authorization
    * code for tokens, creates/finds the user, generates a JWT, and redirects
    * to the mobile app's deep link with the token.
-   * 
+   *
    * @param code - Authorization code from Google
    * @param state - State token generated in /start
    * @param error - Error from Google (if user denied permission)
    * @returns Redirect to app deep link with token or error
-   * 
+   *
    * @example
    * // Success redirect
    * kitchen-hub://auth/callback?token=JWT&isNewHousehold=true
-   * 
+   *
    * @example
    * // Error redirect
    * kitchen-hub://auth/callback?error=access_denied&message=User%20denied%20permission
@@ -150,9 +150,21 @@ export class OAuthController {
     summary: 'Handle Google OAuth callback',
     description: 'Exchanges code for tokens and redirects to app with JWT',
   })
-  @ApiQuery({ name: 'code', required: false, description: 'Authorization code from Google' })
-  @ApiQuery({ name: 'state', required: false, description: 'State token for CSRF protection' })
-  @ApiQuery({ name: 'error', required: false, description: 'Error from Google' })
+  @ApiQuery({
+    name: 'code',
+    required: false,
+    description: 'Authorization code from Google',
+  })
+  @ApiQuery({
+    name: 'state',
+    required: false,
+    description: 'State token for CSRF protection',
+  })
+  @ApiQuery({
+    name: 'error',
+    required: false,
+    description: 'Error from Google',
+  })
   async handleGoogleCallback(
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,
@@ -240,7 +252,7 @@ export class OAuthController {
 
   /**
    * Builds success redirect URL to mobile app.
-   * 
+   *
    * Format: kitchen-hub://auth/callback?token=JWT&isNewHousehold=true|false
    */
   private buildSuccessRedirect(
@@ -250,7 +262,7 @@ export class OAuthController {
   ): string {
     const url = new URL(`${this.appScheme}://auth/callback`);
     url.searchParams.set('token', accessToken);
-    
+
     // Include isNewHousehold flag if provided
     if (isNewHousehold !== undefined) {
       url.searchParams.set('isNewHousehold', String(isNewHousehold));
@@ -261,7 +273,7 @@ export class OAuthController {
 
   /**
    * Builds success redirect URL for web platform.
-   * 
+   *
    * Format: {redirectUri}?token=JWT&isNewHousehold=true|false
    */
   private buildWebSuccessRedirect(
@@ -271,7 +283,7 @@ export class OAuthController {
   ): string {
     const url = new URL(redirectUri);
     url.searchParams.set('token', accessToken);
-    
+
     // Include isNewHousehold flag if provided
     if (isNewHousehold !== undefined) {
       url.searchParams.set('isNewHousehold', String(isNewHousehold));
@@ -282,7 +294,7 @@ export class OAuthController {
 
   /**
    * Builds error redirect URL to mobile app.
-   * 
+   *
    * Format: kitchen-hub://auth/callback?error=error_code&message=error_message
    */
   private buildErrorRedirect(errorCode: string, message: string): string {

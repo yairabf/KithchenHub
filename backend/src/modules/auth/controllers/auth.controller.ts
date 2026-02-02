@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+} from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import {
   GoogleAuthDto,
@@ -87,10 +94,10 @@ export class AuthController {
 
   /**
    * Gets the current authenticated user's information.
-   * 
+   *
    * Used by mobile app after OAuth callback to retrieve full user object
    * without embedding sensitive data in the callback URL.
-   * 
+   *
    * @param user - Current authenticated user from JWT
    * @returns User information with household data
    */

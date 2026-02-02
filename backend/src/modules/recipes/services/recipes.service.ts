@@ -84,21 +84,29 @@ export class RecipesService {
   ): Promise<RecipeListItemDto[]> {
     this.logger.log(`Getting recipes for household ${householdId}`);
     this.logger.debug(`Filters: ${JSON.stringify(filters, null, 2)}`);
-    
+
     const recipes = await this.recipesRepository.findRecipesByHousehold(
       householdId,
       filters,
     );
 
-    this.logger.log(`Found ${recipes.length} recipes for household ${householdId}`);
-    this.logger.debug(`Recipes: ${JSON.stringify(recipes.map(r => ({ id: r.id, title: r.title })), null, 2)}`);
+    this.logger.log(
+      `Found ${recipes.length} recipes for household ${householdId}`,
+    );
+    this.logger.debug(
+      `Recipes: ${JSON.stringify(
+        recipes.map((r) => ({ id: r.id, title: r.title })),
+        null,
+        2,
+      )}`,
+    );
 
     const mapped = recipes.map((recipe) => ({
       id: recipe.id,
       title: recipe.title,
       imageUrl: recipe.imageUrl,
     }));
-    
+
     this.logger.debug(`Mapped recipes DTO: ${JSON.stringify(mapped, null, 2)}`);
     return mapped;
   }
@@ -117,7 +125,7 @@ export class RecipesService {
     householdId: string,
   ): Promise<RecipeDetailDto> {
     this.logger.log(`Getting recipe ${recipeId} for household ${householdId}`);
-    
+
     const recipe = await this.recipesRepository.findRecipeById(recipeId);
 
     if (!recipe) {
@@ -126,7 +134,9 @@ export class RecipesService {
     }
 
     if (recipe.householdId !== householdId) {
-      this.logger.warn(`Access denied: Recipe ${recipeId} belongs to household ${recipe.householdId}, user belongs to ${householdId}`);
+      this.logger.warn(
+        `Access denied: Recipe ${recipeId} belongs to household ${recipe.householdId}, user belongs to ${householdId}`,
+      );
       throw new ForbiddenException('Access denied');
     }
 
@@ -149,7 +159,7 @@ export class RecipesService {
   ): Promise<RecipeDetailDto> {
     this.logger.log(`Creating recipe for household ${householdId}`);
     this.logger.debug(`Recipe data: ${JSON.stringify(dto, null, 2)}`);
-    
+
     const recipe = await this.recipesRepository.createRecipe(householdId, {
       title: dto.title,
       prepTime: dto.prepTime,

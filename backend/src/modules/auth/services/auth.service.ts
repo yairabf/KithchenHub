@@ -117,7 +117,8 @@ export class AuthService {
         throw new UnauthorizedException('Invalid Google token');
       }
 
-      const { user: userResult, isNewUser } = await this.findOrCreateGoogleUser(payload);
+      const { user: userResult, isNewUser } =
+        await this.findOrCreateGoogleUser(payload);
       let user = userResult;
       let isNewHousehold = false;
 
@@ -154,10 +155,12 @@ export class AuthService {
         householdId: user.householdId,
         isNewUser,
         isNewHousehold,
-        household: user.household ? {
-          id: user.household.id,
-          name: user.household.name,
-        } : undefined,
+        household: user.household
+          ? {
+              id: user.household.id,
+              name: user.household.name,
+            }
+          : undefined,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -173,16 +176,16 @@ export class AuthService {
 
   /**
    * Authenticates a user using Google OAuth authorization code.
-   * 
+   *
    * This method implements the backend-driven OAuth flow where the backend
    * exchanges the authorization code for tokens directly with Google.
-   * 
+   *
    * @param code - Authorization code from Google OAuth callback
    * @param redirectUri - The redirect URI used in the OAuth flow (must match Google Cloud Console)
    * @param metadata - Optional metadata from state token (e.g., householdId for join flow)
    * @returns Authentication response with access token, refresh token, and user info
    * @throws UnauthorizedException if code exchange fails or Google OAuth is not configured
-   * 
+   *
    * @example
    * ```typescript
    * const response = await authService.authenticateGoogleWithCode(
@@ -202,8 +205,6 @@ export class AuthService {
     }
 
     try {
-      const config = loadConfiguration();
-      
       // Exchange authorization code for tokens
       // Note: OAuth2Client.getToken() returns a Promise<GetTokenResponse>
       // which contains { tokens: Credentials }
@@ -230,7 +231,8 @@ export class AuthService {
       }
 
       // Find or create user based on Google payload
-      const { user: userResult, isNewUser } = await this.findOrCreateGoogleUser(payload);
+      const { user: userResult, isNewUser } =
+        await this.findOrCreateGoogleUser(payload);
       let user = userResult;
       let isNewHousehold = false;
 
@@ -280,10 +282,12 @@ export class AuthService {
         householdId: user.householdId,
         isNewUser,
         isNewHousehold,
-        household: user.household ? {
-          id: user.household.id,
-          name: user.household.name,
-        } : undefined,
+        household: user.household
+          ? {
+              id: user.household.id,
+              name: user.household.name,
+            }
+          : undefined,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -293,7 +297,9 @@ export class AuthService {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
-      throw new UnauthorizedException('Failed to exchange Google authorization code');
+      throw new UnauthorizedException(
+        'Failed to exchange Google authorization code',
+      );
     }
   }
 
@@ -530,14 +536,14 @@ export class AuthService {
 
   /**
    * Gets the current authenticated user's information.
-   * 
+   *
    * Used by mobile app after OAuth callback to retrieve full user object
    * without embedding sensitive data in the callback URL.
-   * 
+   *
    * @param userId - User ID from JWT payload
    * @returns User response DTO with household information
    * @throws UnauthorizedException if user not found
-   * 
+   *
    * @example
    * ```typescript
    * const user = await authService.getCurrentUser('user-id-from-jwt');
@@ -562,7 +568,7 @@ export class AuthService {
    * 1. User exists with Google ID - update profile
    * 2. User exists with email but no Google ID - link Google account
    * 3. User doesn't exist - create new user
-   * 
+   *
    * @returns Object containing the user and isNewUser flag
    */
   private async findOrCreateGoogleUser(payload: {
