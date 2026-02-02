@@ -276,7 +276,9 @@ describe('HouseholdsService', () => {
 
       await service.addUserToHousehold(mockHouseholdId, mockUserId);
 
-      expect(repository.findHouseholdById).toHaveBeenCalledWith(mockHouseholdId);
+      expect(repository.findHouseholdById).toHaveBeenCalledWith(
+        mockHouseholdId,
+      );
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: mockUserId },
         data: { householdId: mockHouseholdId, role: 'Member' },
@@ -347,7 +349,9 @@ describe('HouseholdsService', () => {
 
       const result = await service.validateInviteCode(code);
 
-      expect(repository.findHouseholdById).toHaveBeenCalledWith(mockHouseholdId);
+      expect(repository.findHouseholdById).toHaveBeenCalledWith(
+        mockHouseholdId,
+      );
       expect(result).toEqual({
         householdId: mockHouseholdId,
         householdName: mockHouseholdName,

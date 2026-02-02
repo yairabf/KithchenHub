@@ -855,11 +855,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
         name: 'My Household',
       });
 
-      expect(mockHouseholdsService.createHouseholdForNewUser).toHaveBeenCalledWith(
-        mockUserId,
-        'My Household',
-        undefined,
-      );
+      expect(
+        mockHouseholdsService.createHouseholdForNewUser,
+      ).toHaveBeenCalledWith(mockUserId, 'My Household', undefined);
       expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
     });
 
@@ -869,11 +867,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
         id: 'custom-household-id',
       });
 
-      expect(mockHouseholdsService.createHouseholdForNewUser).toHaveBeenCalledWith(
-        mockUserId,
-        'My Household',
-        'custom-household-id',
-      );
+      expect(
+        mockHouseholdsService.createHouseholdForNewUser,
+      ).toHaveBeenCalledWith(mockUserId, 'My Household', 'custom-household-id');
       expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
     });
 
@@ -886,7 +882,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
         mockHouseholdId,
         mockUserId,
       );
-      expect(mockHouseholdsService.createHouseholdForNewUser).not.toHaveBeenCalled();
+      expect(
+        mockHouseholdsService.createHouseholdForNewUser,
+      ).not.toHaveBeenCalled();
     });
 
     it('should trim name when creating new household', async () => {
@@ -894,11 +892,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
         name: '  Trimmed Name  ',
       });
 
-      expect(mockHouseholdsService.createHouseholdForNewUser).toHaveBeenCalledWith(
-        mockUserId,
-        'Trimmed Name',
-        undefined,
-      );
+      expect(
+        mockHouseholdsService.createHouseholdForNewUser,
+      ).toHaveBeenCalledWith(mockUserId, 'Trimmed Name', undefined);
     });
 
     it('should propagate NotFoundException when addUserToHousehold throws (invalid household id)', async () => {
@@ -919,7 +915,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
           id: '',
         }),
       ).rejects.toThrow(BadRequestException);
-      expect(mockHouseholdsService.createHouseholdForNewUser).not.toHaveBeenCalled();
+      expect(
+        mockHouseholdsService.createHouseholdForNewUser,
+      ).not.toHaveBeenCalled();
       expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
     });
   });

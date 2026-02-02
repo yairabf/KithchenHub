@@ -163,13 +163,9 @@ export class HouseholdsService {
    * @throws NotFoundException if household or user not found
    * @throws ForbiddenException if user already has a household
    */
-  async addUserToHousehold(
-    householdId: string,
-    userId: string,
-  ): Promise<void> {
-    const household = await this.householdsRepository.findHouseholdById(
-      householdId,
-    );
+  async addUserToHousehold(householdId: string, userId: string): Promise<void> {
+    const household =
+      await this.householdsRepository.findHouseholdById(householdId);
     if (!household) throw new NotFoundException('Household not found');
 
     const user = await this.prisma.user.findUnique({
@@ -279,9 +275,8 @@ export class HouseholdsService {
       throw new BadRequestException('Invalid invite code format');
     }
     const householdId = parts[1];
-    const household = await this.householdsRepository.findHouseholdById(
-      householdId,
-    );
+    const household =
+      await this.householdsRepository.findHouseholdById(householdId);
     if (!household) {
       throw new NotFoundException('Invite code is invalid or expired');
     }

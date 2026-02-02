@@ -23,7 +23,9 @@ function AtLeastOneOfIdOrName(validationOptions?: ValidationOptions) {
         validate(_value: unknown, args: ValidationArguments) {
           const dto = args.object as UserCreationHouseholdDto;
           const hasId =
-            dto.id != null && typeof dto.id === 'string' && dto.id.trim().length > 0;
+            dto.id != null &&
+            typeof dto.id === 'string' &&
+            dto.id.trim().length > 0;
           const hasName =
             dto.name != null &&
             typeof dto.name === 'string' &&
