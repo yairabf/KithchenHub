@@ -13,6 +13,9 @@ export class RecipesRepository {
     householdId: string,
     filters?: { category?: string; search?: string },
   ): Promise<Recipe[]> {
+    this.logger.log(`Finding recipes for household ${householdId}`);
+    this.logger.debug(`Filters: ${JSON.stringify(filters, null, 2)}`);
+    
     const where: any = {
       householdId,
       ...ACTIVE_RECORDS_FILTER,
@@ -25,10 +28,22 @@ export class RecipesRepository {
       };
     }
 
-    return this.prisma.recipe.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
+    this.logger.debug(`Prisma where clause: ${JSON.stringify(where, null, 2)}`);
+
+    try {
+      const recipes = await this.prisma.recipe.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+      });
+      
+      this.logger.log(`Found ${recipes.length} recipes in database for household ${householdId}`);
+      this.logger.debug(`Recipe IDs: ${recipes.map(r => r.id).join(', ')}`);
+      return recipes;
+    } catch (error) {
+      this.logger.error(`Failed to find recipes: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error details: ${JSON.stringify(error, null, 2)}`);
+      throw error;
+    }
   }
 
   async findRecipeById(id: string): Promise<Recipe | null> {
@@ -47,16 +62,29 @@ export class RecipesRepository {
       imageUrl?: string;
     },
   ): Promise<Recipe> {
-    return this.prisma.recipe.create({
-      data: {
-        householdId,
-        title: data.title,
-        prepTime: data.prepTime,
-        ingredients: data.ingredients,
-        instructions: data.instructions,
-        imageUrl: data.imageUrl,
-      },
-    });
+    this.logger.log(`Creating recipe in database for household ${householdId}`);
+    this.logger.debug(`Recipe data: ${JSON.stringify(data, null, 2)}`);
+    
+    try {
+      const recipe = await this.prisma.recipe.create({
+        data: {
+          householdId,
+          title: data.title,
+          prepTime: data.prepTime,
+          ingredients: data.ingredients,
+          instructions: data.instructions,
+          imageUrl: data.imageUrl,
+        },
+      });
+      
+      this.logger.log(`Recipe created in database with ID: ${recipe.id}`);
+      this.logger.debug(`Created recipe entity: ${JSON.stringify(recipe, null, 2)}`);
+      return recipe;
+    } catch (error) {
+      this.logger.error(`Failed to create recipe in database: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error details: ${JSON.stringify(error, null, 2)}`);
+      throw error;
+    }
   }
 
   async updateRecipe(

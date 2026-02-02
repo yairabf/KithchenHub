@@ -61,10 +61,18 @@ export class ShoppingListsController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: CreateListDto,
   ) {
+    console.log('[ShoppingListsController] POST /shopping-lists - createList called');
+    console.log('[ShoppingListsController] User:', JSON.stringify({ id: user.id, email: user.email, householdId: user.householdId }));
+    console.log('[ShoppingListsController] DTO:', JSON.stringify(dto, null, 2));
+    
     if (!user.householdId) {
+      console.error('[ShoppingListsController] Error: User must belong to a household');
       throw new BadRequestException('User must belong to a household');
     }
-    return this.shoppingService.createList(user.householdId, dto);
+    
+    const result = await this.shoppingService.createList(user.householdId, dto);
+    console.log('[ShoppingListsController] List created successfully:', JSON.stringify(result, null, 2));
+    return result;
   }
 
   @Get(':id')

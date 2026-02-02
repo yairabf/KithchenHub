@@ -209,7 +209,14 @@ export class ShoppingService {
     householdId: string,
     dto: CreateListDto,
   ): Promise<{ id: string; name: string }> {
+    this.logger.log(`Creating shopping list for household ${householdId}`);
+    this.logger.debug(`List data: ${JSON.stringify(dto, null, 2)}`);
+    
     const list = await this.shoppingRepository.createList(householdId, dto);
+    
+    this.logger.log(`Shopping list created successfully with ID: ${list.id}`);
+    this.logger.debug(`Created list: ${JSON.stringify(list, null, 2)}`);
+    
     return { id: list.id, name: list.name };
   }
 

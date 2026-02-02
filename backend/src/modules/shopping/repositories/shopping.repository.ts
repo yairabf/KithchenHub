@@ -45,13 +45,26 @@ export class ShoppingRepository {
     householdId: string,
     data: { name: string; color?: string },
   ): Promise<ShoppingList> {
-    return this.prisma.shoppingList.create({
-      data: {
-        householdId,
-        name: data.name,
-        color: data.color,
-      },
-    });
+    this.logger.log(`Creating shopping list in database for household ${householdId}`);
+    this.logger.debug(`List data: ${JSON.stringify(data, null, 2)}`);
+    
+    try {
+      const list = await this.prisma.shoppingList.create({
+        data: {
+          householdId,
+          name: data.name,
+          color: data.color,
+        },
+      });
+      
+      this.logger.log(`Shopping list created in database with ID: ${list.id}`);
+      this.logger.debug(`Created list entity: ${JSON.stringify(list, null, 2)}`);
+      return list;
+    } catch (error) {
+      this.logger.error(`Failed to create shopping list in database: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error details: ${JSON.stringify(error, null, 2)}`);
+      throw error;
+    }
   }
 
   /**

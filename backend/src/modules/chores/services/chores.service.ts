@@ -68,7 +68,8 @@ export class ChoresService {
 
     const upcomingChores = chores
       .filter((chore) => {
-        if (!chore.dueDate) return false;
+        // Include chores without a dueDate in upcoming (they're not overdue)
+        if (!chore.dueDate) return true;
         const dueDate = new Date(chore.dueDate);
         return dueDate >= tomorrow;
       })
