@@ -83,6 +83,10 @@ export interface ICacheAwareShoppingRepository {
   invalidateItemsCache(): Promise<void>;
   invalidateAllCache(): Promise<void>;
   
+  // Refresh methods (force fetch from API)
+  refreshLists(): Promise<ShoppingList[]>;
+  refreshItems(): Promise<ShoppingItem[]>;
+  
   // Realtime update methods
   applyRealtimeListChange(payload: RealtimePostgresChangesPayload<{
     id: string;
@@ -162,8 +166,13 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
    * Fetches shopping lists from API (used by cache layer)
    */
   private async fetchListsFromApi(): Promise<ShoppingList[]> {
+    console.log('[fetchListsFromApi] Fetching shopping lists from API...');
     const lists = await api.get<ShoppingListSummaryDto[]>('/shopping-lists');
-    return lists.map(mapShoppingListSummary);
+    console.log('[fetchListsFromApi] API response:', JSON.stringify(lists, null, 2));
+    console.log('[fetchListsFromApi] Response type:', typeof lists, 'isArray:', Array.isArray(lists), 'length:', Array.isArray(lists) ? lists.length : 'N/A');
+    const mapped = lists.map(mapShoppingListSummary);
+    console.log('[fetchListsFromApi] Mapped shopping lists:', mapped.length);
+    return mapped;
   }
   
   /**
@@ -277,6 +286,78 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       entity // Full entity payload
     );
   }
+
+  /**
+   * Updates the item count for a shopping list based on current items in cache
+   * 
+   * This ensures the list's itemCount stays in sync with actual items.
+   * Called after createItem, deleteItem operations.
+   * 
+   * @param listId - The shopping list ID to update
+   */
+  private async updateListItemCount(listId: string): Promise<void> {
+    try {
+      // Read current items and lists from cache
+      const items = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+      const lists = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
+      
+      // Find the list using helper method
+      const list = lists.find(l => this.matchesAnyId(l, listId));
+      if (!list) {
+        console.warn(`[CacheAwareShoppingRepository] List ${listId} not found, skipping item count update`);
+        return;
+      }
+      
+      // Count active items for this list
+      // Items don't have localId, so we match against listId directly
+      const activeItems = items.filter(item => {
+        const itemListId = item.listId;
+        return (itemListId === listId || itemListId === list.id || itemListId === list.localId) &&
+               !item.deletedAt;
+      });
+      const newItemCount = activeItems.length;
+      
+      // Only update if count changed
+      if (list.itemCount !== newItemCount) {
+        const isOnline = getIsOnline();
+        if (isOnline) {
+          // Update via API
+          try {
+            const updated = await this.service.updateList(listId, { itemCount: newItemCount });
+            await updateEntityInCache(
+              'shoppingLists',
+              updated,
+              (l) => this.getListId(l),
+              (l) => this.matchesAnyId(l, listId)
+            );
+            cacheEvents.emitCacheChange('shoppingLists');
+          } catch (error) {
+            // If API update fails, still update cache optimistically
+            console.error(`[CacheAwareShoppingRepository] Failed to update list item count via API:`, error);
+            await updateEntityInCache(
+              'shoppingLists',
+              { ...list, itemCount: newItemCount } as ShoppingList,
+              (l) => this.getListId(l),
+              (l) => this.matchesAnyId(l, listId)
+            );
+            cacheEvents.emitCacheChange('shoppingLists');
+          }
+        } else {
+          // Offline: update cache optimistically
+          await updateEntityInCache(
+            'shoppingLists',
+            { ...list, itemCount: newItemCount } as ShoppingList,
+            (l) => this.getListId(l),
+            (l) => this.matchesAnyId(l, listId)
+          );
+          cacheEvents.emitCacheChange('shoppingLists');
+        }
+      }
+    } catch (error) {
+      // Don't throw - item count update is best-effort
+      console.error(`[CacheAwareShoppingRepository] Failed to update list item count:`, error);
+    }
+  }
   
   // Lists operations
   
@@ -300,7 +381,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
    */
   async findListById(id: string): Promise<ShoppingList | null> {
     const lists = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
-    return lists.find(l => l.id === id || l.localId === id) ?? null;
+    return lists.find(l => this.matchesAnyId(l, id)) ?? null;
   }
   
   /**
@@ -354,7 +435,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   async updateList(id: string, updates: Partial<ShoppingList>): Promise<ShoppingList> {
     // Step 1: Read current cache
     const current = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
-    const existing = current.find(l => l.id === id || l.localId === id);
+    const existing = current.find(l => this.matchesAnyId(l, id));
     
     if (!existing) {
       throw new Error(`Shopping list with id ${id} not found in cache`);
@@ -371,7 +452,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       'shoppingLists',
       optimisticEntity,
       (l) => this.getListId(l),
-      (l) => l.id === id || l.localId === id
+      (l) => this.matchesAnyId(l, id)
     );
     
     // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
@@ -387,7 +468,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
           'shoppingLists',
           updated,
           (l) => this.getListId(l),
-          (l) => l.id === id || l.localId === id
+          (l) => this.matchesAnyId(l, id)
         );
         cacheEvents.emitCacheChange('shoppingLists');
         return updated;
@@ -409,7 +490,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   async deleteList(id: string): Promise<void> {
     // Step 1: Read current cache
     const current = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
-    const existing = current.find(l => l.id === id || l.localId === id);
+    const existing = current.find(l => this.matchesAnyId(l, id));
     
     if (!existing) {
       return;
@@ -423,7 +504,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       'shoppingLists',
       optimisticEntity,
       (l) => this.getListId(l),
-      (l) => l.id === id || l.localId === id
+      (l) => this.matchesAnyId(l, id)
     );
     
     // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
@@ -453,7 +534,21 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       'shoppingItems',
       () => this.fetchItemsFromApi(),
       (item) => this.getItemId(item),
-      getIsOnline()
+      getIsOnline(),
+      false // Don't force refresh on normal findAllItems
+    );
+  }
+  
+  /**
+   * Force refresh items from API (bypasses cache)
+   */
+  async refreshItems(): Promise<ShoppingItem[]> {
+    return getCached<ShoppingItem>(
+      'shoppingItems',
+      () => this.fetchItemsFromApi(),
+      (item) => this.getItemId(item),
+      getIsOnline(),
+      true // Force refresh
     );
   }
   
@@ -464,8 +559,14 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   
   /**
    * Creates a shopping item with write-through caching and offline queueing
+   * 
+   * Accepts ShoppingItemWithCatalog to support catalogItemId/masterItemId for API requests.
    */
-  async createItem(item: Partial<ShoppingItem>): Promise<ShoppingItem> {
+  async createItem(item: Partial<ShoppingItem> & { catalogItemId?: string; masterItemId?: string }): Promise<ShoppingItem> {
+    if (!item.listId) {
+      throw new Error('Shopping item must have a listId');
+    }
+
     // Step 1: Create optimistic entity
     const optimisticEntity = this.createOptimisticItem(item);
     
@@ -476,7 +577,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       (i) => this.getItemId(i)
     );
     
-    // Step 3: Emit cache event (UI updates instantly) - ALWAYS SECOND
+    // Step 3: Emit cache events (UI updates instantly) - ALWAYS SECOND
     cacheEvents.emitCacheChange('shoppingItems');
     
     // Step 4: Handle sync (online vs offline) - AFTER cache update
@@ -490,15 +591,24 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
           created,
           (i) => this.getItemId(i)
         );
+        // Update list item count ONLY after successful API call (recalculates from fresh cache)
+        await this.updateListItemCount(item.listId);
         cacheEvents.emitCacheChange('shoppingItems');
+        cacheEvents.emitCacheChange('shoppingLists');
         return created;
       } catch (error) {
+        // On error, update count optimistically to keep UI in sync
+        await this.updateListItemCount(item.listId);
+        cacheEvents.emitCacheChange('shoppingLists');
         if (error instanceof NetworkError) {
           await this.enqueueWrite('shoppingItems', 'create', optimisticEntity);
         }
         throw error;
       }
     } else {
+      // Offline: update count optimistically
+      await this.updateListItemCount(item.listId);
+      cacheEvents.emitCacheChange('shoppingLists');
       await this.enqueueWrite('shoppingItems', 'create', optimisticEntity);
       return optimisticEntity;
     }
@@ -510,7 +620,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   async updateItem(id: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem> {
     // Step 1: Read current cache
     const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
-    const existing = current.find(i => i.id === id || i.localId === id);
+    const existing = current.find(i => this.matchesAnyId(i, id));
     
     if (!existing) {
       throw new Error(`Shopping item with id ${id} not found in cache`);
@@ -527,7 +637,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       'shoppingItems',
       optimisticEntity,
       (i) => this.getItemId(i),
-      (i) => i.id === id || i.localId === id
+      (i) => this.matchesAnyId(i, id)
     );
     
     // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
@@ -543,7 +653,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
           'shoppingItems',
           updated,
           (i) => this.getItemId(i),
-          (i) => i.id === id || i.localId === id
+          (i) => this.matchesAnyId(i, id)
         );
         cacheEvents.emitCacheChange('shoppingItems');
         return updated;
@@ -565,11 +675,13 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   async deleteItem(id: string): Promise<void> {
     // Step 1: Read current cache
     const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
-    const existing = current.find(i => i.id === id || i.localId === id);
+    const existing = current.find(i => this.matchesAnyId(i, id));
     
     if (!existing) {
       return;
     }
+    
+    const listId = existing.listId;
     
     // Step 2: Create optimistic deleted entity
     const optimisticEntity = this.ensureLocalId(markDeleted(existing));
@@ -579,7 +691,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       'shoppingItems',
       optimisticEntity,
       (i) => this.getItemId(i),
-      (i) => i.id === id || i.localId === id
+      (i) => this.matchesAnyId(i, id)
     );
     
     // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
@@ -591,13 +703,28 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
     if (isOnline) {
       try {
         await this.service.deleteItem(id);
+        // Update list item count ONLY after successful API call (recalculates from fresh cache)
+        if (listId) {
+          await this.updateListItemCount(listId);
+          cacheEvents.emitCacheChange('shoppingLists');
+        }
       } catch (error) {
+        // On error, update count optimistically to keep UI in sync
+        if (listId) {
+          await this.updateListItemCount(listId);
+          cacheEvents.emitCacheChange('shoppingLists');
+        }
         if (error instanceof NetworkError) {
           await this.enqueueWrite('shoppingItems', 'delete', optimisticEntity);
         }
         throw error;
       }
     } else {
+      // Offline: update count optimistically
+      if (listId) {
+        await this.updateListItemCount(listId);
+        cacheEvents.emitCacheChange('shoppingLists');
+      }
       await this.enqueueWrite('shoppingItems', 'delete', optimisticEntity);
     }
   }
@@ -608,7 +735,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   async toggleItem(id: string): Promise<ShoppingItem> {
     // Step 1: Read current cache
     const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
-    const existing = current.find(i => i.id === id || i.localId === id);
+    const existing = current.find(i => this.matchesAnyId(i, id));
     
     if (!existing) {
       throw new Error(`Shopping item with id ${id} not found in cache`);
@@ -625,7 +752,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       'shoppingItems',
       optimisticEntity,
       (i) => this.getItemId(i),
-      (i) => i.id === id || i.localId === id
+      (i) => this.matchesAnyId(i, id)
     );
     
     // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
@@ -641,7 +768,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
           'shoppingItems',
           updated,
           (i) => this.getItemId(i),
-          (i) => i.id === id || i.localId === id
+          (i) => this.matchesAnyId(i, id)
         );
         cacheEvents.emitCacheChange('shoppingItems');
         return updated;

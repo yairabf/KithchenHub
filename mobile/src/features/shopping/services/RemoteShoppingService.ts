@@ -8,6 +8,30 @@ import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../../.
 import { catalogService } from '../../../common/services/catalogService';
 import { addEntityToCache, updateEntityInCache } from '../../../common/repositories/cacheAwareRepository';
 
+/**
+ * Extended ShoppingItem type that includes catalog identifiers for API requests.
+ * 
+ * Used when creating items from grocery catalog - the catalogItemId/masterItemId
+ * are passed but not part of the base ShoppingItem type.
+ */
+interface ShoppingItemWithCatalog extends Partial<ShoppingItem> {
+  catalogItemId?: string;
+  masterItemId?: string;
+}
+
+/**
+ * Backend ShoppingItemInputDto type matching the API contract.
+ */
+interface ShoppingItemInputDto {
+  catalogItemId?: string;
+  masterItemId?: string;
+  name?: string;
+  quantity?: number;
+  unit?: string;
+  category?: string;
+  isChecked?: boolean;
+}
+
 type ShoppingListSummaryDto = {
   id: string;
   name: string;
@@ -125,12 +149,82 @@ export class RemoteShoppingService implements IShoppingService {
     };
   }
 
+  /**
+   * Maps frontend ShoppingList to backend CreateListDto format
+   */
+  private mapListToCreateDto(list: Partial<ShoppingList>): { name: string; color?: string } {
+    return {
+      name: list.name || 'New List',
+      color: list.color,
+      // Note: Backend doesn't support 'icon' field, so we exclude it
+    };
+  }
+
+  /**
+   * Maps frontend ShoppingItem to backend ShoppingItemInputDto
+   * 
+   * The API expects AddItemsDto with items array containing ShoppingItemInputDto.
+   * ShoppingItemInputDto has:
+   * - catalogItemId?: string (if item comes from catalog)
+   * - masterItemId?: string (if item comes from master catalog)
+   * - name?: string (only if no catalogItemId/masterItemId)
+   * - quantity?: number
+   * - unit?: string
+   * - category?: string
+   * - isChecked?: boolean
+   * 
+   * Note: Timestamps, id, listId are not sent - backend generates these.
+   * 
+   * @param item - Shopping item with optional catalog identifiers
+   * @returns ShoppingItemInputDto matching backend API contract
+   * @throws Error if name is required but missing or invalid
+   */
+  private mapItemToInputDto(item: ShoppingItemWithCatalog): ShoppingItemInputDto {
+    const catalogItemId = item.catalogItemId;
+    const masterItemId = item.masterItemId;
+    
+    const itemInputDto: ShoppingItemInputDto = {
+      quantity: item.quantity ?? 1,
+      unit: item.unit,
+      category: item.category,
+      isChecked: item.isChecked ?? false,
+    };
+
+    // Validate quantity is non-negative
+    if (itemInputDto.quantity !== undefined && itemInputDto.quantity < 0) {
+      throw new Error('Item quantity cannot be negative');
+    }
+
+    // Only include name if no catalog identifiers
+    if (catalogItemId) {
+      itemInputDto.catalogItemId = catalogItemId;
+    } else if (masterItemId) {
+      itemInputDto.masterItemId = masterItemId;
+    } else {
+      // No catalog identifier - name is required
+      const itemName = item.name?.trim();
+      if (!itemName || itemName.length === 0) {
+        throw new Error('Item name is required when catalogItemId/masterItemId is not provided');
+      }
+      itemInputDto.name = itemName;
+    }
+
+    return itemInputDto;
+  }
+
   async createList(list: Partial<ShoppingList>): Promise<ShoppingList> {
-    // Apply timestamp for optimistic UI and offline queue
-    const withTimestamps = withCreatedAtAndUpdatedAt(list as ShoppingList);
-    const payload = toSupabaseTimestamps(withTimestamps);
-    const response = await api.post<ShoppingListSummaryDto>('/shopping-lists', payload);
+    console.log('[RemoteShoppingService] createList() called with list:', JSON.stringify(list, null, 2));
+    
+    // Map frontend ShoppingList format to backend CreateListDto format
+    const dto = this.mapListToCreateDto(list);
+    console.log('[RemoteShoppingService] Mapped to CreateListDto:', JSON.stringify(dto, null, 2));
+    
+    console.log('[RemoteShoppingService] Making POST request to /shopping-lists...');
+    const response = await api.post<ShoppingListSummaryDto>('/shopping-lists', dto);
+    console.log('[RemoteShoppingService] API response received:', JSON.stringify(response, null, 2));
+    
     const mapped = mapShoppingListSummary(response);
+    console.log('[RemoteShoppingService] Mapped response to ShoppingList:', JSON.stringify(mapped, null, 2));
     
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
@@ -138,11 +232,14 @@ export class RemoteShoppingService implements IShoppingService {
                                  'createdAt' in response || 'updatedAt' in response;
     const created = hasServerTimestamps
       ? normalizeTimestampsFromApi<ShoppingList>({ ...mapped, ...response })
-      : { ...mapped, createdAt: withTimestamps.createdAt, updatedAt: withTimestamps.updatedAt };
+      : { ...mapped, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    
+    console.log('[RemoteShoppingService] Final created list:', JSON.stringify(created, null, 2));
     
     // Write-through cache update: add new entity to cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
     await addEntityToCache('shoppingLists', created, (l) => l.id);
+    console.log('[RemoteShoppingService] Added to cache');
     
     return created;
   }
@@ -199,23 +296,52 @@ export class RemoteShoppingService implements IShoppingService {
     await updateEntityInCache('shoppingLists', withTimestamps, (l) => l.id, (l) => l.id === listId);
   }
 
-  async createItem(item: Partial<ShoppingItem>): Promise<ShoppingItem> {
+  async createItem(item: ShoppingItemWithCatalog): Promise<ShoppingItem> {
     if (!item.listId) {
       throw new Error('Shopping item must have a listId');
     }
     
-    // Apply timestamp for optimistic UI and offline queue
-    const withTimestamps = withCreatedAtAndUpdatedAt(item as ShoppingItem);
-    const payload = toSupabaseTimestamps(withTimestamps);
-    const response = await api.post<ShoppingListDetailDto['items'][0]>(`/shopping-lists/${item.listId}/items`, payload);
-    // Map response to ShoppingItem format
-    const mapped = mapItemResponseToShoppingItem(response, item.listId);
+    // Map to backend DTO format: { items: [ShoppingItemInputDto] }
+    const itemInputDto = this.mapItemToInputDto(item);
+    const payload = { items: [itemInputDto] };
+    
+    console.log('[RemoteShoppingService] createItem() payload:', JSON.stringify(payload, null, 2));
+    
+    // API returns { addedItems: [...] }, we take the first item
+    type AddItemsResponse = {
+      addedItems: Array<{
+        id: string;
+        catalogItemId?: string;
+        name: string;
+        quantity: number;
+        unit?: string;
+        isChecked: boolean;
+        category?: string;
+      }>;
+    };
+    const response = await api.post<AddItemsResponse>(`/shopping-lists/${item.listId}/items`, payload);
+    
+    // Validate response structure
+    if (!response.addedItems || response.addedItems.length === 0) {
+      console.error('[RemoteShoppingService] API returned empty addedItems array:', response);
+      throw new Error(`API did not return created item. Response: ${JSON.stringify(response)}`);
+    }
+    
+    const createdItem = response.addedItems[0];
+    if (!createdItem || !createdItem.id) {
+      console.error('[RemoteShoppingService] Invalid item in response:', createdItem);
+      throw new Error('API returned invalid item structure');
+    }
+    
+    // Map response to ShoppingItem format (createdItem matches ShoppingListDetailDto['items'][0] structure)
+    const mapped = mapItemResponseToShoppingItem(createdItem as ShoppingListDetailDto['items'][0], item.listId, item.image);
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
-    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
-                                 'createdAt' in response || 'updatedAt' in response;
+    const hasServerTimestamps = 'created_at' in createdItem || 'updated_at' in createdItem || 
+                                 'createdAt' in createdItem || 'updatedAt' in createdItem;
+    const withTimestamps = withCreatedAtAndUpdatedAt(item as ShoppingItem);
     const created = hasServerTimestamps
-      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...response })
+      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...createdItem })
       : { ...mapped, createdAt: withTimestamps.createdAt, updatedAt: withTimestamps.updatedAt };
     
     // Write-through cache update: add new entity to cache
