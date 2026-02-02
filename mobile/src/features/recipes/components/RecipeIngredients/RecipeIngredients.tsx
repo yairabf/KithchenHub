@@ -50,14 +50,14 @@ export function RecipeIngredients({
           </View>
 
           <View style={styles.ingredientsList}>
-            {recipe.ingredients.map((ingredient, index) => (
-              <View key={ingredient.id} style={styles.ingredientCardWrapper}>
+            {(recipe.ingredients || []).map((ingredient, index) => (
+              <View key={ingredient.id || `ing-${index}`} style={styles.ingredientCardWrapper}>
                 <GroceryCard
                   backgroundColor={pastelColors[index % pastelColors.length]}
                 >
                   <GroceryCardContent
                     image={ingredient.image}
-                    title={ingredient.name}
+                    title={ingredient.name || ''}
                     subtitle={
                       <IngredientInfo
                         quantity={ingredient.quantity}
@@ -70,7 +70,7 @@ export function RecipeIngredients({
                         onPress={() => onAddIngredient(ingredient)}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={`Add ${ingredient.name} to shopping list`}
+                        accessibilityLabel={`Add ${ingredient.name || 'ingredient'} to shopping list`}
                       >
                         <Ionicons
                           name="cart-outline"

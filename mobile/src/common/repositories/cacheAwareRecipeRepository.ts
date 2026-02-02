@@ -74,9 +74,23 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
    * Once services are refactored, this can be extracted to a shared method.
    */
   private async fetchRecipesFromApi(): Promise<Recipe[]> {
-    const response = await api.get<RecipeApiResponse[]>('/recipes');
-    // Normalize timestamps from API response (server is authority)
-    return response.map((item) => normalizeTimestampsFromApi<Recipe>(item));
+    console.log('[fetchRecipesFromApi] Starting fetch from API...');
+    try {
+      const response = await api.get<RecipeApiResponse[]>('/recipes');
+      console.log('[fetchRecipesFromApi] API response received');
+      console.log('[fetchRecipesFromApi] Response type:', typeof response, 'isArray:', Array.isArray(response), 'length:', Array.isArray(response) ? response.length : 'N/A');
+      console.log('[fetchRecipesFromApi] Raw response:', JSON.stringify(response, null, 2));
+      
+      // Normalize timestamps from API response (server is authority)
+      const normalized = response.map((item) => normalizeTimestampsFromApi<Recipe>(item));
+      console.log('[fetchRecipesFromApi] Successfully normalized', normalized.length, 'recipes');
+      console.log('[fetchRecipesFromApi] Normalized recipes:', JSON.stringify(normalized, null, 2));
+      return normalized;
+    } catch (error) {
+      console.error('[fetchRecipesFromApi] Error fetching recipes:', error);
+      console.error('[fetchRecipesFromApi] Error details:', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
   }
   
   /**
@@ -88,22 +102,90 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
       this.entityType,
       () => this.fetchRecipesFromApi(),
       (recipe) => this.getId(recipe),
-      getIsOnline()
+      getIsOnline(),
+      false // Don't force refresh on normal findAll
     );
   }
   
   /**
-   * Find single recipe by ID (reads directly from cache, no network fetch)
+   * Force refresh from API (bypasses cache)
+   * Fetches fresh data from API and updates cache
+   */
+  async refresh(): Promise<Recipe[]> {
+    return getCached<Recipe>(
+      this.entityType,
+      () => this.fetchRecipesFromApi(),
+      (recipe) => this.getId(recipe),
+      getIsOnline(),
+      true // Force refresh
+    );
+  }
+  
+  /**
+   * Find single recipe by ID (reads from cache first, fetches from API if details missing)
    * 
-   * Optimized to read directly from cache without triggering findAll(),
-   * which may cause unnecessary network requests.
+   * If recipe is found in cache but missing details (empty ingredients/instructions),
+   * fetches full details from API and updates cache.
    * 
    * @param id - Recipe ID to find
    * @returns Recipe if found, null otherwise
    */
   async findById(id: string): Promise<Recipe | null> {
     const recipes = await readCachedEntitiesForUpdate<Recipe>(this.entityType);
-    return recipes.find(r => r.id === id || r.localId === id) ?? null;
+    const cached = recipes.find(r => r.id === id || r.localId === id);
+    
+    if (!cached) {
+      return null;
+    }
+    
+    // Check if recipe has full details (ingredients/instructions)
+    const hasFullDetails = cached.ingredients && cached.ingredients.length > 0;
+    
+    if (!hasFullDetails) {
+      // Fetch full details from API
+      console.log(`[CacheAwareRecipeRepository] Recipe ${id} missing details, fetching from API...`);
+      try {
+        const fullRecipe = await this.service.getRecipeById(id);
+        
+        // Validate fetched recipe has an ID
+        const fetchedId = this.getId(fullRecipe);
+        if (!fetchedId) {
+          console.error(`[CacheAwareRecipeRepository] Fetched recipe missing ID, cannot update cache. Recipe data:`, JSON.stringify({ name: fullRecipe?.name, title: (fullRecipe as any)?.title }));
+          // Return cached recipe instead of invalid fetched recipe
+          return cached;
+        }
+        
+        // Ensure ID matches (in case API returns different ID)
+        if (fetchedId !== id && fullRecipe.localId !== id) {
+          console.warn(`[CacheAwareRecipeRepository] Fetched recipe ID mismatch: requested=${id}, fetched=${fetchedId}, preserving requested ID`);
+          // Preserve the original ID to ensure cache update works
+          const recipeWithCorrectId = { ...fullRecipe, id } as Recipe;
+          await updateEntityInCache(
+            this.entityType,
+            recipeWithCorrectId,
+            (r) => this.getId(r),
+            (r) => r.id === id || r.localId === id
+          );
+        } else {
+          // Update cache with full details
+          await updateEntityInCache(
+            this.entityType,
+            fullRecipe,
+            (r) => this.getId(r),
+            (r) => r.id === id || r.localId === id
+          );
+        }
+        
+        cacheEvents.emitCacheChange(this.entityType);
+        return fullRecipe;
+      } catch (error) {
+        console.error(`[CacheAwareRecipeRepository] Failed to fetch full recipe details:`, error);
+        // Return cached recipe even if it's missing details
+        return cached;
+      }
+    }
+    
+    return cached;
   }
   
   /**
@@ -186,43 +268,58 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
    * @throws {Error} If service call fails (when online)
    */
   async create(recipe: Partial<Recipe>): Promise<Recipe> {
+    console.log('[CacheAwareRecipeRepository] create() called with recipe:', JSON.stringify(recipe, null, 2));
+    
     // Step 1: Create optimistic entity (always, for consistent behavior)
     const optimisticEntity = this.createOptimisticRecipe(recipe);
+    console.log('[CacheAwareRecipeRepository] Created optimistic entity:', JSON.stringify(optimisticEntity, null, 2));
     
     // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
+    console.log('[CacheAwareRecipeRepository] Adding optimistic entity to cache...');
     await addEntityToCache(
       this.entityType,
       optimisticEntity,
       (r) => this.getId(r)
     );
+    console.log('[CacheAwareRecipeRepository] Optimistic entity added to cache');
     
     // Step 3: Emit cache event (UI updates instantly) - ALWAYS SECOND
     cacheEvents.emitCacheChange(this.entityType);
     
     // Step 4: Handle sync (online vs offline) - AFTER cache update
     const isOnline = getIsOnline();
+    console.log('[CacheAwareRecipeRepository] Network status:', isOnline ? 'online' : 'offline');
     
     if (isOnline) {
       // Online: Call service, update cache with server response
       try {
+        console.log('[CacheAwareRecipeRepository] Calling service.createRecipe()...');
         const created = await this.service.createRecipe(recipe);
-        // Update cache with server-assigned ID and timestamps
-        await addEntityToCache(
+        console.log('[CacheAwareRecipeRepository] Service returned created recipe:', JSON.stringify(created, null, 2));
+        
+        // Replace optimistic entity with server response (matched by localId)
+        console.log('[CacheAwareRecipeRepository] Replacing optimistic entity with server response...');
+        await updateEntityInCache(
           this.entityType,
           created,
-          (r) => this.getId(r)
+          (r) => this.getId(r),
+          (r) => r.localId === optimisticEntity.localId || r.id === optimisticEntity.id
         );
+        console.log('[CacheAwareRecipeRepository] Cache updated with server response, optimistic entity replaced');
         cacheEvents.emitCacheChange(this.entityType);
         return created;
       } catch (error) {
+        console.error('[CacheAwareRecipeRepository] Error during service.createRecipe():', error);
         // Network error during service call → enqueue for retry
         if (error instanceof NetworkError) {
+          console.log('[CacheAwareRecipeRepository] Network error detected, enqueueing for retry...');
           await this.enqueueWrite('create', optimisticEntity);
         }
         throw error;
       }
     } else {
       // Offline: Enqueue write for later sync
+      console.log('[CacheAwareRecipeRepository] Offline mode, enqueueing write for later sync...');
       await this.enqueueWrite('create', optimisticEntity);
       return optimisticEntity;
     }

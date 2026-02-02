@@ -26,12 +26,14 @@ export function RecipeSteps({
   completedSteps,
   onToggleStep,
 }: RecipeStepsProps) {
+  const safeInstructions = instructions || [];
+  
   return (
     <View style={styles.container}>
       <View style={styles.instructionsList}>
-        {instructions.map((step, index) => (
+        {safeInstructions.map((step, index) => (
           <InstructionStep
-            key={step.id}
+            key={step.id || `step-${index}`}
             step={step}
             stepNumber={index + 1}
             isCompleted={completedSteps.has(step.id)}

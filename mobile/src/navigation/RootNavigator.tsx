@@ -8,7 +8,7 @@ import { invalidateAllSignedInCaches } from '../common/repositories/cacheAwareRe
 import { colors } from '../theme';
 
 export function RootNavigator() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, showHouseholdNameScreen } = useAuth();
   const hasInvalidatedWebCachesRef = useRef(false);
 
   useEffect(() => {
@@ -29,9 +29,12 @@ export function RootNavigator() {
     );
   }
 
+  // Show AuthStackNavigator if user needs to set household name, otherwise show MainNavigator
+  const shouldShowAuthStack = !user || showHouseholdNameScreen;
+
   return (
     <NavigationContainer>
-      {user ? <MainNavigator /> : <AuthStackNavigator />}
+      {shouldShowAuthStack ? <AuthStackNavigator /> : <MainNavigator />}
     </NavigationContainer>
   );
 }

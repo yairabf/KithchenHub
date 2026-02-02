@@ -9,6 +9,9 @@ function buildBaseEnv(overrides: Record<string, string | undefined> = {}) {
     JWT_REFRESH_SECRET: 'y'.repeat(32),
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_ANON_KEY: 'anon-key',
+    AUTH_BACKEND_BASE_URL: 'http://localhost:3000',
+    AUTH_APP_SCHEME: 'kitchen-hub',
+    AUTH_STATE_SECRET: 'test-secret-key-for-validation-only',
     ...overrides,
   } satisfies Record<string, string | undefined>;
 }
@@ -24,11 +27,11 @@ describe('validateEnv', () => {
   it.each([
     [
       'succeeds in development without DIRECT_URL',
-      buildBaseEnv({ NODE_ENV: 'development', DIRECT_URL: undefined }),
+      buildBaseEnv({ NODE_ENV: 'development' }),
     ],
     [
       'succeeds in production without DIRECT_URL',
-      buildBaseEnv({ NODE_ENV: 'production', DIRECT_URL: undefined }),
+      buildBaseEnv({ NODE_ENV: 'production' }),
     ],
     [
       'succeeds in production with DIRECT_URL',
@@ -38,7 +41,11 @@ describe('validateEnv', () => {
       }),
     ],
   ])('%s', (_label, env) => {
-    process.env = env;
+    // Filter out undefined values before setting process.env
+    const filteredEnv = Object.fromEntries(
+      Object.entries(env).filter(([, value]) => value !== undefined),
+    ) as Record<string, string>;
+    process.env = filteredEnv;
     expect(validateEnv().DATABASE_URL).toBe(
       'postgresql://user:pass@localhost:5432/db?schema=public',
     );

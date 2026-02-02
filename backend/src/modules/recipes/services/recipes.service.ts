@@ -82,16 +82,33 @@ export class RecipesService {
     householdId: string,
     filters?: { category?: string; search?: string },
   ): Promise<RecipeListItemDto[]> {
+    this.logger.log(`Getting recipes for household ${householdId}`);
+    this.logger.debug(`Filters: ${JSON.stringify(filters, null, 2)}`);
+
     const recipes = await this.recipesRepository.findRecipesByHousehold(
       householdId,
       filters,
     );
 
-    return recipes.map((recipe) => ({
+    this.logger.log(
+      `Found ${recipes.length} recipes for household ${householdId}`,
+    );
+    this.logger.debug(
+      `Recipes: ${JSON.stringify(
+        recipes.map((r) => ({ id: r.id, title: r.title })),
+        null,
+        2,
+      )}`,
+    );
+
+    const mapped = recipes.map((recipe) => ({
       id: recipe.id,
       title: recipe.title,
       imageUrl: recipe.imageUrl,
     }));
+
+    this.logger.debug(`Mapped recipes DTO: ${JSON.stringify(mapped, null, 2)}`);
+    return mapped;
   }
 
   /**
@@ -107,17 +124,26 @@ export class RecipesService {
     recipeId: string,
     householdId: string,
   ): Promise<RecipeDetailDto> {
+    this.logger.log(`Getting recipe ${recipeId} for household ${householdId}`);
+
     const recipe = await this.recipesRepository.findRecipeById(recipeId);
 
     if (!recipe) {
+      this.logger.warn(`Recipe ${recipeId} not found`);
       throw new NotFoundException('Recipe not found');
     }
 
     if (recipe.householdId !== householdId) {
+      this.logger.warn(
+        `Access denied: Recipe ${recipeId} belongs to household ${recipe.householdId}, user belongs to ${householdId}`,
+      );
       throw new ForbiddenException('Access denied');
     }
 
-    return mapRecipeToDetailDto(recipe);
+    const mapped = mapRecipeToDetailDto(recipe);
+    this.logger.log(`Recipe ${recipeId} found, returning details`);
+    this.logger.debug(`Recipe details: ${JSON.stringify(mapped, null, 2)}`);
+    return mapped;
   }
 
   /**
@@ -131,6 +157,9 @@ export class RecipesService {
     householdId: string,
     dto: CreateRecipeDto,
   ): Promise<RecipeDetailDto> {
+    this.logger.log(`Creating recipe for household ${householdId}`);
+    this.logger.debug(`Recipe data: ${JSON.stringify(dto, null, 2)}`);
+
     const recipe = await this.recipesRepository.createRecipe(householdId, {
       title: dto.title,
       prepTime: dto.prepTime,
@@ -139,7 +168,12 @@ export class RecipesService {
       imageUrl: dto.imageUrl,
     });
 
-    return mapRecipeToDetailDto(recipe);
+    this.logger.log(`Recipe created successfully with ID: ${recipe.id}`);
+    this.logger.debug(`Created recipe: ${JSON.stringify(recipe, null, 2)}`);
+
+    const mapped = mapRecipeToDetailDto(recipe);
+    this.logger.debug(`Mapped recipe DTO: ${JSON.stringify(mapped, null, 2)}`);
+    return mapped;
   }
 
   /**

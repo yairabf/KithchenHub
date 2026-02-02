@@ -829,6 +829,7 @@ describe('AuthService - authenticateGoogle household payload', () => {
   const mockAuthRepository = {
     findUserById: jest.fn(),
     findUserByEmail: jest.fn(),
+    findUserByGoogleId: jest.fn(),
     createUser: jest.fn(),
     updateUser: jest.fn(),
     createRefreshToken: jest.fn(),
@@ -956,12 +957,18 @@ describe('AuthService - authenticateGoogle household payload', () => {
 
     it('should throw BadRequestException when existing user has household and dto.household is present', async () => {
       setupGoogleClient();
-      mockAuthRepository.findUserById.mockResolvedValue(
-        mockUserWithHousehold(mockHouseholdId),
-      );
-      mockAuthRepository.updateUser.mockResolvedValue(
-        mockUserWithHousehold(mockHouseholdId),
-      );
+      // Reset mocks before setting up
+      jest.clearAllMocks();
+      // Ensure mocks are properly set up
+      mockAuthRepository.findUserByGoogleId = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
+      mockAuthRepository.updateUser = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
+      mockAuthRepository.findUserById = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
 
       await expect(
         service.authenticateGoogle({
@@ -978,12 +985,16 @@ describe('AuthService - authenticateGoogle household payload', () => {
 
     it('should succeed without household calls when existing user has household and no dto.household', async () => {
       setupGoogleClient();
-      mockAuthRepository.findUserById.mockResolvedValue(
-        mockUserWithHousehold(mockHouseholdId),
-      );
-      mockAuthRepository.updateUser.mockResolvedValue(
-        mockUserWithHousehold(mockHouseholdId),
-      );
+      jest.clearAllMocks();
+      mockAuthRepository.findUserByGoogleId = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
+      mockAuthRepository.updateUser = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
+      mockAuthRepository.findUserById = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
 
       const result = await service.authenticateGoogle({ idToken: 'token' });
 
@@ -997,13 +1008,19 @@ describe('AuthService - authenticateGoogle household payload', () => {
 
     it('should create household with default name when new user and no dto.household', async () => {
       setupGoogleClient();
-      mockAuthRepository.findUserById
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(mockUserWithHousehold(mockHouseholdId));
-      mockAuthRepository.findUserByEmail.mockResolvedValue(null);
-      mockAuthRepository.createUser.mockResolvedValue(
-        mockUserWithHousehold(null),
-      );
+      jest.clearAllMocks();
+      mockUuidService.generate = jest.fn().mockReturnValue(mockUserId);
+      mockAuthRepository.findUserByGoogleId = jest.fn().mockResolvedValue(null);
+      mockAuthRepository.findUserByEmail = jest.fn().mockResolvedValue(null);
+      mockAuthRepository.findUserById = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
+      mockAuthRepository.createUser = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(null));
+      mockAuthRepository.updateUser = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
 
       const result = await service.authenticateGoogle({ idToken: 'token' });
 
@@ -1016,13 +1033,19 @@ describe('AuthService - authenticateGoogle household payload', () => {
 
     it('should call addUserToHousehold when new user and dto.household has id (join)', async () => {
       setupGoogleClient();
-      mockAuthRepository.findUserById
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(mockUserWithHousehold(mockHouseholdId));
-      mockAuthRepository.findUserByEmail.mockResolvedValue(null);
-      mockAuthRepository.createUser.mockResolvedValue(
-        mockUserWithHousehold(null),
-      );
+      jest.clearAllMocks();
+      mockUuidService.generate = jest.fn().mockReturnValue(mockUserId);
+      mockAuthRepository.findUserByGoogleId = jest.fn().mockResolvedValue(null);
+      mockAuthRepository.findUserByEmail = jest.fn().mockResolvedValue(null);
+      mockAuthRepository.findUserById = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
+      mockAuthRepository.createUser = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(null));
+      mockAuthRepository.updateUser = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
 
       await service.authenticateGoogle({
         idToken: 'token',
@@ -1040,13 +1063,19 @@ describe('AuthService - authenticateGoogle household payload', () => {
 
     it('should call createHouseholdForNewUser when new user and dto.household has name', async () => {
       setupGoogleClient();
-      mockAuthRepository.findUserById
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(mockUserWithHousehold(mockHouseholdId));
-      mockAuthRepository.findUserByEmail.mockResolvedValue(null);
-      mockAuthRepository.createUser.mockResolvedValue(
-        mockUserWithHousehold(null),
-      );
+      jest.clearAllMocks();
+      mockUuidService.generate = jest.fn().mockReturnValue(mockUserId);
+      mockAuthRepository.findUserByGoogleId = jest.fn().mockResolvedValue(null);
+      mockAuthRepository.findUserByEmail = jest.fn().mockResolvedValue(null);
+      mockAuthRepository.findUserById = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
+      mockAuthRepository.createUser = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(null));
+      mockAuthRepository.updateUser = jest
+        .fn()
+        .mockResolvedValue(mockUserWithHousehold(mockHouseholdId));
 
       await service.authenticateGoogle({
         idToken: 'token',

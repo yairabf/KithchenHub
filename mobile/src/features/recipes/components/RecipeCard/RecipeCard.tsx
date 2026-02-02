@@ -33,10 +33,12 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style }: R
         )}
       </View>
       <View style={styles.recipeInfo}>
-        <Text style={styles.recipeName} numberOfLines={1}>{recipe.name}</Text>
+        <Text style={styles.recipeName} numberOfLines={1}>
+          {recipe.name || recipe.title || 'Untitled Recipe'}
+        </Text>
         <View style={styles.recipeMetaRow}>
           <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.recipeMeta}>{recipe.cookTime}</Text>
+          <Text style={styles.recipeMeta}>{recipe.cookTime || 'N/A'}</Text>
         </View>
       </View>
     </TouchableOpacity>

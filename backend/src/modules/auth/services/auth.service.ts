@@ -83,7 +83,10 @@ export class AuthService {
   ) {
     const config = loadConfiguration();
     if (config.google.clientId && config.google.clientSecret) {
-      this.googleClient = new OAuth2Client(config.google.clientId);
+      this.googleClient = new OAuth2Client(
+        config.google.clientId,
+        config.google.clientSecret,
+      );
     }
   }
 
@@ -114,7 +117,10 @@ export class AuthService {
         throw new UnauthorizedException('Invalid Google token');
       }
 
-      let user = await this.findOrCreateGoogleUser(payload);
+      const { user: userResult, isNewUser } =
+        await this.findOrCreateGoogleUser(payload);
+      let user = userResult;
+      let isNewHousehold = false;
 
       if (user.householdId) {
         if (dto.household) {
@@ -125,6 +131,7 @@ export class AuthService {
       } else {
         if (dto.household) {
           await this.resolveAndAttachHousehold(user.id, dto.household);
+          isNewHousehold = dto.household.name !== undefined;
         } else {
           const defaultName = this.deriveDefaultHouseholdName(
             payload.email ?? '',
@@ -133,6 +140,7 @@ export class AuthService {
           await this.resolveAndAttachHousehold(user.id, {
             name: defaultName,
           });
+          isNewHousehold = true;
         }
         const refreshed = await this.authRepository.findUserById(user.id);
         user = (refreshed ?? user) as UserWithHousehold;
@@ -145,6 +153,14 @@ export class AuthService {
         refreshToken: tokens.refreshToken,
         user: this.mapUserToResponse(user),
         householdId: user.householdId,
+        isNewUser,
+        isNewHousehold,
+        household: user.household
+          ? {
+              id: user.household.id,
+              name: user.household.name,
+            }
+          : undefined,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -155,6 +171,135 @@ export class AuthService {
         stack: error instanceof Error ? error.stack : undefined,
       });
       throw new UnauthorizedException('Failed to verify Google token');
+    }
+  }
+
+  /**
+   * Authenticates a user using Google OAuth authorization code.
+   *
+   * This method implements the backend-driven OAuth flow where the backend
+   * exchanges the authorization code for tokens directly with Google.
+   *
+   * @param code - Authorization code from Google OAuth callback
+   * @param redirectUri - The redirect URI used in the OAuth flow (must match Google Cloud Console)
+   * @param metadata - Optional metadata from state token (e.g., householdId for join flow)
+   * @returns Authentication response with access token, refresh token, and user info
+   * @throws UnauthorizedException if code exchange fails or Google OAuth is not configured
+   *
+   * @example
+   * ```typescript
+   * const response = await authService.authenticateGoogleWithCode(
+   *   'auth-code-from-google',
+   *   'http://localhost:3000/api/v1/auth/google/callback',
+   *   { householdId: 'abc-123' }
+   * );
+   * ```
+   */
+  async authenticateGoogleWithCode(
+    code: string,
+    redirectUri: string,
+    metadata?: { householdId?: string },
+  ): Promise<AuthResponseDto> {
+    if (!this.googleClient) {
+      throw new UnauthorizedException('Google OAuth not configured');
+    }
+
+    try {
+      // Exchange authorization code for tokens
+      // Note: OAuth2Client.getToken() returns a Promise<GetTokenResponse>
+      // which contains { tokens: Credentials }
+      // IMPORTANT: Must pass the same redirect_uri that was used in the authorization request
+      const tokenResponse = await this.googleClient.getToken({
+        code,
+        redirect_uri: redirectUri,
+      });
+      const tokens = tokenResponse.tokens;
+
+      if (!tokens.id_token) {
+        this.logger.error('Google token exchange failed: no id_token received');
+        throw new UnauthorizedException('Failed to get Google ID token');
+      }
+
+      // Verify the ID token
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: tokens.id_token,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        throw new UnauthorizedException('Invalid Google token payload');
+      }
+
+      // Find or create user based on Google payload
+      const { user: userResult, isNewUser } =
+        await this.findOrCreateGoogleUser(payload);
+      let user = userResult;
+      let isNewHousehold = false;
+
+      // Handle household attachment logic
+      if (user.householdId) {
+        // User already has a household
+        if (metadata?.householdId) {
+          throw new BadRequestException(
+            'Cannot attach or switch household during login.',
+          );
+        }
+      } else {
+        // User doesn't have a household - create or join one
+        if (metadata?.householdId) {
+          // Join existing household (not a new household)
+          await this.resolveAndAttachHousehold(user.id, {
+            id: metadata.householdId,
+          });
+          isNewHousehold = false;
+        } else {
+          // Create new household with default name
+          const defaultName = this.deriveDefaultHouseholdName(
+            payload.email ?? '',
+            payload.name,
+          );
+          await this.resolveAndAttachHousehold(user.id, {
+            name: defaultName,
+          });
+          isNewHousehold = true;
+        }
+        // Refresh user data to get household info
+        const refreshed = await this.authRepository.findUserById(user.id);
+        user = (refreshed ?? user) as UserWithHousehold;
+      }
+
+      // Generate JWT tokens
+      const jwtTokens = await this.generateTokens(user);
+
+      this.logger.log(
+        `Google OAuth code exchange success for user: ${user.id}${metadata?.householdId ? ` (joined household: ${metadata.householdId})` : ''}`,
+      );
+
+      return {
+        accessToken: jwtTokens.accessToken,
+        refreshToken: jwtTokens.refreshToken,
+        user: this.mapUserToResponse(user),
+        householdId: user.householdId,
+        isNewUser,
+        isNewHousehold,
+        household: user.household
+          ? {
+              id: user.household.id,
+              name: user.household.name,
+            }
+          : undefined,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('Google code exchange failed', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new UnauthorizedException(
+        'Failed to exchange Google authorization code',
+      );
     }
   }
 
@@ -390,55 +535,88 @@ export class AuthService {
   }
 
   /**
+   * Gets the current authenticated user's information.
+   *
+   * Used by mobile app after OAuth callback to retrieve full user object
+   * without embedding sensitive data in the callback URL.
+   *
+   * @param userId - User ID from JWT payload
+   * @returns User response DTO with household information
+   * @throws UnauthorizedException if user not found
+   *
+   * @example
+   * ```typescript
+   * const user = await authService.getCurrentUser('user-id-from-jwt');
+   * ```
+   */
+  async getCurrentUser(userId: string): Promise<UserResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { household: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.mapUserToResponse(user as UserWithHousehold);
+  }
+
+  /**
    * Finds or creates a user based on Google OAuth payload.
    * Handles three scenarios:
    * 1. User exists with Google ID - update profile
    * 2. User exists with email but no Google ID - link Google account
    * 3. User doesn't exist - create new user
+   *
+   * @returns Object containing the user and isNewUser flag
    */
   private async findOrCreateGoogleUser(payload: {
-    sub: string; // This is the Supabase UUID
+    sub: string; // Google's user ID
     email?: string;
     name?: string;
     picture?: string;
-  }): Promise<UserWithHousehold> {
-    let user = await this.authRepository.findUserById(payload.sub);
+  }): Promise<{ user: UserWithHousehold; isNewUser: boolean }> {
+    // First, try to find user by Google ID
+    let user = await this.authRepository.findUserByGoogleId(payload.sub);
+    let isNewUser = false;
 
     if (!user) {
       // Check by email in case user existed before Google sign-in
       user = await this.authRepository.findUserByEmail(payload.email!);
       if (user) {
-        // Link existing user to this Supabase ID
-        // Note: This might be tricky if we want to change the ID itself.
-        // In Supabase, the user already has this ID in auth.users.
-        // If they existed in public.users with a CUID, we should probably delete/migrate.
-        // For simplicity, we assume new system or manual migration.
+        // Link existing user to Google account (not a new user)
         user = await this.authRepository.updateUser(user.id, {
           googleId: payload.sub,
           name: payload.name,
           avatarUrl: payload.picture,
           isGuest: false,
         });
+        isNewUser = false;
       } else {
-        // If trigger failed or hasn't run yet, create manually
+        // Create new user with generated UUID
+        const newUserId = this.uuidService.generate();
         user = await this.authRepository.createUser({
-          id: payload.sub,
+          id: newUserId,
           email: payload.email,
           googleId: payload.sub,
           name: payload.name,
           avatarUrl: payload.picture,
           isGuest: false,
         });
+        isNewUser = true;
       }
     } else {
+      // User exists with Google ID - update profile (not a new user)
       user = await this.authRepository.updateUser(user.id, {
         name: payload.name,
         avatarUrl: payload.picture,
         isGuest: false,
       });
+      isNewUser = false;
     }
 
-    return user as UserWithHousehold;
+    return { user: user as UserWithHousehold, isNewUser };
   }
 
   /**

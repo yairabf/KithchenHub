@@ -24,6 +24,12 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  /**
+   * OAuth configuration for backend-driven flows
+   */
+  AUTH_BACKEND_BASE_URL: z.string().url(),
+  AUTH_APP_SCHEME: z.string().default('kitchen-hub'),
+  AUTH_STATE_SECRET: z.string().min(32),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),

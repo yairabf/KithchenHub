@@ -44,12 +44,21 @@ type NetworkStatusProvider = () => { isOffline: boolean };
 class ApiClient {
     private baseUrl: string;
     private apiVersion: string;
+    private authToken: string | null = null;
     private static networkStatusProvider?: NetworkStatusProvider;
     private static readonly REQUEST_TIMEOUT_MS = 15_000;
 
     constructor(baseUrl: string, apiVersion: string = '1') {
         this.baseUrl = baseUrl;
         this.apiVersion = apiVersion;
+    }
+
+    /**
+     * Sets the authentication token for all subsequent requests.
+     * @param token - JWT token or null to clear
+     */
+    public setAuthToken(token: string | null): void {
+        this.authToken = token;
     }
 
     /**
@@ -85,11 +94,14 @@ class ApiClient {
             throw new NetworkError('No internet connection');
         }
 
+        // Use provided token or fall back to stored auth token
+        const effectiveToken = token || this.authToken;
+
         const config: RequestInit = {
             ...customConfig,
             headers: {
                 'Content-Type': 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
                 ...headers,
             },
         };
@@ -100,15 +112,26 @@ class ApiClient {
         const versionedUrl = `${this.baseUrl}/v${this.apiVersion}${endpoint}`;
 
         try {
+            console.log(`[API] Making ${customConfig.method || 'GET'} request to: ${versionedUrl}`);
             const response = await fetch(versionedUrl, { ...config, signal });
             const data = await this.parseJsonResponse(response);
+            console.log(`[API] Response status: ${response.status}, data:`, JSON.stringify(data, null, 2));
 
             if (!response.ok) {
+                // If we get 401 and have a token, it's likely expired or invalid
+                if (response.status === 401 && effectiveToken) {
+                    console.warn('[API] 401 Unauthorized with token - token may be expired or invalid');
+                    // Trigger unauthorized handler if set (will clear user session)
+                    if (onUnauthorizedHandler) {
+                        onUnauthorizedHandler();
+                    }
+                }
                 throw this.createApiError(response.status, data);
             }
 
             // Backend wraps success responses as { success: true, data: T }; unwrap for callers
             const unwrapped = this.unwrapSuccessData(data);
+            console.log(`[API] Unwrapped response:`, JSON.stringify(unwrapped, null, 2), 'type:', typeof unwrapped, 'isArray:', Array.isArray(unwrapped));
             return unwrapped as T;
         } catch (error: unknown) {
             if (this.isAbortError(error)) {
@@ -197,3 +220,10 @@ class ApiClient {
 
 export const api = new ApiClient(BASE_URL, API_VERSION);
 export const setNetworkStatusProvider = ApiClient.setNetworkStatusProvider;
+
+// Global handler for 401 errors - will be set by AuthContext
+let onUnauthorizedHandler: (() => void) | null = null;
+
+export function setOnUnauthorizedHandler(handler: (() => void) | null) {
+    onUnauthorizedHandler = handler;
+}

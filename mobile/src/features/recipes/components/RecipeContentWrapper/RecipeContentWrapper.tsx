@@ -336,7 +336,7 @@ function MobileRecipeContent({
       ) : (
         <View style={styles.tabContent}>
           <RecipeSteps
-            instructions={recipe.instructions}
+            instructions={recipe.instructions || []}
             completedSteps={completedSteps}
             onToggleStep={onToggleStep}
           />

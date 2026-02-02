@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+} from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import {
   GoogleAuthDto,
@@ -8,6 +15,7 @@ import {
 } from '../dtos';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 import { Public } from '../../../common/decorators/public.decorator';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
 /**
  * Authentication controller handling user authentication and data synchronization.
@@ -20,8 +28,10 @@ import { Public } from '../../../common/decorators/public.decorator';
  * - POST /auth/refresh - Token refresh
  *
  * Protected endpoints:
+ * - GET /auth/me - Get current user information
  * - POST /auth/sync - Offline data synchronization
  */
+@ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -80,5 +90,24 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refreshToken(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshToken(dto);
+  }
+
+  /**
+   * Gets the current authenticated user's information.
+   *
+   * Used by mobile app after OAuth callback to retrieve full user object
+   * without embedding sensitive data in the callback URL.
+   *
+   * @param user - Current authenticated user from JWT
+   * @returns User information with household data
+   */
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get current user',
+    description: 'Returns authenticated user information',
+  })
+  async getCurrentUser(@CurrentUser() user: CurrentUserPayload) {
+    return this.authService.getCurrentUser(user.userId);
   }
 }

@@ -31,13 +31,38 @@ export class RecipesController {
     @Query('category') category?: string,
     @Query('search') search?: string,
   ) {
+    console.log('[RecipesController] GET /recipes - getRecipes called');
+    console.log(
+      '[RecipesController] User:',
+      JSON.stringify({
+        id: user.userId,
+        email: user.email,
+        householdId: user.householdId,
+      }),
+    );
+    console.log(
+      '[RecipesController] Query params:',
+      JSON.stringify({ category, search }),
+    );
+
     if (!user.householdId) {
+      console.error(
+        '[RecipesController] Error: User must belong to a household',
+      );
       throw new BadRequestException('User must belong to a household');
     }
-    return this.recipesService.getRecipes(user.householdId, {
+
+    const result = await this.recipesService.getRecipes(user.householdId, {
       category,
       search,
     });
+
+    console.log('[RecipesController] Returning', result.length, 'recipes');
+    console.log(
+      '[RecipesController] Recipes:',
+      JSON.stringify(result, null, 2),
+    );
+    return result;
   }
 
   @Post()
@@ -45,10 +70,33 @@ export class RecipesController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: CreateRecipeDto,
   ) {
+    console.log('[RecipesController] POST /recipes - createRecipe called');
+    console.log(
+      '[RecipesController] User:',
+      JSON.stringify({
+        id: user.userId,
+        email: user.email,
+        householdId: user.householdId,
+      }),
+    );
+    console.log('[RecipesController] DTO:', JSON.stringify(dto, null, 2));
+
     if (!user.householdId) {
+      console.error(
+        '[RecipesController] Error: User must belong to a household',
+      );
       throw new BadRequestException('User must belong to a household');
     }
-    return this.recipesService.createRecipe(user.householdId, dto);
+
+    const result = await this.recipesService.createRecipe(
+      user.householdId,
+      dto,
+    );
+    console.log(
+      '[RecipesController] Recipe created successfully:',
+      JSON.stringify(result, null, 2),
+    );
+    return result;
   }
 
   @Get(':id')
@@ -56,10 +104,33 @@ export class RecipesController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') recipeId: string,
   ) {
+    console.log('[RecipesController] GET /recipes/:id - getRecipe called');
+    console.log(
+      '[RecipesController] User:',
+      JSON.stringify({
+        id: user.userId,
+        email: user.email,
+        householdId: user.householdId,
+      }),
+    );
+    console.log('[RecipesController] Recipe ID:', recipeId);
+
     if (!user.householdId) {
+      console.error(
+        '[RecipesController] Error: User must belong to a household',
+      );
       throw new BadRequestException('User must belong to a household');
     }
-    return this.recipesService.getRecipe(recipeId, user.householdId);
+
+    const result = await this.recipesService.getRecipe(
+      recipeId,
+      user.householdId,
+    );
+    console.log(
+      '[RecipesController] Recipe details fetched:',
+      JSON.stringify(result, null, 2),
+    );
+    return result;
   }
 
   @Put(':id')

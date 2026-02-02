@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
@@ -48,7 +49,7 @@ type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export function ShoppingListsScreen() {
   const { isTablet } = useResponsive();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { groceryItems, categories, frequentlyAddedItems } = useCatalog();
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
   const [selectedGroceryItem, setSelectedGroceryItem] = useState<GroceryItem | null>(null);
@@ -63,6 +64,7 @@ export function ShoppingListsScreen() {
   const [showAllItemsModal, setShowAllItemsModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Determine data mode based on user authentication state
   const userMode = useMemo(() => {
@@ -107,6 +109,44 @@ export function ShoppingListsScreen() {
   const activeList = selectedList ?? shoppingLists[0] ?? fallbackList;
   
   const listIdFilter = buildListIdFilter(shoppingLists.map((list) => list.id));
+
+  // For signed-in users, trigger initial fetch ONLY on first login (when cache is missing)
+  // Subsequent navigations will use cache (no API calls)
+  // Note: findAll() will only fetch from API if cache is missing, otherwise returns cache
+  useEffect(() => {
+    if (isSignedIn && repository && !isAuthLoading) {
+      // Check cache - only fetches from API if cache is missing
+      repository.findAllLists()
+        .then((lists) => {
+          console.log('[ShoppingListsScreen] Cache check completed, lists:', lists.length);
+        })
+        .catch((error) => {
+          console.error('[ShoppingListsScreen] Failed to check cache for lists:', error);
+        });
+      repository.findAllItems()
+        .then((items) => {
+          console.log('[ShoppingListsScreen] Cache check completed, items:', items.length);
+        })
+        .catch((error) => {
+          console.error('[ShoppingListsScreen] Failed to check cache for items:', error);
+        });
+    }
+  }, [isSignedIn, repository, isAuthLoading]);
+
+  const handleRefresh = async () => {
+    if (!repository) return;
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        repository.refreshLists(),
+        repository.refreshItems(),
+      ]);
+    } catch (error) {
+      console.error('Failed to refresh shopping data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Load shopping lists and items for guest mode (catalog: groceryItems, categories, frequentlyAdded from useCatalog → API)
   useEffect(() => {
@@ -190,7 +230,13 @@ export function ShoppingListsScreen() {
   };
   
   // Helper to use repository if available (signed-in), otherwise use service (guest)
-  const createItem = async (item: Partial<ShoppingItem>) => {
+  // Accepts ShoppingItemWithCatalog to support catalogItemId/masterItemId for API requests
+  type ShoppingItemWithCatalog = Partial<ShoppingItem> & {
+    catalogItemId?: string;
+    masterItemId?: string;
+  };
+  
+  const createItem = async (item: ShoppingItemWithCatalog) => {
     if (repository) {
       return repository.createItem(item);
     }
@@ -426,7 +472,8 @@ export function ShoppingListsScreen() {
             quantity,
             category: groceryItem.category,
             image: groceryItem.image,
-          });
+            catalogItemId: groceryItem.id, // Pass grocery item ID as catalogItemId
+          } as any); // Type assertion needed because ShoppingItem doesn't have catalogItemId
           
           // Replace temp item with real item from service
           setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
@@ -446,6 +493,7 @@ export function ShoppingListsScreen() {
             quantity,
             category: groceryItem.category,
             image: groceryItem.image,
+            catalogItemId: groceryItem.id, // Pass grocery item ID as catalogItemId
           });
         } catch (error) {
           logShoppingError('Failed to create shopping item:', error);
@@ -507,7 +555,8 @@ export function ShoppingListsScreen() {
             quantity,
             category: selectedGroceryItem.category,
             image: selectedGroceryItem.image,
-          });
+            catalogItemId: selectedGroceryItem.id, // Pass grocery item ID as catalogItemId
+          } as any); // Type assertion needed because ShoppingItem doesn't have catalogItemId
           
           // Replace temp item with real item from service
           setGuestItems((prev: ShoppingItem[]) => prev.map((item) =>
@@ -648,7 +697,13 @@ export function ShoppingListsScreen() {
         }}
       />
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+        }
+      >
         <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
           {/* Left Column - Shopping List */}
           <ShoppingListPanel
