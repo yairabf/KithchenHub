@@ -1,9 +1,4 @@
-import {
-  IsString,
-  IsOptional,
-  MinLength,
-  MaxLength,
-} from 'class-validator';
+import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 /**
@@ -13,9 +8,7 @@ import { Transform } from 'class-transformer';
 export class UpdateHouseholdDto {
   @IsOptional()
   @IsString()
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @MinLength(1, {
     message: 'Household name must be non-empty when provided',
   })

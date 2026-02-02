@@ -299,8 +299,9 @@ export class HouseholdsService {
         code?.trim() ? 'Invalid invite code format' : 'Invite code is required',
       );
     }
-    const household =
-      await this.householdsRepository.findHouseholdById(parsed.householdId);
+    const household = await this.householdsRepository.findHouseholdById(
+      parsed.householdId,
+    );
     if (!household) {
       throw new NotFoundException('Invite code is invalid or expired');
     }

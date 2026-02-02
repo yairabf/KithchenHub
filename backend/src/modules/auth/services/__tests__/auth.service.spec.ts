@@ -866,7 +866,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
       'should use display name when present: "%s" -> "%s"',
       (displayName, email, expected) => {
         expect(
-          (service as unknown as AuthServicePrivateTestAccess).deriveDefaultHouseholdName(email, displayName),
+          (
+            service as unknown as AuthServicePrivateTestAccess
+          ).deriveDefaultHouseholdName(email, displayName),
         ).toBe(expected);
       },
     );
@@ -878,36 +880,43 @@ describe('AuthService - authenticateGoogle household payload', () => {
     ])(
       'should use email local-part when no display name: %s -> %s',
       (email, expected) => {
-        expect((service as unknown as AuthServicePrivateTestAccess).deriveDefaultHouseholdName(email)).toBe(
-          expected,
-        );
+        expect(
+          (
+            service as unknown as AuthServicePrivateTestAccess
+          ).deriveDefaultHouseholdName(email),
+        ).toBe(expected);
       },
     );
 
     it('should return "My family" when email and display name empty', () => {
-      expect((service as unknown as AuthServicePrivateTestAccess).deriveDefaultHouseholdName('', '')).toBe(
-        'My family',
-      );
+      expect(
+        (
+          service as unknown as AuthServicePrivateTestAccess
+        ).deriveDefaultHouseholdName('', ''),
+      ).toBe('My family');
     });
 
     it('should return "My family" when email empty and no display name', () => {
-      expect((service as unknown as AuthServicePrivateTestAccess).deriveDefaultHouseholdName('')).toBe(
-        'My family',
-      );
+      expect(
+        (
+          service as unknown as AuthServicePrivateTestAccess
+        ).deriveDefaultHouseholdName(''),
+      ).toBe('My family');
     });
 
     it('should treat whitespace-only display name as empty and fallback to email', () => {
       expect(
-        (service as unknown as AuthServicePrivateTestAccess).deriveDefaultHouseholdName('john@example.com', '   '),
+        (
+          service as unknown as AuthServicePrivateTestAccess
+        ).deriveDefaultHouseholdName('john@example.com', '   '),
       ).toBe("John's family");
     });
 
     it('should trim and title-case display name', () => {
       expect(
-        (service as unknown as AuthServicePrivateTestAccess).deriveDefaultHouseholdName(
-          'x@x.com',
-          '  jane doe  ',
-        ),
+        (
+          service as unknown as AuthServicePrivateTestAccess
+        ).deriveDefaultHouseholdName('x@x.com', '  jane doe  '),
       ).toBe("Jane Doe's family");
     });
   });
@@ -920,7 +929,11 @@ describe('AuthService - authenticateGoogle household payload', () => {
     };
 
     function setupGoogleClient(): void {
-      (service as unknown as AuthServicePrivateTestAccess & { googleClient: unknown }).googleClient = {
+      (
+        service as unknown as AuthServicePrivateTestAccess & {
+          googleClient: unknown;
+        }
+      ).googleClient = {
         verifyIdToken: jest.fn().mockResolvedValue({
           getPayload: () => googlePayload,
         }),
@@ -957,7 +970,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
         }),
       ).rejects.toThrow(BadRequestException);
 
-      expect(mockHouseholdsService.createHouseholdForNewUser).not.toHaveBeenCalled();
+      expect(
+        mockHouseholdsService.createHouseholdForNewUser,
+      ).not.toHaveBeenCalled();
       expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
     });
 
@@ -974,7 +989,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
 
       expect(result).toHaveProperty('accessToken');
       expect(result.householdId).toBe(mockHouseholdId);
-      expect(mockHouseholdsService.createHouseholdForNewUser).not.toHaveBeenCalled();
+      expect(
+        mockHouseholdsService.createHouseholdForNewUser,
+      ).not.toHaveBeenCalled();
       expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
     });
 
@@ -1045,7 +1062,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
 
   describe('resolveAndAttachHousehold', () => {
     it('should call createHouseholdForNewUser when household has name (new household)', async () => {
-      await (service as unknown as AuthServicePrivateTestAccess).resolveAndAttachHousehold(mockUserId, {
+      await (
+        service as unknown as AuthServicePrivateTestAccess
+      ).resolveAndAttachHousehold(mockUserId, {
         name: 'My Household',
       });
 
@@ -1056,7 +1075,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
     });
 
     it('should call createHouseholdForNewUser with optional id when both name and id provided', async () => {
-      await (service as unknown as AuthServicePrivateTestAccess).resolveAndAttachHousehold(mockUserId, {
+      await (
+        service as unknown as AuthServicePrivateTestAccess
+      ).resolveAndAttachHousehold(mockUserId, {
         name: 'My Household',
         id: 'custom-household-id',
       });
@@ -1068,7 +1089,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
     });
 
     it('should call addUserToHousehold when household has only id (existing household)', async () => {
-      await (service as unknown as AuthServicePrivateTestAccess).resolveAndAttachHousehold(mockUserId, {
+      await (
+        service as unknown as AuthServicePrivateTestAccess
+      ).resolveAndAttachHousehold(mockUserId, {
         id: mockHouseholdId,
       });
 
@@ -1082,7 +1105,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
     });
 
     it('should trim name when creating new household', async () => {
-      await (service as unknown as AuthServicePrivateTestAccess).resolveAndAttachHousehold(mockUserId, {
+      await (
+        service as unknown as AuthServicePrivateTestAccess
+      ).resolveAndAttachHousehold(mockUserId, {
         name: '  Trimmed Name  ',
       });
 
@@ -1096,7 +1121,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
       mockHouseholdsService.addUserToHousehold.mockRejectedValueOnce(notFound);
 
       await expect(
-        (service as unknown as AuthServicePrivateTestAccess).resolveAndAttachHousehold(mockUserId, {
+        (
+          service as unknown as AuthServicePrivateTestAccess
+        ).resolveAndAttachHousehold(mockUserId, {
           id: 'non-existent-id',
         }),
       ).rejects.toThrow(NotFoundException);
@@ -1104,7 +1131,9 @@ describe('AuthService - authenticateGoogle household payload', () => {
 
     it('should throw BadRequestException when household has neither name nor id', async () => {
       await expect(
-        (service as unknown as AuthServicePrivateTestAccess).resolveAndAttachHousehold(mockUserId, {
+        (
+          service as unknown as AuthServicePrivateTestAccess
+        ).resolveAndAttachHousehold(mockUserId, {
           name: '',
           id: '',
         }),

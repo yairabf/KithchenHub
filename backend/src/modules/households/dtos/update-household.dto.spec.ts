@@ -17,8 +17,7 @@ describe('UpdateHouseholdDto', () => {
         expect(nameErrors.length).toBeGreaterThan(0);
         expect(
           nameErrors.some(
-            (e) =>
-              e.constraints?.minLength?.includes('non-empty') ?? false,
+            (e) => e.constraints?.minLength?.includes('non-empty') ?? false,
           ),
         ).toBe(true);
       },
@@ -48,8 +47,7 @@ describe('UpdateHouseholdDto', () => {
       expect(nameErrors.length).toBeGreaterThan(0);
       expect(
         nameErrors.some(
-          (e) =>
-            e.constraints?.maxLength?.includes('200') ?? false,
+          (e) => e.constraints?.maxLength?.includes('200') ?? false,
         ),
       ).toBe(true);
     });
