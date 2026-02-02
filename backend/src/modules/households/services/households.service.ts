@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ForbiddenException,
@@ -122,6 +123,69 @@ export class HouseholdsService {
   }
 
   /**
+   * Creates a new household for a user during auth flow (e.g. Google sign-up).
+   * Caller must ensure the user exists and has no household yet.
+   *
+   * @param userId - The user ID to set as Admin
+   * @param name - Household name (trimmed and length-validated by caller)
+   * @param householdId - Optional household id (e.g. client-generated CUID)
+   * @returns Created household id
+   */
+  async createHouseholdForNewUser(
+    userId: string,
+    name: string,
+    householdId?: string,
+  ): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.householdId)
+      throw new ForbiddenException('User already has a household');
+
+    const household = await this.householdsRepository.createHousehold(
+      name,
+      householdId,
+    );
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { householdId: household.id, role: 'Admin' },
+    });
+    return household.id;
+  }
+
+  /**
+   * Adds an existing user to an existing household (e.g. join during auth).
+   * Caller must ensure the user exists and has no household yet.
+   *
+   * @param householdId - The household to join
+   * @param userId - The user ID to add as Member
+   * @throws NotFoundException if household or user not found
+   * @throws ForbiddenException if user already has a household
+   */
+  async addUserToHousehold(
+    householdId: string,
+    userId: string,
+  ): Promise<void> {
+    const household = await this.householdsRepository.findHouseholdById(
+      householdId,
+    );
+    if (!household) throw new NotFoundException('Household not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.householdId)
+      throw new ForbiddenException('User already has a household');
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { householdId, role: 'Member' },
+    });
+  }
+
+  /**
    * Updates household settings (name, timezone).
    * Only admins can update household settings.
    *
@@ -191,6 +255,40 @@ export class HouseholdsService {
     const inviteToken = `invite_${user.householdId}_${Date.now()}`;
 
     return { inviteToken };
+  }
+
+  /**
+   * Validates an invite code and returns household id and name for display.
+   * Public endpoint so unauthenticated users can resolve the code before sign-in.
+   * Token format: invite_<householdId>_<timestamp>.
+   *
+   * @param code - The invite code (inviteToken) shared by a household member
+   * @returns householdId and householdName
+   * @throws BadRequestException if code format is invalid
+   * @throws NotFoundException if household does not exist
+   */
+  async validateInviteCode(
+    code: string,
+  ): Promise<{ householdId: string; householdName: string }> {
+    const trimmed = code?.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Invite code is required');
+    }
+    const parts = trimmed.split('_');
+    if (parts.length !== 3 || parts[0] !== 'invite' || !parts[1] || !parts[2]) {
+      throw new BadRequestException('Invalid invite code format');
+    }
+    const householdId = parts[1];
+    const household = await this.householdsRepository.findHouseholdById(
+      householdId,
+    );
+    if (!household) {
+      throw new NotFoundException('Invite code is invalid or expired');
+    }
+    return {
+      householdId: household.id,
+      householdName: household.name,
+    };
   }
 
   /**

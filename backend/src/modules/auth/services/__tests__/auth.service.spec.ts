@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth.service';
 import { AuthRepository } from '../../repositories/auth.repository';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { HouseholdsService } from '../../../households/services/households.service';
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service';
 import { UuidService } from '../../../../common/services/uuid.service';
 import { SyncDataDto } from '../../dtos';
@@ -61,6 +63,11 @@ describe('AuthService - Idempotency', () => {
     generate: jest.fn(),
   };
 
+  const mockHouseholdsService = {
+    createHouseholdForNewUser: jest.fn(),
+    addUserToHousehold: jest.fn(),
+  };
+
   const userId = 'user-123';
   const householdId = 'household-123';
   const mockUser = {
@@ -90,6 +97,10 @@ describe('AuthService - Idempotency', () => {
         {
           provide: UuidService,
           useValue: mockUuidService,
+        },
+        {
+          provide: HouseholdsService,
+          useValue: mockHouseholdsService,
         },
       ],
     }).compile();
@@ -777,6 +788,139 @@ describe('AuthService - Idempotency', () => {
 
       // Restore original method
       service['syncRecipes'] = originalSyncRecipes;
+    });
+  });
+});
+
+describe('AuthService - authenticateGoogle household payload', () => {
+  let service: AuthService;
+  let authRepository: AuthRepository;
+  let householdsService: HouseholdsService;
+
+  const mockUserId = 'user-123';
+  const mockHouseholdId = 'household-123';
+
+  const mockPrismaService = {
+    user: { findUnique: jest.fn() },
+    shoppingList: { upsert: jest.fn() },
+    shoppingItem: { upsert: jest.fn() },
+    recipe: { upsert: jest.fn() },
+    chore: { upsert: jest.fn() },
+    syncIdempotencyKey: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+  };
+
+  const mockJwtService = { signAsync: jest.fn().mockResolvedValue('token') };
+
+  const mockAuthRepository = {
+    findUserById: jest.fn(),
+    findUserByEmail: jest.fn(),
+    createUser: jest.fn(),
+    updateUser: jest.fn(),
+    createRefreshToken: jest.fn(),
+  };
+
+  const mockUuidService = { generate: jest.fn() };
+
+  const mockHouseholdsService = {
+    createHouseholdForNewUser: jest.fn().mockResolvedValue(mockHouseholdId),
+    addUserToHousehold: jest.fn().mockResolvedValue(undefined),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: JwtService, useValue: mockJwtService },
+        { provide: AuthRepository, useValue: mockAuthRepository },
+        { provide: UuidService, useValue: mockUuidService },
+        { provide: HouseholdsService, useValue: mockHouseholdsService },
+      ],
+    }).compile();
+
+    service = module.get<AuthService>(AuthService);
+    authRepository = module.get<AuthRepository>(AuthRepository);
+    householdsService = module.get<HouseholdsService>(HouseholdsService);
+    jest.clearAllMocks();
+  });
+
+  describe('resolveAndAttachHousehold', () => {
+    it('should call createHouseholdForNewUser when household has name (new household)', async () => {
+      await (service as any).resolveAndAttachHousehold(mockUserId, {
+        name: 'My Household',
+      });
+
+      expect(mockHouseholdsService.createHouseholdForNewUser).toHaveBeenCalledWith(
+        mockUserId,
+        'My Household',
+        undefined,
+      );
+      expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
+    });
+
+    it('should call createHouseholdForNewUser with optional id when both name and id provided', async () => {
+      await (service as any).resolveAndAttachHousehold(mockUserId, {
+        name: 'My Household',
+        id: 'custom-household-id',
+      });
+
+      expect(mockHouseholdsService.createHouseholdForNewUser).toHaveBeenCalledWith(
+        mockUserId,
+        'My Household',
+        'custom-household-id',
+      );
+      expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
+    });
+
+    it('should call addUserToHousehold when household has only id (existing household)', async () => {
+      await (service as any).resolveAndAttachHousehold(mockUserId, {
+        id: mockHouseholdId,
+      });
+
+      expect(mockHouseholdsService.addUserToHousehold).toHaveBeenCalledWith(
+        mockHouseholdId,
+        mockUserId,
+      );
+      expect(mockHouseholdsService.createHouseholdForNewUser).not.toHaveBeenCalled();
+    });
+
+    it('should trim name when creating new household', async () => {
+      await (service as any).resolveAndAttachHousehold(mockUserId, {
+        name: '  Trimmed Name  ',
+      });
+
+      expect(mockHouseholdsService.createHouseholdForNewUser).toHaveBeenCalledWith(
+        mockUserId,
+        'Trimmed Name',
+        undefined,
+      );
+    });
+
+    it('should propagate NotFoundException when addUserToHousehold throws (invalid household id)', async () => {
+      const notFound = new NotFoundException('Household not found');
+      mockHouseholdsService.addUserToHousehold.mockRejectedValueOnce(notFound);
+
+      await expect(
+        (service as any).resolveAndAttachHousehold(mockUserId, {
+          id: 'non-existent-id',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when household has neither name nor id', async () => {
+      await expect(
+        (service as any).resolveAndAttachHousehold(mockUserId, {
+          name: '',
+          id: '',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockHouseholdsService.createHouseholdForNewUser).not.toHaveBeenCalled();
+      expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
     });
   });
 });

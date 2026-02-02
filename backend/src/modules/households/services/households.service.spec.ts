@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HouseholdsService } from './households.service';
 import { HouseholdsRepository } from '../repositories/households.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 
 /**
  * Households Service Unit Tests
@@ -12,6 +16,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 describe('HouseholdsService', () => {
   let service: HouseholdsService;
   let prisma: PrismaService;
+  let repository: HouseholdsRepository;
 
   const mockUserId = 'user-123';
   const mockHouseholdId = 'household-123';
@@ -27,6 +32,7 @@ describe('HouseholdsService', () => {
             findHouseholdById: jest.fn(),
             findHouseholdWithMembers: jest.fn(),
             updateHousehold: jest.fn(),
+            createHousehold: jest.fn(),
           },
         },
         {
@@ -46,6 +52,7 @@ describe('HouseholdsService', () => {
 
     service = module.get<HouseholdsService>(HouseholdsService);
     prisma = module.get<PrismaService>(PrismaService);
+    repository = module.get<HouseholdsRepository>(HouseholdsRepository);
   });
 
   describe('createHousehold', () => {
@@ -128,6 +135,260 @@ describe('HouseholdsService', () => {
       expect(result.name).toBe(mockHouseholdName);
       expect(result.members).toHaveLength(1);
       expect(result.members[0].role).toBe('Admin');
+    });
+  });
+
+  describe('createHouseholdForNewUser', () => {
+    it('should create household without optional id and set user as Admin', async () => {
+      const mockUser = {
+        id: mockUserId,
+        householdId: null,
+        email: 'u@example.com',
+        name: 'User',
+        avatarUrl: null,
+        role: 'Member',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const mockHousehold = {
+        id: mockHouseholdId,
+        name: mockHouseholdName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
+      jest
+        .spyOn(repository, 'createHousehold')
+        .mockResolvedValue(mockHousehold as any);
+      jest.spyOn(prisma.user, 'update').mockResolvedValue(undefined as any);
+
+      const result = await service.createHouseholdForNewUser(
+        mockUserId,
+        mockHouseholdName,
+      );
+
+      expect(repository.createHousehold).toHaveBeenCalledWith(
+        mockHouseholdName,
+        undefined,
+      );
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: mockUserId },
+        data: { householdId: mockHouseholdId, role: 'Admin' },
+      });
+      expect(result).toBe(mockHouseholdId);
+    });
+
+    it('should create household with optional id when provided', async () => {
+      const customId = 'custom-household-id';
+      const mockUser = {
+        id: mockUserId,
+        householdId: null,
+        email: 'u@example.com',
+        name: 'User',
+        avatarUrl: null,
+        role: 'Member',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const mockHousehold = {
+        id: customId,
+        name: mockHouseholdName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
+      jest
+        .spyOn(repository, 'createHousehold')
+        .mockResolvedValue(mockHousehold as any);
+      jest.spyOn(prisma.user, 'update').mockResolvedValue(undefined as any);
+
+      const result = await service.createHouseholdForNewUser(
+        mockUserId,
+        mockHouseholdName,
+        customId,
+      );
+
+      expect(repository.createHousehold).toHaveBeenCalledWith(
+        mockHouseholdName,
+        customId,
+      );
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: mockUserId },
+        data: { householdId: customId, role: 'Admin' },
+      });
+      expect(result).toBe(customId);
+    });
+
+    it('should throw NotFoundException when user does not exist', async () => {
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
+
+      await expect(
+        service.createHouseholdForNewUser(mockUserId, mockHouseholdName),
+      ).rejects.toThrow(NotFoundException);
+      expect(repository.createHousehold).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when user already has a household', async () => {
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: mockUserId,
+        householdId: mockHouseholdId,
+        email: 'u@example.com',
+        name: 'User',
+        avatarUrl: null,
+        role: 'Member',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      await expect(
+        service.createHouseholdForNewUser(mockUserId, mockHouseholdName),
+      ).rejects.toThrow(ForbiddenException);
+      expect(repository.createHousehold).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('addUserToHousehold', () => {
+    it('should add user to existing household as Member', async () => {
+      const mockHousehold = {
+        id: mockHouseholdId,
+        name: mockHouseholdName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const mockUser = {
+        id: mockUserId,
+        householdId: null,
+        email: 'u@example.com',
+        name: 'User',
+        avatarUrl: null,
+        role: 'Member',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest
+        .spyOn(repository, 'findHouseholdById')
+        .mockResolvedValue(mockHousehold as any);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
+      jest.spyOn(prisma.user, 'update').mockResolvedValue(undefined as any);
+
+      await service.addUserToHousehold(mockHouseholdId, mockUserId);
+
+      expect(repository.findHouseholdById).toHaveBeenCalledWith(mockHouseholdId);
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: mockUserId },
+        data: { householdId: mockHouseholdId, role: 'Member' },
+      });
+    });
+
+    it('should throw NotFoundException when household does not exist', async () => {
+      jest.spyOn(repository, 'findHouseholdById').mockResolvedValue(null);
+
+      await expect(
+        service.addUserToHousehold(mockHouseholdId, mockUserId),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when user does not exist', async () => {
+      jest.spyOn(repository, 'findHouseholdById').mockResolvedValue({
+        id: mockHouseholdId,
+        name: mockHouseholdName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
+
+      await expect(
+        service.addUserToHousehold(mockHouseholdId, mockUserId),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when user already has a household', async () => {
+      jest.spyOn(repository, 'findHouseholdById').mockResolvedValue({
+        id: mockHouseholdId,
+        name: mockHouseholdName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: mockUserId,
+        householdId: 'other-household-id',
+        email: 'u@example.com',
+        name: 'User',
+        avatarUrl: null,
+        role: 'Member',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      await expect(
+        service.addUserToHousehold(mockHouseholdId, mockUserId),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('validateInviteCode', () => {
+    it('should return householdId and householdName for valid invite code', async () => {
+      const code = `invite_${mockHouseholdId}_${Date.now()}`;
+      const mockHousehold = {
+        id: mockHouseholdId,
+        name: mockHouseholdName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      jest
+        .spyOn(repository, 'findHouseholdById')
+        .mockResolvedValue(mockHousehold as any);
+
+      const result = await service.validateInviteCode(code);
+
+      expect(repository.findHouseholdById).toHaveBeenCalledWith(mockHouseholdId);
+      expect(result).toEqual({
+        householdId: mockHouseholdId,
+        householdName: mockHouseholdName,
+      });
+    });
+
+    it.each([
+      ['empty string', ''],
+      ['whitespace only', '   '],
+    ])(
+      'should throw BadRequestException when code is %s',
+      async (_description, code) => {
+        await expect(service.validateInviteCode(code)).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(repository.findHouseholdById).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      ['invalid_format', 'invalid_format'],
+      ['invite_ only', 'invite_'],
+      ['wrong prefix', 'wrong_prefix_abc_123'],
+    ])(
+      'should throw BadRequestException for invalid format: %s',
+      async (_description, code) => {
+        await expect(service.validateInviteCode(code)).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(repository.findHouseholdById).not.toHaveBeenCalled();
+      },
+    );
+
+    it('should throw NotFoundException when household does not exist', async () => {
+      const code = `invite_nonexistent_${Date.now()}`;
+      jest.spyOn(repository, 'findHouseholdById').mockResolvedValue(null);
+
+      await expect(service.validateInviteCode(code)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(repository.findHouseholdById).toHaveBeenCalledWith('nonexistent');
     });
   });
 });

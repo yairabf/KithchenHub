@@ -37,9 +37,9 @@ export class HouseholdsRepository {
     });
   }
 
-  async createHousehold(name: string): Promise<Household> {
+  async createHousehold(name: string, id?: string): Promise<Household> {
     return this.prisma.household.create({
-      data: { name },
+      data: id ? { id, name } : { name },
     });
   }
 
