@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,20 +7,46 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { GuestDataImportModal } from '../components/GuestDataImportModal';
 
-export function LoginScreen() {
-  const { signInWithGoogle, signInAsGuest, showGuestImportPrompt, resolveGuestImport } = useAuth();
+type AuthStackParamList = {
+  Login: undefined;
+  EnterInviteCode: undefined;
+  HouseholdName: undefined;
+};
+
+type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
+
+interface LoginScreenProps {
+  navigation: LoginScreenNavigationProp;
+}
+
+export function LoginScreen({ navigation }: LoginScreenProps) {
+  const { signInWithGoogle, showGuestImportPrompt, resolveGuestImport, showHouseholdNameScreen } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Navigate to HouseholdName screen if flag is set (after OAuth callback with new household)
+  useEffect(() => {
+    if (showHouseholdNameScreen) {
+      navigation.navigate('HouseholdName');
+    }
+  }, [showHouseholdNameScreen, navigation]);
+
+  /**
+   * Handles Google sign-in button press.
+   * Navigation to HouseholdName screen is handled by useEffect watching showHouseholdNameScreen flag.
+   */
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
       await signInWithGoogle();
+      // Navigation to HouseholdName screen is handled by useEffect watching showHouseholdNameScreen
+      // RootNavigator will automatically show MainNavigator if user is set and flag is not set
     } catch (error) {
       Alert.alert(
         'Sign In Failed',
@@ -34,18 +60,8 @@ export function LoginScreen() {
     }
   };
 
-  const handleGuestSignIn = async () => {
-    try {
-      await signInAsGuest();
-    } catch (error) {
-      Alert.alert(
-        'Sign In Failed',
-        error instanceof Error
-          ? error.message
-          : 'Unable to sign in as guest. Please try again.',
-        [{ text: 'OK' }]
-      );
-    }
+  const handleJoinHousehold = () => {
+    navigation.navigate('EnterInviteCode');
   };
 
   return (
@@ -64,18 +80,14 @@ export function LoginScreen() {
         <View style={styles.buttonContainer}>
           <GoogleSignInButton onPress={handleGoogleSignIn} isLoading={isLoading} />
 
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>Or continue as guest</Text>
-            <View style={styles.divider} />
-          </View>
-
           <TouchableOpacity
-            style={styles.guestButton}
-            onPress={handleGuestSignIn}
+            style={styles.joinButton}
+            onPress={handleJoinHousehold}
             activeOpacity={0.7}
+            disabled={isLoading}
           >
-            <Text style={styles.guestButtonText}>Skip for now</Text>
+            <Ionicons name="people-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
+            <Text style={styles.joinButtonText}>Join household</Text>
           </TouchableOpacity>
         </View>
 
@@ -146,26 +158,22 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     alignSelf: 'center',
   },
-  dividerContainer: {
+  joinButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: spacing.lg,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    paddingHorizontal: spacing.md,
-  },
-  guestButton: {
-    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  guestButtonText: {
+  joinButtonIcon: {
+    marginRight: spacing.sm,
+  },
+  joinButtonText: {
     ...typography.button,
     color: colors.secondary,
   },
