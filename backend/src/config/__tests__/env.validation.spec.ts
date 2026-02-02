@@ -27,11 +27,11 @@ describe('validateEnv', () => {
   it.each([
     [
       'succeeds in development without DIRECT_URL',
-      buildBaseEnv({ NODE_ENV: 'development', DIRECT_URL: undefined }),
+      buildBaseEnv({ NODE_ENV: 'development' }),
     ],
     [
       'succeeds in production without DIRECT_URL',
-      buildBaseEnv({ NODE_ENV: 'production', DIRECT_URL: undefined }),
+      buildBaseEnv({ NODE_ENV: 'production' }),
     ],
     [
       'succeeds in production with DIRECT_URL',
@@ -41,7 +41,11 @@ describe('validateEnv', () => {
       }),
     ],
   ])('%s', (_label, env) => {
-    process.env = env;
+    // Filter out undefined values before setting process.env
+    const filteredEnv = Object.fromEntries(
+      Object.entries(env).filter(([, value]) => value !== undefined),
+    ) as Record<string, string>;
+    process.env = filteredEnv;
     expect(validateEnv().DATABASE_URL).toBe(
       'postgresql://user:pass@localhost:5432/db?schema=public',
     );
