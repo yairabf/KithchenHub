@@ -116,8 +116,24 @@ export class AuthService {
 
       let user = await this.findOrCreateGoogleUser(payload);
 
-      if (dto.household && !user.householdId) {
-        await this.resolveAndAttachHousehold(user.id, dto.household);
+      if (user.householdId) {
+        if (dto.household) {
+          throw new BadRequestException(
+            'Cannot attach or switch household during login.',
+          );
+        }
+      } else {
+        if (dto.household) {
+          await this.resolveAndAttachHousehold(user.id, dto.household);
+        } else {
+          const defaultName = this.deriveDefaultHouseholdName(
+            payload.email ?? '',
+            payload.name,
+          );
+          await this.resolveAndAttachHousehold(user.id, {
+            name: defaultName,
+          });
+        }
         const refreshed = await this.authRepository.findUserById(user.id);
         user = (refreshed ?? user) as UserWithHousehold;
       }
@@ -423,6 +439,49 @@ export class AuthService {
     }
 
     return user as UserWithHousehold;
+  }
+
+  /**
+   * Derives a default household name from email and optional display name.
+   * Prefer display name (title-cased + "'s family"); fallback to email local-part; edge case "My family".
+   *
+   * @param email - User email (used for fallback when display name is empty)
+   * @param displayName - Optional display name from Google (payload.name)
+   * @returns Default household name, e.g. "John's family" or "My family"
+   */
+  private deriveDefaultHouseholdName(
+    email: string,
+    displayName?: string | null,
+  ): string {
+    const trimmedDisplay =
+      displayName != null && typeof displayName === 'string'
+        ? displayName.trim()
+        : '';
+    if (trimmedDisplay.length > 0) {
+      const name = this.toTitleCase(trimmedDisplay);
+      if (name.length > 0) return `${name}'s family`;
+    }
+    const localPart = (email ?? '').trim().split('@')[0] ?? '';
+    const normalizedLocal = localPart.replace(/[^a-zA-Z0-9]+/g, ' ').trim();
+    if (normalizedLocal.length > 0) {
+      const name = this.toTitleCase(normalizedLocal);
+      if (name.length > 0) return `${name}'s family`;
+    }
+    return 'My family';
+  }
+
+  /**
+   * Capitalizes the first letter of each word (split on spaces).
+   */
+  private toTitleCase(s: string): string {
+    return s
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(
+        (word) =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+      )
+      .join(' ');
   }
 
   /**

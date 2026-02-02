@@ -230,7 +230,7 @@ describe('HouseholdsService', () => {
       expect(repository.createHousehold).not.toHaveBeenCalled();
     });
 
-    it('should throw ForbiddenException when user already has a household', async () => {
+    it('should return existing household id when user already has a household (race-safe)', async () => {
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({
         id: mockUserId,
         householdId: mockHouseholdId,
@@ -242,10 +242,14 @@ describe('HouseholdsService', () => {
         updatedAt: new Date(),
       } as any);
 
-      await expect(
-        service.createHouseholdForNewUser(mockUserId, mockHouseholdName),
-      ).rejects.toThrow(ForbiddenException);
+      const result = await service.createHouseholdForNewUser(
+        mockUserId,
+        mockHouseholdName,
+      );
+
+      expect(result).toBe(mockHouseholdId);
       expect(repository.createHousehold).not.toHaveBeenCalled();
+      expect(prisma.user.update).not.toHaveBeenCalled();
     });
   });
 
@@ -309,7 +313,30 @@ describe('HouseholdsService', () => {
       expect(prisma.user.update).not.toHaveBeenCalled();
     });
 
-    it('should throw ForbiddenException when user already has a household', async () => {
+    it('should no-op when user is already in the same household (idempotent)', async () => {
+      jest.spyOn(repository, 'findHouseholdById').mockResolvedValue({
+        id: mockHouseholdId,
+        name: mockHouseholdName,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+        id: mockUserId,
+        householdId: mockHouseholdId,
+        email: 'u@example.com',
+        name: 'User',
+        avatarUrl: null,
+        role: 'Member',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      await service.addUserToHousehold(mockHouseholdId, mockUserId);
+
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when user already has a different household', async () => {
       jest.spyOn(repository, 'findHouseholdById').mockResolvedValue({
         id: mockHouseholdId,
         name: mockHouseholdName,
