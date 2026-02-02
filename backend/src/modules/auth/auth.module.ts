@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './controllers/auth.controller';
+import { OAuthController } from './controllers/oauth.controller';
 import { AuthService } from './services/auth.service';
+import { OAuthStateService } from './services/oauth-state.service';
 import { AuthRepository } from './repositories/auth.repository';
 import { AuthCleanupService } from './services/auth-cleanup.service';
 import { HouseholdsModule } from '../households/households.module';
@@ -30,8 +32,14 @@ const config = loadConfiguration();
       }),
     } as any),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, AuthRepository, AuthCleanupService, UuidService],
+  controllers: [AuthController, OAuthController],
+  providers: [
+    AuthService,
+    OAuthStateService,
+    AuthRepository,
+    AuthCleanupService,
+    UuidService,
+  ],
   exports: [AuthService, AuthCleanupService, JwtModule],
 })
 export class AuthModule {}

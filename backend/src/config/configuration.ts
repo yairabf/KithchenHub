@@ -16,6 +16,11 @@ export interface AppConfig {
     clientId?: string;
     clientSecret?: string;
   };
+  auth: {
+    backendBaseUrl: string;
+    appScheme: string;
+    stateSecret: string;
+  };
   logging: {
     level: string;
     format: 'json' | 'pretty';
@@ -58,6 +63,11 @@ export const loadConfiguration = (): AppConfig => {
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+    auth: {
+      backendBaseUrl: env.AUTH_BACKEND_BASE_URL,
+      appScheme: env.AUTH_APP_SCHEME,
+      stateSecret: env.AUTH_STATE_SECRET,
     },
     logging: {
       level: env.LOG_LEVEL,
