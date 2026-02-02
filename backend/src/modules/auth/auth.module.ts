@@ -4,6 +4,7 @@ import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 import { AuthRepository } from './repositories/auth.repository';
 import { AuthCleanupService } from './services/auth-cleanup.service';
+import { HouseholdsModule } from '../households/households.module';
 import { PrismaModule } from '../../infrastructure/database/prisma/prisma.module';
 import { UuidService } from '../../common/services/uuid.service';
 import { loadConfiguration } from '../../config/configuration';
@@ -20,6 +21,7 @@ const config = loadConfiguration();
 @Module({
   imports: [
     PrismaModule,
+    HouseholdsModule,
     JwtModule.registerAsync({
       global: true,
       useFactory: () => ({

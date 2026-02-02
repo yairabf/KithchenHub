@@ -1,4 +1,5 @@
 import {
+  HttpException,
   Injectable,
   UnauthorizedException,
   BadRequestException,
@@ -8,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { AuthRepository } from '../repositories/auth.repository';
+import { HouseholdsService } from '../../households/services/households.service';
 import { UuidService } from '../../../common/services/uuid.service';
 import { loadConfiguration } from '../../../config/configuration';
 import { User, Household } from '@prisma/client';
@@ -21,6 +23,7 @@ import {
   SyncShoppingListDto,
   SyncRecipeDto,
   SyncChoreDto,
+  UserCreationHouseholdDto,
 } from '../dtos';
 import {
   JwtPayload,
@@ -76,6 +79,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private uuidService: UuidService,
+    private householdsService: HouseholdsService,
   ) {
     const config = loadConfiguration();
     if (config.google.clientId && config.google.clientSecret) {
@@ -110,7 +114,13 @@ export class AuthService {
         throw new UnauthorizedException('Invalid Google token');
       }
 
-      const user = await this.findOrCreateGoogleUser(payload);
+      let user = await this.findOrCreateGoogleUser(payload);
+
+      if (dto.household && !user.householdId) {
+        await this.resolveAndAttachHousehold(user.id, dto.household);
+        const refreshed = await this.authRepository.findUserById(user.id);
+        user = (refreshed ?? user) as UserWithHousehold;
+      }
 
       const tokens = await this.generateTokens(user);
 
@@ -121,6 +131,9 @@ export class AuthService {
         householdId: user.householdId,
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       this.logger.error('Google token verification failed', {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
@@ -410,6 +423,42 @@ export class AuthService {
     }
 
     return user as UserWithHousehold;
+  }
+
+  /**
+   * Resolves household from auth payload and attaches user to it.
+   * New household: name present (optional id) → create and set user as Admin.
+   * Existing household: id only → add user as Member.
+   */
+  private async resolveAndAttachHousehold(
+    userId: string,
+    household: UserCreationHouseholdDto,
+  ): Promise<void> {
+    const trimmedName =
+      household.name != null && typeof household.name === 'string'
+        ? household.name.trim()
+        : '';
+
+    if (trimmedName.length > 0) {
+      await this.householdsService.createHouseholdForNewUser(
+        userId,
+        trimmedName,
+        household.id,
+      );
+    } else if (
+      household.id != null &&
+      typeof household.id === 'string' &&
+      household.id.trim().length > 0
+    ) {
+      await this.householdsService.addUserToHousehold(
+        household.id.trim(),
+        userId,
+      );
+    } else {
+      throw new BadRequestException(
+        'Household must specify name (new household) or id (existing household).',
+      );
+    }
   }
 
   /**
