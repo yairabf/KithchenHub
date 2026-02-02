@@ -45,4 +45,10 @@ export interface ICacheAwareRepository<T extends EntityTimestamps> {
    * Invalidate cache (force refresh on next read)
    */
   invalidateCache(): Promise<void>;
+  
+  /**
+   * Force refresh from API (bypasses cache)
+   * Fetches fresh data from API and updates cache
+   */
+  refresh(): Promise<T[]>;
 }

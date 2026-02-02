@@ -1,8 +1,10 @@
 /**
  * Cache-Aware Repository
  * 
- * Implements cache-first read strategy with background refresh for stale data.
- * Handles cache state (fresh/stale/expired) and network-aware behavior.
+ * Implements cache-first read strategy:
+ * - Fetches from API ONLY when cache is missing (first login) or forceRefresh=true (explicit refresh)
+ * - Returns cached data for all other cases (fresh/stale/expired)
+ * - No background refresh - data is served from cache until explicitly refreshed
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,9 +13,7 @@ import { EntityTimestamps, toPersistedTimestamps } from '../types/entityMetadata
 import type { SyncEntityType } from '../utils/cacheMetadata';
 import { getCacheMetadata, updateCacheMetadata, clearCacheMetadata } from '../utils/cacheMetadata';
 import { getCacheState, type CacheState } from '../config/cacheConfig';
-import { queueRefresh } from '../utils/backgroundRefresh';
 import { applyRemoteUpdatesToLocal } from '../utils/syncApplication';
-import { normalizePersistedArray } from '../utils/storageHelpers';
 import { cacheEvents } from '../utils/cacheEvents';
 import { readCacheArray, writeCacheArray } from '../utils/cacheStorage';
 
@@ -93,32 +93,56 @@ async function writeCachedEntities<T extends EntityTimestamps>(
 }
 
 /**
- * Cache-first read with background refresh
+ * Cache-first read strategy
  * 
  * Implements the cache-first strategy:
- * - Fresh: Return cache, no refresh
- * - Stale: Return cache immediately, refresh in background if online
- * - Expired: Block for network if online, return cache if offline
- * - Missing: Fetch from network
+ * - Fresh: Return cache, no API call
+ * - Stale: Return cache, no API call (use refresh() to fetch)
+ * - Expired: Return cache, no API call (use refresh() to fetch)
+ * - Missing: Fetch from API (first login only)
  * - Future version: Prefer network fetch but preserve local data (don't blow away)
+ * 
+ * API calls are made ONLY when:
+ * 1. Cache is missing (first login)
+ * 2. forceRefresh=true (explicit refresh via repository.refresh())
+ * 
+ * All other cases return cached data without API calls.
+ * Use the repository's refresh() method to force a fresh fetch from the API.
  * 
  * @param entityType - The entity type to get
  * @param fetchFn - Function that fetches fresh data from API
  * @param getId - Function to extract entity ID for merging
  * @param isOnline - Whether the device is online
+ * @param forceRefresh - If true, force fetch from API even if cache exists (default: false)
  * @returns Array of entities
  */
 export async function getCached<T extends EntityTimestamps>(
   entityType: SyncEntityType,
   fetchFn: () => Promise<T[]>,
   getId: (entity: T) => string,
-  isOnline: boolean
+  isOnline: boolean,
+  forceRefresh: boolean = false
 ): Promise<T[]> {
+  console.log(`[getCached] Starting for ${entityType}, isOnline: ${isOnline}, forceRefresh: ${forceRefresh}`);
+  
+  // If forceRefresh is true, always fetch from API and replace cache entirely
+  if (forceRefresh && isOnline) {
+    console.log(`[getCached] ${entityType} force refresh requested, fetching from API...`);
+    const fresh = await fetchFn();
+    console.log(`[getCached] ${entityType} fetched ${fresh.length} items from API`);
+    await writeCachedEntities(entityType, fresh, getId);
+    await updateCacheMetadata(entityType, new Date().toISOString());
+    // Emit cache change event to trigger UI updates
+    cacheEvents.emitCacheChange(entityType);
+    return fresh;
+  }
+  
   // Read cache with status tracking
   const cacheResult = await readCacheArray<T>(entityType);
   const cached = cacheResult.data;
   const metadata = await getCacheMetadata(entityType);
   const state = getCacheState(entityType, metadata?.lastSyncedAt ?? null);
+  console.log(`[getCached] ${entityType} cache state: ${state}, cached items: ${cached.length}, status: ${cacheResult.status}`);
 
   // Handle future_version status: prefer network but preserve local data
   if (cacheResult.status === 'future_version') {
@@ -150,6 +174,10 @@ export async function getCached<T extends EntityTimestamps>(
     // Online and corrupt cache - fetch from network
     const fresh = await fetchFn();
     await writeCachedEntities(entityType, fresh, getId);
+    // CRITICAL: Update metadata after writing cache to prevent treating it as "missing" on next read
+    await updateCacheMetadata(entityType, new Date().toISOString());
+    // Emit cache change event to trigger UI updates
+    cacheEvents.emitCacheChange(entityType);
     return fresh;
   }
 
@@ -160,34 +188,29 @@ export async function getCached<T extends EntityTimestamps>(
       return [];
     }
     // Online and no cache - fetch from network
+    console.log(`[getCached] ${entityType} cache missing, fetching from API...`);
     const fresh = await fetchFn();
+    console.log(`[getCached] ${entityType} fetched ${fresh.length} items from API`);
     await writeCachedEntities(entityType, fresh, getId);
+    // CRITICAL: Update metadata after writing cache to prevent treating it as "missing" on next read
+    await updateCacheMetadata(entityType, new Date().toISOString());
+    // Emit cache change event to trigger UI updates
+    cacheEvents.emitCacheChange(entityType);
     return fresh;
   }
 
   // Handle expired cache
   if (state === 'expired') {
-    if (!isOnline) {
-      // Offline - return cached data (better than nothing)
-      return cached;
-    }
-    // Online - block for network fetch
-    const fresh = await fetchFn();
-    await applyRemoteUpdatesToLocal(entityType, fresh, getId);
-    await updateCacheMetadata(entityType, new Date().toISOString());
-    return fresh;
+    // Return cached data (even if expired) - forceRefresh is handled above
+    console.log(`[getCached] ${entityType} cache expired, returning cached data (use refresh() to fetch from API)`);
+    return cached;
   }
 
   // Handle stale cache
   if (state === 'stale') {
-    if (isOnline) {
-      // Trigger background refresh (non-blocking)
-      queueRefresh(entityType, fetchFn, getId).catch((error) => {
-        // Background refresh errors are already logged in queueRefresh
-        console.error(`Background refresh error for ${entityType}:`, error);
-      });
-    }
     // Return cached data immediately (even if stale)
+    // Only fetch from API on explicit refresh (forceRefresh=true) or pull-to-refresh
+    console.log(`[getCached] ${entityType} cache is stale, returning cached data (use refresh() to fetch from API)`);
     return cached;
   }
 
@@ -253,6 +276,15 @@ export async function addEntityToCache<T extends EntityTimestamps>(
 ): Promise<void> {
   try {
     const current = await readCachedEntitiesForUpdate<T>(entityType);
+    const entityId = getId(newEntity);
+    
+    // Check if entity already exists (by ID) to prevent duplicates
+    const exists = current.some(entity => getId(entity) === entityId);
+    if (exists) {
+      console.warn(`[addEntityToCache] Entity with ID ${entityId} already exists in cache for ${entityType}, skipping add`);
+      return;
+    }
+    
     await setCached(entityType, [...current, newEntity], getId);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -301,20 +333,74 @@ export async function updateEntityInCache<T extends EntityTimestamps>(
   matchFn: (entity: T) => boolean
 ): Promise<void> {
   try {
-    const current = await readCachedEntitiesForUpdate<T>(entityType);
-    const updatedCache = current.map(entity => matchFn(entity) ? updatedEntity : entity);
-    await setCached(entityType, updatedCache, getId);
+    // Validate updatedEntity has an ID
+    const updatedId = getId(updatedEntity);
+    if (!updatedId) {
+      console.error(`[updateEntityInCache] Updated entity for ${entityType} is missing ID, cannot update cache`);
+      return;
+    }
+
+    // Read cache with status check to detect corruption
+    const cacheResult = await readCacheArray<T>(entityType);
+    const current = cacheResult.data;
+    
+    // Detect corrupt cache and log warning
+    if (cacheResult.status === 'corrupt') {
+      console.error(`[updateEntityInCache] Cache for ${entityType} is corrupt (status: corrupt). This may cause data loss. Invalidating cache and fetching fresh data.`);
+      // Invalidate corrupt cache to force fresh fetch
+      await invalidateCache(entityType);
+      // Still proceed with update - add entity to empty cache
+      await setCached(entityType, [updatedEntity], getId);
+      console.warn(`[updateEntityInCache] Added entity ${updatedId} to empty cache after corruption. Fresh data should be fetched on next read.`);
+      return;
+    }
+    
+    console.log(`[updateEntityInCache] Updating ${entityType} cache: current count=${current.length}, status=${cacheResult.status}, updating ID=${updatedId}`);
+    
+    // Check if any entity matches
+    const matchedEntities = current.filter(matchFn);
+    if (matchedEntities.length === 0) {
+      console.warn(`[updateEntityInCache] No matching entity found for ${entityType} with ID ${updatedId}, adding to cache instead`);
+      // If no match found, add the entity to cache (might be a new entity)
+      await setCached(entityType, [...current, updatedEntity], getId);
+      return;
+    }
+    
+    if (matchedEntities.length > 1) {
+      console.warn(`[updateEntityInCache] Multiple entities matched for ${entityType} with ID ${updatedId}, updating all matches`);
+    }
+    
+    // Update matched entities
+    const updatedCache = current.map(entity => {
+      if (matchFn(entity)) {
+        // Ensure the updated entity has the same ID as the original
+        const entityId = getId(entity);
+        if (entityId !== updatedId) {
+          console.warn(`[updateEntityInCache] ID mismatch: entity ID=${entityId}, updated ID=${updatedId}, preserving original ID`);
+          return { ...updatedEntity, id: entityId } as T;
+        }
+        return updatedEntity;
+      }
+      return entity;
+    });
+    
+    // Validate all entities in updated cache have IDs
+    const entitiesWithoutIds = updatedCache.filter(e => !getId(e));
+    if (entitiesWithoutIds.length > 0) {
+      console.error(`[updateEntityInCache] Found ${entitiesWithoutIds.length} entities without IDs after update, filtering them out`);
+      const validCache = updatedCache.filter(e => getId(e));
+      await setCached(entityType, validCache, getId);
+    } else {
+      await setCached(entityType, updatedCache, getId);
+    }
+    
+    console.log(`[updateEntityInCache] Successfully updated ${entityType} cache: new count=${updatedCache.length}`);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`Failed to update cache after update for ${entityType}:`, errorMessage);
+    console.error(`[updateEntityInCache] Failed to update cache for ${entityType}:`, errorMessage);
+    console.error(`[updateEntityInCache] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
     // Don't throw - server operation succeeded, cache update is best-effort
-    // Optionally invalidate cache to force refresh on next read
-    try {
-      await invalidateCache(entityType);
-    } catch (invalidateError) {
-      // Ignore invalidation errors
-      console.error(`Failed to invalidate cache after update error:`, invalidateError);
-    }
+    // Don't invalidate cache on error - preserve existing data
   }
 }
 

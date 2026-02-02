@@ -180,13 +180,18 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
    * Once services are refactored, this can be extracted to a shared method.
    */
   private async fetchChoresFromApi(): Promise<Chore[]> {
+    console.log('[fetchChoresFromApi] Fetching chores from API...');
     const response = await api.get<ChoreListResponseDto>('/chores');
+    console.log('[fetchChoresFromApi] API response:', JSON.stringify(response, null, 2));
+    console.log('[fetchChoresFromApi] Response type:', typeof response, 'today:', response.today?.length ?? 0, 'upcoming:', response.upcoming?.length ?? 0);
     const todayChores = response.today.map((chore) => mapChoreDto(chore, 'today'));
     const upcomingChores = response.upcoming.map((chore) => mapChoreDto(chore, 'thisWeek'));
 
     // Normalize timestamps from API response (server is authority)
     const allChores = [...todayChores, ...upcomingChores];
-    return allChores.map((chore) => normalizeTimestampsFromApi<Chore>(chore));
+    const normalized = allChores.map((chore) => normalizeTimestampsFromApi<Chore>(chore));
+    console.log('[fetchChoresFromApi] Normalized chores:', normalized.length);
+    return normalized;
   }
   
   /**
@@ -198,7 +203,22 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       this.entityType,
       () => this.fetchChoresFromApi(),
       (chore) => this.getId(chore),
-      getIsOnline()
+      getIsOnline(),
+      false // Don't force refresh on normal findAll
+    );
+  }
+  
+  /**
+   * Force refresh from API (bypasses cache)
+   * Fetches fresh data from API and updates cache
+   */
+  async refresh(): Promise<Chore[]> {
+    return getCached<Chore>(
+      this.entityType,
+      () => this.fetchChoresFromApi(),
+      (chore) => this.getId(chore),
+      getIsOnline(),
+      true // Force refresh
     );
   }
   
