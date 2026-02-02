@@ -30,9 +30,19 @@ These rules apply to every programming language. Always follow the idioms of whi
 
 7. **Organize code by responsibility in a familiar order** – Place public APIs or entry points first, then internal helpers, keeping utilities in their own modules or files when that’s customary for the language. Follow any additional ordering guidance surfaced via Context7.
 
+### Pre-Commit Requirements:
+
+8. **ALWAYS run build, lint, and tests before committing**:
+   - **Pre-commit hook is enforced** - Git hooks automatically run checks before allowing commits
+   - **Backend checks**: `npm run build`, `npm run lint`, `npm run test:unit`
+   - **Mobile checks**: `npx tsc --noEmit`, `npm test`
+   - **Never bypass hooks** - Use `git commit --no-verify` only in exceptional circumstances (e.g., WIP commits)
+   - **Setup for new developers**: Run `./scripts/setup-git-hooks.sh` to install hooks
+   - **If checks fail**: Fix the errors before committing - do not commit broken code
+
 ### Testing Rules:
 
-8. **Always parameterize tests** - Use test parameterization to cover multiple scenarios:
+9. **Always parameterize tests** - Use test parameterization to cover multiple scenarios:
    ```typescript
    describe.each([
      ['valid input', 'test@example.com', true],
@@ -46,14 +56,14 @@ These rules apply to every programming language. Always follow the idioms of whi
    });
    ```
 
-9. **Follow TDD (Test-Driven Development) approach**:
+10. **Follow TDD (Test-Driven Development) approach**:
    - **ALWAYS create test file first** before implementing any new file
    - Write comprehensive test cases that describe the expected behavior and use cases
    - Create template tests that cover all scenarios and edge cases
    - Only then implement the actual logic/function to make tests pass
    - This ensures complete test coverage and validates the design before implementation
 
-10. **Explain file purpose before implementation**:
+11. **Explain file purpose before implementation**:
     - **ALWAYS explain exactly what a file does** before writing any code
     - Describe the file's responsibility, inputs, outputs, and behavior
     - Outline the key methods/functions and their purposes
@@ -62,19 +72,19 @@ These rules apply to every programming language. Always follow the idioms of whi
 
 ### Error Handling and Type Safety:
 
-11. **Handle edge cases gracefully**:
+12. **Handle edge cases gracefully**:
     - Always check for null/undefined values
     - Use optional chaining (`?.`) and nullish coalescing (`??`)
     - Provide meaningful error messages
 
-12. **Use TypeScript strictly**:
+13. **Use TypeScript strictly**:
     - Avoid `any` type - use proper interfaces and types
     - Enable strict mode in tsconfig.json
     - Use union types for better type safety
 
 ### Composer/Plan Mode - Epic & Task Documentation:
 
-13. **ALWAYS Follow Epic/Task Documentation Structure in Plan Mode**:
+14. **ALWAYS Follow Epic/Task Documentation Structure in Plan Mode**:
    
    When developing a new feature in Composer/Plan Mode:
    
@@ -146,7 +156,7 @@ These rules apply to every programming language. Always follow the idioms of whi
    - Acceptance criteria
    ```
 
-15. **Summary Document Structure (`*_summary.mdc`)**:
+16. **Summary Document Structure (`*_summary.mdc`)**:
    ```markdown
    # [Task Number] - [Task Name] - Implementation Summary
    
@@ -177,19 +187,19 @@ These rules apply to every programming language. Always follow the idioms of whi
    - Related tasks
    ```
 
-16. **ALWAYS Create Plan Document FIRST**:
+17. **ALWAYS Create Plan Document FIRST**:
    - Before writing any code, create the `*_plan.mdc` file
    - Get user approval on the plan before implementation
    - Update plan if requirements change
 
-17. **ALWAYS Create Summary Document LAST**:
+18. **ALWAYS Create Summary Document LAST**:
    - After implementation is complete, create `*_summary.mdc`
    - Document actual results vs. planned approach
    - Include lessons learned and next steps
 
 ### Problem-Solving and UI Testing Rules:
 
-22. **Use Playwright for UI Testing and Validation**:
+19. **Use Playwright for UI Testing and Validation**:
    - **ALWAYS use Playwright MCP** for testing browser extension functionality
    - Test authentication flows, user interactions, and API integrations
    - Validate CORS handling and cross-origin communication
@@ -203,7 +213,7 @@ These rules apply to every programming language. Always follow the idioms of whi
    - Verify accessibility features and keyboard navigation
    - Test cross-browser compatibility (Chrome, Firefox, Safari)
 
-24. **Use Context7 MCP for Code Quality and Best Practices**:
+21. **Use Context7 MCP for Code Quality and Best Practices**:
    - **ALWAYS use Context7 MCP** to verify code quality and ensure up-to-date practices
    - Check library documentation for latest APIs and recommended patterns
    - Validate implementation approaches against current best practices
@@ -218,6 +228,7 @@ These rules apply to every programming language. Always follow the idioms of whi
 - "Are my variable and function names descriptive enough?"
 - "Have I written comprehensive parameterized tests first?"
 - "Do I understand exactly what this file should do?"
+- "Have I run build, lint, and tests before committing?"
 - "How can I test this UI functionality with Playwright?"
 - "Should I use Context7 MCP to verify this implementation is following current best practices?"
 
