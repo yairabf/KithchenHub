@@ -9,6 +9,9 @@ function buildBaseEnv(overrides: Record<string, string | undefined> = {}) {
     JWT_REFRESH_SECRET: 'y'.repeat(32),
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_ANON_KEY: 'anon-key',
+    AUTH_BACKEND_BASE_URL: 'http://localhost:3000',
+    AUTH_APP_SCHEME: 'kitchen-hub',
+    AUTH_STATE_SECRET: 'test-secret-key-for-validation-only',
     ...overrides,
   } satisfies Record<string, string | undefined>;
 }
