@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,12 +91,13 @@ const calculateCardMargin = (index: number): ViewStyle => {
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { width, isTablet } = useResponsive();
   const { user } = useAuth();
-  const { recipes, isLoading, addRecipe, updateRecipe } = useRecipes();
+  const { recipes, isLoading, addRecipe, updateRecipe, refresh } = useRecipes();
   const { groceryItems } = useCatalog(); // Use catalog hook for grocery items
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
   const [isSavingRecipe, setIsSavingRecipe] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Calculate card width dynamically based on screen size
   // Account for container padding and gap between columns
@@ -112,14 +114,53 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     }
   }, [width, isTablet]);
 
-  const filteredRecipes = recipes.filter(recipe => {
-    const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
-    const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase());
+  // Deduplicate recipes by ID to prevent duplicate key warnings
+  const uniqueRecipes = useMemo(() => {
+    const seen = new Set<string>();
+    const filtered = recipes.filter(recipe => {
+      const id = recipe?.id;
+      if (!id) {
+        console.warn('[RecipesScreen] Recipe missing ID, filtering out:', JSON.stringify({ name: recipe?.name, title: recipe?.title, hasId: !!recipe?.id }));
+        return false;
+      }
+      if (seen.has(id)) {
+        console.warn('[RecipesScreen] Duplicate recipe ID found, filtering out:', id, JSON.stringify({ name: recipe?.name, title: recipe?.title }));
+        return false;
+      }
+      seen.add(id);
+      return true;
+    });
+    
+    if (filtered.length !== recipes.length) {
+      console.warn(`[RecipesScreen] Filtered ${recipes.length - filtered.length} recipes (missing IDs or duplicates). Original: ${recipes.length}, Filtered: ${filtered.length}`);
+    }
+    
+    return filtered;
+  }, [recipes]);
+
+  const filteredRecipes = uniqueRecipes.filter(recipe => {
+    // Safely handle recipes that might be missing fields (e.g., from API list endpoint)
+    const recipeName = recipe?.name || recipe?.title || '';
+    const recipeCategory = recipe?.category || 'Dinner';
+    
+    const matchesCategory = selectedCategory === 'All' || recipeCategory === selectedCategory;
+    const matchesSearch = recipeName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const handleAddRecipe = () => {
     setShowAddRecipeModal(true);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refresh();
+    } catch (error) {
+      console.error('Failed to refresh recipes:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleSaveRecipe = async (data: NewRecipeData) => {
@@ -165,7 +206,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         }}
       />
 
-      {isLoading ? (
+      {isLoading && recipes.length === 0 ? (
         <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -209,7 +250,13 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             ))}
           </ScrollView>
 
-          <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          <ScrollView 
+            style={styles.content} 
+            contentContainerStyle={styles.contentContainer}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+            }
+          >
             <View style={styles.grid}>
               {filteredRecipes.map((recipe, index) => (
                 <RecipeCard

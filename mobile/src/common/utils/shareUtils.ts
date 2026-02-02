@@ -166,14 +166,21 @@ export function formatChoresText(
  * Format recipe into shareable text
  */
 export function formatRecipeText(recipe: Recipe): string {
-  const header = `Recipe: ${recipe.name}`;
+  // Defensive check: ensure recipe has required fields
+  if (!recipe) {
+    return 'Recipe not available';
+  }
+  
+  const recipeName = recipe.name || recipe.title || 'Untitled Recipe';
+  const header = `Recipe: ${recipeName}`;
   const lines: string[] = [];
 
   if (recipe.description) {
     lines.push(`\n${recipe.description}`);
   }
 
-  lines.push(`\nCook Time: ${recipe.cookTime}`);
+  const cookTime = recipe.cookTime || 'N/A';
+  lines.push(`\nCook Time: ${cookTime}`);
   if (recipe.prepTime) {
     lines.push(`Prep Time: ${recipe.prepTime}`);
   }
@@ -182,18 +189,28 @@ export function formatRecipeText(recipe: Recipe): string {
   }
 
   lines.push('\nIngredients:');
-  if (recipe.ingredients.length === 0) {
+  const ingredients = recipe.ingredients || [];
+  if (ingredients.length === 0) {
     lines.push(`  ${SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS}`);
   } else {
-    recipe.ingredients.forEach(ing => {
-      lines.push(`  • ${ing.quantity} ${ing.unit} ${ing.name}`);
+    ingredients.forEach(ing => {
+      const quantity = ing.quantity || '';
+      const unit = ing.unit || '';
+      const name = ing.name || '';
+      lines.push(`  • ${quantity} ${unit} ${name}`.trim());
     });
   }
 
   lines.push('\nInstructions:');
-  recipe.instructions.forEach((step, index) => {
-    lines.push(`  ${index + 1}. ${step.text}`);
-  });
+  const instructions = recipe.instructions || [];
+  if (instructions.length === 0) {
+    lines.push(`  ${SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS}`); // Reuse empty string constant
+  } else {
+    instructions.forEach((step, index) => {
+      const text = step?.text || '';
+      lines.push(`  ${index + 1}. ${text}`);
+    });
+  }
 
   return `${header}\n${SHARE_STRINGS.DIVIDER}${lines.join('\n')}${SHARE_STRINGS.FOOTER}`;
 }

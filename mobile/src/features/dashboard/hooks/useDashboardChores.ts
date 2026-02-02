@@ -15,7 +15,18 @@ import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 
 function filterTodayChores(chores: Chore[]): Chore[] {
-  return chores.filter((c) => c.section === 'today');
+  // Include chores with section 'today' OR chores without a dueDate (they're not overdue)
+  // Chores without a dueDate come from the backend in "upcoming" array and get mapped
+  // with section 'thisWeek' and dueDate 'Upcoming', so we include those too
+  return chores.filter((c) => {
+    if (c.section === 'today') return true;
+    // Chores without a dueDate are mapped with dueDate: 'Upcoming' and section: 'thisWeek'
+    // Include them on dashboard since they're not overdue
+    if (c.section === 'thisWeek' && c.dueDate === 'Upcoming') {
+      return true;
+    }
+    return false;
+  });
 }
 
 export interface UseDashboardChoresReturn {
@@ -55,6 +66,18 @@ export function useDashboardChores(): UseDashboardChoresReturn {
   const isLoading = isSignedIn ? cacheLoading : guestLoading;
 
   const todayChores = useMemo(() => filterTodayChores(chores), [chores]);
+
+  // For signed-in users, trigger initial fetch ONLY on first login (when cache is missing)
+  // Subsequent navigations will use cache (no API calls)
+  // Note: findAll() will only fetch from API if cache is missing, otherwise returns cache
+  useEffect(() => {
+    if (isSignedIn && repository) {
+      // Check cache - only fetches from API if cache is missing
+      repository.findAll().catch((error) => {
+        console.error('Failed to check cache for chores:', error);
+      });
+    }
+  }, [isSignedIn, repository]);
 
   useEffect(() => {
     if (!isSignedIn) {

@@ -50,10 +50,12 @@ export function AddRecipeModal({
     }
   }, [visible]);
 
-  // Validation
+  // Validation - ensure arrays exist
+  const ingredients = recipe.ingredients || [];
+  const instructions = recipe.instructions || [];
   const isValid =
     recipe.title.trim().length > 0 &&
-    recipe.ingredients.some((ing) => ing.name.trim().length > 0);
+    ingredients.some((ing) => ing.name.trim().length > 0);
 
   // Handlers
   const handleSave = () => {
@@ -61,8 +63,8 @@ export function AddRecipeModal({
       // Filter out empty ingredients and instructions
       const cleanedRecipe: NewRecipeData = {
         ...recipe,
-        ingredients: recipe.ingredients.filter((ing) => ing.name.trim()),
-        instructions: recipe.instructions.filter((inst) => inst.text.trim()),
+        ingredients: (recipe.ingredients || []).filter((ing) => ing.name.trim()),
+        instructions: (recipe.instructions || []).filter((inst) => inst.text.trim()),
         imageLocalUri: imageUri ?? undefined,
       };
       onSave(cleanedRecipe);
@@ -97,52 +99,58 @@ export function AddRecipeModal({
     field: keyof Ingredient,
     value: string
   ) => {
+    const currentIngredients = recipe.ingredients || [];
     setRecipe({
       ...recipe,
-      ingredients: recipe.ingredients.map((ing) =>
+      ingredients: currentIngredients.map((ing) =>
         ing.id === id ? { ...ing, [field]: value } : ing
       ),
     });
   };
 
   const handleRemoveIngredient = (id: string) => {
+    const currentIngredients = recipe.ingredients || [];
     setRecipe({
       ...recipe,
-      ingredients: recipe.ingredients.filter((ing) => ing.id !== id),
+      ingredients: currentIngredients.filter((ing) => ing.id !== id),
     });
   };
 
   // Step handlers
   const handleAddStep = () => {
+    const currentInstructions = recipe.instructions || [];
     setRecipe({
       ...recipe,
-      instructions: [...recipe.instructions, { id: generateId(), text: '' }],
+      instructions: [...currentInstructions, { id: generateId(), text: '' }],
     });
   };
 
   const handleUpdateStep = (id: string, value: string) => {
+    const currentInstructions = recipe.instructions || [];
     setRecipe({
       ...recipe,
-      instructions: recipe.instructions.map((inst) =>
+      instructions: currentInstructions.map((inst) =>
         inst.id === id ? { ...inst, text: value } : inst
       ),
     });
   };
 
   const handleRemoveStep = (id: string) => {
-    if (recipe.instructions.length <= 1) return;
+    const currentInstructions = recipe.instructions || [];
+    if (currentInstructions.length <= 1) return;
     setRecipe({
       ...recipe,
-      instructions: recipe.instructions.filter((inst) => inst.id !== id),
+      instructions: currentInstructions.filter((inst) => inst.id !== id),
     });
   };
 
   // Grocery search handler - adds ingredient and clears search
   const handleAddIngredientFromSearch = (item: GroceryItem) => {
+    const currentIngredients = recipe.ingredients || [];
     setRecipe({
       ...recipe,
       ingredients: [
-        ...recipe.ingredients,
+        ...currentIngredients,
         { id: generateId(), quantity: '', unit: '', name: item.name },
       ],
     });
@@ -286,7 +294,7 @@ export function AddRecipeModal({
             allowCustomItems={true}
           />
 
-          {recipe.ingredients.map((ing) => (
+          {(recipe.ingredients || []).map((ing) => (
             <View key={ing.id} style={styles.ingredientRow}>
               <TextInput
                 style={[styles.input, styles.qtyInput]}
@@ -332,7 +340,7 @@ export function AddRecipeModal({
         {/* Steps Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Steps</Text>
-          {recipe.instructions.map((step, idx) => (
+          {(recipe.instructions || []).map((step, idx) => (
             <View key={step.id} style={styles.stepRow}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>{idx + 1}</Text>
@@ -345,7 +353,7 @@ export function AddRecipeModal({
                 onChangeText={(text) => handleUpdateStep(step.id, text)}
                 multiline
               />
-              {recipe.instructions.length > 1 && (
+              {(recipe.instructions || []).length > 1 && (
                 <TouchableOpacity
                   style={styles.removeButton}
                   onPress={() => handleRemoveStep(step.id)}

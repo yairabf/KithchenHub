@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   GestureResponderEvent,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, pastelColors, spacing } from '../../../theme';
@@ -35,6 +36,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   
@@ -64,6 +66,34 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   const [guestChores, setGuestChores] = useState<Chore[]>([]);
   
   const chores = isSignedIn ? cachedChores : guestChores;
+  
+  // For signed-in users, trigger initial fetch ONLY on first login (when cache is missing)
+  // Subsequent navigations will use cache (no API calls)
+  // Note: findAll() will only fetch from API if cache is missing, otherwise returns cache
+  useEffect(() => {
+    if (isSignedIn && repository) {
+      // Check cache - only fetches from API if cache is missing
+      repository.findAll()
+        .then((chores) => {
+          console.log('[ChoresScreen] Cache check completed, chores:', chores.length);
+        })
+        .catch((error) => {
+          console.error('[ChoresScreen] Failed to check cache:', error);
+        });
+    }
+  }, [isSignedIn, repository]);
+
+  const handleRefresh = async () => {
+    if (!repository) return;
+    setIsRefreshing(true);
+    try {
+      await repository.refresh();
+    } catch (error) {
+      console.error('Failed to refresh chores:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   // Load chores for guest mode
   useEffect(() => {
@@ -313,6 +343,9 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+        }
       >
         {isWideScreen ? (
           // Two-column layout for tablets/landscape

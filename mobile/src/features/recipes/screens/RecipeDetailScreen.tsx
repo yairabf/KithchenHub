@@ -7,6 +7,8 @@ import {
   NativeScrollEvent,
   LayoutChangeEvent,
   Animated,
+  Text,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecipeHeader } from '../components/RecipeHeader';
@@ -16,7 +18,8 @@ import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatRecipeText } from '../../../common/utils/shareUtils';
 import { useResponsive } from '../../../common/hooks';
-import type { Ingredient } from '../../../mocks/recipes';
+import type { Ingredient, Recipe } from '../../../mocks/recipes';
+import { colors } from '../../../theme';
 import { styles } from './RecipeDetailScreen.styles';
 import type { RecipeDetailScreenProps } from './RecipeDetailScreen.types';
 import { STICKY_HEADER_ANIMATION, SCROLL_CONFIG } from './RecipeDetailScreen.constants';
@@ -26,6 +29,8 @@ import {
   calculateSpacerHeight,
   calculateShouldShowStickyHeader,
 } from './RecipeDetailScreen.utils';
+import { useRecipes } from '../hooks/useRecipes';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export function RecipeDetailScreen({
   recipe,
@@ -34,10 +39,74 @@ export function RecipeDetailScreen({
 }: RecipeDetailScreenProps) {
   const { isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const { getRecipeById } = useRecipes();
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [fullRecipe, setFullRecipe] = useState<Recipe | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const fetchingRef = useRef<string | null>(null);
+  const lastFetchedIdRef = useRef<string | null>(null);
+  
+  // Check if recipe has full details (ingredients/instructions)
+  const hasFullDetails = useMemo(() => {
+    return recipe.ingredients && recipe.ingredients.length > 0;
+  }, [recipe.ingredients]);
+  
+  // Reset state when recipe ID changes
+  useEffect(() => {
+    if (lastFetchedIdRef.current !== recipe.id) {
+      // Recipe ID changed, reset state
+      setFullRecipe(null);
+      setIsLoadingDetails(false);
+      fetchingRef.current = null;
+    }
+  }, [recipe.id]);
+  
+  // Fetch full recipe details if missing
+  useEffect(() => {
+    // If recipe already has full details or is guest mode, use recipe prop directly
+    if (hasFullDetails || user?.isGuest || !recipe.id) {
+      setFullRecipe(recipe);
+      lastFetchedIdRef.current = recipe.id;
+      fetchingRef.current = null;
+      return;
+    }
+    
+    // If we already fetched this recipe ID, don't fetch again
+    if (lastFetchedIdRef.current === recipe.id) {
+      return;
+    }
+    
+    // If we're already fetching this recipe, don't start another fetch
+    if (fetchingRef.current === recipe.id) {
+      return;
+    }
+    
+    // Fetch full details
+    fetchingRef.current = recipe.id;
+    setIsLoadingDetails(true);
+    getRecipeById(recipe.id)
+      .then((fetchedRecipe) => {
+        if (fetchedRecipe && fetchedRecipe.id === recipe.id) {
+          console.log('[RecipeDetailScreen] Fetched full recipe details:', JSON.stringify(fetchedRecipe, null, 2));
+          setFullRecipe(fetchedRecipe);
+          lastFetchedIdRef.current = recipe.id;
+        }
+      })
+      .catch((error) => {
+        console.error('[RecipeDetailScreen] Failed to fetch recipe details:', error);
+      })
+      .finally(() => {
+        setIsLoadingDetails(false);
+        fetchingRef.current = null;
+      });
+  }, [recipe.id, hasFullDetails, getRecipeById, user?.isGuest]);
+  
+  // Use fullRecipe if available, otherwise fall back to recipe prop
+  const displayRecipe = fullRecipe || recipe;
 
   // Track scroll position and header height for sticky header
   const [scrollY, setScrollY] = useState(0);
@@ -117,7 +186,7 @@ export function RecipeDetailScreen({
   }, [shouldShowStickyHeader, animateStickyHeaderIn, animateStickyHeaderOut]);
 
   // Format recipe for sharing using centralized formatter
-  const shareText = useMemo(() => formatRecipeText(recipe), [recipe]);
+  const shareText = useMemo(() => formatRecipeText(displayRecipe), [displayRecipe]);
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -151,11 +220,14 @@ export function RecipeDetailScreen({
   );
 
   const handleAddAllIngredients = useCallback(() => {
-    if (onAddToShoppingList) {
-      onAddToShoppingList(recipe.ingredients);
+    const ingredients = displayRecipe.ingredients || [];
+    if (onAddToShoppingList && ingredients.length > 0) {
+      onAddToShoppingList(ingredients);
+      showToast(`All ${ingredients.length} ingredients added`);
+    } else if (ingredients.length === 0) {
+      showToast('No ingredients to add');
     }
-    showToast(`All ${recipe.ingredients.length} ingredients added`);
-  }, [onAddToShoppingList, recipe.ingredients, showToast]);
+  }, [onAddToShoppingList, displayRecipe.ingredients, showToast]);
 
   // Handle scroll position tracking
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -242,24 +314,31 @@ export function RecipeDetailScreen({
       >
         {/* Recipe Header */}
         <View style={styles.headerSection} onLayout={handleHeaderLayout}>
-          <RecipeHeader recipe={recipe} />
+          <RecipeHeader recipe={displayRecipe} />
         </View>
 
         {/* Recipe Content Wrapper */}
         {/* Spacer to prevent jump - always render to prevent layout shift */}
         <View style={[styles.stickyHeaderSpacer, { height: spacerHeight }]} />
 
-        <RecipeContentWrapper
-          recipe={recipe}
-          completedSteps={completedSteps}
-          onToggleStep={handleToggleStep}
-          onAddIngredient={handleAddIngredient}
-          onAddAllIngredients={handleAddAllIngredients}
-          hideHeaderWhenSticky={isHeaderScrolled}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onHeaderLayout={handleContentHeaderLayout}
-        />
+        {isLoadingDetails ? (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.recipes} />
+            <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading recipe details...</Text>
+          </View>
+        ) : (
+          <RecipeContentWrapper
+            recipe={displayRecipe}
+            completedSteps={completedSteps}
+            onToggleStep={handleToggleStep}
+            onAddIngredient={handleAddIngredient}
+            onAddAllIngredients={handleAddAllIngredients}
+            hideHeaderWhenSticky={isHeaderScrolled}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onHeaderLayout={handleContentHeaderLayout}
+          />
+        )}
       </ScrollView>
 
       {/* Toast */}
