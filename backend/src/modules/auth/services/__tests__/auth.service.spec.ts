@@ -794,8 +794,6 @@ describe('AuthService - Idempotency', () => {
 
 describe('AuthService - authenticateGoogle household payload', () => {
   let service: AuthService;
-  let authRepository: AuthRepository;
-  let householdsService: HouseholdsService;
 
   const mockUserId = 'user-123';
   const mockHouseholdId = 'household-123';
@@ -844,8 +842,6 @@ describe('AuthService - authenticateGoogle household payload', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    authRepository = module.get<AuthRepository>(AuthRepository);
-    householdsService = module.get<HouseholdsService>(HouseholdsService);
     jest.clearAllMocks();
   });
 

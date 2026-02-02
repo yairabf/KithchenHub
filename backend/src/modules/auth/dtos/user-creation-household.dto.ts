@@ -32,6 +32,7 @@ function AtLeastOneOfIdOrName(validationOptions?: ValidationOptions) {
             dto.name.trim().length > 0;
           return hasId || hasName;
         },
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature required by class-validator
         defaultMessage(args: ValidationArguments) {
           return 'Household must be either existing (id only) or new (name required, id optional). At least one of id or name must be set.';
         },
