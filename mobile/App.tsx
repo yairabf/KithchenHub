@@ -7,6 +7,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { getLocales } from 'react-native-localize';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { HouseholdProvider } from './src/contexts/HouseholdContext';
+import { OnboardingProvider } from './src/features/auth/contexts/OnboardingContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { getStoredLanguage } from './src/i18n/storage';
 import { normalizeLocale } from './src/i18n/localeNormalization';
@@ -48,12 +49,14 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <PaperProvider>
-        <AuthProvider>
-          <HouseholdProvider>
-            <StatusBar style="auto" />
-            <RootNavigator />
-          </HouseholdProvider>
-        </AuthProvider>
+        <OnboardingProvider>
+          <AuthProvider>
+            <HouseholdProvider>
+              <StatusBar style="auto" />
+              <RootNavigator />
+            </HouseholdProvider>
+          </AuthProvider>
+        </OnboardingProvider>
       </PaperProvider>
     </GestureHandlerRootView>
   );

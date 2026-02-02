@@ -299,15 +299,17 @@ export function normalizeTimestampsFromApi<T extends EntityTimestamps>(
 
   // Check if already camelCase (some APIs might transform)
   if (itemRecord.createdAt || itemRecord.updatedAt || itemRecord.deletedAt) {
-    return {
+    // Preserve all fields from original item, only normalize timestamps
+    const result = {
       ...itemRecord,
       createdAt: normalizeTimestampField(itemRecord.createdAt),
       updatedAt: normalizeTimestampField(itemRecord.updatedAt),
       deletedAt: normalizeTimestampField(itemRecord.deletedAt),
-    } as T;
+    };
+    return result as T;
   }
 
-  // Has snake_case, use helper
+  // Has snake_case, use helper (which preserves all fields via spread)
   return fromSupabaseTimestamps(itemRecord as { created_at?: string; updated_at?: string; deleted_at?: string }) as T;
 }
 
