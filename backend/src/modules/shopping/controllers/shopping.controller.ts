@@ -67,7 +67,7 @@ export class ShoppingListsController {
     console.log(
       '[ShoppingListsController] User:',
       JSON.stringify({
-        id: user.id,
+        id: user.userId,
         email: user.email,
         householdId: user.householdId,
       }),

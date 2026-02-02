@@ -35,7 +35,7 @@ export class RecipesController {
     console.log(
       '[RecipesController] User:',
       JSON.stringify({
-        id: user.id,
+        id: user.userId,
         email: user.email,
         householdId: user.householdId,
       }),
@@ -74,7 +74,7 @@ export class RecipesController {
     console.log(
       '[RecipesController] User:',
       JSON.stringify({
-        id: user.id,
+        id: user.userId,
         email: user.email,
         householdId: user.householdId,
       }),
@@ -108,7 +108,7 @@ export class RecipesController {
     console.log(
       '[RecipesController] User:',
       JSON.stringify({
-        id: user.id,
+        id: user.userId,
         email: user.email,
         householdId: user.householdId,
       }),
