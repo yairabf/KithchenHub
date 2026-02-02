@@ -12,7 +12,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 
 ### Authentication & Authorization
 - **JWT Authentication**: Secure token-based authentication with refresh tokens
-- **Google OAuth**: Integration with Supabase for Google sign-in; optional household in payload for sign-up (new household with name ± id, or join existing by household id)
+- **Google OAuth**: Integration with Supabase for Google sign-in; three flows: login (existing user, no household switch; household in body rejected), sign-up (new user, no household → backend creates household with default name; optional rename via PUT /household), join via invite (household.id from GET /invite/validate)
 - **Guest Mode**: Support for guest users with device-based identification
 - **Token Refresh**: Secure token refresh mechanism
 - **Offline Sync**: Data synchronization endpoint for offline-first mobile app
@@ -43,7 +43,10 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 ### Household Management
 - Multi-user household support
 - **Create household**: `POST /household` for users without a household (JWT only; no household required)
-- **Invite code validation**: Public `GET /invite/validate?code=` resolves invite code to household id and name (for join flow before sign-in)
+- **Update household**: `PUT /household` (admin only); name validated (trimmed, non-empty, max 200 chars)
+- **Invite code validation**: Public `GET /invite/validate?code=` resolves invite code to household id and name (for join flow before sign-in); token format structured for optional expiry
+- **Idempotent join**: Adding user to household is no-op if already a member (safe for retries)
+- **Race-safe sign-up**: Creating household for new user returns existing household id if user already has one (e.g. duplicate sign-up)
 - Member invitation and management
 - Household-level data isolation
 - Row Level Security (RLS) via Supabase
@@ -444,7 +447,7 @@ To verify that Row Level Security is correctly isolating data between households
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `POST` | `/auth/google` | Public | Authenticate with Google OAuth ID token; optional `household` in body for sign-up (new: `name` ± `id`, or join existing: `id` only) |
+| `POST` | `/auth/google` | Public | Authenticate with Google OAuth ID token. Login: existing user returns tokens (household in body rejected). Sign-up: new user with no body → backend creates household with default name. Join: body `household.id` (from GET /invite/validate) to join existing household. |
 | `POST` | `/auth/guest` | Public | Authenticate as guest user (device ID) |
 | `POST` | `/auth/refresh` | Public | Refresh access token using refresh token |
 | `POST` | `/auth/sync` | Protected | Synchronize offline data to cloud |
@@ -511,7 +514,7 @@ To verify that Row Level Security is correctly isolating data between households
 |--------|----------|------|-------------|
 | `POST` | `/household` | JWT only | Create new household (user must not already have a household) |
 | `GET` | `/household` | Protected | Get current user's household with members |
-| `PUT` | `/household` | Protected | Update household details (admin only) |
+| `PUT` | `/household` | Protected | Update household details (admin only); name optional, validated when provided (non-empty, max 200 chars) |
 | `POST` | `/household/invite` | Protected | Invite member to household (admin only) |
 | `DELETE` | `/household/members/:id` | Protected | Remove member from household (admin only) |
 
@@ -658,9 +661,9 @@ backend/
 │   │   │   ├── dtos/               # Auth DTOs
 │   │   │   ├── constants/          # Sync entity type constants
 │   │   │   └── auth.module.ts
-│   │   ├── households/             # Household management (create, get, update, invite, remove member, invite code validation)
+│   │   ├── households/             # Household management (create, get, update, invite, remove member, invite validation; default name, idempotent join, race-safe create)
 │   │   │   ├── controllers/        # HouseholdsController, InviteController (public validate)
-│   │   │   ├── services/           # HouseholdsService (validateInviteCode, createHouseholdForNewUser, addUserToHousehold)
+│   │   │   ├── services/           # HouseholdsService (validateInviteCode, createHouseholdForNewUser, addUserToHousehold, parseInviteCode)
 │   │   │   ├── repositories/       # HouseholdsRepository
 │   │   │   ├── dtos/               # CreateHouseholdDto, UpdateHouseholdDto, InviteMemberDto, etc.
 │   │   │   └── households.module.ts

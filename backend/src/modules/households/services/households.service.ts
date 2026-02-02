@@ -124,12 +124,12 @@ export class HouseholdsService {
 
   /**
    * Creates a new household for a user during auth flow (e.g. Google sign-up).
-   * Caller must ensure the user exists and has no household yet.
+   * If the user already has a household (e.g. race from duplicate sign-up), returns that household id without creating another (race-safe).
    *
    * @param userId - The user ID to set as Admin
    * @param name - Household name (trimmed and length-validated by caller)
    * @param householdId - Optional household id (e.g. client-generated CUID)
-   * @returns Created household id
+   * @returns Created or existing household id
    */
   async createHouseholdForNewUser(
     userId: string,
@@ -140,8 +140,7 @@ export class HouseholdsService {
       where: { id: userId },
     });
     if (!user) throw new NotFoundException('User not found');
-    if (user.householdId)
-      throw new ForbiddenException('User already has a household');
+    if (user.householdId) return user.householdId;
 
     const household = await this.householdsRepository.createHousehold(
       name,
@@ -156,12 +155,12 @@ export class HouseholdsService {
 
   /**
    * Adds an existing user to an existing household (e.g. join during auth).
-   * Caller must ensure the user exists and has no household yet.
+   * No-op if user is already a member of this household (idempotent).
    *
    * @param householdId - The household to join
    * @param userId - The user ID to add as Member
    * @throws NotFoundException if household or user not found
-   * @throws ForbiddenException if user already has a household
+   * @throws ForbiddenException if user already belongs to a different household
    */
   async addUserToHousehold(householdId: string, userId: string): Promise<void> {
     const household =
@@ -172,6 +171,7 @@ export class HouseholdsService {
       where: { id: userId },
     });
     if (!user) throw new NotFoundException('User not found');
+    if (user.householdId === householdId) return;
     if (user.householdId)
       throw new ForbiddenException('User already has a household');
 
@@ -207,8 +207,13 @@ export class HouseholdsService {
       throw new ForbiddenException('Only admins can update household');
     }
 
+    const name =
+      dto.name != null && typeof dto.name === 'string'
+        ? dto.name.trim()
+        : undefined;
+
     await this.householdsRepository.updateHousehold(user.householdId, {
-      name: dto.name,
+      name,
     });
 
     return this.getHousehold(userId);
@@ -254,6 +259,28 @@ export class HouseholdsService {
   }
 
   /**
+   * Parses an invite code into householdId and timestamp.
+   * Token format: invite_<householdId>_<timestamp>.
+   * Optional expiry can be added later by checking timestamp against current time
+   * and throwing with the same client-visible error shape (e.g. NotFoundException).
+   *
+   * @param code - Raw invite code string
+   * @returns Parsed { householdId, timestamp } or null if format is invalid
+   */
+  private parseInviteCode(
+    code: string,
+  ): { householdId: string; timestamp: number } | null {
+    const trimmed = code?.trim();
+    if (!trimmed) return null;
+    const parts = trimmed.split('_');
+    if (parts.length !== 3 || parts[0] !== 'invite' || !parts[1] || !parts[2])
+      return null;
+    const timestamp = Number(parts[2]);
+    if (!Number.isFinite(timestamp)) return null;
+    return { householdId: parts[1], timestamp };
+  }
+
+  /**
    * Validates an invite code and returns household id and name for display.
    * Public endpoint so unauthenticated users can resolve the code before sign-in.
    * Token format: invite_<householdId>_<timestamp>.
@@ -266,17 +293,15 @@ export class HouseholdsService {
   async validateInviteCode(
     code: string,
   ): Promise<{ householdId: string; householdName: string }> {
-    const trimmed = code?.trim();
-    if (!trimmed) {
-      throw new BadRequestException('Invite code is required');
+    const parsed = this.parseInviteCode(code);
+    if (!parsed) {
+      throw new BadRequestException(
+        code?.trim() ? 'Invalid invite code format' : 'Invite code is required',
+      );
     }
-    const parts = trimmed.split('_');
-    if (parts.length !== 3 || parts[0] !== 'invite' || !parts[1] || !parts[2]) {
-      throw new BadRequestException('Invalid invite code format');
-    }
-    const householdId = parts[1];
-    const household =
-      await this.householdsRepository.findHouseholdById(householdId);
+    const household = await this.householdsRepository.findHouseholdById(
+      parsed.householdId,
+    );
     if (!household) {
       throw new NotFoundException('Invite code is invalid or expired');
     }
