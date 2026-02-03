@@ -59,7 +59,7 @@ The mobile app uses React Navigation with a conditional auth flow:
 #### State Management
 - Auth state managed via `AuthContext` with `useAuth()` hook
 - User data persisted to AsyncStorage under `@kitchen_hub_user`
-- Supports Google sign-in and guest mode
+- Supports email/password authentication (with email verification), Google sign-in, and guest mode
 - Network status via `NetworkContext`
 - App lifecycle via `AppLifecycleContext`
 
@@ -198,6 +198,7 @@ When adding new backend code, follow these rules:
 
 4. **Add guards** as needed:
    - `JwtAuthGuard` - JWT authentication (global, opt-out with `@Public()`)
+- Email/password authentication endpoints: `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/resend-verification`
    - `HouseholdGuard` - Household membership check
 
 ### Mobile App Type Definitions
@@ -294,6 +295,18 @@ Errors are transformed by `HttpExceptionFilter` into consistent error responses:
 Mark endpoints as public using the `@Public()` decorator:
 
 ```typescript
+@Post('register')
+@Public()  // Opts out of global JWT guard
+async register(@Body() dto: RegisterDto) {
+  // ...
+}
+
+@Post('login')
+@Public()  // Opts out of global JWT guard
+async login(@Body() dto: LoginDto) {
+  // ...
+}
+
 @Post('google')
 @Public()  // Opts out of global JWT guard
 async authenticateGoogle(@Body() dto: GoogleAuthDto) {
