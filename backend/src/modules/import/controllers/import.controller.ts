@@ -8,7 +8,7 @@ import { HouseholdUtils } from '../../../common/utils';
 /**
  * Controller for handling data import operations.
  * API Version: 1
- * Allows users to import recipes and shopping lists from guest mode to their household.
+ * Allows users to import recipes and shopping lists into their household.
  */
 @Controller({ path: 'import', version: '1' })
 @UseGuards(JwtAuthGuard)

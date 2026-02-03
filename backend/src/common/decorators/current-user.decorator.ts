@@ -4,7 +4,6 @@ export interface CurrentUserPayload {
   userId: string;
   householdId: string | null;
   email?: string;
-  isGuest: boolean;
 }
 
 export const CurrentUser = createParamDecorator(

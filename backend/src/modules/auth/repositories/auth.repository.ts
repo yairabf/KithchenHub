@@ -27,21 +27,12 @@ export class AuthRepository {
     });
   }
 
-  async findUserByDeviceId(deviceId: string): Promise<User | null> {
-    return this.prisma.user.findFirst({
-      where: { deviceId, isGuest: true },
-      include: { household: true },
-    });
-  }
-
   async createUser(data: {
     id?: string;
     email?: string;
     googleId?: string;
     name?: string;
     avatarUrl?: string;
-    deviceId?: string;
-    isGuest: boolean;
     householdId?: string;
   }): Promise<User & { household: Household | null }> {
     // Use Prisma's generated type for type safety instead of 'any'
@@ -51,8 +42,6 @@ export class AuthRepository {
       googleId: data.googleId,
       name: data.name,
       avatarUrl: data.avatarUrl,
-      deviceId: data.deviceId,
-      isGuest: data.isGuest,
       householdId: data.householdId,
     };
 
@@ -73,7 +62,6 @@ export class AuthRepository {
       name?: string;
       avatarUrl?: string;
       householdId?: string;
-      isGuest?: boolean;
     },
   ): Promise<User & { household: Household | null }> {
     return this.prisma.user.update({

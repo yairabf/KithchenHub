@@ -7,12 +7,7 @@ import {
   Get,
 } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
-import {
-  GoogleAuthDto,
-  GuestAuthDto,
-  SyncDataDto,
-  RefreshTokenDto,
-} from '../dtos';
+import { GoogleAuthDto, SyncDataDto, RefreshTokenDto } from '../dtos';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 import { Public } from '../../../common/decorators/public.decorator';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -24,7 +19,6 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
  *
  * Public endpoints:
  * - POST /auth/google - Google OAuth authentication
- * - POST /auth/guest - Guest user authentication
  * - POST /auth/refresh - Token refresh
  *
  * Protected endpoints:
@@ -47,19 +41,6 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async authenticateGoogle(@Body() dto: GoogleAuthDto) {
     return this.authService.authenticateGoogle(dto);
-  }
-
-  /**
-   * Authenticates a guest user by device ID.
-   *
-   * @param dto - Contains device ID
-   * @returns Authentication response with access token
-   */
-  @Post('guest')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  async authenticateGuest(@Body() dto: GuestAuthDto) {
-    return this.authService.authenticateGuest(dto);
   }
 
   /**

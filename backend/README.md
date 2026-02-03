@@ -13,7 +13,6 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 ### Authentication & Authorization
 - **JWT Authentication**: Secure token-based authentication with refresh tokens
 - **Google OAuth**: Integration with Supabase for Google sign-in; three flows: login (existing user, no household switch; household in body rejected), sign-up (new user, no household → backend creates household with default name; optional rename via PUT /household), join via invite (household.id from GET /invite/validate)
-- **Guest Mode**: Support for guest users with device-based identification
 - **Token Refresh**: Secure token refresh mechanism
 - **Offline Sync**: Data synchronization endpoint for offline-first mobile app
 - **UUID-based Users**: Seamless cross-provider integration with UUID identifiers
@@ -28,7 +27,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 - **Automatic Timestamps**: All entities include `created_at` and `updated_at` timestamps
   - `updated_at` automatically maintained by Prisma
 - **Master Grocery Catalog**: Centralized grocery database with categories and search
-- **Data Import**: Import from guest mode to household accounts with fingerprinting and idempotency
+- **Data Import**: Import data to household accounts with fingerprinting and idempotency
 - **Sync Idempotency**: Sync operations use idempotency keys to prevent duplicate processing
   - Each entity includes a unique `operationId` (UUID) for idempotent retries
   - Optional `requestId` for batch observability
@@ -56,7 +55,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 - **Recipes**: Recipe CRUD with ingredients, instructions, and soft-delete (`DELETE /recipes/:id`)
 - **Chores**: Task management with assignees, completion tracking, and soft-delete (`DELETE /chores/:id`)
 - **Dashboard**: Aggregated household activity summaries
-- **Import**: Guest mode data import with deduplication
+- **Import**: Data import with deduplication
 
 ### Infrastructure
 - **PostgreSQL Database**: Prisma ORM with migrations
@@ -412,6 +411,286 @@ The script replaces all existing catalog rows with the JSON contents. To use a d
   - Scheduled cleanup: Requires `@nestjs/schedule` package (optional)
   - Stats: `getIdempotencyKeyStats()` for monitoring
 
+### Database Schema
+
+The database schema is defined in `src/infrastructure/database/prisma/schema.prisma`. Below is a complete reference of all database tables and their schemas.
+
+#### Household (`households`)
+
+Represents a household/group of users sharing data.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique household identifier |
+| `name` | String | Required | Household name |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+| `deletedAt` | DateTime? | Nullable | Soft-delete timestamp (null = active) |
+
+**Relationships:**
+- `users`: One-to-many with `User`
+- `shoppingLists`: One-to-many with `ShoppingList`
+- `recipes`: One-to-many with `Recipe`
+- `chores`: One-to-many with `Chore`
+- `userItems`: One-to-many with `UserItem`
+
+#### User (`users`)
+
+Represents a user account.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | UUID | Primary Key | Unique user identifier (matches Supabase Auth UUID) |
+| `email` | String? | Unique, Nullable | User email address |
+| `googleId` | String? | Unique, Nullable | Google OAuth ID |
+| `name` | String? | Nullable | User display name |
+| `avatarUrl` | String? | Nullable | User avatar URL |
+| `role` | String | Default: "Member" | User role (Admin, Member, Kid) |
+| `householdId` | String? | Foreign Key, Nullable, Indexed | Reference to `Household.id` |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+
+**Relationships:**
+- `household`: Many-to-one with `Household` (nullable)
+- `refreshTokens`: One-to-many with `RefreshToken`
+- `assignedChores`: One-to-many with `Chore` (as assignee)
+- `importBatches`: One-to-many with `ImportBatch`
+- `importMappings`: One-to-many with `ImportMapping`
+- `syncIdempotencyKeys`: One-to-many with `SyncIdempotencyKey`
+- `userItems`: One-to-many with `UserItem`
+
+**Indexes:**
+- `householdId` (for efficient household queries)
+
+#### RefreshToken (`refresh_tokens`)
+
+Stores refresh tokens for JWT authentication.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique token record identifier |
+| `token` | String | Unique | Refresh token value |
+| `userId` | UUID | Foreign Key | Reference to `User.id` |
+| `expiresAt` | DateTime | Required | Token expiration timestamp |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+
+**Relationships:**
+- `user`: Many-to-one with `User` (cascade delete)
+
+#### ShoppingList (`shopping_lists`)
+
+Represents a shopping list belonging to a household.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique list identifier |
+| `householdId` | String (CUID) | Foreign Key, Required | Reference to `Household.id` |
+| `name` | String | Required | List name |
+| `color` | String? | Nullable | List color (for UI) |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+| `deletedAt` | DateTime? | Nullable | Soft-delete timestamp (null = active) |
+
+**Relationships:**
+- `household`: Many-to-one with `Household` (cascade delete)
+- `items`: One-to-many with `ShoppingItem`
+
+**Indexes:**
+- `[householdId, name]` (composite index for efficient household list queries)
+
+#### ShoppingItem (`shopping_items`)
+
+Represents an item in a shopping list.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique item identifier |
+| `listId` | String (CUID) | Foreign Key, Required | Reference to `ShoppingList.id` |
+| `catalogItemId` | String? | Foreign Key, Nullable | Reference to `MasterGroceryCatalog.id` |
+| `userItemId` | String? | Foreign Key, Nullable | Reference to `UserItem.id` |
+| `name` | String | Required | Item name |
+| `quantity` | Float | Default: 1 | Item quantity |
+| `unit` | String? | Nullable | Unit of measurement |
+| `isChecked` | Boolean | Default: false | Whether item is checked/completed |
+| `category` | String? | Nullable | Item category |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+| `deletedAt` | DateTime? | Nullable | Soft-delete timestamp (null = active) |
+
+**Relationships:**
+- `list`: Many-to-one with `ShoppingList` (cascade delete)
+- `catalogItem`: Many-to-one with `MasterGroceryCatalog` (set null on delete)
+- `userItem`: Many-to-one with `UserItem` (set null on delete)
+
+**Indexes:**
+- `listId` (for efficient list queries)
+- `[listId, isChecked]` (composite index for filtering checked items)
+- `catalogItemId` (for catalog item lookups)
+- `userItemId` (for user item lookups)
+
+#### MasterGroceryCatalog (`master_grocery_catalog`)
+
+Centralized grocery catalog with standardized items.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String | Primary Key | Unique catalog item identifier |
+| `name` | String | Required | Item name |
+| `category` | String | Required | Item category |
+| `defaultUnit` | String? | Nullable | Default unit of measurement |
+| `imageUrl` | String? | Nullable | Item image URL |
+| `defaultQuantity` | Int? | Nullable | Default quantity |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+
+**Relationships:**
+- `shoppingItems`: One-to-many with `ShoppingItem`
+
+**Indexes:**
+- `name` (for search functionality)
+- `category` (for category filtering)
+
+#### UserItem (`user_items`)
+
+User-defined custom items (not in master catalog).
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique user item identifier |
+| `userId` | UUID | Foreign Key, Required | Reference to `User.id` |
+| `householdId` | String? | Foreign Key, Nullable | Reference to `Household.id` |
+| `name` | String | Required | Item name |
+| `category` | String? | Nullable | Item category |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+
+**Relationships:**
+- `user`: Many-to-one with `User` (cascade delete)
+- `household`: Many-to-one with `Household` (cascade delete, nullable)
+- `shoppingItems`: One-to-many with `ShoppingItem`
+
+**Indexes:**
+- `[userId, name]` (composite index for user item lookups)
+- `householdId` (for household item queries)
+
+#### Recipe (`recipes`)
+
+Represents a recipe belonging to a household.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique recipe identifier |
+| `householdId` | String (CUID) | Foreign Key, Required | Reference to `Household.id` |
+| `title` | String | Required | Recipe title |
+| `prepTime` | Int? | Nullable | Preparation time in minutes |
+| `ingredients` | JSON | Required | JSONB array of ingredients |
+| `instructions` | JSON | Required | JSONB array of instruction steps |
+| `imageUrl` | String? | Nullable | Recipe image URL |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+| `deletedAt` | DateTime? | Nullable | Soft-delete timestamp (null = active) |
+
+**Relationships:**
+- `household`: Many-to-one with `Household` (cascade delete)
+
+**Indexes:**
+- `[householdId, title]` (composite index for household recipe queries)
+
+#### Chore (`chores`)
+
+Represents a chore/task belonging to a household.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique chore identifier |
+| `householdId` | String (CUID) | Foreign Key, Required | Reference to `Household.id` |
+| `assigneeId` | UUID? | Foreign Key, Nullable | Reference to `User.id` (assignee) |
+| `title` | String | Required | Chore title |
+| `dueDate` | DateTime? | Nullable | Due date |
+| `isCompleted` | Boolean | Default: false | Completion status |
+| `completedAt` | DateTime? | Nullable | Completion timestamp |
+| `repeat` | String? | Nullable | Repeat pattern (daily, weekly, monthly, etc.) |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+| `deletedAt` | DateTime? | Nullable | Soft-delete timestamp (null = active) |
+
+**Relationships:**
+- `household`: Many-to-one with `Household` (cascade delete)
+- `assignee`: Many-to-one with `User` (set null on delete, nullable)
+
+#### ImportBatch (`import_batches`)
+
+Tracks data import operations.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique batch identifier |
+| `userId` | UUID | Foreign Key, Required, Indexed | Reference to `User.id` |
+| `status` | String | Default: "PENDING" | Batch status (PENDING, MAPPING, PROCESSING, COMPLETED, FAILED) |
+| `filename` | String? | Nullable | Source filename |
+| `source` | String | Required | Import source identifier |
+| `startedAt` | DateTime | Auto-generated | Start timestamp |
+| `completedAt` | DateTime? | Nullable | Completion timestamp |
+| `error` | String? | Nullable | Error message if failed |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+
+**Relationships:**
+- `user`: Many-to-one with `User` (cascade delete)
+- `mappings`: One-to-many with `ImportMapping`
+
+**Indexes:**
+- `userId` (for user import queries)
+
+#### ImportMapping (`import_mappings`)
+
+Maps source entity IDs to target entity IDs for idempotent imports.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique mapping identifier |
+| `batchId` | String (CUID) | Foreign Key, Required | Reference to `ImportBatch.id` |
+| `userId` | UUID | Foreign Key, Required | Reference to `User.id` |
+| `sourceField` | String | Required | Source entity ID |
+| `sourceType` | String | Required | Source entity type (RECIPE, SHOPPING_LIST, etc.) |
+| `targetField` | String | Required | Target entity ID |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+| `updatedAt` | DateTime | Auto-updated | Last update timestamp |
+
+**Relationships:**
+- `batch`: Many-to-one with `ImportBatch` (cascade delete)
+- `user`: Many-to-one with `User` (cascade delete)
+
+**Unique Constraints:**
+- `[batchId, sourceField, sourceType]` (prevents duplicates within a batch)
+- `[userId, sourceField, sourceType]` (ensures idempotency across batches)
+
+#### SyncIdempotencyKey (`sync_idempotency_keys`)
+
+Tracks processed sync operations to prevent duplicate processing.
+
+| Field | Type | Constraints | Description |
+|-------|------|-------------|-------------|
+| `id` | String (CUID) | Primary Key | Unique key record identifier |
+| `userId` | UUID | Foreign Key, Required | Reference to `User.id` |
+| `key` | String | Required | The operationId (idempotency key) |
+| `entityType` | String | Required | Entity type (recipe, shoppingList, shoppingItem, chore) |
+| `entityId` | String | Required | The entity ID that was processed |
+| `requestId` | String? | Nullable | Optional request ID for observability |
+| `status` | String | Default: "PENDING" | Processing status (PENDING, COMPLETED, FAILED) |
+| `processedAt` | DateTime? | Nullable | Timestamp when status became COMPLETED |
+| `createdAt` | DateTime | Auto-generated | Creation timestamp |
+
+**Relationships:**
+- `user`: Many-to-one with `User` (cascade delete)
+
+**Unique Constraints:**
+- `[userId, key]` (ensures idempotency: same user + same operationId = already processed)
+
+**Indexes:**
+- `[userId, entityType, entityId]` (for entity lookups)
+- `processedAt` (for retention cleanup queries)
+
 ## Supabase Setup
 - **Config**: Supabase client is initialized in `src/modules/supabase/supabase.service.ts`.
 - **Environment**: Requires `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env`. Optionally include `SUPABASE_SERVICE_ROLE_KEY` for admin operations.
@@ -448,8 +727,8 @@ To verify that Row Level Security is correctly isolating data between households
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `POST` | `/auth/google` | Public | Authenticate with Google OAuth ID token. Login: existing user returns tokens (household in body rejected). Sign-up: new user with no body → backend creates household with default name. Join: body `household.id` (from GET /invite/validate) to join existing household. |
-| `POST` | `/auth/guest` | Public | Authenticate as guest user (device ID) |
 | `POST` | `/auth/refresh` | Public | Refresh access token using refresh token |
+| `GET` | `/auth/me` | Protected | Get current authenticated user information with household data |
 | `POST` | `/auth/sync` | Protected | Synchronize offline data to cloud |
 
 **Sync Endpoint Details:**
@@ -507,6 +786,33 @@ To verify that Row Level Security is correctly isolating data between households
 - Soft-delete operations set `deletedAt` correctly
 - Sync endpoint returns entities with proper timestamps
 - No timestamp manipulation in sync endpoint (let Prisma handle it)
+
+### OAuth Flow Endpoints
+
+The backend implements a backend-driven OAuth flow where all OAuth secrets and token exchanges happen on the server side. The mobile app opens a WebBrowser session to the start endpoint and receives a JWT via deep link.
+
+**Flow:**
+1. Client opens `/auth/google/start` in browser (optionally with `?householdId=xxx` for join flow)
+2. Backend generates state token with CSRF protection and redirects to Google
+3. Google redirects back to `/auth/google/callback` with authorization code
+4. Backend validates state, exchanges code for tokens, creates/finds user
+5. Backend redirects to app deep link with JWT: `kitchen-hub://auth/callback?token=JWT&isNewHousehold=true|false`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/auth/google/start?householdId=` | Public | Start Google OAuth flow. Generates state token and redirects to Google authorization page. Optional `householdId` query parameter for join flow. Optional `redirect_uri` query parameter for web platform redirects. |
+| `GET` | `/auth/google/callback?code=&state=` | Public | Handle Google OAuth callback. Validates state token (CSRF protection), exchanges authorization code for tokens, creates/finds user, generates JWT, and redirects to app deep link with token. Returns error redirect if authentication fails. |
+
+**Query Parameters:**
+- `householdId` (optional): Household ID for join flow (when user is joining an existing household)
+- `redirect_uri` (optional): Web redirect URI for web platform (overrides deep link redirect)
+- `code`: Authorization code from Google (in callback)
+- `state`: State token for CSRF protection (in callback)
+- `error`: Error from Google if user denied permission (in callback)
+
+**Response:**
+- Success redirect: `kitchen-hub://auth/callback?token=JWT&isNewHousehold=true|false`
+- Error redirect: `kitchen-hub://auth/callback?error=error_code&message=error_message`
 
 ### Household Endpoints
 
@@ -585,7 +891,7 @@ To verify that Row Level Security is correctly isolating data between households
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `POST` | `/import` | Protected | Import recipes and shopping lists from guest mode |
+| `POST` | `/import` | Protected | Import recipes and shopping lists into household |
 
 ### Health & Version Endpoints
 
@@ -599,7 +905,7 @@ To verify that Row Level Security is correctly isolating data between households
 
 ### Authentication Requirements
 
-- **Public Routes**: `/auth/google`, `/auth/guest`, `/auth/refresh`, `/invite/validate`, `/groceries/*`
+- **Public Routes**: `/auth/google`, `/auth/google/start`, `/auth/google/callback`, `/auth/refresh`, `/invite/validate`, `/groceries/*`
 - **Protected Routes**: All other endpoints require Bearer JWT token
 - **Household Routes**: Most protected routes also require household membership (enforced by `HouseholdGuard`)
 
@@ -690,7 +996,7 @@ backend/
 │   │   │   ├── services/           # DashboardService
 │   │   │   ├── dtos/               # Dashboard DTOs
 │   │   │   └── dashboard.module.ts
-│   │   ├── import/                 # Data import from guest mode
+│   │   ├── import/                 # Data import
 │   │   │   ├── controllers/        # ImportController
 │   │   │   ├── services/           # ImportService
 │   │   │   ├── repositories/       # ImportRepository
@@ -757,15 +1063,6 @@ async authenticateGoogle(@Body() dto: GoogleAuthDto) {
 }
 ```
 
-### Guest Mode Protection
-
-Guest users can only access public endpoints:
-- `/auth/guest` - Guest authentication
-- `/auth/google` - Google authentication
-- `/auth/refresh` - Token refresh
-- `/groceries/*` - Grocery catalog search
-
-All other endpoints require valid JWT tokens with household membership, preventing guest data from syncing to the backend.
 
 ### API Versioning
 
