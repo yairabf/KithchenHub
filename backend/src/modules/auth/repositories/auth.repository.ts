@@ -31,6 +31,10 @@ export class AuthRepository {
     id?: string;
     email?: string;
     googleId?: string;
+    passwordHash?: string;
+    emailVerified?: boolean;
+    emailVerificationToken?: string;
+    emailVerificationTokenExpiry?: Date;
     name?: string;
     avatarUrl?: string;
     householdId?: string;
@@ -40,6 +44,10 @@ export class AuthRepository {
       id: data.id,
       email: data.email,
       googleId: data.googleId,
+      passwordHash: data.passwordHash,
+      emailVerified: data.emailVerified,
+      emailVerificationToken: data.emailVerificationToken,
+      emailVerificationTokenExpiry: data.emailVerificationTokenExpiry,
       name: data.name,
       avatarUrl: data.avatarUrl,
       householdId: data.householdId,
@@ -59,6 +67,10 @@ export class AuthRepository {
     data: {
       email?: string;
       googleId?: string;
+      passwordHash?: string;
+      emailVerified?: boolean;
+      emailVerificationToken?: string | null;
+      emailVerificationTokenExpiry?: Date | null;
       name?: string;
       avatarUrl?: string;
       householdId?: string;
@@ -76,13 +88,18 @@ export class AuthRepository {
     token: string,
     expiresAt: Date,
   ): Promise<RefreshToken> {
-    return this.prisma.refreshToken.create({
-      data: {
-        userId,
-        token,
-        expiresAt,
-      },
-    });
+    try {
+      const result = await this.prisma.refreshToken.create({
+        data: {
+          userId,
+          token,
+          expiresAt,
+        },
+      });
+      return result;
+    } catch (error: unknown) {
+      throw error;
+    }
   }
 
   async findRefreshToken(token: string): Promise<RefreshToken | null> {
@@ -105,6 +122,63 @@ export class AuthRepository {
           lt: new Date(),
         },
       },
+    });
+  }
+
+  /**
+   * Deletes all refresh tokens for a specific user.
+   *
+   * This method is used to ensure only one active refresh token exists per user
+   * at any given time, preventing unique constraint violations when generating
+   * new tokens.
+   *
+   * @param userId - The ID of the user whose refresh tokens should be deleted
+   * @returns Promise that resolves when deletion is complete
+   * @throws PrismaClientKnownRequestError if database operation fails
+   */
+  async deleteAllRefreshTokensForUser(userId: string): Promise<void> {
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId },
+    });
+  }
+
+  async findUserByEmailVerificationToken(
+    token: string,
+  ): Promise<(User & { household: Household | null }) | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        emailVerificationToken: token,
+        emailVerificationTokenExpiry: {
+          gt: new Date(),
+        },
+      },
+      include: { household: true },
+    });
+  }
+
+  async updateUserEmailVerification(
+    userId: string,
+    verified: boolean,
+  ): Promise<User & { household: Household | null }> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerified: verified,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
+      },
+      include: { household: true },
+    });
+  }
+
+  async updateUserPassword(
+    userId: string,
+    passwordHash: string,
+  ): Promise<User & { household: Household | null }> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+      include: { household: true },
     });
   }
 }

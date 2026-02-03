@@ -57,6 +57,25 @@ const envSchema = z.object({
    * rewritten to {CATALOG_ICONS_BASE_URL}/{image_url} in API responses.
    */
   CATALOG_ICONS_BASE_URL: z.string().optional(),
+  /**
+   * Email configuration (optional, for email verification)
+   */
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().int().positive())
+    .optional()
+    .default('587'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().email().optional().default('noreply@kitchenhub.app'),
+  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().int().positive())
+    .optional()
+    .default('24'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
