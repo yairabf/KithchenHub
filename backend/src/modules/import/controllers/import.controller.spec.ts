@@ -17,7 +17,6 @@ describe('ImportController', () => {
     userId: 'user-123',
     householdId: 'household-123',
     email: 'test@example.com',
-    isGuest: false,
   };
 
   beforeEach(async () => {

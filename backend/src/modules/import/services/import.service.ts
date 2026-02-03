@@ -64,7 +64,7 @@ function isPrismaUniqueConstraintError(error: unknown): error is {
 
 /**
  * Service for managing data import operations
- * Handles importing recipes and shopping lists from guest mode to household accounts
+ * Handles importing recipes and shopping lists into household accounts
  * Implements deduplication through mapping tables
  */
 @Injectable()
@@ -77,7 +77,7 @@ export class ImportService {
   ) {}
 
   /**
-   * Executes the import of recipes and shopping lists from guest mode to household
+   * Executes the import of recipes and shopping lists into household
    * Creates deduplication mappings to prevent duplicate imports
    *
    * @param userId - The ID of the user performing the import
@@ -405,7 +405,7 @@ export class ImportService {
    * @param prismaTransaction - The Prisma transaction client
    * @param userId - The user ID performing the import
    * @param batchId - The import batch ID
-   * @param sourceId - The original local ID from guest mode
+   * @param sourceId - The original local ID from the source
    * @param targetId - The new server-side ID in the household
    * @throws Prisma error P2002 if mapping already exists (concurrent request scenario)
    */

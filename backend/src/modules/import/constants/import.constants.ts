@@ -2,7 +2,7 @@
  * Import source types for tracking data origin
  */
 export enum ImportSource {
-  /** Data imported from guest mode to household account */
+  /** Data imported to household account */
   GUEST_MODE_MIGRATION = 'GUEST_MODE_MIGRATION',
   /** Data uploaded via CSV file */
   CSV_UPLOAD = 'CSV_UPLOAD',

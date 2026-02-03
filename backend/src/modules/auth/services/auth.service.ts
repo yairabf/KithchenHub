@@ -15,7 +15,6 @@ import { loadConfiguration } from '../../../config/configuration';
 import { User, Household } from '@prisma/client';
 import {
   GoogleAuthDto,
-  GuestAuthDto,
   SyncDataDto,
   RefreshTokenDto,
   AuthResponseDto,
@@ -65,7 +64,6 @@ function isPrismaUniqueConstraintError(error: unknown): error is {
  *
  * Responsibilities:
  * - Google OAuth authentication
- * - Guest user authentication
  * - JWT token generation and refresh
  * - Offline data synchronization
  */
@@ -301,35 +299,6 @@ export class AuthService {
         'Failed to exchange Google authorization code',
       );
     }
-  }
-
-  /**
-   * Authenticates a guest user by device ID.
-   * Creates a new guest user if one doesn't exist for the device.
-   *
-   * @param dto - Contains the device ID
-   * @returns Authentication response with access token and guest user info
-   */
-  async authenticateGuest(dto: GuestAuthDto): Promise<AuthResponseDto> {
-    let user = await this.authRepository.findUserByDeviceId(dto.deviceId);
-
-    if (!user) {
-      user = await this.authRepository.createUser({
-        id: this.uuidService.generate(), // Ensure guest user has a valid UUID
-        deviceId: dto.deviceId,
-        name: 'Guest',
-        isGuest: true,
-      });
-    }
-
-    const userWithHousehold = user as User & { household: Household | null };
-    const tokens = await this.generateTokens(userWithHousehold);
-
-    return {
-      accessToken: tokens.accessToken,
-      user: this.mapUserToResponse(userWithHousehold),
-      householdId: null,
-    };
   }
 
   /**
@@ -590,7 +559,6 @@ export class AuthService {
           googleId: payload.sub,
           name: payload.name,
           avatarUrl: payload.picture,
-          isGuest: false,
         });
         isNewUser = false;
       } else {
@@ -602,7 +570,6 @@ export class AuthService {
           googleId: payload.sub,
           name: payload.name,
           avatarUrl: payload.picture,
-          isGuest: false,
         });
         isNewUser = true;
       }
@@ -611,7 +578,6 @@ export class AuthService {
       user = await this.authRepository.updateUser(user.id, {
         name: payload.name,
         avatarUrl: payload.picture,
-        isGuest: false,
       });
       isNewUser = false;
     }
@@ -1222,7 +1188,6 @@ export class AuthService {
       sub: user.id,
       email: user.email || undefined,
       householdId: user.householdId || null,
-      isGuest: user.isGuest || false,
     };
   }
 
@@ -1246,7 +1211,6 @@ export class AuthService {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
-      isGuest: user.isGuest,
       householdId: user.householdId,
     };
   }

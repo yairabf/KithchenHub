@@ -61,7 +61,6 @@ export class JwtAuthGuard implements CanActivate {
         userId: payload.sub as string,
         householdId: (payload.householdId as string | null) || null,
         email: payload.email as string | undefined,
-        isGuest: (payload.isGuest as boolean) || false,
       } as CurrentUserPayload;
     } catch (error) {
       this.logger.warn('JWT token validation failed', {

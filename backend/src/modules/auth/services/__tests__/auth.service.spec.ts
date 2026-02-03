@@ -87,7 +87,6 @@ describe('AuthService - Idempotency', () => {
     householdId,
     email: 'test@example.com',
     name: 'Test User',
-    isGuest: false,
   };
 
   beforeEach(async () => {
@@ -948,7 +947,6 @@ describe('AuthService - authenticateGoogle household payload', () => {
         email: googlePayload.email,
         name: googlePayload.name,
         avatarUrl: null,
-        isGuest: false,
         role: 'Member',
         createdAt: new Date(),
         updatedAt: new Date(),
