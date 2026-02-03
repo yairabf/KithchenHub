@@ -53,6 +53,13 @@ This document provides comprehensive checklists for all environment variables re
 - [ ] `GOOGLE_CLIENT_ID` - Google OAuth client ID (if using Google sign-in)
 - [ ] `GOOGLE_CLIENT_SECRET` - Google OAuth secret (if using Google sign-in)
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (for admin operations)
+- [ ] `SMTP_HOST` - SMTP server hostname (if using email verification via SMTP)
+- [ ] `SMTP_PORT` - SMTP server port (if using email verification via SMTP)
+- [ ] `SMTP_USER` - SMTP username (if using email verification via SMTP)
+- [ ] `SMTP_PASS` - SMTP password (if using email verification via SMTP)
+- [ ] `EMAIL_FROM` - Email sender address (if using email verification via SMTP)
+- [ ] `EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS` - Token expiry in hours (default: 24)
+- [ ] `AUTH_BACKEND_BASE_URL` - Backend base URL for email verification links
 
 #### GitHub Secrets (for CI/CD)
 
@@ -90,6 +97,13 @@ This document provides comprehensive checklists for all environment variables re
 - [ ] `GOOGLE_CLIENT_ID` - Production Google OAuth client ID (if using Google sign-in)
 - [ ] `GOOGLE_CLIENT_SECRET` - Production Google OAuth secret (if using Google sign-in)
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` - Production Supabase service role key (for admin operations)
+- [ ] `SMTP_HOST` - Production SMTP server hostname (if using email verification via SMTP)
+- [ ] `SMTP_PORT` - Production SMTP server port (if using email verification via SMTP)
+- [ ] `SMTP_USER` - Production SMTP username (if using email verification via SMTP)
+- [ ] `SMTP_PASS` - Production SMTP password (if using email verification via SMTP)
+- [ ] `EMAIL_FROM` - Production email sender address (if using email verification via SMTP)
+- [ ] `EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS` - Token expiry in hours (default: 24)
+- [ ] `AUTH_BACKEND_BASE_URL` - Production backend base URL for email verification links
 
 #### GitHub Secrets (for CI/CD)
 
@@ -124,6 +138,13 @@ This document provides comprehensive checklists for all environment variables re
 | `SUPABASE_URL` | ✅ | - | Supabase project URL | `https://xxx.supabase.co` |
 | `SUPABASE_ANON_KEY` | ✅ | - | Supabase anonymous key | `eyJ...` |
 | `SUPABASE_SERVICE_ROLE_KEY` | ❌ | - | Supabase service role key | `eyJ...` |
+| `SMTP_HOST` | ❌ | - | SMTP server hostname (for email verification) | `smtp.gmail.com` |
+| `SMTP_PORT` | ❌ | `587` | SMTP server port | `587` or `465` |
+| `SMTP_USER` | ❌ | - | SMTP username | `user@example.com` |
+| `SMTP_PASS` | ❌ | - | SMTP password | Generated secret |
+| `EMAIL_FROM` | ❌ | - | Email sender address | `noreply@kitchenhub.com` |
+| `EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS` | ❌ | `24` | Email verification token expiry (hours) | `24` |
+| `AUTH_BACKEND_BASE_URL` | ❌ | - | Backend base URL for verification links | `https://api.kitchenhub.com` |
 
 **Legend**: ✅ Required | ⚠️ Recommended | ❌ Optional
 

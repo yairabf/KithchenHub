@@ -31,7 +31,7 @@ The app helps families organize shopping lists with a comprehensive 111-item gro
 - **🍳 Recipes** - Discover, create, and organize recipes with ingredient-to-shopping list integration, step tracking, and category filtering
 - **✅ Chores** - Task tracking with animated progress visualization, assignee management, and due date tracking
 - **🏠 Dashboard** - Quick overview with time-based personalized greeting, action widgets, and household statistics
-- **👤 Authentication** - Google sign-in with OAuth and guest mode for local-only usage with data import/export
+- **👤 Authentication** - Email/password registration and login with email verification, Google sign-in with OAuth, and guest mode for local-only usage with data import/export
 - **⚙️ Settings** - Profile management, household member management, notification preferences, and app configuration
 
 ### Advanced Features
@@ -85,7 +85,7 @@ kitchen-hub/
 - **Framework**: NestJS 10.0.0 with Fastify adapter
 - **Language**: TypeScript 5.1.3
 - **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: JWT with Google OAuth (Supabase)
+- **Authentication**: JWT with email/password authentication (with email verification) and Google OAuth (Supabase)
 - **Documentation**: Swagger/OpenAPI
 - **Infrastructure**: Supabase (Auth, Storage, RLS)
 

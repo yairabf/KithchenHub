@@ -12,8 +12,13 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 
 ### Authentication & Authorization
 - **JWT Authentication**: Secure token-based authentication with refresh tokens
+- **Email/Password Authentication**: Traditional email/password registration and login with email verification
+  - Registration with password hashing (bcrypt, 12 rounds)
+  - Email verification flow with auto-login after verification
+  - Resend verification email endpoint
+  - Email verification required before login
 - **Google OAuth**: Integration with Supabase for Google sign-in; three flows: login (existing user, no household switch; household in body rejected), sign-up (new user, no household → backend creates household with default name; optional rename via PUT /household), join via invite (household.id from GET /invite/validate)
-- **Token Refresh**: Secure token refresh mechanism
+- **Token Refresh**: Secure token refresh mechanism with automatic cleanup of existing tokens
 - **Offline Sync**: Data synchronization endpoint for offline-first mobile app
 - **UUID-based Users**: Seamless cross-provider integration with UUID identifiers
 
@@ -114,6 +119,15 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Email configuration (optional, for email verification)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-smtp-username
+SMTP_PASS=your-smtp-password
+EMAIL_FROM=noreply@kitchenhub.com
+EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS=24
+AUTH_BACKEND_BASE_URL=http://localhost:3000
 ```
 
 Optional (monitoring and logging): `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`, `LOG_LEVEL`, `LOG_FORMAT`. See `src/config/env.validation.ts` and the [Monitoring Setup Guide](./docs/MONITORING_SETUP.md).
@@ -443,6 +457,10 @@ Represents a user account.
 | `id` | UUID | Primary Key | Unique user identifier (matches Supabase Auth UUID) |
 | `email` | String? | Unique, Nullable | User email address |
 | `googleId` | String? | Unique, Nullable | Google OAuth ID |
+| `passwordHash` | String? | Nullable | Bcrypt hashed password (for email/password authentication) |
+| `emailVerified` | Boolean | Default: false | Whether email address has been verified |
+| `emailVerificationToken` | String? | Nullable | Cryptographically secure token for email verification |
+| `emailVerificationTokenExpiry` | DateTime? | Nullable | Expiration timestamp for verification token |
 | `name` | String? | Nullable | User display name |
 | `avatarUrl` | String? | Nullable | User avatar URL |
 | `role` | String | Default: "Member" | User role (Admin, Member, Kid) |
@@ -726,6 +744,11 @@ To verify that Row Level Security is correctly isolating data between households
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
+| `POST` | `/auth/register` | Public | Register new user with email and password. Creates user account and sends verification email. Email verification required before login. |
+| `POST` | `/auth/login` | Public | Authenticate user with email and password. Requires email to be verified. Returns JWT access and refresh tokens. |
+| `GET` | `/auth/verify-email?token=` | Public | Verify email address via GET request (for email links). Validates token and automatically logs user in. |
+| `POST` | `/auth/verify-email` | Public | Verify email address via POST request (for API calls). Validates token and automatically logs user in. |
+| `POST` | `/auth/resend-verification` | Public | Resend email verification email. Generates new verification token and sends email. |
 | `POST` | `/auth/google` | Public | Authenticate with Google OAuth ID token. Login: existing user returns tokens (household in body rejected). Sign-up: new user with no body → backend creates household with default name. Join: body `household.id` (from GET /invite/validate) to join existing household. |
 | `POST` | `/auth/refresh` | Public | Refresh access token using refresh token |
 | `GET` | `/auth/me` | Protected | Get current authenticated user information with household data |
@@ -905,7 +928,7 @@ The backend implements a backend-driven OAuth flow where all OAuth secrets and t
 
 ### Authentication Requirements
 
-- **Public Routes**: `/auth/google`, `/auth/google/start`, `/auth/google/callback`, `/auth/refresh`, `/invite/validate`, `/groceries/*`
+- **Public Routes**: `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/resend-verification`, `/auth/google`, `/auth/google/start`, `/auth/google/callback`, `/auth/refresh`, `/invite/validate`, `/groceries/*`
 - **Protected Routes**: All other endpoints require Bearer JWT token
 - **Household Routes**: Most protected routes also require household membership (enforced by `HouseholdGuard`)
 
@@ -961,10 +984,10 @@ backend/
 │   │
 │   ├── modules/                     # Feature modules (mirror mobile features)
 │   │   ├── auth/                   # Authentication module
-│   │   │   ├── controllers/        # AuthController
-│   │   │   ├── services/           # AuthService, AuthCleanupService (idempotency key cleanup)
+│   │   │   ├── controllers/        # AuthController (Google OAuth, email/password, sync)
+│   │   │   ├── services/           # AuthService, EmailService, AuthCleanupService (idempotency key cleanup)
 │   │   │   ├── repositories/       # AuthRepository
-│   │   │   ├── dtos/               # Auth DTOs
+│   │   │   ├── dtos/               # Auth DTOs (RegisterDto, LoginDto, VerifyEmailDto, etc.)
 │   │   │   ├── constants/          # Sync entity type constants
 │   │   │   └── auth.module.ts
 │   │   ├── households/             # Household management (create, get, update, invite, remove member, invite validation; default name, idempotent join, race-safe create)
@@ -1056,6 +1079,18 @@ The API uses global guards and interceptors configured in `app.module.ts`:
 Mark endpoints as public using the `@Public()` decorator:
 
 ```typescript
+@Post('register')
+@Public()  // Opts out of JWT guard
+async register(@Body() dto: RegisterDto) {
+  // ...
+}
+
+@Post('login')
+@Public()  // Opts out of JWT guard
+async login(@Body() dto: LoginDto) {
+  // ...
+}
+
 @Post('google')
 @Public()  // Opts out of JWT guard
 async authenticateGoogle(@Body() dto: GoogleAuthDto) {
