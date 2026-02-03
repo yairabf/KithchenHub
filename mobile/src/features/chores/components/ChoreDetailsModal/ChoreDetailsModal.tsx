@@ -23,7 +23,7 @@ export function ChoreDetailsModal({
 }: ChoreDetailsModalProps) {
   const { members } = useHousehold();
   const [selectedAssignee, setSelectedAssignee] = useState<string | undefined>(chore?.assignee);
-  const [choreName, setChoreName] = useState<string>(chore?.name || '');
+  const [choreName, setChoreName] = useState<string>(chore?.title || '');
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
 
   // Helper function to parse the chore's date/time strings into a Date object
@@ -95,8 +95,8 @@ export function ChoreDetailsModal({
       // Build updates object
       const updates: Partial<Chore> = {};
 
-      if (choreName !== chore.name) {
-        updates.name = choreName;
+      if (choreName !== chore.title) {
+        updates.title = choreName;
       }
 
       // Update date/time if changed and valid

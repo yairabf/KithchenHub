@@ -144,18 +144,18 @@ export function formatChoresText(
   if (todayChores.length > 0) {
     lines.push("\nToday's Chores:");
     todayChores.forEach(chore => {
-      const status = chore.completed ? '✓' : '○';
+      const status = chore.isCompleted ? '✓' : '○';
       const assignee = chore.assignee ? ` (${chore.assignee})` : '';
-      lines.push(`  ${status} ${chore.icon || '📋'} ${chore.name}${assignee}`);
+      lines.push(`  ${status} ${chore.icon || '📋'} ${chore.title}${assignee}`);
     });
   }
 
   if (upcomingChores.length > 0) {
     lines.push('\nUpcoming Chores:');
     upcomingChores.forEach(chore => {
-      const status = chore.completed ? '✓' : '○';
+      const status = chore.isCompleted ? '✓' : '○';
       const assignee = chore.assignee ? ` (${chore.assignee})` : '';
-      lines.push(`  ${status} ${chore.icon || '📋'} ${chore.name} - ${chore.dueDate}${assignee}`);
+      lines.push(`  ${status} ${chore.icon || '📋'} ${chore.title} - ${chore.dueDate}${assignee}`);
     });
   }
 
@@ -171,7 +171,7 @@ export function formatRecipeText(recipe: Recipe): string {
     return 'Recipe not available';
   }
   
-  const recipeName = recipe.name || recipe.title || 'Untitled Recipe';
+  const recipeName = recipe.title || 'Untitled Recipe';
   const header = `Recipe: ${recipeName}`;
   const lines: string[] = [];
 
@@ -207,8 +207,8 @@ export function formatRecipeText(recipe: Recipe): string {
     lines.push(`  ${SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS}`); // Reuse empty string constant
   } else {
     instructions.forEach((step, index) => {
-      const text = step?.text || '';
-      lines.push(`  ${index + 1}. ${text}`);
+      const instruction = step?.instruction || '';
+      lines.push(`  ${index + 1}. ${instruction}`);
     });
   }
 

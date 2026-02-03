@@ -3,23 +3,23 @@ import type { Chore } from '../../../mocks/chores';
 import { withCreatedAtAndUpdatedAt } from '../../../common/utils/timestamps';
 
 interface NewChoreData {
-    name: string;
+    title: string;
     icon: string;
     assignee?: string;
     dueDate: string;
     dueTime?: string;
-    section: 'today' | 'thisWeek';
+    section: 'today' | 'thisWeek' | 'recurring';
 }
 
 export const createChore = (data: NewChoreData): Chore => {
     const chore = {
         id: Date.now().toString(),
         localId: Crypto.randomUUID(),
-        name: data.name,
+        title: data.title,
         assignee: data.assignee,
         dueDate: data.dueDate,
         dueTime: data.dueTime,
-        completed: false,
+        isCompleted: false,
         section: data.section,
         icon: data.icon,
     };

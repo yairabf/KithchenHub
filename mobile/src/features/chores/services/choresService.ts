@@ -23,9 +23,11 @@ export interface IChoresService {
 type ChoreDto = {
   id: string;
   title: string;
+  assigneeId?: string | null;
   assigneeName?: string | null;
   dueDate?: string | Date | null;
   isCompleted: boolean;
+  completedAt?: string | Date | null;
   repeat?: string | null;
 };
 
@@ -40,6 +42,80 @@ const parseDate = (value?: string | Date | null): Date | null => {
   if (!value) return null;
   const parsed = value instanceof Date ? value : new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/**
+ * Parses a frontend dueDate string (e.g., "Today", "Tomorrow", or date string) into an ISO date string.
+ * Returns undefined if the date cannot be parsed.
+ */
+const parseDueDateString = (dueDate?: string, dueTime?: string): string | undefined => {
+  if (!dueDate) return undefined;
+  
+  try {
+    const dueDateLower = dueDate.toLowerCase();
+    let baseDate = new Date();
+    
+    if (dueDateLower === 'today') {
+      baseDate = new Date();
+      baseDate.setHours(0, 0, 0, 0);
+    } else if (dueDateLower === 'tomorrow') {
+      baseDate = new Date();
+      baseDate.setDate(baseDate.getDate() + 1);
+      baseDate.setHours(0, 0, 0, 0);
+    } else {
+      // Try to parse as a date string
+      const parsed = new Date(dueDate);
+      if (Number.isNaN(parsed.getTime())) {
+        // If it's a weekday name, find the next occurrence
+        const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const targetDay = weekdays.indexOf(dueDateLower);
+        if (targetDay !== -1) {
+          const today = new Date().getDay();
+          const daysToAdd = targetDay >= today ? targetDay - today : 7 - today + targetDay;
+          baseDate = new Date();
+          baseDate.setDate(baseDate.getDate() + daysToAdd);
+          baseDate.setHours(0, 0, 0, 0);
+        } else {
+          return undefined;
+        }
+      } else {
+        baseDate = parsed;
+      }
+    }
+    
+    // Parse time if provided
+    if (dueTime) {
+      const timeMatch = dueTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        const period = timeMatch[3]?.toUpperCase();
+        
+        if (period === 'PM' && hours !== 12) {
+          hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        
+        baseDate.setHours(hours, minutes, 0, 0);
+      }
+    }
+    
+    return baseDate.toISOString();
+  } catch (error) {
+    console.error('Error parsing dueDate string:', error);
+    return undefined;
+  }
+};
+
+/**
+ * Maps frontend isRecurring boolean to backend repeat string.
+ * Returns undefined if not recurring.
+ */
+const mapIsRecurringToRepeat = (isRecurring?: boolean): string | undefined => {
+  // For now, we use a simple mapping. In the future, this could be more sophisticated
+  // (e.g., daily, weekly, monthly based on chore configuration)
+  return isRecurring ? 'daily' : undefined;
 };
 
 const formatDateLabel = (date: Date | null, section: Chore['section']): string => {
@@ -69,13 +145,13 @@ const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
   return {
     id: dto.id,
     localId: dto.id,
-    name: dto.title,
+    title: dto.title,
     assignee: dto.assigneeName ?? undefined,
     dueDate: formatDateLabel(dueDate, resolvedSection),
     dueTime: formatTimeLabel(dueDate),
     reminder: undefined,
     isRecurring,
-    completed: dto.isCompleted,
+    isCompleted: dto.isCompleted,
     section: resolvedSection,
     icon: DEFAULT_CHORE_ICON,
   };
@@ -89,12 +165,12 @@ export class LocalChoresService implements IChoresService {
   }
 
   async createChore(chore: Partial<Chore>): Promise<Chore> {
-    if (!chore.name) {
-      throw new Error('Chore must have a name');
+    if (!chore.title) {
+      throw new Error('Chore must have a title');
     }
     
     const newChore = createChore({
-      name: chore.name,
+      title: chore.title,
       icon: chore.icon || DEFAULT_CHORE_ICON,
       assignee: chore.assignee,
       dueDate: chore.dueDate || 'Today',
@@ -138,7 +214,7 @@ export class LocalChoresService implements IChoresService {
     return updateEntityInStorage(
       existingChores,
       choreIndex,
-      (chore) => withUpdatedAt({ ...chore, completed: !chore.completed }),
+      (chore) => withUpdatedAt({ ...chore, isCompleted: !chore.isCompleted }),
       guestStorage.saveChores
     );
   }
@@ -165,8 +241,8 @@ export class RemoteChoresService implements IChoresService {
   }
 
   async createChore(chore: Partial<Chore>): Promise<Chore> {
-    if (!chore.name) {
-      throw new Error('Chore must have a name');
+    if (!chore.title) {
+      throw new Error('Chore must have a title');
     }
     
     // Apply timestamp for optimistic UI and offline queue
@@ -174,7 +250,7 @@ export class RemoteChoresService implements IChoresService {
     const payload = toSupabaseTimestamps(withTimestamps);
     // Map to backend DTO format
     const dto = {
-      title: payload.name || chore.name,
+      title: payload.title || chore.title,
       assigneeId: undefined, // Would need to map assignee name to ID
       dueDate: undefined, // Would need to parse dueDate string
       repeat: undefined,
@@ -209,11 +285,23 @@ export class RemoteChoresService implements IChoresService {
     const withTimestamps = withUpdatedAt(updated);
     const payload = toSupabaseTimestamps(withTimestamps);
     // Map to backend DTO format
-    const dto = {
-      title: payload.name || updates.name,
-      assigneeId: undefined, // Would need to map assignee name to ID
-      dueDate: undefined, // Would need to parse dueDate string
-    };
+    const dto: {
+      title?: string;
+      assigneeId?: string;
+      dueDate?: string;
+      repeat?: string;
+    } = {};
+    
+    if (updates.title !== undefined) {
+      dto.title = updates.title;
+    }
+    if (updates.dueDate !== undefined || updates.dueTime !== undefined) {
+      dto.dueDate = parseDueDateString(updates.dueDate ?? updated.dueDate, updates.dueTime ?? updated.dueTime);
+    }
+    if (updates.isRecurring !== undefined) {
+      dto.repeat = mapIsRecurringToRepeat(updates.isRecurring);
+    }
+    // Note: assigneeId mapping requires user lookup - left as undefined for now
     await api.patch(`/chores/${choreId}`, dto);
     // Server is authority: fetch the updated chore to get server timestamps
     const updatedChore = await this.getChores().then(chores => chores.find(c => c.id === choreId));
@@ -262,13 +350,13 @@ export class RemoteChoresService implements IChoresService {
     // Apply timestamp for optimistic UI and offline queue
     const updated = { 
       ...existing, 
-      completed: !existing.completed 
+      isCompleted: !existing.isCompleted 
     };
     const withTimestamps = withUpdatedAt(updated);
     const payload = toSupabaseTimestamps(withTimestamps);
     
     await api.patch(`/chores/${choreId}`, { 
-      is_completed: !existing.completed,
+      is_completed: !existing.isCompleted,
       updated_at: payload.updated_at 
     });
     // Server is authority: fetch the updated chore to get server timestamps
@@ -301,11 +389,6 @@ export const createChoresService = (
   mode: 'guest' | 'signed-in',
   entityType: 'chores' = 'chores'
 ): IChoresService => {
-  // Public catalog cannot use chores service
-  if (mode === 'public-catalog') {
-    throw new Error('Public catalog cannot use chores service.');
-  }
-  
   // Validate service compatibility
   const serviceType = mode === 'guest' ? 'local' : 'remote';
   validateServiceCompatibility(serviceType, mode);

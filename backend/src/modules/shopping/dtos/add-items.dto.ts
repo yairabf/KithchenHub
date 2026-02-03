@@ -36,6 +36,10 @@ export class ShoppingItemInputDto {
   @IsOptional()
   category?: string;
 
+  @IsString()
+  @IsOptional()
+  image?: string;
+
   @IsBoolean()
   @IsOptional()
   isChecked?: boolean;

@@ -8,4 +8,8 @@ export class CreateListDto {
   @IsString()
   @IsOptional()
   color?: string;
+
+  @IsString()
+  @IsOptional()
+  icon?: string;
 }

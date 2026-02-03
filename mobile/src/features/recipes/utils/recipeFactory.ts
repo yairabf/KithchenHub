@@ -7,9 +7,10 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
     const recipe = {
         id: String(Date.now()),
         localId: Crypto.randomUUID(),
-        name: data.title,
-        cookTime: data.prepTime || 'N/A',
-        category: data.category || 'Dinner',
+        title: data.title,
+        cookTime: typeof data.cookTime === 'number' ? data.cookTime : undefined,
+        prepTime: typeof data.prepTime === 'number' ? data.prepTime : undefined,
+        category: data.category,
         description: data.description,
         ingredients: data.ingredients,
         instructions: data.instructions,

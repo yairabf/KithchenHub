@@ -80,13 +80,13 @@ const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
   return {
     id: dto.id,
     localId: dto.id,
-    name: dto.title,
+    title: dto.title,
     assignee: dto.assigneeName ?? undefined,
     dueDate: formatDateLabel(dueDate, resolvedSection),
     dueTime: formatTimeLabel(dueDate),
     reminder: undefined,
     isRecurring,
-    completed: dto.isCompleted,
+    isCompleted: dto.isCompleted,
     section: resolvedSection,
     icon: DEFAULT_CHORE_ICON,
   };
@@ -394,7 +394,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
     // Step 2: Create optimistic toggled entity
     const optimisticEntity = this.ensureLocalId(withUpdatedAt({
       ...existing,
-      completed: !existing.completed,
+      isCompleted: !existing.isCompleted,
     } as Chore));
     
     // Step 3: Update cache immediately (write-through) - ALWAYS FIRST

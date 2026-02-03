@@ -121,7 +121,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
         if (isMounted) {
           const templates = chores.map((chore) => ({
             id: chore.id,
-            name: chore.name,
+            name: chore.title,
             icon: chore.icon ?? '🧹',
             category: chore.section === 'today' ? 'Today' : 'Upcoming',
           }));
@@ -189,7 +189,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
     // Call the callback to add chore to parent state
     if (onAddChore) {
       onAddChore({
-        name: newChoreText.trim(),
+        title: newChoreText.trim(),
         icon: selectedIcon,
         assignee: selectedAssignee,
         dueDate: formattedDate,

@@ -120,11 +120,11 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     const filtered = recipes.filter(recipe => {
       const id = recipe?.id;
       if (!id) {
-        console.warn('[RecipesScreen] Recipe missing ID, filtering out:', JSON.stringify({ name: recipe?.name, title: recipe?.title, hasId: !!recipe?.id }));
+        console.warn('[RecipesScreen] Recipe missing ID, filtering out:', JSON.stringify({ title: recipe?.title, hasId: !!recipe?.id }));
         return false;
       }
       if (seen.has(id)) {
-        console.warn('[RecipesScreen] Duplicate recipe ID found, filtering out:', id, JSON.stringify({ name: recipe?.name, title: recipe?.title }));
+        console.warn('[RecipesScreen] Duplicate recipe ID found, filtering out:', id, JSON.stringify({ title: recipe?.title }));
         return false;
       }
       seen.add(id);
@@ -140,7 +140,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
 
   const filteredRecipes = uniqueRecipes.filter(recipe => {
     // Safely handle recipes that might be missing fields (e.g., from API list endpoint)
-    const recipeName = recipe?.name || recipe?.title || '';
+    const recipeName = recipe?.title || '';
     const recipeCategory = recipe?.category || 'Dinner';
     
     const matchesCategory = selectedCategory === 'All' || recipeCategory === selectedCategory;

@@ -21,7 +21,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  photoUrl?: string;
+  avatarUrl?: string;
   householdId?: string;
   isGuest: boolean;
 }
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: response.id,
         email: response.email || '',
         name: response.name || 'Kitchen User',
-        photoUrl: response.avatarUrl,
+        avatarUrl: response.avatarUrl,
         householdId: response.householdId || undefined,
         isGuest: response.isGuest,
       };
@@ -104,14 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           // Fetch current user from backend to ensure session is valid
           const userData = await authApi.getCurrentUser();
-          const userToSet: User = {
-            id: userData.id,
-            email: userData.email || '',
-            name: userData.name || 'Kitchen User',
-            photoUrl: userData.avatarUrl,
-            householdId: userData.householdId || undefined,
-            isGuest: userData.isGuest,
-          };
+        const userToSet: User = {
+          id: userData.id,
+          email: userData.email || '',
+          name: userData.name || 'Kitchen User',
+          avatarUrl: userData.avatarUrl,
+          householdId: userData.householdId || undefined,
+          isGuest: userData.isGuest,
+        };
           setUser(userToSet);
           await saveUser(userToSet);
           // Ensure token is still set after user is loaded

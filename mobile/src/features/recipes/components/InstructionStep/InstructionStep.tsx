@@ -42,7 +42,7 @@ export function InstructionStep({
         <Text
           style={[styles.stepText, isCompleted && styles.stepTextCompleted]}
         >
-          {step.text}
+          {step.instruction}
         </Text>
         {!isCompleted && (
           <Text style={styles.markAsFinished}>Mark as finished</Text>

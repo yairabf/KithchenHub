@@ -79,6 +79,7 @@ model ShoppingList {
   householdId String    @map("household_id")
   name        String
   color       String?
+  icon        String?
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
@@ -100,6 +101,7 @@ model ShoppingItem {
   unit          String?
   isChecked     Boolean   @default(false) @map("is_checked")
   category      String?
+  image         String?   @map("image")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
@@ -154,7 +156,9 @@ model Recipe {
   id           String    @id @default(cuid())
   householdId  String    @map("household_id")
   title        String
+  category     String?
   prepTime     Int?      @map("prep_time") // in minutes
+  cookTime     Int?      @map("cook_time") // in minutes
   ingredients  Json      // JSONB array of ingredients
   instructions Json      // JSONB array of instruction steps
   imageUrl     String?   @map("image_url")

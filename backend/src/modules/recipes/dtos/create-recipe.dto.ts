@@ -34,9 +34,17 @@ export class CreateRecipeDto {
   @IsNotEmpty()
   title: string;
 
+  @IsString()
+  @IsOptional()
+  category?: string;
+
   @IsNumber()
   @IsOptional()
   prepTime?: number;
+
+  @IsNumber()
+  @IsOptional()
+  cookTime?: number;
 
   @IsArray()
   @IsNotEmpty()

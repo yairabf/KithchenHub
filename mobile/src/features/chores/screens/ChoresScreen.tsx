@@ -130,7 +130,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     } else {
       // Guest: update local state
       setGuestChores(prevChores => prevChores.map(chore =>
-        chore.id === id ? { ...chore, completed: !chore.completed } : chore
+        chore.id === id ? { ...chore, isCompleted: !chore.isCompleted } : chore
       ));
     }
   };
@@ -187,7 +187,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   };
 
   const handleAddChore = async (newChore: {
-    name: string;
+    title: string;
     icon: string;
     assignee?: string;
     dueDate: string;
@@ -297,10 +297,10 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           </View>
           <View style={styles.choreCardContent}>
             <Text
-              style={[styles.choreCardName, chore.completed && styles.choreCompleted]}
+              style={[styles.choreCardName, chore.isCompleted && styles.choreCompleted]}
               numberOfLines={1}
             >
-              {chore.name}
+              {chore.title}
             </Text>
             <Text style={styles.choreCardTime} numberOfLines={1}>
               {chore.dueDate} {chore.dueTime}
@@ -314,7 +314,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
             </View>
           )}
           <View style={styles.choreCardCheck}>
-            {chore.completed ? (
+            {chore.isCompleted ? (
               <View style={styles.checkmark}>
                 <Ionicons name="checkmark" size={18} color={colors.success} />
               </View>

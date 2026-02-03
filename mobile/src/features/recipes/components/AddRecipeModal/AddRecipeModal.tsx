@@ -26,7 +26,7 @@ const createEmptyRecipe = (): NewRecipeData => ({
   prepTime: '',
   description: '',
   ingredients: [],
-  instructions: [{ id: generateId(), text: '' }],
+  instructions: [{ id: generateId(), instruction: '' }],
 });
 
 export function AddRecipeModal({
@@ -64,7 +64,7 @@ export function AddRecipeModal({
       const cleanedRecipe: NewRecipeData = {
         ...recipe,
         ingredients: (recipe.ingredients || []).filter((ing) => ing.name.trim()),
-        instructions: (recipe.instructions || []).filter((inst) => inst.text.trim()),
+        instructions: (recipe.instructions || []).filter((inst) => inst.instruction.trim()),
         imageLocalUri: imageUri ?? undefined,
       };
       onSave(cleanedRecipe);
@@ -121,7 +121,7 @@ export function AddRecipeModal({
     const currentInstructions = recipe.instructions || [];
     setRecipe({
       ...recipe,
-      instructions: [...currentInstructions, { id: generateId(), text: '' }],
+      instructions: [...currentInstructions, { id: generateId(), instruction: '' }],
     });
   };
 
@@ -130,7 +130,7 @@ export function AddRecipeModal({
     setRecipe({
       ...recipe,
       instructions: currentInstructions.map((inst) =>
-        inst.id === id ? { ...inst, text: value } : inst
+        inst.id === id ? { ...inst, instruction: value } : inst
       ),
     });
   };

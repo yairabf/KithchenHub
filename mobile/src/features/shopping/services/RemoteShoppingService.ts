@@ -29,6 +29,7 @@ interface ShoppingItemInputDto {
   quantity?: number;
   unit?: string;
   category?: string;
+  image?: string;
   isChecked?: boolean;
 }
 
@@ -36,6 +37,7 @@ type ShoppingListSummaryDto = {
   id: string;
   name: string;
   color?: string | null;
+  icon?: string | null;
   itemCount?: number | null;
 };
 
@@ -43,6 +45,7 @@ type ShoppingListDetailDto = {
   id: string;
   name: string;
   color?: string | null;
+  icon?: string | null;
   items: {
     id: string;
     name: string;
@@ -50,6 +53,7 @@ type ShoppingListDetailDto = {
     unit?: string | null;
     isChecked?: boolean | null;
     category?: string | null;
+    image?: string | null;
   }[];
 };
 
@@ -65,7 +69,7 @@ const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => (
   localId: list.id,
   name: list.name,
   itemCount: list.itemCount ?? 0,
-  icon: DEFAULT_LIST_ICON,
+  icon: (list.icon as ShoppingList['icon']) ?? DEFAULT_LIST_ICON,
   color: list.color ?? DEFAULT_LIST_COLOR,
 });
 
@@ -83,7 +87,7 @@ const buildShoppingItemsFromDetails = (
       id: item.id,
       localId: item.id,
       name: item.name,
-      image: matchingGrocery?.image ?? '',
+      image: item.image ?? matchingGrocery?.image ?? '',
       quantity: item.quantity ?? 1,
       unit: item.unit ?? undefined,
       isChecked: item.isChecked ?? false,
@@ -118,7 +122,7 @@ const mapItemResponseToShoppingItem = (
     isChecked: response.isChecked ?? false,
     category: response.category ?? 'Other',
     listId,
-    image: existingImage ?? '',
+    image: response.image ?? existingImage ?? '',
   };
 };
 
@@ -152,11 +156,11 @@ export class RemoteShoppingService implements IShoppingService {
   /**
    * Maps frontend ShoppingList to backend CreateListDto format
    */
-  private mapListToCreateDto(list: Partial<ShoppingList>): { name: string; color?: string } {
+  private mapListToCreateDto(list: Partial<ShoppingList>): { name: string; color?: string; icon?: string } {
     return {
       name: list.name || 'New List',
       color: list.color,
-      // Note: Backend doesn't support 'icon' field, so we exclude it
+      icon: list.icon,
     };
   }
 
@@ -171,6 +175,7 @@ export class RemoteShoppingService implements IShoppingService {
    * - quantity?: number
    * - unit?: string
    * - category?: string
+   * - image?: string
    * - isChecked?: boolean
    * 
    * Note: Timestamps, id, listId are not sent - backend generates these.
@@ -187,6 +192,7 @@ export class RemoteShoppingService implements IShoppingService {
       quantity: item.quantity ?? 1,
       unit: item.unit,
       category: item.category,
+      image: item.image,
       isChecked: item.isChecked ?? false,
     };
 

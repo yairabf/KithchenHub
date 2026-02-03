@@ -79,7 +79,7 @@ export function mapUserResponseToUser(userResponse: UserResponse): User {
     id: userResponse.id,
     email: userResponse.email || '',
     name: userResponse.name || 'Kitchen User',
-    photoUrl: userResponse.avatarUrl,
+    avatarUrl: userResponse.avatarUrl,
     householdId: userResponse.householdId || undefined,
     isGuest: userResponse.isGuest,
   };

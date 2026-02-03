@@ -12,7 +12,9 @@ export class RecipeInstructionDto {
 export class RecipeDetailDto {
   id: string;
   title: string;
+  category?: string;
   prepTime?: number;
+  cookTime?: number;
   ingredients: RecipeIngredientDto[];
   instructions: RecipeInstructionDto[];
   imageUrl?: string;

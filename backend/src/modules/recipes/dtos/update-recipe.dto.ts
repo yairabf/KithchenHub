@@ -1,21 +1,41 @@
-import { IsString, IsOptional, IsArray, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsNumber,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { IngredientInputDto, InstructionInputDto } from './create-recipe.dto';
 
 export class UpdateRecipeDto {
   @IsString()
   @IsOptional()
   title?: string;
 
+  @IsString()
+  @IsOptional()
+  category?: string;
+
   @IsNumber()
   @IsOptional()
   prepTime?: number;
 
-  @IsArray()
+  @IsNumber()
   @IsOptional()
-  ingredients?: any[];
+  cookTime?: number;
 
   @IsArray()
   @IsOptional()
-  instructions?: any[];
+  @ValidateNested({ each: true })
+  @Type(() => IngredientInputDto)
+  ingredients?: IngredientInputDto[];
+
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => InstructionInputDto)
+  instructions?: InstructionInputDto[];
 
   @IsString()
   @IsOptional()
