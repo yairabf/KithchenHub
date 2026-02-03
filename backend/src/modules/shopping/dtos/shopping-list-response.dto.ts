@@ -13,11 +13,13 @@ export class ShoppingItemDto {
   unit?: string;
   isChecked: boolean;
   category?: string;
+  image?: string;
 }
 
 export class ShoppingListDetailDto {
   id: string;
   name: string;
   color?: string;
+  icon?: string;
   items: ShoppingItemDto[];
 }

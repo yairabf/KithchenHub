@@ -43,7 +43,7 @@ export class ShoppingRepository {
 
   async createList(
     householdId: string,
-    data: { name: string; color?: string },
+    data: { name: string; color?: string; icon?: string },
   ): Promise<ShoppingList> {
     this.logger.log(
       `Creating shopping list in database for household ${householdId}`,
@@ -56,6 +56,7 @@ export class ShoppingRepository {
           householdId,
           name: data.name,
           color: data.color,
+          icon: data.icon,
         },
       });
 
@@ -114,6 +115,7 @@ export class ShoppingRepository {
       quantity: number;
       unit?: string;
       category?: string;
+      image?: string;
       isChecked?: boolean;
     },
   ): Promise<ShoppingItem> {
@@ -126,6 +128,7 @@ export class ShoppingRepository {
         quantity: data.quantity,
         unit: data.unit,
         category: data.category,
+        image: data.image,
         isChecked: data.isChecked || false,
       },
     });

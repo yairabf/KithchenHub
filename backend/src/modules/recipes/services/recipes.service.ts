@@ -25,7 +25,9 @@ import {
 type RecipeEntityShape = {
   id: string;
   title: string;
+  category?: string | null;
   prepTime?: number | null;
+  cookTime?: number | null;
   ingredients?: unknown;
   instructions?: unknown;
   imageUrl?: string | null;
@@ -42,7 +44,9 @@ function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
   return {
     id: recipe.id,
     title: recipe.title,
+    category: recipe.category ?? undefined,
     prepTime: recipe.prepTime ?? undefined,
+    cookTime: recipe.cookTime ?? undefined,
     ingredients: Array.isArray(recipe.ingredients)
       ? (recipe.ingredients as unknown as RecipeIngredientDto[])
       : [],
@@ -104,7 +108,9 @@ export class RecipesService {
     const mapped = recipes.map((recipe) => ({
       id: recipe.id,
       title: recipe.title,
-      imageUrl: recipe.imageUrl,
+      category: recipe.category ?? undefined,
+      cookTime: recipe.cookTime ?? undefined,
+      imageUrl: recipe.imageUrl ?? undefined,
     }));
 
     this.logger.debug(`Mapped recipes DTO: ${JSON.stringify(mapped, null, 2)}`);
@@ -162,7 +168,9 @@ export class RecipesService {
 
     const recipe = await this.recipesRepository.createRecipe(householdId, {
       title: dto.title,
+      category: dto.category,
       prepTime: dto.prepTime,
+      cookTime: dto.cookTime,
       ingredients: dto.ingredients,
       instructions: dto.instructions,
       imageUrl: dto.imageUrl,
@@ -203,7 +211,9 @@ export class RecipesService {
 
     const updatedRecipe = await this.recipesRepository.updateRecipe(recipeId, {
       title: dto.title,
+      category: dto.category,
       prepTime: dto.prepTime,
+      cookTime: dto.cookTime,
       ingredients: dto.ingredients,
       instructions: dto.instructions,
       imageUrl: dto.imageUrl,

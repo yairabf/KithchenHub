@@ -68,6 +68,7 @@ export class ShoppingService {
       quantity?: number;
       unit?: string;
       category?: string;
+      image?: string;
       isChecked?: boolean;
     },
     catalogItem: {
@@ -75,6 +76,7 @@ export class ShoppingService {
       category: string;
       defaultUnit?: string | null;
       defaultQuantity?: number | null;
+      imageUrl?: string | null;
     } | null,
     catalogItemId?: string,
   ) {
@@ -89,6 +91,7 @@ export class ShoppingService {
       category: catalogItem?.category ?? input.category,
       unit: input.unit ?? catalogItem?.defaultUnit ?? undefined,
       quantity: input.quantity ?? catalogItem?.defaultQuantity ?? 1,
+      image: input.image ?? this.resolveCatalogImageUrl(catalogItem?.imageUrl),
       isChecked: input.isChecked ?? false,
     };
   }
@@ -247,6 +250,7 @@ export class ShoppingService {
       id: list.id,
       name: list.name,
       color: list.color,
+      icon: list.icon ?? undefined,
       items: list.items.map((item) => ({
         id: item.id,
         catalogItemId: item.catalogItemId ?? undefined,
@@ -255,6 +259,7 @@ export class ShoppingService {
         unit: item.unit,
         isChecked: item.isChecked,
         category: item.category,
+        image: item.image ?? undefined,
       })),
     };
   }
@@ -298,6 +303,7 @@ export class ShoppingService {
         unit: item.unit,
         isChecked: item.isChecked,
         category: item.category,
+        image: item.image ?? undefined,
       })),
     };
   }
@@ -340,6 +346,7 @@ export class ShoppingService {
         unit: updatedItem.unit,
         isChecked: updatedItem.isChecked,
         category: updatedItem.category,
+        image: updatedItem.image ?? undefined,
       },
     };
   }
@@ -407,6 +414,7 @@ export class ShoppingService {
       quantity?: number;
       unit?: string;
       category?: string;
+      image?: string;
       isChecked?: boolean;
     },
   ) {

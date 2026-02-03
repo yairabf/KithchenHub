@@ -60,7 +60,9 @@ export class RecipesRepository {
     householdId: string,
     data: {
       title: string;
+      category?: string;
       prepTime?: number;
+      cookTime?: number;
       ingredients: any;
       instructions: any;
       imageUrl?: string;
@@ -74,7 +76,9 @@ export class RecipesRepository {
         data: {
           householdId,
           title: data.title,
+          category: data.category,
           prepTime: data.prepTime,
+          cookTime: data.cookTime,
           ingredients: data.ingredients,
           instructions: data.instructions,
           imageUrl: data.imageUrl,
@@ -99,7 +103,9 @@ export class RecipesRepository {
     id: string,
     data: {
       title?: string;
+      category?: string;
       prepTime?: number;
+      cookTime?: number;
       ingredients?: any;
       instructions?: any;
       imageUrl?: string;
