@@ -34,17 +34,21 @@ model Household {
 }
 
 model User {
-  id          String   @id @db.Uuid
-  email       String?  @unique
-  googleId    String?  @unique @map("google_id")
-  name        String?
-  avatarUrl   String?  @map("avatar_url")
-  role        String   @default("Member") // Admin, Member, Kid
-  isGuest     Boolean  @default(false) @map("is_guest")
-  deviceId    String?  @map("device_id")
-  householdId String?  @map("household_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                          String    @id @db.Uuid
+  email                       String?   @unique
+  googleId                    String?   @unique @map("google_id")
+  passwordHash                String?   @map("password_hash")
+  emailVerified               Boolean   @default(false) @map("email_verified")
+  emailVerificationToken      String?   @map("email_verification_token")
+  emailVerificationTokenExpiry DateTime? @map("email_verification_token_expiry")
+  name                        String?
+  avatarUrl                   String?   @map("avatar_url")
+  role                        String    @default("Member") // Admin, Member, Kid
+  isGuest                     Boolean   @default(false) @map("is_guest")
+  deviceId                    String?   @map("device_id")
+  householdId                 String?   @map("household_id")
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @updatedAt @map("updated_at")
 
   household           Household?            @relation(fields: [householdId], references: [id], onDelete: SetNull)
   refreshTokens       RefreshToken[]

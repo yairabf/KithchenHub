@@ -4,13 +4,17 @@ import {
   UnauthorizedException,
   BadRequestException,
   Logger,
+  ConflictException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { AuthRepository } from '../repositories/auth.repository';
 import { HouseholdsService } from '../../households/services/households.service';
 import { UuidService } from '../../../common/services/uuid.service';
+import { EmailService } from './email.service';
 import { loadConfiguration } from '../../../config/configuration';
 import { User, Household } from '@prisma/client';
 import {
@@ -23,6 +27,10 @@ import {
   SyncRecipeDto,
   SyncChoreDto,
   UserCreationHouseholdDto,
+  RegisterDto,
+  LoginDto,
+  VerifyEmailDto,
+  ResendVerificationDto,
 } from '../dtos';
 import {
   JwtPayload,
@@ -64,6 +72,7 @@ function isPrismaUniqueConstraintError(error: unknown): error is {
  *
  * Responsibilities:
  * - Google OAuth authentication
+ * - Email/password authentication
  * - JWT token generation and refresh
  * - Offline data synchronization
  */
@@ -71,6 +80,7 @@ function isPrismaUniqueConstraintError(error: unknown): error is {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private googleClient: OAuth2Client | null = null;
+  private readonly config = loadConfiguration();
 
   constructor(
     private authRepository: AuthRepository,
@@ -78,6 +88,7 @@ export class AuthService {
     private prisma: PrismaService,
     private uuidService: UuidService,
     private householdsService: HouseholdsService,
+    private emailService: EmailService,
   ) {
     const config = loadConfiguration();
     if (config.google.clientId && config.google.clientSecret) {
@@ -1171,6 +1182,25 @@ export class AuthService {
 
     const expiresAt = this.calculateRefreshTokenExpiry();
 
+    // Before creating a new refresh token, delete any existing ones for this user.
+    // This prevents 'Unique constraint failed' errors (P2002) that occur when:
+    // - verifyEmail() generates tokens for auto-login
+    // - login() is called immediately after, generating another token
+    // The refreshToken.token field has a unique constraint, so we ensure only one
+    // active token exists per user at any time.
+    try {
+      await this.authRepository.deleteAllRefreshTokensForUser(user.id);
+    } catch (error) {
+      this.logger.warn(
+        'Failed to delete existing refresh tokens, continuing with creation',
+        {
+          userId: user.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+      // Continue - worst case is we have multiple tokens (handled by unique constraint)
+    }
+
     await this.authRepository.createRefreshToken(
       user.id,
       refreshToken,
@@ -1213,5 +1243,254 @@ export class AuthService {
       avatarUrl: user.avatarUrl,
       householdId: user.householdId,
     };
+  }
+
+  /**
+   * Registers a new user with email and password.
+   *
+   * @param dto - Registration data (email, password, optional name and household)
+   * @returns Success message (user must verify email before login)
+   * @throws ConflictException if email already exists
+   * @throws BadRequestException if validation fails
+   */
+  async register(dto: RegisterDto): Promise<{ message: string }> {
+    // Check if user already exists
+    const existingUser = await this.authRepository.findUserByEmail(dto.email);
+    if (existingUser) {
+      throw new ConflictException('Email already registered');
+    }
+
+    // Hash password
+    const passwordHash = await this.hashPassword(dto.password);
+
+    // Generate email verification token
+    const verificationToken = this.generateEmailVerificationToken();
+    const tokenExpiry = new Date();
+    const expiryHours = this.config.email?.verificationTokenExpiryHours ?? 24;
+    tokenExpiry.setHours(tokenExpiry.getHours() + expiryHours);
+
+    // Create user
+    const userId = this.uuidService.generate();
+    await this.authRepository.createUser({
+      id: userId,
+      email: dto.email,
+      passwordHash,
+      emailVerified: false,
+      emailVerificationToken: verificationToken,
+      emailVerificationTokenExpiry: tokenExpiry,
+      name: dto.name,
+    });
+
+    // Send verification email
+    await this.emailService.sendVerificationEmail(
+      dto.email,
+      verificationToken,
+      dto.name,
+    );
+
+    // Handle household creation if provided
+    if (dto.household) {
+      await this.resolveAndAttachHousehold(userId, dto.household);
+    } else {
+      // Create default household
+      const defaultName = this.deriveDefaultHouseholdName(dto.email, dto.name);
+      await this.resolveAndAttachHousehold(userId, { name: defaultName });
+    }
+
+    return {
+      message:
+        'Registration successful. Please check your email to verify your account.',
+    };
+  }
+
+  /**
+   * Authenticates a user with email and password.
+   *
+   * @param dto - Login credentials (email and password)
+   * @returns Authentication response with tokens and user info
+   * @throws UnauthorizedException if credentials are invalid or email not verified
+   */
+  async login(dto: LoginDto): Promise<AuthResponseDto> {
+    // Find user by email
+    const user = await this.authRepository.findUserByEmail(dto.email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    // Check if user has password (email/password user)
+    if (!user.passwordHash) {
+      throw new UnauthorizedException(
+        'This email is registered with Google sign-in. Please use Google to sign in.',
+      );
+    }
+
+    // Verify password
+    const isPasswordValid = await this.verifyPassword(
+      dto.password,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    // Check email verification
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email before logging in. Check your inbox for the verification link.',
+      );
+    }
+
+    // Generate tokens
+    const userWithHousehold = user as UserWithHousehold;
+    const tokens = await this.generateTokens(userWithHousehold);
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: this.mapUserToResponse(userWithHousehold),
+      householdId: userWithHousehold.householdId,
+      isNewUser: false,
+      isNewHousehold: false,
+      household: userWithHousehold.household
+        ? {
+            id: userWithHousehold.household.id,
+            name: userWithHousehold.household.name,
+          }
+        : undefined,
+    };
+  }
+
+  /**
+   * Verifies a user's email address using the verification token.
+   *
+   * @param dto - Contains the verification token
+   * @returns Authentication response with tokens (auto-login after verification)
+   * @throws BadRequestException if token is invalid or expired
+   */
+  async verifyEmail(dto: VerifyEmailDto): Promise<AuthResponseDto> {
+    // Find user by verification token
+    const user = await this.authRepository.findUserByEmailVerificationToken(
+      dto.token,
+    );
+
+    if (!user) {
+      throw new BadRequestException(
+        'Invalid or expired verification token. Please request a new verification email.',
+      );
+    }
+
+    // Mark email as verified and clear token
+    const verifiedUser = await this.authRepository.updateUserEmailVerification(
+      user.id,
+      true,
+    );
+
+    // Generate tokens for auto-login
+    const tokens = await this.generateTokens(verifiedUser as UserWithHousehold);
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: this.mapUserToResponse(verifiedUser),
+      householdId: verifiedUser.householdId,
+      isNewUser: true,
+      isNewHousehold: false,
+      household: verifiedUser.household
+        ? {
+            id: verifiedUser.household.id,
+            name: verifiedUser.household.name,
+          }
+        : undefined,
+    };
+  }
+
+  /**
+   * Resends email verification email to the user.
+   *
+   * @param dto - Contains the user's email
+   * @returns Success message
+   * @throws BadRequestException if email not found or already verified
+   */
+  async resendVerificationEmail(
+    dto: ResendVerificationDto,
+  ): Promise<{ message: string }> {
+    // Find user by email
+    const user = await this.authRepository.findUserByEmail(dto.email);
+    if (!user) {
+      // Don't reveal if email exists for security
+      return {
+        message:
+          'If the email exists and is not verified, a verification email has been sent.',
+      };
+    }
+
+    // Check if already verified
+    if (user.emailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    // Check if user has password (email/password user)
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'This email is registered with Google sign-in. Email verification is not required.',
+      );
+    }
+
+    // Generate new verification token
+    const verificationToken = this.generateEmailVerificationToken();
+    const tokenExpiry = new Date();
+    const expiryHours = this.config.email?.verificationTokenExpiryHours ?? 24;
+    tokenExpiry.setHours(tokenExpiry.getHours() + expiryHours);
+
+    // Update user with new token
+    await this.authRepository.updateUser(user.id, {
+      emailVerificationToken: verificationToken,
+      emailVerificationTokenExpiry: tokenExpiry,
+    });
+
+    // Send verification email
+    await this.emailService.sendVerificationEmail(
+      dto.email,
+      verificationToken,
+      user.name ?? undefined,
+    );
+
+    return {
+      message: 'Verification email sent. Please check your inbox.',
+    };
+  }
+
+  /**
+   * Hashes a password using bcrypt.
+   *
+   * @param password - Plain text password
+   * @returns Hashed password
+   */
+  private async hashPassword(password: string): Promise<string> {
+    const saltRounds = 12;
+    return bcrypt.hash(password, saltRounds);
+  }
+
+  /**
+   * Verifies a password against a hash.
+   *
+   * @param password - Plain text password
+   * @param hash - Hashed password from database
+   * @returns True if password matches hash
+   */
+  private async verifyPassword(
+    password: string,
+    hash: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(password, hash);
+  }
+
+  /**
+   * Generates a cryptographically secure random token for email verification.
+   *
+   * @returns Random token string
+   */
+  private generateEmailVerificationToken(): string {
+    return crypto.randomBytes(32).toString('hex');
   }
 }

@@ -4,6 +4,7 @@ import { AuthController } from './controllers/auth.controller';
 import { OAuthController } from './controllers/oauth.controller';
 import { AuthService } from './services/auth.service';
 import { OAuthStateService } from './services/oauth-state.service';
+import { EmailService } from './services/email.service';
 import { AuthRepository } from './repositories/auth.repository';
 import { AuthCleanupService } from './services/auth-cleanup.service';
 import { HouseholdsModule } from '../households/households.module';
@@ -36,6 +37,7 @@ const config = loadConfiguration();
   providers: [
     AuthService,
     OAuthStateService,
+    EmailService,
     AuthRepository,
     AuthCleanupService,
     UuidService,

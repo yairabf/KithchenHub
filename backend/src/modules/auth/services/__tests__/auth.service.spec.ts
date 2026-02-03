@@ -6,6 +6,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { HouseholdsService } from '../../../households/services/households.service';
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service';
 import { UuidService } from '../../../../common/services/uuid.service';
+import { EmailService } from '../email.service';
 import { SyncDataDto, UserCreationHouseholdDto } from '../../dtos';
 
 /** Interface used to cast AuthService when testing private methods (avoids intersection with private members). */
@@ -69,6 +70,7 @@ describe('AuthService - Idempotency', () => {
 
   const mockAuthRepository = {
     createRefreshToken: jest.fn(),
+    deleteAllRefreshTokensForUser: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockUuidService = {
@@ -78,6 +80,10 @@ describe('AuthService - Idempotency', () => {
   const mockHouseholdsService = {
     createHouseholdForNewUser: jest.fn(),
     addUserToHousehold: jest.fn(),
+  };
+
+  const mockEmailService = {
+    sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   const userId = 'user-123';
@@ -112,6 +118,10 @@ describe('AuthService - Idempotency', () => {
         {
           provide: HouseholdsService,
           useValue: mockHouseholdsService,
+        },
+        {
+          provide: EmailService,
+          useValue: mockEmailService,
         },
       ],
     }).compile();
@@ -801,6 +811,69 @@ describe('AuthService - Idempotency', () => {
       service['syncRecipes'] = originalSyncRecipes;
     });
   });
+
+  describe('generateTokens - refresh token cleanup', () => {
+    it.each([
+      ['no existing tokens', undefined, 1],
+      ['deletion succeeds', undefined, 1],
+      ['deletion fails', new Error('Database error'), 1],
+    ])(
+      'should handle token cleanup: %s',
+      async (description, deletionError, expectedCreateCalls) => {
+        mockAuthRepository.deleteAllRefreshTokensForUser.mockClear();
+        mockAuthRepository.createRefreshToken.mockClear();
+
+        if (deletionError) {
+          mockAuthRepository.deleteAllRefreshTokensForUser.mockRejectedValueOnce(
+            deletionError,
+          );
+        } else {
+          mockAuthRepository.deleteAllRefreshTokensForUser.mockResolvedValueOnce(
+            undefined,
+          );
+        }
+
+        mockAuthRepository.createRefreshToken.mockResolvedValue({
+          id: 'token-id',
+          userId: mockUser.id,
+          token: 'refresh-token',
+          expiresAt: new Date(),
+          createdAt: new Date(),
+        });
+
+        // Use reflection to access private method
+        await (service as any).generateTokens(mockUser);
+
+        expect(
+          mockAuthRepository.deleteAllRefreshTokensForUser,
+        ).toHaveBeenCalledWith(mockUser.id);
+        expect(mockAuthRepository.createRefreshToken).toHaveBeenCalledTimes(
+          expectedCreateCalls,
+        );
+      },
+    );
+
+    it('should continue token creation even if deletion fails', async () => {
+      const deletionError = new Error('Database connection failed');
+      mockAuthRepository.deleteAllRefreshTokensForUser.mockRejectedValueOnce(
+        deletionError,
+      );
+      mockAuthRepository.createRefreshToken.mockResolvedValue({
+        id: 'token-id',
+        userId: mockUser.id,
+        token: 'refresh-token',
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      // Should not throw - deletion failure is handled gracefully
+      await expect(
+        (service as any).generateTokens(mockUser),
+      ).resolves.toHaveProperty('accessToken');
+
+      expect(mockAuthRepository.createRefreshToken).toHaveBeenCalled();
+    });
+  });
 });
 
 describe('AuthService - authenticateGoogle household payload', () => {
@@ -832,6 +905,7 @@ describe('AuthService - authenticateGoogle household payload', () => {
     createUser: jest.fn(),
     updateUser: jest.fn(),
     createRefreshToken: jest.fn(),
+    deleteAllRefreshTokensForUser: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockUuidService = { generate: jest.fn() };
@@ -839,6 +913,10 @@ describe('AuthService - authenticateGoogle household payload', () => {
   const mockHouseholdsService = {
     createHouseholdForNewUser: jest.fn().mockResolvedValue(mockHouseholdId),
     addUserToHousehold: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockEmailService = {
+    sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {
@@ -850,6 +928,7 @@ describe('AuthService - authenticateGoogle household payload', () => {
         { provide: AuthRepository, useValue: mockAuthRepository },
         { provide: UuidService, useValue: mockUuidService },
         { provide: HouseholdsService, useValue: mockHouseholdsService },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 

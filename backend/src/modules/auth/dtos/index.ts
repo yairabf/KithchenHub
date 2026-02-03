@@ -3,3 +3,7 @@ export * from './user-creation-household.dto';
 export * from './sync-data.dto';
 export * from './refresh-token.dto';
 export * from './auth-response.dto';
+export * from './register.dto';
+export * from './login.dto';
+export * from './verify-email.dto';
+export * from './resend-verification.dto';
