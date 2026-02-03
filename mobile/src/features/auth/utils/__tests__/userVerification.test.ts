@@ -120,7 +120,7 @@ describe('mapUserResponseToUser', () => {
       id: 'user-123',
       email: '',
       name: 'Kitchen User',
-      photoUrl: undefined,
+      avatarUrl: undefined,
       householdId: undefined,
       isGuest: false,
     });

@@ -10,7 +10,7 @@ describe('choreFactory', () => {
     describe('createChore', () => {
         it('should create a chore with a valid localId', () => {
             const choreData = {
-                name: 'Clean Room',
+                title: 'Clean Room',
                 icon: '🧹',
                 assignee: 'Alice',
                 dueDate: 'Today',
@@ -21,10 +21,10 @@ describe('choreFactory', () => {
             const chore = createChore(choreData);
 
             expect(chore.localId).toBe('test-uuid-chore');
-            expect(chore.name).toBe(choreData.name);
+            expect(chore.title).toBe(choreData.title);
             expect(chore.assignee).toBe(choreData.assignee);
             expect(chore.section).toBe(choreData.section);
-            expect(chore.completed).toBe(false);
+            expect(chore.isCompleted).toBe(false);
             expect(chore.id).toBeDefined();
         });
     });

@@ -52,7 +52,7 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
 
               {/* Title and Description at bottom */}
               <View style={styles.textOverlay}>
-                <Text style={styles.title}>{recipe.name}</Text>
+                <Text style={styles.title}>{recipe.title}</Text>
                 {recipe.description && (
                   <Text style={styles.description} numberOfLines={2}>
                     {recipe.description}
@@ -84,7 +84,7 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
               </View>
               {/* Title and Description */}
               <View style={styles.textOverlay}>
-                <Text style={styles.titlePlaceholder}>{recipe.name}</Text>
+                <Text style={styles.titlePlaceholder}>{recipe.title}</Text>
                 {recipe.description && (
                   <Text style={styles.descriptionPlaceholder} numberOfLines={2}>
                     {recipe.description}
@@ -102,7 +102,7 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
           <Text style={styles.statLabel}>Time</Text>
           <View style={styles.statValue}>
             <Ionicons name="time-outline" size={18} color={colors.recipes} />
-            <Text style={styles.statText}>{recipe.cookTime}</Text>
+            <Text style={styles.statText}>{recipe.cookTime ? `${recipe.cookTime} min` : 'N/A'}</Text>
           </View>
         </View>
         {recipe.calories && (

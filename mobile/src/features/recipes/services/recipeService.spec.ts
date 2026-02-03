@@ -87,7 +87,7 @@ describe('Recipe Services', () => {
 
             expect(recipe.id).toBeDefined();
             expect(recipe.localId).toBeDefined();
-            expect(recipe.name).toBe('Test Recipe');
+            expect(recipe.title).toBe('Test Recipe');
             expect(recipe.category).toBe('Dinner'); // Default
             // Verify createdAt is set and is a valid Date
             expect(recipe.createdAt).toBeInstanceOf(Date);
@@ -165,13 +165,13 @@ describe('Recipe Services', () => {
             (guestStorage.saveRecipes as jest.Mock).mockResolvedValue(undefined);
 
             const promises = Array.from({ length: 5 }, (_, i) =>
-                service.createRecipe({ name: `Recipe ${i}` })
+                service.createRecipe({ title: `Recipe ${i}` })
             );
 
             const recipes = await Promise.all(promises);
 
             expect(recipes.length).toBe(5);
-            expect(recipes.every(r => r.localId && r.name)).toBe(true);
+            expect(recipes.every(r => r.localId && r.title)).toBe(true);
             // Verify all recipes were saved (saveRecipes should be called 5 times due to retries)
             expect(guestStorage.saveRecipes).toHaveBeenCalled();
         });
@@ -179,9 +179,9 @@ describe('Recipe Services', () => {
         it('should provide default values for missing fields', async () => {
             (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
 
-            // Even with empty name, it should get a default
-            const recipe = await service.createRecipe({ name: '' });
-            expect(recipe.name).toBe('New Recipe');
+            // Even with empty title, it should get a default
+            const recipe = await service.createRecipe({ title: '' });
+            expect(recipe.title).toBe('New Recipe');
             expect(recipe.localId).toBeDefined();
         });
 
@@ -216,8 +216,8 @@ describe('Recipe Services', () => {
                     [{
                         id: '1',
                         localId: 'uuid-1',
-                        name: 'Existing',
-                        cookTime: '30 min',
+                        title: 'Existing',
+                        cookTime: 30,
                         category: 'Dinner',
                         ingredients: [],
                         instructions: [],
@@ -229,8 +229,8 @@ describe('Recipe Services', () => {
                     [{
                         id: '1',
                         localId: 'uuid-1',
-                        name: 'Deleted Recipe',
-                        cookTime: '30 min',
+                        title: 'Deleted Recipe',
+                        cookTime: 30,
                         category: 'Dinner',
                         ingredients: [],
                         instructions: [],
@@ -317,7 +317,7 @@ describe('Recipe Services', () => {
                 // Verify recipe can be retrieved
                 (guestStorage.getRecipes as jest.Mock).mockResolvedValue([recipe]);
                 const retrieved = await service.getRecipes();
-                expect(retrieved).toContainEqual(expect.objectContaining({ name: 'Test Recipe' }));
+                expect(retrieved).toContainEqual(expect.objectContaining({ title: 'Test Recipe' }));
             });
         });
     });
@@ -331,38 +331,37 @@ describe('Recipe Services', () => {
         });
 
         it('getRecipes calls api.get and normalizes timestamps', async () => {
-            const mockResult = [{ id: '1', name: 'Remote', created_at: '2026-01-25T10:00:00.000Z' }];
+            const mockResult = [{ id: '1', title: 'Remote', created_at: '2026-01-25T10:00:00.000Z' }];
             (api.get as jest.Mock).mockResolvedValue(mockResult);
 
             const recipes = await service.getRecipes();
 
             expect(api.get).toHaveBeenCalledWith('/recipes');
             expect(recipes).toHaveLength(1);
-            expect(recipes[0]).toEqual(expect.objectContaining({ id: '1', name: 'Remote' }));
+            expect(recipes[0]).toEqual(expect.objectContaining({ id: '1', title: 'Remote' }));
         });
 
         it('createRecipe calls api.post with timestamps', async () => {
-            const newRecipeData = { name: 'New Remote' };
-            const mockResult = { id: 'remote-1', ...newRecipeData };
+            const newRecipeData = { title: 'New Remote' };
+            const mockResult = { id: 'remote-1', title: 'New Remote' };
             (api.post as jest.Mock).mockResolvedValue(mockResult);
 
             const recipe = await service.createRecipe(newRecipeData);
 
             // Verify api.post was called with payload containing timestamps
             expect(api.post).toHaveBeenCalledWith('/recipes', expect.objectContaining({
-                name: 'New Remote',
-                created_at: expect.any(String),
+                title: 'New Remote',
             }));
-            expect(recipe).toEqual(expect.objectContaining({ id: 'remote-1', name: 'New Remote' }));
+            expect(recipe).toEqual(expect.objectContaining({ id: 'remote-1', title: 'New Remote' }));
         });
 
         describe.each([
             ['updates imageUrl', { imageUrl: 'https://example.com/image.jpg' }],
-            ['updates name', { name: 'Updated Remote' }],
+            ['updates title', { title: 'Updated Remote' }],
         ])('updateRecipe: %s', (_label, updates) => {
             it('calls api.put with recipe id and timestamps', async () => {
                 const recipeId = 'remote-1';
-                const existingRecipe = { id: recipeId, name: 'Original', cookTime: '30 min', category: 'Dinner', ingredients: [], instructions: [] };
+                const existingRecipe = { id: recipeId, title: 'Original', cookTime: 30, category: 'Dinner', ingredients: [], instructions: [] };
                 const mockResult = { id: recipeId, ...existingRecipe, ...updates };
                 
                 // Mock getRecipes to return the existing recipe

@@ -150,7 +150,7 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
         // Validate fetched recipe has an ID
         const fetchedId = this.getId(fullRecipe);
         if (!fetchedId) {
-          console.error(`[CacheAwareRecipeRepository] Fetched recipe missing ID, cannot update cache. Recipe data:`, JSON.stringify({ name: fullRecipe?.name, title: (fullRecipe as any)?.title }));
+          console.error(`[CacheAwareRecipeRepository] Fetched recipe missing ID, cannot update cache. Recipe data:`, JSON.stringify({ title: fullRecipe?.title }));
           // Return cached recipe instead of invalid fetched recipe
           return cached;
         }
@@ -204,10 +204,10 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
     return withCreatedAt({
       id: localId, // Use localId as id initially (will be replaced by server id after sync)
       localId: localId,
-      name: data.name ?? '',
-      cookTime: data.cookTime ?? '',
+      title: data.title ?? '',
+      cookTime: data.cookTime,
       prepTime: data.prepTime,
-      category: data.category ?? '',
+      category: data.category,
       imageUrl: data.imageUrl,
       description: data.description,
       calories: data.calories,

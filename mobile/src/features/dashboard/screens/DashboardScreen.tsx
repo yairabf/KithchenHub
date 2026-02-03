@@ -229,8 +229,8 @@ export function DashboardScreen({
               </View>
             )}
             <View style={styles.avatarContainer}>
-              {user?.photoUrl ? (
-                <SafeImage uri={user.photoUrl} style={styles.avatar} />
+              {user?.avatarUrl ? (
+                <SafeImage uri={user.avatarUrl} style={styles.avatar} />
               ) : (
                 <SafeImage
                   uri={getAvatarUri(user?.name ?? 'user')}
@@ -370,8 +370,8 @@ export function DashboardScreen({
                       key={chore.id}
                       style={[
                         styles.choreRow,
-                        chore.completed && styles.choreRowDone,
-                        { backgroundColor: getChoreRowBackground(chore.completed) },
+                        chore.isCompleted && styles.choreRowDone,
+                        { backgroundColor: getChoreRowBackground(chore.isCompleted) },
                       ]}
                       onPress={() => toggleChore(chore.id)}
                       activeOpacity={0.8}
@@ -387,16 +387,16 @@ export function DashboardScreen({
                           <Text
                             style={[
                               styles.choreTitle,
-                              chore.completed && styles.choreTitleDone,
+                              chore.isCompleted && styles.choreTitleDone,
                             ]}
                             numberOfLines={1}
                           >
-                            {chore.name}
+                            {chore.title}
                           </Text>
                           <View
                             style={[
                               styles.choreStatusBadge,
-                              chore.completed
+                              chore.isCompleted
                                 ? styles.choreStatusDone
                                 : styles.choreStatusPending,
                             ]}
@@ -404,10 +404,10 @@ export function DashboardScreen({
                             <Text
                               style={[
                                 styles.choreStatusBadgeText,
-                                chore.completed && styles.choreStatusBadgeTextDone,
+                                chore.isCompleted && styles.choreStatusBadgeTextDone,
                               ]}
                             >
-                              {chore.completed ? 'Done' : 'Pending'}
+                              {chore.isCompleted ? 'Done' : 'Pending'}
                             </Text>
                           </View>
                         </View>

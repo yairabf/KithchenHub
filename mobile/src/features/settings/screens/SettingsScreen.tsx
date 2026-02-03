@@ -87,8 +87,8 @@ export function SettingsScreen() {
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
-              {user?.photoUrl ? (
-                <Image source={{ uri: user.photoUrl }} style={styles.avatar} />
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Ionicons name="person" size={32} color={colors.textSecondary} />

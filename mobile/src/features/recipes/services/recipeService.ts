@@ -18,7 +18,9 @@ import { getIsOnline } from '../../../common/utils/networkStatus';
 type RecipeDetailDto = {
   id: string;
   title: string;
+  category?: string;
   prepTime?: number;
+  cookTime?: number;
   ingredients: Array<{ name: string; quantity?: number; unit?: string }>;
   instructions: Array<{ step: number; instruction: string }>;
   imageUrl?: string;
@@ -30,6 +32,8 @@ type RecipeDetailDto = {
 type RecipeListItemDto = {
   id: string;
   title: string;
+  category?: string;
+  cookTime?: number;
   imageUrl?: string;
 };
 
@@ -40,12 +44,12 @@ type RecipeListItemDto = {
 type RecipeApiResponse = {
   id: string;
   localId?: string;
-  name: string;
-  cookTime?: string;
+  title: string;
+  cookTime?: number;
   category?: string;
   ingredients?: any[];
   instructions?: any[];
-  prepTime?: string;
+  prepTime?: number;
   imageUrl?: string;
   description?: string;
   calories?: number;
@@ -65,7 +69,7 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
   // Map ingredients: backend RecipeIngredientDto[] -> frontend Ingredient[]
   const ingredients = dto.ingredients.map((ing, index) => ({
     id: `ing-${index}`,
-    quantity: ing.quantity?.toString() || '',
+    quantity: ing.quantity ?? 0,
     unit: ing.unit || '',
     name: ing.name,
   }));
@@ -73,20 +77,21 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
   // Map instructions: backend RecipeInstructionDto[] -> frontend Instruction[]
   const instructions = dto.instructions.map((inst, index) => ({
     id: `inst-${index}`,
-    text: inst.instruction,
+    instruction: inst.instruction,
   }));
 
   return {
     id: dto.id,
-    name: dto.title || 'Untitled Recipe',
-    prepTime: dto.prepTime ? `${dto.prepTime} min` : undefined,
-    cookTime: dto.prepTime ? `${dto.prepTime} min` : 'N/A', // Default value
-    category: 'Dinner', // Default value since Recipe interface requires category: string
+    title: dto.title || 'Untitled Recipe',
+    prepTime: dto.prepTime,
+    cookTime: dto.cookTime,
+    category: dto.category,
     ingredients: ingredients,
     instructions: instructions,
     imageUrl: dto.imageUrl,
     createdAt: undefined,
     updatedAt: undefined,
+    deletedAt: undefined,
   };
 }
 
@@ -109,19 +114,19 @@ const RETRY_DELAY_MS = 10; // Brief delay to allow concurrent writes to complete
  * @returns A complete Recipe object with all required fields
  */
 function buildRecipeWithDefaults(recipe: Partial<Recipe>): Recipe {
-  const defaultName = 'New Recipe';
+  const defaultTitle = 'New Recipe';
   const defaultLocalId = `local-uuid-${Date.now()}`;
   
-  // Extract and validate name (handle empty/whitespace strings)
-  const recipeName = (recipe.name && recipe.name.trim()) ? recipe.name : defaultName;
+  // Extract and validate title (handle empty/whitespace strings)
+  const recipeTitle = (recipe.title && recipe.title.trim()) ? recipe.title : defaultTitle;
   const recipeLocalId = recipe.localId || defaultLocalId;
   
   return {
     id: `local-${Date.now()}`,
     localId: recipeLocalId,
-    name: recipeName,
-    cookTime: recipe.cookTime || '0 min',
-    category: recipe.category || 'Dinner',
+    title: recipeTitle,
+    cookTime: recipe.cookTime,
+    category: recipe.category,
     ingredients: recipe.ingredients || [],
     instructions: recipe.instructions || [],
     prepTime: recipe.prepTime,
@@ -200,8 +205,8 @@ export class LocalRecipeService implements IRecipeService {
         const newRecipe = buildRecipeWithDefaults(recipe);
 
         // Validate recipe has required fields before saving
-        if (!newRecipe.localId || !newRecipe.name || !newRecipe.name.trim()) {
-            throw new Error('Invalid recipe data: missing required fields (localId, name)');
+        if (!newRecipe.localId || !newRecipe.title || !newRecipe.title.trim()) {
+            throw new Error('Invalid recipe data: missing required fields (localId, title)');
         }
 
         // Business rule: auto-populate createdAt and updatedAt on creation
@@ -229,8 +234,8 @@ export class LocalRecipeService implements IRecipeService {
 
     async updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe> {
         // Validate updates don't remove required fields
-        if (updates.localId === null || updates.name === null) {
-            throw new Error('Invalid recipe update: cannot remove required fields (localId, name)');
+        if (updates.localId === null || updates.title === null) {
+            throw new Error('Invalid recipe update: cannot remove required fields (localId, title)');
         }
 
         // Update with retry logic for concurrent writes
@@ -250,7 +255,7 @@ export class LocalRecipeService implements IRecipeService {
                 } as Recipe;
 
                 // Validate updated recipe still has required fields
-                if (!updatedRecipe.localId || !updatedRecipe.name) {
+                if (!updatedRecipe.localId || !updatedRecipe.title) {
                     throw new Error('Invalid recipe update: missing required fields after update');
                 }
 
@@ -346,14 +351,14 @@ export class RemoteRecipeService implements IRecipeService {
         const mapped = response.map((item) => {
           const recipe = {
             id: item.id,
-            name: item.title || 'Untitled Recipe',
+            title: item.title || 'Untitled Recipe',
             imageUrl: item.imageUrl,
             ingredients: [],
             instructions: [],
-            cookTime: 'N/A', // Default value since Recipe interface requires cookTime: string
-            category: 'Dinner', // Default value since Recipe interface requires category: string
+            cookTime: item.cookTime,
+            category: item.category,
           };
-          console.log('[RemoteRecipeService] Mapped recipe item:', JSON.stringify({ id: recipe.id, name: recipe.name, title: item.title }, null, 2));
+          console.log('[RemoteRecipeService] Mapped recipe item:', JSON.stringify({ id: recipe.id, title: recipe.title }, null, 2));
           return recipe;
         });
         
@@ -363,19 +368,19 @@ export class RemoteRecipeService implements IRecipeService {
         // Ensure ingredients and instructions are always arrays
         return mapped.map((item) => {
           const normalized = normalizeTimestampsFromApi<Recipe>(item as any);
-          console.log('[RemoteRecipeService] After normalization:', JSON.stringify({ id: normalized.id, name: normalized.name, title: (normalized as any).title }, null, 2));
+          console.log('[RemoteRecipeService] After normalization:', JSON.stringify({ id: normalized.id, title: normalized.title }, null, 2));
           
-          // Preserve name field explicitly (it might be lost during normalization)
-          const recipeName = item.name || normalized.name || (normalized as any).title || 'Untitled Recipe';
+          // Preserve title field explicitly (it might be lost during normalization)
+          const recipeTitle = item.title || normalized.title || 'Untitled Recipe';
           const finalRecipe = {
             ...normalized,
-            name: recipeName, // Explicitly set name to ensure it's preserved
+            title: recipeTitle, // Explicitly set title to ensure it's preserved
             ingredients: normalized.ingredients || [],
             instructions: normalized.instructions || [],
-            cookTime: normalized.cookTime || item.cookTime || 'N/A',
-            category: normalized.category || item.category || 'Dinner',
+            cookTime: normalized.cookTime ?? item.cookTime,
+            category: normalized.category ?? item.category,
           };
-          console.log('[RemoteRecipeService] Final recipe:', JSON.stringify({ id: finalRecipe.id, name: finalRecipe.name }, null, 2));
+          console.log('[RemoteRecipeService] Final recipe:', JSON.stringify({ id: finalRecipe.id, title: finalRecipe.title }, null, 2));
           return finalRecipe;
         });
     }
@@ -404,14 +409,14 @@ export class RemoteRecipeService implements IRecipeService {
         
         // Normalize timestamps
         const normalized = normalizeTimestampsFromApi<Recipe>(mappedResponse);
-        const recipeName = mappedResponse.name || normalized.name || 'Untitled Recipe';
+        const recipeTitle = mappedResponse.title || normalized.title || 'Untitled Recipe';
         const fullRecipe = {
             ...normalized,
-            name: recipeName,
+            title: recipeTitle,
             ingredients: normalized.ingredients || [],
             instructions: normalized.instructions || [],
-            cookTime: normalized.cookTime || mappedResponse.cookTime || 'N/A',
-            category: normalized.category || mappedResponse.category || 'Dinner',
+            cookTime: normalized.cookTime ?? mappedResponse.cookTime,
+            category: normalized.category ?? mappedResponse.category,
         };
         
         // Update cache with full details
@@ -451,25 +456,21 @@ export class RemoteRecipeService implements IRecipeService {
         // Map ingredients: frontend Ingredient[] -> backend IngredientInputDto[]
         const ingredients = (recipe.ingredients || []).map((ing, index) => ({
             name: ing.name,
-            quantity: ing.quantity ? parseFloat(ing.quantity) : undefined,
+            quantity: ing.quantity !== undefined ? ing.quantity : undefined,
             unit: ing.unit || undefined,
         }));
 
         // Map instructions: frontend Instruction[] -> backend InstructionInputDto[]
         const instructions = (recipe.instructions || []).map((inst, index) => ({
             step: index + 1,
-            instruction: inst.text,
+            instruction: inst.instruction,
         }));
 
-        // Parse prepTime from string (e.g., "10 min") to number (minutes)
-        let prepTime: number | undefined;
-        if (recipe.prepTime) {
-            const match = recipe.prepTime.match(/(\d+)/);
-            prepTime = match ? parseInt(match[1], 10) : undefined;
-        }
+        // prepTime is already a number (in minutes)
+        const prepTime = recipe.prepTime;
 
         return {
-            title: recipe.name || 'Untitled Recipe',
+            title: recipe.title || 'Untitled Recipe',
             prepTime,
             ingredients,
             instructions,
@@ -495,15 +496,15 @@ export class RemoteRecipeService implements IRecipeService {
         // Server is authority: overwrite with server timestamps
         const normalized = normalizeTimestampsFromApi<Recipe>(mappedResponse);
         // Ensure ingredients and instructions are always arrays
-        // Preserve name field explicitly (it might be lost during normalization)
-        const recipeName = mappedResponse.name || normalized.name || 'Untitled Recipe';
+        // Preserve title field explicitly (it might be lost during normalization)
+        const recipeTitle = mappedResponse.title || normalized.title || 'Untitled Recipe';
         const created = {
           ...normalized,
-          name: recipeName, // Explicitly set name to ensure it's preserved
+          title: recipeTitle, // Explicitly set title to ensure it's preserved
           ingredients: normalized.ingredients || [],
           instructions: normalized.instructions || [],
-          cookTime: normalized.cookTime || mappedResponse.cookTime || 'N/A',
-          category: normalized.category || mappedResponse.category || 'Dinner',
+          cookTime: normalized.cookTime ?? mappedResponse.cookTime,
+          category: normalized.category ?? mappedResponse.category,
         };
         console.log('[RemoteRecipeService] Normalized recipe:', JSON.stringify(created, null, 2));
         

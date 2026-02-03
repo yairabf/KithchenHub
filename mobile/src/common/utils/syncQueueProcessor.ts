@@ -653,7 +653,7 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     const recipe = payload as Record<string, unknown>;
     return (
       typeof recipe.id === 'string' &&
-      typeof recipe.name === 'string' &&
+      typeof recipe.title === 'string' &&
       Array.isArray(recipe.ingredients) &&
       Array.isArray(recipe.instructions)
     );
@@ -783,7 +783,7 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     const chore = payload as Record<string, unknown>;
     return (
       typeof chore.id === 'string' &&
-      typeof chore.name === 'string'
+      typeof chore.title === 'string'
     );
   }
 
@@ -812,10 +812,10 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     return {
       id: chore.id,
       operationId, // Include idempotency key
-      title: chore.name,
+      title: chore.title,
       assigneeId: undefined, // TODO: Map assignee name to ID if needed
       dueDate: dueDate,
-      isCompleted: chore.completed || undefined,
+      isCompleted: chore.isCompleted || undefined,
     };
   }
 
