@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { ShoppingList, ShoppingItem, UserItem } from '@prisma/client';
+import { ShoppingList, ShoppingItem, CustomItem } from '@prisma/client';
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 
 @Injectable()
@@ -110,7 +110,7 @@ export class ShoppingRepository {
     listId: string,
     data: {
       catalogItemId?: string;
-      userItemId?: string;
+      customItemId?: string;
       name: string;
       quantity: number;
       unit?: string;
@@ -123,7 +123,7 @@ export class ShoppingRepository {
       data: {
         listId,
         catalogItemId: data.catalogItemId,
-        userItemId: data.userItemId,
+        customItemId: data.customItemId,
         name: data.name,
         quantity: data.quantity,
         unit: data.unit,
@@ -134,13 +134,13 @@ export class ShoppingRepository {
     });
   }
 
-  async findUserItemByName(
-    userId: string,
+  async findCustomItemByName(
+    householdId: string,
     name: string,
-  ): Promise<UserItem | null> {
-    return this.prisma.userItem.findFirst({
+  ): Promise<CustomItem | null> {
+    return this.prisma.customItem.findFirst({
       where: {
-        userId,
+        householdId,
         name: {
           equals: name,
           mode: 'insensitive',
@@ -149,23 +149,23 @@ export class ShoppingRepository {
     });
   }
 
-  async createUserItem(
-    userId: string,
+  async createCustomItem(
+    householdId: string,
     name: string,
     category?: string,
-  ): Promise<UserItem> {
-    return this.prisma.userItem.create({
+  ): Promise<CustomItem> {
+    return this.prisma.customItem.create({
       data: {
-        userId,
+        householdId,
         name,
         category,
       },
     });
   }
 
-  async findUserItems(userId: string): Promise<UserItem[]> {
-    return this.prisma.userItem.findMany({
-      where: { userId },
+  async findCustomItems(householdId: string): Promise<CustomItem[]> {
+    return this.prisma.customItem.findMany({
+      where: { householdId },
       orderBy: { name: 'asc' },
     });
   }

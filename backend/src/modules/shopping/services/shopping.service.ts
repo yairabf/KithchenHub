@@ -277,7 +277,6 @@ export class ShoppingService {
   async addItems(
     listId: string,
     householdId: string,
-    userId: string,
     dto: AddItemsDto,
   ): Promise<{ addedItems: ShoppingItemDto[] }> {
     const list = await this.shoppingRepository.findListById(listId);
@@ -291,7 +290,9 @@ export class ShoppingService {
     }
 
     const addedItems = await Promise.all(
-      dto.items.map((item) => this.createItemFromInput(listId, userId, item)),
+      dto.items.map((item) =>
+        this.createItemFromInput(listId, householdId, item),
+      ),
     );
 
     return {
@@ -401,12 +402,13 @@ export class ShoppingService {
    * Creates a shopping item from input and optional catalog defaults.
    *
    * @param listId - Shopping list ID
+   * @param householdId - Household ID for custom item creation
    * @param item - Item input
    * @returns Persisted shopping item
    */
   async createItemFromInput(
     listId: string,
-    userId: string,
+    householdId: string,
     item: {
       catalogItemId?: string;
       masterItemId?: string;
@@ -424,26 +426,26 @@ export class ShoppingService {
 
     const catalogItemId = item.catalogItemId ?? item.masterItemId;
     let catalogItem = null;
-    let userItemId: string | undefined;
+    let customItemId: string | undefined;
 
     if (catalogItemId) {
       catalogItem = await this.getCatalogItemOrThrow(catalogItemId);
     } else {
       const normalizedName = item.name?.trim();
       if (normalizedName) {
-        const userItem = await this.shoppingRepository.findUserItemByName(
-          userId,
+        const customItem = await this.shoppingRepository.findCustomItemByName(
+          householdId,
           normalizedName,
         );
-        if (userItem) {
-          userItemId = userItem.id;
+        if (customItem) {
+          customItemId = customItem.id;
         } else {
-          const newItem = await this.shoppingRepository.createUserItem(
-            userId,
+          const newItem = await this.shoppingRepository.createCustomItem(
+            householdId,
             normalizedName,
             item.category,
           );
-          userItemId = newItem.id;
+          customItemId = newItem.id;
         }
       }
     }
@@ -452,17 +454,17 @@ export class ShoppingService {
 
     return this.shoppingRepository.createItem(listId, {
       ...itemData,
-      userItemId,
+      customItemId,
     });
   }
 
   /**
-   * Gets all custom user items.
+   * Gets all custom items for a household.
    *
-   * @param userId - The user ID
-   * @returns List of user items
+   * @param householdId - The household ID
+   * @returns List of custom items
    */
-  async getUserItems(userId: string) {
-    return this.shoppingRepository.findUserItems(userId);
+  async getCustomItems(householdId: string) {
+    return this.shoppingRepository.findCustomItems(householdId);
   }
 }

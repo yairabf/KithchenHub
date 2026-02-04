@@ -358,6 +358,9 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   async updateItem(itemId: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem> {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:360',message:'updateItem called',data:{itemId,updates,updatesKeys:Object.keys(updates),isCheckedType:typeof updates.isChecked,quantityType:typeof updates.quantity},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // Get existing item first
     const allItems = await this.getShoppingItems(
       await this.getShoppingLists(),
@@ -368,20 +371,30 @@ export class RemoteShoppingService implements IShoppingService {
       throw new Error(`Shopping item not found: ${itemId}`);
     }
     
-    // Apply timestamp for optimistic UI and offline queue
-    const updated = { ...existing, ...updates };
-    const withTimestamps = withUpdatedAt(updated);
-    const payload = toSupabaseTimestamps(withTimestamps);
-    const response = await api.patch<ShoppingListDetailDto['items'][0]>(`/shopping-items/${itemId}`, payload);
+    // Build payload with only fields allowed by UpdateItemDto (isChecked, quantity)
+    const payload: { isChecked?: boolean; quantity?: number } = {};
+    if ('isChecked' in updates && updates.isChecked !== undefined) {
+      payload.isChecked = updates.isChecked;
+    }
+    if ('quantity' in updates && updates.quantity !== undefined) {
+      payload.quantity = updates.quantity;
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:377',message:'payload constructed',data:{payload,payloadKeys:Object.keys(payload),payloadStringified:JSON.stringify(payload),isCheckedValue:payload.isChecked,isCheckedType:typeof payload.isChecked,quantityValue:payload.quantity,quantityType:typeof payload.quantity},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
+    const response = await api.patch<{ updatedItem: ShoppingListDetailDto['items'][0] }>(`/shopping-items/${itemId}`, payload);
+    // Extract the updatedItem from the response
+    const updatedItemResponse = response.updatedItem || response;
     // Map response to ShoppingItem format
-    const mapped = mapItemResponseToShoppingItem(response, existing.listId, existing.image);
+    const mapped = mapItemResponseToShoppingItem(updatedItemResponse, existing.listId, existing.image);
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
-    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
-                                 'createdAt' in response || 'updatedAt' in response;
+    const hasServerTimestamps = 'created_at' in updatedItemResponse || 'updated_at' in updatedItemResponse || 
+                                 'createdAt' in updatedItemResponse || 'updatedAt' in updatedItemResponse;
     const updatedItem = hasServerTimestamps
-      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...response })
-      : { ...mapped, createdAt: existing.createdAt, updatedAt: withTimestamps.updatedAt };
+      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...updatedItemResponse })
+      : { ...mapped, createdAt: existing.createdAt, updatedAt: new Date() };
     
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
@@ -391,6 +404,9 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   async deleteItem(itemId: string): Promise<void> {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:406',message:'deleteItem called',data:{itemId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     // Get existing item first
     const allItems = await this.getShoppingItems(
       await this.getShoppingLists(),
@@ -401,13 +417,18 @@ export class RemoteShoppingService implements IShoppingService {
       throw new Error(`Shopping item not found: ${itemId}`);
     }
     
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:417',message:'calling api.delete',data:{itemId,endpoint:`/shopping-items/${itemId}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
+    // Use DELETE endpoint (backend has @Delete(':id') endpoint)
+    await api.delete(`/shopping-items/${itemId}`);
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:423',message:'api.delete completed',data:{itemId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    // #endregion
+    
     // Apply timestamp for optimistic UI and offline queue
     const deleted = markDeleted(existing);
     const withTimestamps = withUpdatedAt(deleted);
-    const payload = toSupabaseTimestamps(withTimestamps);
-    
-    // Use PATCH instead of DELETE with body (more compatible)
-    await api.patch(`/shopping-items/${itemId}`, { deleted_at: payload.deleted_at });
     
     // Write-through cache update: update entity in cache with deleted timestamp
     // Note: Cache updates are best-effort; failures are logged but don't throw
@@ -425,26 +446,23 @@ export class RemoteShoppingService implements IShoppingService {
       throw new Error(`Shopping item not found: ${itemId}`);
     }
     
-    // Apply timestamp for optimistic UI and offline queue
-    const updated = { 
-      ...existing, 
-      isChecked: !existing.isChecked 
+    // Build payload with only fields allowed by UpdateItemDto (isChecked, quantity)
+    // Use camelCase isChecked (not snake_case is_checked) and don't send updated_at
+    const payload: { isChecked: boolean } = {
+      isChecked: !existing.isChecked
     };
-    const withTimestamps = withUpdatedAt(updated);
-    const payload = toSupabaseTimestamps(withTimestamps);
-    const response = await api.patch<ShoppingListDetailDto['items'][0]>(`/shopping-items/${itemId}`, { 
-      is_checked: !existing.isChecked,
-      updated_at: payload.updated_at 
-    });
+    const response = await api.patch<{ updatedItem: ShoppingListDetailDto['items'][0] }>(`/shopping-items/${itemId}`, payload);
+    // Extract the updatedItem from the response
+    const updatedItemResponse = response.updatedItem || response;
     // Map response to ShoppingItem format
-    const mapped = mapItemResponseToShoppingItem(response, existing.listId, existing.image);
+    const mapped = mapItemResponseToShoppingItem(updatedItemResponse, existing.listId, existing.image);
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
-    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
-                                 'createdAt' in response || 'updatedAt' in response;
+    const hasServerTimestamps = 'created_at' in updatedItemResponse || 'updated_at' in updatedItemResponse || 
+                                 'createdAt' in updatedItemResponse || 'updatedAt' in updatedItemResponse;
     const toggledItem = hasServerTimestamps
-      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...response })
-      : { ...mapped, createdAt: existing.createdAt, updatedAt: withTimestamps.updatedAt };
+      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...updatedItemResponse })
+      : { ...mapped, createdAt: existing.createdAt, updatedAt: new Date() };
     
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw

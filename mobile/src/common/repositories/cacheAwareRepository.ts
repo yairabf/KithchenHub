@@ -231,7 +231,12 @@ export async function setCached<T extends EntityTimestamps>(
   entities: T[],
   getId: (entity: T) => string
 ): Promise<void> {
-  await writeCachedEntities(entityType, entities, getId);
+  // Always deduplicate by ID before writing (defensive - prevent duplicates from race conditions)
+  const deduplicated = Array.from(
+    new Map(entities.map((entity) => [getId(entity), entity])).values()
+  );
+  
+  await writeCachedEntities(entityType, deduplicated, getId);
   
   // Emit cache change event to trigger UI updates
   cacheEvents.emitCacheChange(entityType);
@@ -285,7 +290,12 @@ export async function addEntityToCache<T extends EntityTimestamps>(
       return;
     }
     
-    await setCached(entityType, [...current, newEntity], getId);
+    // Deduplicate current array before adding (defensive)
+    const deduplicatedCurrent = Array.from(
+      new Map(current.map((entity) => [getId(entity), entity])).values()
+    );
+    
+    await setCached(entityType, [...deduplicatedCurrent, newEntity], getId);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Failed to update cache after create for ${entityType}:`, errorMessage);

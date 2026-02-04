@@ -11,6 +11,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { GrocerySearchBarProps, GroceryItem } from './types';
+import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../constants/categories';
+import { useTranslation } from 'react-i18next';
+import { compareGroceryItemsForSearch } from './searchSortingUtils';
 
 export function GrocerySearchBar({
   items,
@@ -31,6 +34,7 @@ export function GrocerySearchBar({
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const isSelectingRef = useRef(false);
+  const { t } = useTranslation();
 
   // Use controlled value if provided, otherwise use internal state
   const searchQuery = value !== undefined ? value : internalQuery;
@@ -42,16 +46,26 @@ export function GrocerySearchBar({
     }
   };
 
-  // Search logic with filtering
+  // Search logic with filtering and sorting
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const query = searchQuery.toLowerCase();
-    return items
-      .filter(item =>
-        item.name.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
-      )
-      .slice(0, maxResults);
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return [];
+    
+    const normalizedQuery = trimmedQuery.toLowerCase();
+    
+    // Filter items that match the query
+    const filtered = items.filter(item =>
+      item.name.toLowerCase().includes(normalizedQuery) ||
+      item.category.toLowerCase().includes(normalizedQuery)
+    );
+    
+    // Sort results with custom items prioritized, especially exact matches
+    // Create a copy to avoid mutating the filtered array
+    const sorted = [...filtered].sort((a, b) =>
+      compareGroceryItemsForSearch(a, b, normalizedQuery)
+    );
+    
+    return sorted.slice(0, maxResults);
   }, [searchQuery, items, maxResults]);
 
   // Create custom item option when custom items are allowed and there's a query
@@ -62,11 +76,14 @@ export function GrocerySearchBar({
     const trimmedQuery = searchQuery.trim();
     // Use stable ID based on query content to prevent re-render issues
     const stableId = `custom-${trimmedQuery.toLowerCase().replace(/\s+/g, '-')}`;
+    // Category will be set in the modal, use default for now
+    const normalizedCategory = normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase());
+    
     return {
       id: stableId,
       name: trimmedQuery,
       image: '', // Empty string - handled by customItemIcon styling
-      category: 'Custom',
+      category: normalizedCategory, // Default category, will be updated in modal
       defaultQuantity: 1,
     };
   }, [allowCustomItems, searchQuery]);
@@ -171,7 +188,7 @@ export function GrocerySearchBar({
                   </View>
                   <View style={styles.searchResultInfo}>
                     <Text style={styles.searchResultName}>Add "{customItem.name}"</Text>
-                    <Text style={styles.searchResultCategory}>{customItem.category}</Text>
+                    <Text style={styles.searchResultCategory}>Custom Item</Text>
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity

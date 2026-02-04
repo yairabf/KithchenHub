@@ -56,7 +56,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 - Row Level Security (RLS) via Supabase
 
 ### Core Modules
-- **Shopping Lists**: Multi-list management with items, grocery catalog integration, and **custom user items** (user-defined items linked to list items; `GET /shopping-items/custom`)
+- **Shopping Lists**: Multi-list management with items, grocery catalog integration, and **custom items** (household-defined items shared across members; `GET /shopping-items/custom`)
 - **Recipes**: Recipe CRUD with ingredients, instructions, and soft-delete (`DELETE /recipes/:id`)
 - **Chores**: Task management with assignees, completion tracking, and soft-delete (`DELETE /chores/:id`)
 - **Dashboard**: Aggregated household activity summaries
@@ -446,7 +446,7 @@ Represents a household/group of users sharing data.
 - `shoppingLists`: One-to-many with `ShoppingList`
 - `recipes`: One-to-many with `Recipe`
 - `chores`: One-to-many with `Chore`
-- `userItems`: One-to-many with `UserItem`
+- `customItems`: One-to-many with `CustomItem`
 
 #### User (`users`)
 
@@ -475,7 +475,6 @@ Represents a user account.
 - `importBatches`: One-to-many with `ImportBatch`
 - `importMappings`: One-to-many with `ImportMapping`
 - `syncIdempotencyKeys`: One-to-many with `SyncIdempotencyKey`
-- `userItems`: One-to-many with `UserItem`
 
 **Indexes:**
 - `householdId` (for efficient household queries)
@@ -525,7 +524,7 @@ Represents an item in a shopping list.
 | `id` | String (CUID) | Primary Key | Unique item identifier |
 | `listId` | String (CUID) | Foreign Key, Required | Reference to `ShoppingList.id` |
 | `catalogItemId` | String? | Foreign Key, Nullable | Reference to `MasterGroceryCatalog.id` |
-| `userItemId` | String? | Foreign Key, Nullable | Reference to `UserItem.id` |
+| `customItemId` | String? | Foreign Key, Nullable | Reference to `CustomItem.id` |
 | `name` | String | Required | Item name |
 | `quantity` | Float | Default: 1 | Item quantity |
 | `unit` | String? | Nullable | Unit of measurement |
@@ -538,13 +537,13 @@ Represents an item in a shopping list.
 **Relationships:**
 - `list`: Many-to-one with `ShoppingList` (cascade delete)
 - `catalogItem`: Many-to-one with `MasterGroceryCatalog` (set null on delete)
-- `userItem`: Many-to-one with `UserItem` (set null on delete)
+- `customItem`: Many-to-one with `CustomItem` (set null on delete)
 
 **Indexes:**
 - `listId` (for efficient list queries)
 - `[listId, isChecked]` (composite index for filtering checked items)
 - `catalogItemId` (for catalog item lookups)
-- `userItemId` (for user item lookups)
+- `customItemId` (for custom item lookups)
 
 #### MasterGroceryCatalog (`master_grocery_catalog`)
 
@@ -568,27 +567,25 @@ Centralized grocery catalog with standardized items.
 - `name` (for search functionality)
 - `category` (for category filtering)
 
-#### UserItem (`user_items`)
+#### CustomItem (`custom_items`)
 
-User-defined custom items (not in master catalog).
+Household-defined custom items (not in master catalog). Shared across all household members.
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
-| `id` | String (CUID) | Primary Key | Unique user item identifier |
-| `userId` | UUID | Foreign Key, Required | Reference to `User.id` |
-| `householdId` | String? | Foreign Key, Nullable | Reference to `Household.id` |
+| `id` | String (CUID) | Primary Key | Unique custom item identifier |
+| `householdId` | String (CUID) | Foreign Key, Required | Reference to `Household.id` |
 | `name` | String | Required | Item name |
 | `category` | String? | Nullable | Item category |
 | `createdAt` | DateTime | Auto-generated | Creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Last update timestamp |
 
 **Relationships:**
-- `user`: Many-to-one with `User` (cascade delete)
-- `household`: Many-to-one with `Household` (cascade delete, nullable)
+- `household`: Many-to-one with `Household` (cascade delete)
 - `shoppingItems`: One-to-many with `ShoppingItem`
 
 **Indexes:**
-- `[userId, name]` (composite index for user item lookups)
+- `[householdId, name]` (composite index for household item lookups)
 - `householdId` (for household item queries)
 
 #### Recipe (`recipes`)
@@ -861,8 +858,8 @@ The backend implements a backend-driven OAuth flow where all OAuth secrets and t
 | `POST` | `/shopping-lists` | Protected | Create new shopping list |
 | `GET` | `/shopping-lists/:id` | Protected | Get shopping list with items |
 | `DELETE` | `/shopping-lists/:id` | Protected | Soft-delete shopping list |
-| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list (catalog or custom names; custom items create/link UserItem) |
-| `GET` | `/shopping-items/custom` | Protected | Get current user's custom (user-defined) items |
+| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list (catalog or custom names; custom items create/link CustomItem) |
+| `GET` | `/shopping-items/custom` | Protected | Get household's custom items (shared across household members) |
 | `PATCH` | `/shopping-items/:id` | Protected | Update shopping item |
 | `DELETE` | `/shopping-items/:id` | Protected | Soft-delete shopping item |
 
@@ -996,7 +993,7 @@ backend/
 │   │   │   ├── repositories/       # HouseholdsRepository
 │   │   │   ├── dtos/               # CreateHouseholdDto, UpdateHouseholdDto, InviteMemberDto, etc.
 │   │   │   └── households.module.ts
-│   │   ├── shopping/               # Shopping lists, items, grocery catalog, custom user items (UserItem)
+│   │   ├── shopping/               # Shopping lists, items, grocery catalog, custom items (CustomItem)
 │   │   │   ├── controllers/        # GroceriesController, ShoppingListsController, ShoppingItemsController (shopping.controller.ts)
 │   │   │   ├── services/           # ShoppingService
 │   │   │   ├── repositories/       # ShoppingRepository

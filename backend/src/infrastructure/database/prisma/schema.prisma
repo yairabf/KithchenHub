@@ -28,7 +28,7 @@ model Household {
   shoppingLists ShoppingList[]
   recipes       Recipe[]
   chores        Chore[]
-  userItems     UserItem[]
+  customItems   CustomItem[]
 
   @@map("households")
 }
@@ -56,7 +56,6 @@ model User {
   importBatches        ImportBatch[]
   importMappings      ImportMapping[]
   syncIdempotencyKeys SyncIdempotencyKey[]
-  userItems           UserItem[]
 
   @@index([householdId])
   @@map("users")
@@ -95,7 +94,7 @@ model ShoppingItem {
   id            String    @id @default(cuid())
   listId        String    @map("list_id")
   catalogItemId String?   @map("catalog_item_id")
-  userItemId    String?   @map("user_item_id")
+  customItemId  String?   @map("custom_item_id")
   name          String
   quantity      Float     @default(1)
   unit          String?
@@ -108,12 +107,12 @@ model ShoppingItem {
 
   list        ShoppingList         @relation(fields: [listId], references: [id], onDelete: Cascade)
   catalogItem MasterGroceryCatalog? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
-  userItem    UserItem?             @relation(fields: [userItemId], references: [id], onDelete: SetNull)
+  customItem  CustomItem?          @relation(fields: [customItemId], references: [id], onDelete: SetNull)
 
   @@index([listId])
   @@index([listId, isChecked])
   @@index([catalogItemId])
-  @@index([userItemId])
+  @@index([customItemId])
   @@map("shopping_items")
 }
 
@@ -134,22 +133,20 @@ model MasterGroceryCatalog {
   @@map("master_grocery_catalog")
 }
 
-model UserItem {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id") @db.Uuid
-  householdId String? @map("household_id")
-  name      String
-  category  String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+model CustomItem {
+  id          String   @id @default(cuid())
+  householdId String   @map("household_id")
+  name        String
+  category    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household Household? @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household     Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   shoppingItems ShoppingItem[]
 
-  @@index([userId, name])
+  @@index([householdId, name])
   @@index([householdId])
-  @@map("user_items")
+  @@map("custom_items")
 }
 
 model Recipe {
