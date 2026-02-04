@@ -15,13 +15,17 @@ import { useResponsive } from '../../../common/hooks';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { colors } from '../../../theme';
 import { SafeImage } from '../../../common/components/SafeImage';
+import { Toast } from '../../../common/components/Toast';
 import { GrocerySearchBar } from '../../shopping/components/GrocerySearchBar';
 import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
 import type { ShoppingItem } from '../../../mocks/shopping';
 import { useDashboardChores } from '../hooks/useDashboardChores';
 import { useRecipes } from '../../recipes/hooks/useRecipes';
 import { createShoppingService } from '../../shopping/services/shoppingService';
-import { getActiveListId } from '../../shopping/utils/selectionUtils';
+import { getActiveListId, getMainList } from '../../shopping/utils/selectionUtils';
+import { createShoppingItem } from '../../shopping/utils/shoppingFactory';
+import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../shopping/constants/categories';
+import { quickAddItem } from '../../shopping/utils/quickAddUtils';
 import { config } from '../../../config';
 import { styles } from './styles';
 import type { DashboardScreenProps } from './types';
@@ -47,6 +51,17 @@ export function DashboardScreen({
   const { isTablet } = useResponsive();
   const [searchValue, setSearchValue] = useState('');
   const shoppingButtonRef = useRef<View>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    setToastVisible(true);
+  }, []);
+
+  const hideToast = useCallback(() => {
+    setToastVisible(false);
+  }, []);
 
   const { groceryItems, frequentlyAddedItems } = useCatalog();
   const suggestedItems =
@@ -63,15 +78,18 @@ export function DashboardScreen({
   const { recipes } = useRecipes();
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [shoppingListsCount, setShoppingListsCount] = useState(0);
+  const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
 
   const loadShoppingData = useCallback(async () => {
     try {
       const data = await shoppingService.getShoppingData();
       setActiveListId((current) => getActiveListId(data.shoppingLists, current));
       setShoppingListsCount(data.shoppingLists.length);
+      setAllItems(data.shoppingItems);
     } catch (_err) {
       setActiveListId(null);
       setShoppingListsCount(0);
+      setAllItems([]);
     }
   }, [shoppingService]);
 
@@ -143,12 +161,117 @@ export function DashboardScreen({
     openShoppingModal();
   };
 
-  const handleSelectGroceryItem = (_item: GroceryItem) => {
-    openShoppingModal();
+  const handleSelectGroceryItem = async (item: GroceryItem) => {
+    try {
+      const data = await shoppingService.getShoppingData();
+      const mainList = getMainList(data.shoppingLists);
+      
+      if (!mainList) {
+        showToast('No main shopping list found. Please create one.');
+        return;
+      }
+
+      // Use the same pattern as ShoppingListsScreen but always use main list
+      const normalizedItemName = item.name.trim().toLowerCase();
+      const existingInList = data.shoppingItems.find(
+        (i) => i.listId === mainList.id && i.name.trim().toLowerCase() === normalizedItemName
+      );
+
+      if (existingInList) {
+        const currentQuantity = typeof existingInList.quantity === 'number' ? existingInList.quantity : 0;
+        await shoppingService.updateItem(existingInList.id, {
+          quantity: currentQuantity + 1,
+        });
+        showToast(`${item.name} quantity updated`);
+      } else {
+        // Use default category for custom items, otherwise use item's category
+        const categoryToUse = item.id.startsWith('custom-') 
+          ? normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase())
+          : item.category;
+        
+        const newItemData: Partial<ShoppingItem> = {
+          listId: mainList.id,
+          name: item.name.trim(),
+          quantity: 1,
+          category: categoryToUse,
+          image: item.image ?? '',
+          catalogItemId: item.id.startsWith('custom-') ? undefined : item.id,
+        } as any; // Type assertion needed because ShoppingItem doesn't have catalogItemId
+        
+        await shoppingService.createItem(newItemData);
+        showToast(`${item.name} added to ${mainList.name}`);
+      }
+      // Don't clear search value - keep dropdown open for multiple additions
+    } catch (error) {
+      console.error('Failed to add item to shopping list:', error);
+      showToast('Failed to add item');
+    }
   };
 
-  const handleQuickAddGroceryItem = (_item: GroceryItem) => {
-    openShoppingModal();
+  // Helper functions for quick add utility
+  type ShoppingItemWithCatalog = Partial<ShoppingItem> & {
+    catalogItemId?: string;
+    masterItemId?: string;
+  };
+
+  const createItem = async (item: ShoppingItemWithCatalog) => {
+    return await shoppingService.createItem(item);
+  };
+
+  const updateItem = async (itemId: string, updates: Partial<ShoppingItem>) => {
+    return await shoppingService.updateItem(itemId, updates);
+  };
+
+  const executeWithOptimisticUpdate = async <T,>(
+    operation: () => Promise<T>,
+    optimisticUpdate: () => void,
+    revertUpdate: () => void,
+    errorMessage: string
+  ): Promise<T | null> => {
+    optimisticUpdate();
+    try {
+      return await operation();
+    } catch (error) {
+      revertUpdate();
+      console.error(errorMessage, error);
+      return null;
+    }
+  };
+
+  const logShoppingError = (message: string, error: unknown) => {
+    console.error(message, error);
+    showToast('Failed to add item');
+  };
+
+  const handleQuickAddGroceryItem = async (item: GroceryItem) => {
+    try {
+      const data = await shoppingService.getShoppingData();
+      const mainList = getMainList(data.shoppingLists);
+      
+      if (!mainList) {
+        showToast('No main shopping list found. Please create one.');
+        return;
+      }
+
+      // Refresh allItems from latest data before quick add
+      setAllItems(data.shoppingItems);
+
+      await quickAddItem(item, mainList, {
+        allItems: data.shoppingItems,
+        setAllItems,
+        createItem,
+        updateItem,
+        executeWithOptimisticUpdate,
+        logShoppingError,
+      });
+
+      // Refresh data after quick add to sync with server
+      const updatedData = await shoppingService.getShoppingData();
+      setAllItems(updatedData.shoppingItems);
+    } catch (error) {
+      console.error('Failed to add item to shopping list:', error);
+      showToast('Failed to add item');
+    }
   };
 
   /**
@@ -157,6 +280,14 @@ export function DashboardScreen({
    * Otherwise creates a new item with quantity 1.
    * Opens the shopping modal if there is no active list, or if the operation fails.
    *
+   * @param item - The grocery item to add
+   */
+  /**
+   * Handles adding a suggested grocery item to the shopping list.
+   * If the item already exists, increments its quantity by 1.
+   * Otherwise creates a new item with quantity 1.
+   * Opens the shopping modal only if there's no active list or if the operation fails due to missing list.
+   * 
    * @param item - The grocery item to add
    */
   const handleSuggestionPress = async (item: GroceryItem) => {
@@ -176,6 +307,7 @@ export function DashboardScreen({
         await shoppingService.updateItem(existingInList.id, {
           quantity: currentQuantity + addQuantity,
         });
+        showToast(`${item.name} quantity updated`);
       } else {
         const newItemData: Partial<ShoppingItem> = {
           listId: activeListId,
@@ -185,10 +317,18 @@ export function DashboardScreen({
           image: item.image ?? '',
         };
         await shoppingService.createItem(newItemData);
+        showToast(`${item.name} added to shopping list`);
       }
+      // Refresh shopping data to update the UI immediately
+      await loadShoppingData();
     } catch (error) {
       console.error('Failed to add item to shopping list:', error);
-      openShoppingModal();
+      showToast('Failed to add item');
+      // Only open modal if error is related to missing list, not other errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('list') || errorMessage.includes('List')) {
+        openShoppingModal();
+      }
     }
   };
 
@@ -270,7 +410,6 @@ export function DashboardScreen({
                       onChangeText={setSearchValue}
                       onSelectItem={handleSelectGroceryItem}
                       onQuickAddItem={handleQuickAddGroceryItem}
-                      placeholder="e.g. 2 cartons of organic milk..."
                       variant="background"
                       showShadow={false}
                       allowCustomItems={true}
@@ -279,14 +418,6 @@ export function DashboardScreen({
                   </View>
                   <TouchableOpacity style={styles.micButton}>
                     <Ionicons name="mic-outline" size={22} color={colors.textMuted} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    ref={shoppingButtonRef}
-                    style={styles.addButton}
-                    onPress={handleAddToShopping}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="add" size={24} color={colors.textLight} />
                   </TouchableOpacity>
                 </View>
 
@@ -438,6 +569,13 @@ export function DashboardScreen({
           </View>
         </View>
       </ScrollView>
+      {/* Toast */}
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type="success"
+        onHide={hideToast}
+      />
     </SafeAreaView>
   );
 }

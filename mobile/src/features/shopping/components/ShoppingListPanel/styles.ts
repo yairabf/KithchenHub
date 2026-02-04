@@ -57,10 +57,29 @@ export const styles = StyleSheet.create({
   listCardContent: {
     flex: 1,
   },
+  listCardNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   listCardName: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  mainBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.recipes + '15',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  mainBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.recipes,
   },
   listCardNameActive: {
     color: colors.chores,

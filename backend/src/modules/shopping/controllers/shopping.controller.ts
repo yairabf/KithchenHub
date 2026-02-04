@@ -12,7 +12,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ShoppingService } from '../services/shopping.service';
-import { CreateListDto, AddItemsDto, UpdateItemDto } from '../dtos';
+import {
+  CreateListDto,
+  AddItemsDto,
+  UpdateItemDto,
+  UpdateListDto,
+} from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 import { Public } from '../../../common/decorators/public.decorator';
@@ -57,6 +62,14 @@ export class ShoppingListsController {
     return this.shoppingService.getLists(user.householdId);
   }
 
+  @Get('main')
+  async getMainList(@CurrentUser() user: CurrentUserPayload) {
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+    return this.shoppingService.getMainList(user.householdId);
+  }
+
   @Post()
   async createList(
     @CurrentUser() user: CurrentUserPayload,
@@ -99,6 +112,18 @@ export class ShoppingListsController {
       throw new BadRequestException('User must belong to a household');
     }
     return this.shoppingService.getListDetails(listId, user.householdId);
+  }
+
+  @Patch(':id')
+  async updateList(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') listId: string,
+    @Body() dto: UpdateListDto,
+  ) {
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+    return this.shoppingService.updateList(listId, user.householdId, dto);
   }
 
   @Delete(':id')

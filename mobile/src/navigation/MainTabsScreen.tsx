@@ -153,7 +153,7 @@ export function MainTabsScreen() {
           />
         );
       case 'Shopping':
-        return <ShoppingListsScreen />;
+        return <ShoppingListsScreen isActive={activeTab === 'Shopping'} />;
       case 'Recipes':
         if (selectedRecipe) {
           return (

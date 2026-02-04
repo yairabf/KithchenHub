@@ -220,4 +220,48 @@ export class ShoppingRepository {
       },
     });
   }
+
+  async findMainList(householdId: string): Promise<ShoppingList | null> {
+    return this.prisma.shoppingList.findFirst({
+      where: {
+        householdId,
+        isMain: true,
+        ...ACTIVE_RECORDS_FILTER,
+      },
+    });
+  }
+
+  async clearMainListFlag(
+    householdId: string,
+    excludeListId?: string,
+  ): Promise<void> {
+    await this.prisma.shoppingList.updateMany({
+      where: {
+        householdId,
+        isMain: true,
+        id: excludeListId ? { not: excludeListId } : undefined,
+        ...ACTIVE_RECORDS_FILTER,
+      },
+      data: { isMain: false },
+    });
+  }
+
+  async countActiveItems(listId: string): Promise<number> {
+    return this.prisma.shoppingItem.count({
+      where: {
+        listId,
+        ...ACTIVE_RECORDS_FILTER,
+      },
+    });
+  }
+
+  async updateList(
+    id: string,
+    data: { name?: string; color?: string; icon?: string; isMain?: boolean },
+  ): Promise<ShoppingList> {
+    return this.prisma.shoppingList.update({
+      where: { id },
+      data,
+    });
+  }
 }

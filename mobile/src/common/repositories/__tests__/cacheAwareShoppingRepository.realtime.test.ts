@@ -69,6 +69,7 @@ describe('CacheAwareShoppingRepository - Realtime Methods', () => {
         itemCount: 0,
         icon: 'cart-outline',
         color: '#10B981',
+        isMain: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -121,6 +122,7 @@ describe('CacheAwareShoppingRepository - Realtime Methods', () => {
               itemCount: 0,
               icon: 'cart-outline' as const,
               color: id === 'list-1' ? '#123456' : '#F59E0B',
+              isMain: false,
               createdAt: new Date(),
               updatedAt: new Date(),
             }));

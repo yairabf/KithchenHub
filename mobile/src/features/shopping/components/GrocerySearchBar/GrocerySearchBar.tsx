@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   TextInput,
@@ -6,14 +6,15 @@ import {
   ScrollView,
   Image,
   Text,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { GrocerySearchBarProps, GroceryItem } from './types';
 import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../constants/categories';
-import { useTranslation } from 'react-i18next';
 import { compareGroceryItemsForSearch } from './searchSortingUtils';
+import { useClickOutside } from '../../../../common/hooks/useClickOutside';
 
 export function GrocerySearchBar({
   items,
@@ -33,8 +34,8 @@ export function GrocerySearchBar({
   const [internalQuery, setInternalQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef<TextInput>(null);
-  const isSelectingRef = useRef(false);
-  const { t } = useTranslation();
+  const containerRef = useRef<View>(null);
+  const dropdownRef = useRef<View>(null);
 
   // Use controlled value if provided, otherwise use internal state
   const searchQuery = value !== undefined ? value : internalQuery;
@@ -96,16 +97,45 @@ export function GrocerySearchBar({
     setShowDropdown(hasQuery && (hasResults || hasCustom));
   }, [searchQuery, searchResults, customItem]);
 
+  /**
+   * Handles closing the dropdown when clicking outside.
+   * Uses the reusable useClickOutside hook for consistent behavior.
+   */
+  const handleCloseDropdown = useCallback(() => {
+    setShowDropdown(false);
+    inputRef.current?.blur();
+  }, []);
+
+  // Use reusable click-outside hook for consistent behavior
+  useClickOutside({
+    enabled: showDropdown,
+    onOutsideClick: handleCloseDropdown,
+    containerRef: containerRef as React.RefObject<HTMLElement>,
+    testId: 'grocery-search-container',
+    dropdownRef: dropdownRef as React.RefObject<HTMLElement>,
+    dropdownTestId: 'grocery-search-dropdown',
+  });
+
+  /**
+   * Handles selection of a grocery item from the dropdown.
+   * Calls the parent's onSelectItem callback and keeps dropdown open for multiple selections.
+   * 
+   * @param item - The grocery item that was selected
+   */
   const handleSelectItem = (item: GroceryItem) => {
-    isSelectingRef.current = true;
     onSelectItem(item);
-    // Keep dropdown open so user can continue adding items
+    // Don't close dropdown - let user add more items
   };
 
+  /**
+   * Handles quick-add action for a grocery item (clicking + button).
+   * Calls the parent's onQuickAddItem callback and keeps dropdown open for rapid additions.
+   * 
+   * @param item - The grocery item to quickly add
+   */
   const handleQuickAdd = (item: GroceryItem) => {
-    isSelectingRef.current = true;
     onQuickAddItem(item);
-    // Keep dropdown open for rapid multi-item addition
+    // Don't close dropdown - let user add more items
   };
 
   const handleClear = () => {
@@ -113,19 +143,9 @@ export function GrocerySearchBar({
     setShowDropdown(false);
   };
 
-  // Close dropdown when clicking outside - use blur event with ref guard
+  // Don't close dropdown on blur - only close on outside click
   const handleInputBlur = () => {
-    // Delay to allow click events on dropdown items to process first
-    // Increased timeout to 200ms to ensure button clicks complete
-    setTimeout(() => {
-      const wasSelecting = isSelectingRef.current;
-      // Always reset the ref
-      isSelectingRef.current = false;
-      // Only close dropdown if user was NOT selecting an item
-      if (!wasSelecting) {
-        setShowDropdown(false);
-      }
-    }, 200);
+    // Do nothing - click-outside handler manages closing
   };
 
   const handleInputFocus = () => {
@@ -146,10 +166,18 @@ export function GrocerySearchBar({
     showShadow && styles.searchBarShadow,
   ];
 
+  /**
+   * Handles backdrop press events to close the dropdown.
+   */
+  const handleBackdropPress = () => {
+    // Close dropdown when clicking backdrop
+    setShowDropdown(false);
+    inputRef.current?.blur();
+  };
+
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View ref={containerRef} style={[styles.container, containerStyle]} testID="grocery-search-container">
       <View style={searchBarStyle}>
-        <Ionicons name="search-outline" size={20} color={colors.textMuted} />
         <TextInput
           ref={inputRef}
           style={styles.searchInput}
@@ -169,7 +197,17 @@ export function GrocerySearchBar({
 
       {/* Search Results Dropdown */}
       {showDropdown && (
-        <View style={[styles.searchDropdown, dropdownStyle]}>
+        <>
+          {/* Backdrop to catch outside clicks - behind dropdown */}
+          <Pressable
+            style={styles.backdrop}
+            onPress={handleBackdropPress}
+          />
+          <View 
+            ref={dropdownRef} 
+            style={[styles.searchDropdown, dropdownStyle]} 
+            testID="grocery-search-dropdown"
+          >
           <ScrollView
             style={styles.searchDropdownScroll}
             keyboardShouldPersistTaps="handled"
@@ -181,7 +219,6 @@ export function GrocerySearchBar({
                 <TouchableOpacity
                   style={styles.searchResultContent}
                   onPress={() => handleSelectItem(customItem)}
-                  onPressIn={() => { isSelectingRef.current = true; }}
                 >
                   <View style={styles.customItemIcon}>
                     <Ionicons name="add-circle-outline" size={24} color={colors.shopping} />
@@ -194,7 +231,7 @@ export function GrocerySearchBar({
                 <TouchableOpacity
                   style={styles.addIconButton}
                   onPress={() => handleQuickAdd(customItem)}
-                  onPressIn={() => { isSelectingRef.current = true; }}
+                  testID={`add-button-custom-${customItem.id}`}
                 >
                   <Ionicons name="add-circle" size={28} color={colors.shopping} />
                 </TouchableOpacity>
@@ -207,7 +244,6 @@ export function GrocerySearchBar({
                 <TouchableOpacity
                   style={styles.searchResultContent}
                   onPress={() => handleSelectItem(item)}
-                  onPressIn={() => { isSelectingRef.current = true; }}
                 >
                   <Image source={{ uri: item.image }} style={styles.searchResultImage} />
                   <View style={styles.searchResultInfo}>
@@ -218,14 +254,15 @@ export function GrocerySearchBar({
                 <TouchableOpacity
                   style={styles.addIconButton}
                   onPress={() => handleQuickAdd(item)}
-                  onPressIn={() => { isSelectingRef.current = true; }}
+                  testID={`add-button-${item.id}`}
                 >
                   <Ionicons name="add-circle" size={28} color={colors.shopping} />
                 </TouchableOpacity>
               </View>
             ))}
           </ScrollView>
-        </View>
+          </View>
+        </>
       )}
     </View>
   );

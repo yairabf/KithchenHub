@@ -15,6 +15,7 @@ import {
   CreateListDto,
   AddItemsDto,
   UpdateItemDto,
+  UpdateListDto,
   ShoppingItemDto,
 } from '../dtos';
 import { loadConfiguration } from '../../../config/configuration';
@@ -193,12 +194,23 @@ export class ShoppingService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return lists.map((list) => ({
+    const mappedLists = lists.map((list) => ({
       id: list.id,
       name: list.name,
-      color: list.color,
+      color: list.color ?? undefined,
+      icon: list.icon ?? undefined,
+      isMain: list.isMain,
       itemCount: list._count.items,
+      createdAt: list.createdAt,
+      updatedAt: list.updatedAt,
     }));
+
+    // Sort so main list is always first
+    return mappedLists.sort((a, b) => {
+      if (a.isMain && !b.isMain) return -1;
+      if (!a.isMain && b.isMain) return 1;
+      return 0;
+    });
   }
 
   /**
@@ -261,6 +273,78 @@ export class ShoppingService {
         category: item.category,
         image: item.image ?? undefined,
       })),
+    };
+  }
+
+  /**
+   * Gets the main shopping list for a household.
+   *
+   * @param householdId - The household ID
+   * @returns Main shopping list or null if none exists
+   */
+  async getMainList(
+    householdId: string,
+  ): Promise<ShoppingListSummaryDto | null> {
+    const mainList = await this.shoppingRepository.findMainList(householdId);
+    if (!mainList) return null;
+
+    const itemCount = await this.shoppingRepository.countActiveItems(
+      mainList.id,
+    );
+    return {
+      id: mainList.id,
+      name: mainList.name,
+      color: mainList.color ?? undefined,
+      icon: mainList.icon ?? undefined,
+      isMain: mainList.isMain,
+      itemCount,
+      createdAt: mainList.createdAt,
+      updatedAt: mainList.updatedAt,
+    };
+  }
+
+  /**
+   * Updates a shopping list.
+   *
+   * @param listId - The shopping list ID
+   * @param householdId - The household ID for authorization
+   * @param dto - Update data
+   * @returns Updated list
+   * @throws NotFoundException if list doesn't exist
+   * @throws ForbiddenException if user doesn't have access
+   */
+  async updateList(
+    listId: string,
+    householdId: string,
+    dto: UpdateListDto,
+  ): Promise<ShoppingListSummaryDto> {
+    const list = await this.shoppingRepository.findListById(listId);
+
+    if (!list) {
+      throw new NotFoundException('Shopping list not found');
+    }
+
+    if (list.householdId !== householdId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    // If setting this list as main, remove main flag from other lists
+    if (dto.isMain === true) {
+      await this.shoppingRepository.clearMainListFlag(householdId, listId);
+    }
+
+    const updatedList = await this.shoppingRepository.updateList(listId, dto);
+    const itemCount = await this.shoppingRepository.countActiveItems(listId);
+
+    return {
+      id: updatedList.id,
+      name: updatedList.name,
+      color: updatedList.color ?? undefined,
+      icon: updatedList.icon ?? undefined,
+      isMain: updatedList.isMain,
+      itemCount,
+      createdAt: updatedList.createdAt,
+      updatedAt: updatedList.updatedAt,
     };
   }
 
