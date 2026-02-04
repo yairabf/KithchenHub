@@ -22,7 +22,7 @@ import { api } from '../../services/api';
 import { colors } from '../../theme';
 import { markDeleted, withCreatedAt, withUpdatedAt } from '../utils/timestamps';
 import { cacheEvents } from '../utils/cacheEvents';
-import { NetworkError } from '../../services/api';
+import { NetworkError, ApiError } from '../../services/api';
 import { syncQueueStorage, type SyncOp, type QueueTargetId } from '../utils/syncQueueStorage';
 import * as Crypto from 'expo-crypto';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
@@ -146,6 +146,8 @@ const buildShoppingItemsFromDetails = (
  * Implements cache-first read strategy with background refresh and write-through caching.
  */
 export class CacheAwareShoppingRepository implements ICacheAwareShoppingRepository {
+  private readonly createItemInProgress = new Set<string>(); // Track items being created to prevent duplicates
+
   constructor(private readonly service: IShoppingService) {}
   
   /**
@@ -160,6 +162,13 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
    */
   private getItemId(item: ShoppingItem): string {
     return item.id;
+  }
+  
+  /**
+   * Checks if an entity matches the given ID (by id or localId)
+   */
+  private matchesAnyId<T extends { id: string; localId?: string }>(entity: T, id: string): boolean {
+    return entity.id === id || entity.localId === id;
   }
   
   /**
@@ -332,8 +341,25 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
             );
             cacheEvents.emitCacheChange('shoppingLists');
           } catch (error) {
-            // If API update fails, still update cache optimistically
-            console.error(`[CacheAwareShoppingRepository] Failed to update list item count via API:`, error);
+            // Handle different error types
+            if (error instanceof NetworkError) {
+              // Network error: update cache optimistically and continue
+              console.warn(`[CacheAwareShoppingRepository] Network error updating list item count (non-critical):`, error.message);
+            } else if (error instanceof ApiError) {
+              if (error.statusCode === 404) {
+                // List not found server-side - might have been deleted
+                console.warn(`[CacheAwareShoppingRepository] List ${listId} not found server-side when updating item count (404)`);
+              } else {
+                // Other API errors (500, etc.)
+                console.warn(`[CacheAwareShoppingRepository] Failed to update list item count via API (non-critical):`, error.message);
+              }
+            } else {
+              // Unknown errors
+              console.warn(`[CacheAwareShoppingRepository] Failed to update list item count via API (non-critical):`, error instanceof Error ? error.message : String(error));
+            }
+            
+            // Always update cache optimistically regardless of error type
+            // This is non-critical - item count is calculated from items, so cache update is sufficient
             await updateEntityInCache(
               'shoppingLists',
               { ...list, itemCount: newItemCount } as ShoppingList,
@@ -474,8 +500,29 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
         return updated;
       } catch (error) {
         if (error instanceof NetworkError) {
+          // Network error: enqueue for retry when online
           await this.enqueueWrite('shoppingLists', 'update', optimisticEntity);
+          throw error;
         }
+        
+        // For API errors (404, 500, etc.), handle gracefully
+        if (error instanceof ApiError) {
+          if (error.statusCode === 404) {
+            // List not found server-side - might have been deleted
+            // The optimistic update already succeeded, so the UI is correct
+            console.warn(`[CacheAwareShoppingRepository] List ${id} not found server-side (404)`);
+            // Return the optimistic entity since the update already happened in cache
+            return optimisticEntity;
+          }
+          
+          // For other API errors (500, etc.), log but don't throw
+          // The optimistic update already succeeded, so the UI is correct
+          console.warn(`[CacheAwareShoppingRepository] Failed to update list ${id} via API (non-critical):`, error.message);
+          // Return the optimistic entity since the update already happened in cache
+          return optimisticEntity;
+        }
+        
+        // For unknown errors, re-throw
         throw error;
       }
     } else {
@@ -563,39 +610,143 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
    * Accepts ShoppingItemWithCatalog to support catalogItemId/masterItemId for API requests.
    */
   async createItem(item: Partial<ShoppingItem> & { catalogItemId?: string; masterItemId?: string }): Promise<ShoppingItem> {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:565',message:'createItem ENTRY',data:{itemName:item.name,listId:item.listId,catalogItemId:item.catalogItemId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     if (!item.listId) {
       throw new Error('Shopping item must have a listId');
     }
 
-    // Step 1: Create optimistic entity
-    const optimisticEntity = this.createOptimisticItem(item);
+    // Create a unique key for this item creation to prevent concurrent duplicates
+    const createKey = `${item.listId}:${item.name}:${item.catalogItemId || 'custom'}`;
     
-    // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
-    await addEntityToCache(
-      'shoppingItems',
-      optimisticEntity,
-      (i) => this.getItemId(i)
-    );
+    // Check if this exact item is already being created
+    if (this.createItemInProgress.has(createKey)) {
+      console.warn(`[CacheAwareShoppingRepository] Item creation already in progress for ${createKey}, skipping duplicate call`);
+      // Wait a bit and check cache for the item
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+      const existing = current.find((i) => 
+        i.listId === item.listId && 
+        i.name === item.name &&
+        (item.catalogItemId ? i.id === item.catalogItemId : true)
+      );
+      if (existing) {
+        return existing;
+      }
+      // If still not found, proceed with creation
+    }
     
-    // Step 3: Emit cache events (UI updates instantly) - ALWAYS SECOND
-    cacheEvents.emitCacheChange('shoppingItems');
+    this.createItemInProgress.add(createKey);
     
-    // Step 4: Handle sync (online vs offline) - AFTER cache update
-    const isOnline = getIsOnline();
+    try {
+      // Step 1: Create optimistic entity
+      const optimisticEntity = this.createOptimisticItem(item);
+      const optimisticLocalId = optimisticEntity.localId;
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:572',message:'optimistic entity created',data:{optimisticId:optimisticEntity.id,optimisticLocalId:optimisticLocalId,itemName:item.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
+      // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
+      await addEntityToCache(
+        'shoppingItems',
+        optimisticEntity,
+        (i) => this.getItemId(i)
+      );
+      
+      // Step 3: Emit cache events (UI updates instantly) - ALWAYS SECOND
+      cacheEvents.emitCacheChange('shoppingItems');
+      
+      // Step 4: Handle sync (online vs offline) - AFTER cache update
+      const isOnline = getIsOnline();
     
     if (isOnline) {
       try {
         const created = await this.service.createItem(item);
-        await addEntityToCache(
-          'shoppingItems',
-          created,
-          (i) => this.getItemId(i)
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:589',message:'API response received',data:{serverId:created.id,itemName:created.name,optimisticLocalId:optimisticLocalId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        // Replace optimistic entity with real entity from server
+        // Match by localId to find and replace the optimistic entity
+        // Use server ID as primary ID, preserve localId for tracking
+        const realEntityWithLocalId = { ...created, localId: optimisticLocalId } as ShoppingItem;
+        
+        // Read current cache to find and remove optimistic entity
+        const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:596',message:'cache read BEFORE update',data:{cacheSize:current.length,items:current.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId})),serverId:created.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
+        // First, remove ALL items with the server ID (defensive - handle race conditions)
+        const withoutServerId = current.filter((i) => i.id !== created.id);
+        
+        // Check if realtime already added the item (by server ID)
+        const existingByServerId = current.find((i) => i.id === created.id);
+        
+        // Find optimistic entity (by localId, optimistic ID, or name+listId match)
+        const optimisticIndex = withoutServerId.findIndex(
+          (i) => 
+            i.localId === optimisticLocalId || 
+            i.id === optimisticEntity.id ||
+            (i.name === item.name && i.listId === item.listId && i.localId)
         );
+        
+        if (existingByServerId) {
+          // Realtime already added it - update it to preserve localId and ensure consistency
+          // Remove the optimistic entity, keep the server item and update it
+          const withoutOptimistic = current.filter((i) => 
+            i.localId !== optimisticLocalId && i.id !== optimisticEntity.id
+          );
+          // Update the server item with the real entity, preserving its localId
+          const updatedCache = withoutOptimistic.map((i) => 
+            i.id === created.id 
+              ? { ...realEntityWithLocalId, localId: existingByServerId.localId || optimisticLocalId } as ShoppingItem
+              : i
+          );
+          // Deduplicate by ID (defensive)
+          const deduplicated = Array.from(
+            new Map(updatedCache.map((item) => [this.getItemId(item), item])).values()
+          );
+          await setCached('shoppingItems', deduplicated, (i) => this.getItemId(i));
+        } else if (optimisticIndex >= 0) {
+          // Remove optimistic entity and add real entity with server ID
+          const updatedCache = [
+            ...withoutServerId.slice(0, optimisticIndex),
+            realEntityWithLocalId,
+            ...withoutServerId.slice(optimisticIndex + 1),
+          ];
+          // Final deduplication by ID (defensive)
+          const deduplicated = Array.from(
+            new Map(updatedCache.map((item) => [this.getItemId(item), item])).values()
+          );
+          await setCached('shoppingItems', deduplicated, (i) => this.getItemId(i));
+        } else {
+          // No optimistic entity found - add the real entity
+          // Final deduplication by ID (defensive)
+          const withNewItem = [...withoutServerId, realEntityWithLocalId];
+          const deduplicated = Array.from(
+            new Map(withNewItem.map((item) => [this.getItemId(item), item])).values()
+          );
+          await setCached('shoppingItems', deduplicated, (i) => this.getItemId(i));
+        }
+        // #region agent log
+        const afterUpdate = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:663',message:'cache read AFTER update',data:{cacheSize:afterUpdate.length,items:afterUpdate.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId})),serverId:created.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        
         // Update list item count ONLY after successful API call (recalculates from fresh cache)
         await this.updateListItemCount(item.listId);
         cacheEvents.emitCacheChange('shoppingItems');
         cacheEvents.emitCacheChange('shoppingLists');
-        return created;
+        
+        // If this was a custom item (no catalogItemId), invalidate custom items cache
+        // so it appears in grocery search immediately
+        if (!item.catalogItemId && !item.masterItemId) {
+          const { catalogService } = await import('../../common/services/catalogService');
+          await catalogService.clearCustomItemsCache();
+        }
+        
+        return realEntityWithLocalId;
       } catch (error) {
         // On error, update count optimistically to keep UI in sync
         await this.updateListItemCount(item.listId);
@@ -604,13 +755,24 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
           await this.enqueueWrite('shoppingItems', 'create', optimisticEntity);
         }
         throw error;
+      } finally {
+        this.createItemInProgress.delete(createKey);
       }
     } else {
-      // Offline: update count optimistically
-      await this.updateListItemCount(item.listId);
-      cacheEvents.emitCacheChange('shoppingLists');
-      await this.enqueueWrite('shoppingItems', 'create', optimisticEntity);
-      return optimisticEntity;
+      try {
+        // Offline: update count optimistically
+        await this.updateListItemCount(item.listId);
+        cacheEvents.emitCacheChange('shoppingLists');
+        await this.enqueueWrite('shoppingItems', 'create', optimisticEntity);
+        return optimisticEntity;
+      } finally {
+        this.createItemInProgress.delete(createKey);
+      }
+    }
+    } catch (error) {
+      // Clean up on any unexpected error
+      this.createItemInProgress.delete(createKey);
+      throw error;
     }
   }
   
@@ -714,9 +876,31 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
           await this.updateListItemCount(listId);
           cacheEvents.emitCacheChange('shoppingLists');
         }
+        
+        // Handle different error types
         if (error instanceof NetworkError) {
+          // Network error: enqueue for retry when online
           await this.enqueueWrite('shoppingItems', 'delete', optimisticEntity);
+          throw error;
         }
+        
+        // For API errors (404, 500, etc.), handle gracefully
+        if (error instanceof ApiError) {
+          if (error.statusCode === 404) {
+            // Item already deleted server-side - this is fine, just log
+            // The optimistic update already succeeded, so the UI is correct
+            console.warn(`[CacheAwareShoppingRepository] Item ${id} already deleted server-side (404)`);
+            return;
+          }
+          
+          // For other API errors (500, etc.), log but don't throw
+          // The optimistic update already succeeded, so the UI is correct
+          // The error will be logged by executeWithOptimisticUpdate
+          console.warn(`[CacheAwareShoppingRepository] Failed to delete item ${id} via API (non-critical):`, error.message);
+          return;
+        }
+        
+        // For unknown errors, re-throw to let executeWithOptimisticUpdate handle it
         throw error;
       }
     } else {
@@ -893,15 +1077,32 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
     }>,
     groceryItems: GroceryItem[]
   ): Promise<void> {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:934',message:'applyRealtimeItemChange ENTRY',data:{eventType:payload.eventType,itemId:payload.new?.id,itemName:payload.new?.name,listId:payload.new?.list_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     try {
       // Read current cache
       const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:947',message:'realtime cache read BEFORE',data:{cacheSize:current.length,items:current.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId})),incomingId:payload.new?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       
       // Apply change using existing utility
       const updated = applyShoppingItemChange(current, payload, groceryItems);
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:951',message:'realtime after applyShoppingItemChange',data:{beforeSize:current.length,afterSize:updated.length,items:updated.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
+      // Deduplicate by ID before writing (defensive - prevent duplicates from race conditions)
+      const deduplicated = Array.from(
+        new Map(updated.map((item) => [this.getItemId(item), item])).values()
+      );
+      // #region agent log
+      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:956',message:'realtime after deduplication',data:{beforeSize:updated.length,afterSize:deduplicated.length,items:deduplicated.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       
       // Write back to cache
-      await setCached('shoppingItems', updated, (i) => this.getItemId(i));
+      await setCached('shoppingItems', deduplicated, (i) => this.getItemId(i));
       
       // Emit cache event to trigger UI update
       cacheEvents.emitCacheChange('shoppingItems');

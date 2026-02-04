@@ -49,6 +49,9 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMuted,
   },
+  modalCategorySection: {
+    marginBottom: 24,
+  },
   modalQuantitySection: {
     marginBottom: 0,
   },

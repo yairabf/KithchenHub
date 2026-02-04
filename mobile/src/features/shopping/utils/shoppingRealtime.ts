@@ -104,7 +104,9 @@ const mapItemRowToItem = (
 
   const base = {
     id: row.id,
-    localId: row.id,
+    // Preserve localId from existing item if it's an optimistic entity (localId !== id)
+    // Otherwise use row.id as localId
+    localId: existing?.localId && existing.localId !== existing.id ? existing.localId : row.id,
     name: row.name ?? existing?.name ?? 'Untitled Item',
     image: matchingGrocery?.image ?? existing?.image ?? '',
     quantity: row.quantity ?? existing?.quantity ?? 1,
@@ -199,14 +201,71 @@ export const applyShoppingItemChange = (
     return items;
   }
 
-  const existing = items.find((item) => item.id === updatedRow.id);
+  // Check for existing item by ID (server ID)
+  const existingById = items.find((item) => item.id === updatedRow.id);
+  
+  // Also check for items with same name and listId to catch optimistic updates
+  // that haven't been replaced yet (race condition protection)
+  // Match optimistic entities: items where name+listId match and either:
+  // 1. id === localId (initial optimistic entity before API response)
+  // 2. localId exists and differs from id (optimistic entity that was partially updated)
+  const existingByContent = !existingById 
+    ? items.find((item) => {
+        const nameMatches = item.name === (updatedRow.name ?? '');
+        const listIdMatches = item.listId === (updatedRow.list_id ?? '');
+        if (!nameMatches || !listIdMatches) {
+          return false;
+        }
+        // Match optimistic entities: has localId and either matches id (initial) or differs (updated)
+        return item.localId && (
+          item.id === item.localId || // Initial optimistic entity (id === localId === UUID)
+          item.localId !== item.id    // Updated optimistic entity (localId preserved, id changed to server ID)
+        );
+      })
+    : null;
+
+  const existing = existingById ?? existingByContent ?? undefined;
+  // #region agent log
+  if (typeof window !== 'undefined') {
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'shoppingRealtime.ts:227',message:'applyShoppingItemChange matching',data:{incomingId:updatedRow.id,incomingName:updatedRow.name,existingById:existingById?.id,existingByContent:existingByContent?.id,itemsCount:items.length,items:items.map(i=>({id:i.id,localId:i.localId,name:i.name}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  }
+  // #endregion
   const nextItem = mapItemRowToItem(updatedRow, groceryItems, existing);
 
   if (!existing) {
     if (isEntityDeleted(nextItem)) {
       return items;
     }
+    // Double-check for duplicates by server ID before adding (defensive)
+    // This handles race conditions where cache was updated between reads
+    const duplicateCheck = items.find((item) => item.id === updatedRow.id);
+    if (duplicateCheck) {
+      // #region agent log
+      if (typeof window !== 'undefined') {
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'shoppingRealtime.ts:234',message:'duplicate found in double-check',data:{incomingId:updatedRow.id,duplicateId:duplicateCheck.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      }
+      // #endregion
+      // Item already exists - update it instead of adding
+      return items.map((item) => 
+        item.id === updatedRow.id ? nextItem : item
+      );
+    }
+    // #region agent log
+    if (typeof window !== 'undefined') {
+      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'shoppingRealtime.ts:242',message:'ADDING new item (no existing found)',data:{incomingId:updatedRow.id,incomingName:updatedRow.name,beforeCount:items.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    }
+    // #endregion
     return [...items, nextItem];
+  }
+
+  // If we found an optimistic entity by content, replace it with the real one
+  if (existingByContent && !existingById) {
+    // Replace optimistic entity with real entity, preserving localId
+    const realItem = { ...nextItem, localId: existing.localId ?? nextItem.id } as ShoppingItem;
+    // Match by id (works for both initial optimistic where id === localId, and updated where id differs)
+    return items.map((item) => 
+      item.id === existing.id ? realItem : item
+    );
   }
 
   const merged = mergeEntitiesWithTombstones(existing, nextItem);

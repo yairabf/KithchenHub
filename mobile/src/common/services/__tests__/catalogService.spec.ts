@@ -109,7 +109,7 @@ describe('CatalogService', () => {
           (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(cachedItems));
           return cachedItems; // Return for use in assertion
         },
-        async (cachedItems: GroceryItem[]) => {
+        async (cachedItems?: GroceryItem[]) => {
           const items = await service.getGroceryItems();
           expect(items).toEqual(cachedItems);
           expect(mockApiGet).toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('CatalogService', () => {
           mockApiGet.mockRejectedValue(apiError);
           return undefined;
         },
-        async () => {
+        async (_setupResult?: GroceryItem[]) => {
           await expect(service.getGroceryItems()).rejects.toThrow('Server error');
         },
       ],
