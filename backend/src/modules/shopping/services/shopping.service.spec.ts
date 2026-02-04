@@ -33,9 +33,9 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
             createList: jest.fn(),
             createItem: jest.fn(),
             updateItem: jest.fn(),
-            findUserItemByName: jest.fn(),
-            createUserItem: jest.fn(),
-            findUserItems: jest.fn(),
+            findCustomItemByName: jest.fn(),
+            createCustomItem: jest.fn(),
+            findCustomItems: jest.fn(),
           },
         },
         {
@@ -116,7 +116,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
         id: mockItemId,
         listId: mockListId,
         catalogItemId: null,
-        userItemId: null,
+        customItemId: null,
         name: 'Test Item',
         quantity: 1,
         unit: null,
@@ -163,7 +163,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
         id: mockItemId,
         listId: mockListId,
         catalogItemId: null,
-        userItemId: null,
+        customItemId: null,
         name: 'Test Item',
         quantity: 1,
         unit: null,
@@ -253,7 +253,7 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
             id: 'item-1',
             listId: mockListId,
             catalogItemId: null,
-            userItemId: null,
+            customItemId: null,
             name: 'Active Item',
             quantity: 1,
             unit: null,
@@ -278,14 +278,12 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
     });
   });
 
-  describe('getUserItems', () => {
-    it('should return user items from repository', async () => {
-      const mockUserId = 'user-456';
-      const mockUserItems = [
+  describe('getCustomItems', () => {
+    it('should return custom items from repository', async () => {
+      const mockCustomItems = [
         {
-          id: 'ui-1',
-          userId: mockUserId,
-          householdId: null,
+          id: 'ci-1',
+          householdId: mockHouseholdId,
           name: 'Custom Item',
           category: null,
           createdAt: new Date(),
@@ -294,12 +292,12 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       ];
 
       jest
-        .spyOn(repository, 'findUserItems')
-        .mockResolvedValue(mockUserItems as any);
+        .spyOn(repository, 'findCustomItems')
+        .mockResolvedValue(mockCustomItems as any);
 
-      const result = await service.getUserItems(mockUserId);
+      const result = await service.getCustomItems(mockHouseholdId);
 
-      expect(repository.findUserItems).toHaveBeenCalledWith(mockUserId);
+      expect(repository.findCustomItems).toHaveBeenCalledWith(mockHouseholdId);
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Custom Item');
     });

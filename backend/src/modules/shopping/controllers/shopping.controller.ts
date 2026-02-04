@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { ShoppingService } from '../services/shopping.service';
 import { CreateListDto, AddItemsDto, UpdateItemDto } from '../dtos';
@@ -121,12 +122,7 @@ export class ShoppingListsController {
     if (!user.householdId) {
       throw new BadRequestException('User must belong to a household');
     }
-    return this.shoppingService.addItems(
-      listId,
-      user.householdId,
-      user.userId,
-      dto,
-    );
+    return this.shoppingService.addItems(listId, user.householdId, dto);
   }
 }
 
@@ -138,11 +134,16 @@ export class ShoppingListsController {
 @Controller({ path: 'shopping-items', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class ShoppingItemsController {
+  private readonly logger = new Logger(ShoppingItemsController.name);
+
   constructor(private shoppingService: ShoppingService) {}
 
   @Get('custom')
   async getCustomItems(@CurrentUser() user: CurrentUserPayload) {
-    return this.shoppingService.getUserItems(user.userId);
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+    return this.shoppingService.getCustomItems(user.householdId);
   }
 
   @Patch(':id')
@@ -162,10 +163,22 @@ export class ShoppingItemsController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') itemId: string,
   ) {
+    this.logger.log(`DELETE /shopping-items/${itemId} - deleteItem called`);
+    this.logger.debug(
+      `User: ${JSON.stringify({
+        id: user.userId,
+        email: user.email,
+        householdId: user.householdId,
+      })}`,
+    );
+
     if (!user.householdId) {
+      this.logger.error('User must belong to a household');
       throw new BadRequestException('User must belong to a household');
     }
+
     await this.shoppingService.deleteItem(itemId, user.householdId);
+    this.logger.log(`Item ${itemId} deleted successfully`);
     return { success: true };
   }
 }
