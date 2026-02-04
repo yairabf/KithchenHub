@@ -1,5 +1,5 @@
 import { GroceryItem } from '../../features/shopping/components/GrocerySearchBar';
-import { mockGroceriesDB } from '../../data/groceryDatabase';
+import { mockGroceriesDB } from './groceryDatabase';
 
 // Mock frequently added items (top 8 most commonly added)
 // In a real implementation, this would be calculated from user history

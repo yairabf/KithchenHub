@@ -125,4 +125,81 @@ describe('CategoriesGrid', () => {
     expect(queryByText('Categories')).toBeTruthy();
     expect(queryByText('See all →')).toBeTruthy();
   });
+
+  describe('deduplication', () => {
+    it('should deduplicate categories with same ID', () => {
+      const categories: Category[] = [
+        { id: 'fruits', localId: 'uuid-1', name: 'Fruits', image: '', itemCount: 5, backgroundColor: '#fff' },
+        { id: 'fruits', localId: 'uuid-2', name: 'Fruits', image: '', itemCount: 3, backgroundColor: '#f0f0f0' },
+        { id: 'vegetables', localId: 'uuid-3', name: 'Vegetables', image: '', itemCount: 7, backgroundColor: '#e0e0e0' },
+      ];
+
+      const { getAllByText, queryByText } = render(
+        <CategoriesGrid {...defaultProps} categories={categories} />
+      );
+
+      // Should only render one "Fruits" category (first occurrence)
+      const fruitsElements = getAllByText('Fruits');
+      expect(fruitsElements).toHaveLength(1);
+      
+      // Should render Vegetables
+      expect(queryByText('Vegetables')).toBeTruthy();
+    });
+
+    it('should deduplicate multiple duplicate categories', () => {
+      const categories: Category[] = [
+        { id: 'fruits', localId: 'uuid-1', name: 'Fruits', image: '', itemCount: 5, backgroundColor: '#fff' },
+        { id: 'fruits', localId: 'uuid-2', name: 'Fruits', image: '', itemCount: 3, backgroundColor: '#f0f0f0' },
+        { id: 'fruits', localId: 'uuid-3', name: 'Fruits', image: '', itemCount: 2, backgroundColor: '#e0e0e0' },
+        { id: 'vegetables', localId: 'uuid-4', name: 'Vegetables', image: '', itemCount: 7, backgroundColor: '#d0d0d0' },
+      ];
+
+      const { getAllByText } = render(
+        <CategoriesGrid {...defaultProps} categories={categories} />
+      );
+
+      // Should only render one "Fruits" category
+      const fruitsElements = getAllByText('Fruits');
+      expect(fruitsElements).toHaveLength(1);
+    });
+
+    it('should preserve first occurrence when deduplicating', () => {
+      const categories: Category[] = [
+        { id: 'fruits', localId: 'uuid-1', name: 'Fruits', image: '', itemCount: 5, backgroundColor: '#fff' },
+        { id: 'fruits', localId: 'uuid-2', name: 'Fruits', image: '', itemCount: 3, backgroundColor: '#f0f0f0' },
+      ];
+
+      const { getByText } = render(
+        <CategoriesGrid {...defaultProps} categories={categories} />
+      );
+
+      // Should show itemCount from first occurrence (5)
+      expect(getByText('5')).toBeTruthy();
+      expect(() => getByText('3')).toThrow();
+    });
+
+    it('should handle empty array without errors', () => {
+      const { queryByText } = render(
+        <CategoriesGrid {...defaultProps} categories={[]} />
+      );
+
+      expect(queryByText('Categories')).toBeTruthy();
+    });
+
+    it('should handle array with all duplicates', () => {
+      const categories: Category[] = [
+        { id: 'fruits', localId: 'uuid-1', name: 'Fruits', image: '', itemCount: 5, backgroundColor: '#fff' },
+        { id: 'fruits', localId: 'uuid-2', name: 'Fruits', image: '', itemCount: 3, backgroundColor: '#f0f0f0' },
+        { id: 'fruits', localId: 'uuid-3', name: 'Fruits', image: '', itemCount: 2, backgroundColor: '#e0e0e0' },
+      ];
+
+      const { getAllByText } = render(
+        <CategoriesGrid {...defaultProps} categories={categories} />
+      );
+
+      // Should only render one category
+      const fruitsElements = getAllByText('Fruits');
+      expect(fruitsElements).toHaveLength(1);
+    });
+  });
 });

@@ -22,3 +22,5 @@ export const mockChores: Chore[] = [
   { id: '7', localId: '550e8400-e29b-41d4-a716-446655440206', title: 'Fold Laundry', assignee: 'All', dueDate: 'Tomorrow', dueTime: '9:00 AM', isCompleted: false, section: 'thisWeek', icon: '👕' },
   { id: '8', localId: '550e8400-e29b-41d4-a716-446655440207', title: 'Mop Kitchen Floor', assignee: 'Dad', dueDate: 'Wednesday', dueTime: '9:00 AM', isCompleted: false, section: 'thisWeek', icon: '🧽' },
 ];
+
+export { mockChoresDB } from './choreTemplates';

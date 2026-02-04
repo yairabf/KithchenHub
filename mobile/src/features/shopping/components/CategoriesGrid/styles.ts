@@ -1,6 +1,12 @@
 import { StyleSheet } from 'react-native';
 import { colors, shadows, spacing, borderRadius, typography } from '../../../../theme';
 
+/**
+ * Opacity value for category overlay background.
+ * Provides semi-transparent overlay to show icon/image behind text while maintaining readability.
+ */
+const CATEGORY_OVERLAY_OPACITY = 0.6;
+
 export const styles = StyleSheet.create({
   categoriesSection: {
     flex: 1,
@@ -35,16 +41,28 @@ export const styles = StyleSheet.create({
   },
   categoryBg: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     justifyContent: 'flex-end',
   },
   categoryBgImage: {
     borderRadius: 16,
+    width: '100%',
+    height: '100%',
   },
   categoryOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
     padding: 10,
     borderRadius: 16,
+  },
+  categoryOverlayBg: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: CATEGORY_OVERLAY_OPACITY,
+    borderRadius: 16,
+  },
+  categoryOverlayContent: {
+    zIndex: 1,
   },
   categoryCount: {
     fontSize: 20,

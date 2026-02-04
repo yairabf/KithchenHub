@@ -15,37 +15,88 @@ import { isValidImageUrl } from './imageUtils';
 const CATEGORY_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
 /**
+ * Normalizes deprecated category names to consolidated category names.
+ * 
+ * Maps legacy category names to their consolidated equivalents:
+ * - "teas" → "beverages"
+ * - "oils" → "condiments"
+ * - "sweets" → "bakery"
+ * - "supplies" → "household"
+ * 
+ * The normalization is case-insensitive and trims whitespace.
+ * Categories not in the mapping are returned as-is (normalized to lowercase).
+ * 
+ * @param categoryName - Category name to normalize (case-insensitive)
+ * @returns Normalized category name in lowercase, or mapped equivalent if deprecated
+ * 
+ * @example
+ * normalizeCategoryName('Teas') // Returns 'beverages'
+ * normalizeCategoryName('FRUITS') // Returns 'fruits'
+ * normalizeCategoryName('  oils  ') // Returns 'condiments'
+ */
+function normalizeCategoryName(categoryName: string): string {
+  const normalized = categoryName.toLowerCase().trim();
+  
+  // Map deprecated categories to consolidated ones
+  const categoryMapping: Record<string, string> = {
+    'teas': 'beverages',
+    'oils': 'condiments',
+    'sweets': 'bakery', // Default sweets to bakery (cakes, cookies, brownies)
+    'supplies': 'household', // Supplies merged into household
+  };
+  
+  return categoryMapping[normalized] || normalized;
+}
+
+/**
  * Builds category list from grocery items.
  * Generates deterministic localId based on category name for stable references.
+ * Normalizes category names to lowercase to prevent duplicates.
+ * Maps deprecated category names to consolidated categories.
  * 
  * @param items - Array of grocery items
- * @returns Array of categories with metadata
+ * @returns Array of categories with metadata (deduplicated)
  */
 export function buildCategoriesFromGroceries(items: GroceryItem[]): Category[] {
+
+  // Normalize category names to lowercase and map deprecated categories
   const categoryMap = items.reduce<Record<string, GroceryItem[]>>((acc, item) => {
-    const key = item.category || 'Other';
-    const existing = acc[key] ?? [];
-    return { ...acc, [key]: [...existing, item] };
+    const originalCategory = (item.category || 'Other').toLowerCase();
+    const normalizedCategory = normalizeCategoryName(originalCategory);
+    const existing = acc[normalizedCategory] ?? [];
+    return { ...acc, [normalizedCategory]: [...existing, item] };
   }, {});
 
-  return Object.entries(categoryMap).map(([categoryName, categoryItems], index) => {
-    // Find first item with a valid image URL
-    const itemWithImage = categoryItems.find(item => isValidImageUrl(item.image));
-    const fallbackImage = itemWithImage?.image ?? '';
-    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
+  // Build categories array and deduplicate by ID
+  const categoriesArray = Object.entries(categoryMap).map(([categoryNameLower, categoryItems], index) => {
+    // Use normalized lowercase name for ID, but capitalize first letter for display
+    const displayName = categoryNameLower.charAt(0).toUpperCase() + categoryNameLower.slice(1);
+    const categoryId = categoryNameLower.replace(/\s+/g, '-');
     
-    // Generate deterministic UUID based on category name (stable across calls)
-    const localId = uuidv5(categoryName, CATEGORY_NAMESPACE);
+    // Generate deterministic UUID based on normalized category name (stable across calls)
+    const localId = uuidv5(categoryNameLower, CATEGORY_NAMESPACE);
     
     return {
       id: categoryId,
       localId,
-      name: categoryName,
+      name: displayName,
       itemCount: categoryItems.length,
-      image: fallbackImage,
+      image: '', // Empty - CategoriesGrid will use icon assets based on categoryId
       backgroundColor: pastelColors[index % pastelColors.length],
     };
   });
+  
+  // Deduplicate by category ID (in case of any edge cases)
+  const seenIds = new Set<string>();
+  const deduplicated = categoriesArray.filter(cat => {
+    if (seenIds.has(cat.id)) {
+      return false;
+    }
+    seenIds.add(cat.id);
+    return true;
+  });
+  
+  return deduplicated;
 }
 
 /**

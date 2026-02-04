@@ -68,6 +68,24 @@ export function CategoryPicker({
             return require('../../../../../assets/categories/nuts.png');
           case 'other':
             return require('../../../../../assets/categories/other.png');
+          case 'beverages':
+            return require('../../../../../assets/categories/beverages.png');
+          case 'baking':
+            return require('../../../../../assets/categories/baking.png');
+          case 'canned':
+            return require('../../../../../assets/categories/canned.png');
+          case 'spreads':
+            return require('../../../../../assets/categories/spreads.png');
+          case 'freezer':
+            return require('../../../../../assets/categories/freezer.png');
+          case 'dips':
+            return require('../../../../../assets/categories/dips.png');
+          case 'condiments':
+            return require('../../../../../assets/categories/condiments.png');
+          case 'spices':
+            return require('../../../../../assets/categories/spices.png');
+          case 'household':
+            return require('../../../../../assets/categories/household.png');
           default:
             return null;
         }

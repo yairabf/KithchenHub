@@ -195,10 +195,16 @@ interface CategoriesGridProps {
   - Grid of category cards with images and item counts
   - **Show more/less**: Uses `INITIAL_CATEGORIES_LIMIT = 9`; displays up to 9 categories initially; "Show more" / "Show less" toggle reveals or collapses the rest (pill-style button with chevron)
   - "See all" button for full item view
-  - Category background overlays
+  - **CategoryOverlay Component**: Extracted reusable overlay component (`CategoryOverlay`) that displays item count and name over category background, used consistently across icon, image, and placeholder rendering paths
+  - **Icon Loading**: Uses `getCategoryIcon()` function to load category icons from bundled assets (`mobile/assets/categories/`) based on normalized category ID
+    - Supports 19 consolidated categories: fruits, vegetables, dairy, meat, seafood, bakery, grains, snacks, nuts, other, beverages, baking, canned, spreads, freezer, dips, condiments, spices, household
+    - Returns `null` if icon doesn't exist (falls back to placeholder)
+    - Includes error handling with `console.warn` for failed icon loads
+  - **Deduplication**: Defensive deduplication logic using `React.useMemo` to filter duplicate categories by ID (prevents duplicates from other data sources even though `buildCategoriesFromGroceries` already deduplicates)
   - **Image Validation**: Uses `isValidImageUrl()` utility to validate category images before rendering
-  - **Conditional Rendering**: Renders `ImageBackground` when category has valid image URL, falls back to plain `View` with background color when image is invalid or missing
-  - **Test IDs**: Includes `testID` attributes for testing (`category-image-background-{id}` and `category-no-image-{id}`)
+  - **Conditional Rendering**: Renders `ImageBackground` when category has icon asset, falls back to `ImageBackground` with URI when category has valid image URL, or plain `View` with background color when neither is available
+  - **Test IDs**: Includes `testID` attributes for testing (`category-icon-background-{id}`, `category-image-background-{id}`, and `category-no-image-{id}`)
+  - **Styling**: Uses `CATEGORY_OVERLAY_OPACITY = 0.6` constant for semi-transparent overlay background
 
 ### FrequentlyAddedGrid
 
@@ -779,6 +785,8 @@ The sync queue processor implements **partial batch recovery** and **crash-safe 
   - Deduplicates items by name (catalog items take precedence over custom items)
   - Used by all shopping services for consistent catalog fetching
 - `catalogUtils` - Catalog utilities (`mobile/src/common/utils/catalogUtils.ts`) - Shared functions for building categories and frequently added items. Used by all services for consistent data transformation
+  - **`normalizeCategoryName()`**: Normalizes deprecated category names to consolidated categories (teas → beverages, oils → condiments, sweets → bakery, supplies → household). Case-insensitive, trims whitespace. Used by `buildCategoriesFromGroceries()` to prevent duplicate categories
+  - **`buildCategoriesFromGroceries()`**: Builds category list from grocery items with normalization, deduplication, and deterministic UUID generation. Normalizes category names using `normalizeCategoryName()`, generates stable `localId` using UUID v5, and deduplicates by category ID
 - `GrocerySearchItemDto` - Shared type (`mobile/src/common/types/catalog.ts`) - Centralized DTO type for catalog API responses, preventing code duplication
 - `isValidImageUrl` - Image validation utility (`mobile/src/common/utils/imageUtils.ts`) - Validates image URL strings (handles empty strings, whitespace-only strings, null/undefined). Used by `CategoriesGrid` to determine if category images should be rendered
 - `mockGroceriesDB` - Grocery database with images and categories (fallback data for catalog service)
