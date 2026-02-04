@@ -56,11 +56,11 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 - Row Level Security (RLS) via Supabase
 
 ### Core Modules
-- **Shopping Lists**: Multi-list management with items, grocery catalog integration, and **custom items** (household-defined items shared across members; `GET /shopping-items/custom`)
+- **Shopping Lists**: Multi-list management with items, grocery catalog integration, and **custom items** (household-defined items shared across all household members; automatically created when adding non-catalog items; `GET /shopping-items/custom`)
 - **Recipes**: Recipe CRUD with ingredients, instructions, and soft-delete (`DELETE /recipes/:id`)
 - **Chores**: Task management with assignees, completion tracking, and soft-delete (`DELETE /chores/:id`)
 - **Dashboard**: Aggregated household activity summaries
-- **Import**: Data import with deduplication
+- **Import**: Data import with deduplication and fingerprinting
 
 ### Infrastructure
 - **PostgreSQL Database**: Prisma ORM with migrations
@@ -858,9 +858,9 @@ The backend implements a backend-driven OAuth flow where all OAuth secrets and t
 | `POST` | `/shopping-lists` | Protected | Create new shopping list |
 | `GET` | `/shopping-lists/:id` | Protected | Get shopping list with items |
 | `DELETE` | `/shopping-lists/:id` | Protected | Soft-delete shopping list |
-| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list (catalog or custom names; custom items create/link CustomItem) |
-| `GET` | `/shopping-items/custom` | Protected | Get household's custom items (shared across household members) |
-| `PATCH` | `/shopping-items/:id` | Protected | Update shopping item |
+| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list (catalog items by ID or custom items by name; custom items automatically created/linked if not exists) |
+| `GET` | `/shopping-items/custom` | Protected | Get household's custom items (shared across all household members, sorted alphabetically) |
+| `PATCH` | `/shopping-items/:id` | Protected | Update shopping item (quantity, checked status) |
 | `DELETE` | `/shopping-items/:id` | Protected | Soft-delete shopping item |
 
 ### Grocery Catalog Endpoints (Public)
@@ -993,11 +993,11 @@ backend/
 │   │   │   ├── repositories/       # HouseholdsRepository
 │   │   │   ├── dtos/               # CreateHouseholdDto, UpdateHouseholdDto, InviteMemberDto, etc.
 │   │   │   └── households.module.ts
-│   │   ├── shopping/               # Shopping lists, items, grocery catalog, custom items (CustomItem)
-│   │   │   ├── controllers/        # GroceriesController, ShoppingListsController, ShoppingItemsController (shopping.controller.ts)
-│   │   │   ├── services/           # ShoppingService
-│   │   │   ├── repositories/       # ShoppingRepository
-│   │   │   ├── dtos/               # Shopping DTOs
+│   │   ├── shopping/               # Shopping lists, items, grocery catalog, custom items
+│   │   │   ├── controllers/        # GroceriesController (public), ShoppingListsController, ShoppingItemsController (shopping.controller.ts)
+│   │   │   ├── services/           # ShoppingService (handles catalog items, custom items, bulk operations)
+│   │   │   ├── repositories/       # ShoppingRepository (manages lists, items, custom items)
+│   │   │   ├── dtos/               # Shopping DTOs (CreateListDto, AddItemsDto, UpdateItemDto, etc.)
 │   │   │   └── shopping.module.ts
 │   │   ├── recipes/                # Recipe management
 │   │   │   ├── controllers/        # RecipesController
@@ -1026,8 +1026,8 @@ backend/
 │   │   │   ├── controllers/        # HealthController (/api/v1/health*), VersionController (/api/version)
 │   │   │   ├── services/           # HealthService
 │   │   │   └── health.module.ts
-│   │   ├── settings/              # Settings module (app preferences)
-│   │   ├── users/                  # Users module (user profile data)
+│   │   ├── settings/              # Settings module (placeholder for future app preferences)
+│   │   ├── users/                  # Users module (placeholder for future user profile management)
 │   │   └── supabase/               # Supabase client service (global)
 │   │       ├── services/           # SupabaseService
 │   │       └── supabase.module.ts

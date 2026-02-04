@@ -42,8 +42,8 @@ export const mockItems: ShoppingItem[] = [
   // Party Supplies (list 2)
   { id: '7', localId: '550e8400-e29b-41d4-a716-446655440006', name: 'Chips', image: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=100', quantity: 5, category: 'Snacks', listId: '2', isChecked: false },
   { id: '8', localId: '550e8400-e29b-41d4-a716-446655440007', name: 'Soda', image: 'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?w=100', quantity: 8, category: 'Beverages', listId: '2', isChecked: false },
-  { id: '9', localId: '550e8400-e29b-41d4-a716-446655440008', name: 'Party Cups', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=100', quantity: 50, category: 'Supplies', listId: '2', isChecked: false },
-  { id: '10', localId: '550e8400-e29b-41d4-a716-446655440009', name: 'Cake', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=100', quantity: 1, category: 'Sweets', listId: '2', isChecked: false },
+  { id: '9', localId: '550e8400-e29b-41d4-a716-446655440008', name: 'Party Cups', image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=100', quantity: 50, category: 'Household', listId: '2', isChecked: false },
+  { id: '10', localId: '550e8400-e29b-41d4-a716-446655440009', name: 'Cake', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=100', quantity: 1, category: 'Bakery', listId: '2', isChecked: false },
   { id: '11', localId: '550e8400-e29b-41d4-a716-446655440010', name: 'Ice Cream', image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=100', quantity: 3, category: 'Freezer', listId: '2', isChecked: false },
 
   // Meal Prep (list 3)
@@ -56,7 +56,7 @@ export const mockItems: ShoppingItem[] = [
   // Pantry Restock (list 4)
   { id: '17', localId: '550e8400-e29b-41d4-a716-446655440016', name: 'Pasta', image: 'https://images.unsplash.com/photo-1551462147-37cbd8c6c4c8?w=100', quantity: 4, category: 'Grains', listId: '4', isChecked: false },
   { id: '18', localId: '550e8400-e29b-41d4-a716-446655440017', name: 'Canned Beans', image: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=100', quantity: 6, category: 'Canned', listId: '4', isChecked: false },
-  { id: '19', localId: '550e8400-e29b-41d4-a716-446655440018', name: 'Olive Oil', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100', quantity: 1, category: 'Oils', listId: '4', isChecked: false },
+  { id: '19', localId: '550e8400-e29b-41d4-a716-446655440018', name: 'Olive Oil', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100', quantity: 1, category: 'Condiments', listId: '4', isChecked: false },
   { id: '20', localId: '550e8400-e29b-41d4-a716-446655440019', name: 'Flour', image: 'https://images.unsplash.com/photo-1628273876255-d4c1c7e8e20d?w=100', quantity: 2, category: 'Baking', listId: '4', isChecked: false },
 
   // Healthy Snacks (list 5)
@@ -67,7 +67,7 @@ export const mockItems: ShoppingItem[] = [
 ];
 
 export const mockCategories: Category[] = [
-  { id: '1', localId: '550e8400-e29b-41d4-a716-446655440150', name: 'Sweets', itemCount: 12, image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=200', backgroundColor: 'rgba(255, 182, 193, 0.85)' },
+  { id: '1', localId: '550e8400-e29b-41d4-a716-446655440150', name: 'Bakery', itemCount: 12, image: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?w=200', backgroundColor: 'rgba(255, 182, 193, 0.85)' },
   { id: '2', localId: '550e8400-e29b-41d4-a716-446655440151', name: 'Freezer', itemCount: 18, image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200', backgroundColor: 'rgba(173, 216, 230, 0.85)' },
   { id: '3', localId: '550e8400-e29b-41d4-a716-446655440152', name: 'Meat', itemCount: 43, image: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=200', backgroundColor: 'rgba(210, 180, 140, 0.85)' },
   { id: '4', localId: '550e8400-e29b-41d4-a716-446655440153', name: 'Snacks', itemCount: 89, image: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=200', backgroundColor: 'rgba(255, 218, 185, 0.85)' },
@@ -75,7 +75,6 @@ export const mockCategories: Category[] = [
   { id: '6', localId: '550e8400-e29b-41d4-a716-446655440155', name: 'Beverages', itemCount: 67, image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=200', backgroundColor: 'rgba(144, 238, 144, 0.85)' },
   { id: '7', localId: '550e8400-e29b-41d4-a716-446655440156', name: 'Dips', itemCount: 89, image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=200', backgroundColor: 'rgba(255, 160, 122, 0.85)' },
   { id: '8', localId: '550e8400-e29b-41d4-a716-446655440157', name: 'Cheeses', itemCount: 12, image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=200', backgroundColor: 'rgba(255, 228, 181, 0.85)' },
-  { id: '9', localId: '550e8400-e29b-41d4-a716-446655440158', name: 'Teas', itemCount: 34, image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=200', backgroundColor: 'rgba(176, 224, 230, 0.85)' },
 ];
 
 // Calculate item counts dynamically

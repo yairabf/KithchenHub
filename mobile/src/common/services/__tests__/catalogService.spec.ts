@@ -5,7 +5,7 @@
  */
 
 import { api, NetworkError } from '../../../services/api';
-import { mockGroceriesDB } from '../../../data/groceryDatabase';
+import { mockGroceriesDB } from '../../../mocks/shopping/groceryDatabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { GroceryItem } from '../../../features/shopping/components/GrocerySearchBar';
 
@@ -391,6 +391,92 @@ describe('CatalogService', () => {
 
         expect(items).toEqual(expectedResult);
       });
+    });
+  });
+
+  describe('category supplementation fallback', () => {
+    beforeEach(() => {
+      // Ensure mock data is disabled for these tests
+      mockConfigValue.mockData.enabled = false;
+    });
+
+    describe.each([
+      [
+        'missing household category',
+        [
+          { id: '1', name: 'Apple', category: 'Fruits', imageUrl: '', defaultQuantity: 1 },
+          { id: '2', name: 'Salt', category: 'Spices', imageUrl: '', defaultQuantity: 1 },
+        ],
+        (items: GroceryItem[]) => {
+          const hasHousehold = items.some(i => i.category?.toLowerCase().includes('household'));
+          expect(hasHousehold).toBe(true);
+        },
+      ],
+      [
+        'missing spices category',
+        [
+          { id: '1', name: 'Apple', category: 'Fruits', imageUrl: '', defaultQuantity: 1 },
+          { id: '2', name: 'Paper Towels', category: 'Household', imageUrl: '', defaultQuantity: 1 },
+        ],
+        (items: GroceryItem[]) => {
+          const hasSpices = items.some(i => i.category?.toLowerCase().includes('spices'));
+          expect(hasSpices).toBe(true);
+        },
+      ],
+      [
+        'missing both household and spices categories',
+        [
+          { id: '1', name: 'Apple', category: 'Fruits', imageUrl: '', defaultQuantity: 1 },
+        ],
+        (items: GroceryItem[]) => {
+          const hasHousehold = items.some(i => i.category?.toLowerCase().includes('household'));
+          const hasSpices = items.some(i => i.category?.toLowerCase().includes('spices'));
+          expect(hasHousehold).toBe(true);
+          expect(hasSpices).toBe(true);
+        },
+      ],
+      [
+        'both categories already present',
+        [
+          { id: '1', name: 'Paper Towels', category: 'Household', imageUrl: '', defaultQuantity: 1 },
+          { id: '2', name: 'Salt', category: 'Spices', imageUrl: '', defaultQuantity: 1 },
+        ],
+        (items: GroceryItem[]) => {
+          // Should not duplicate items
+          const householdItems = items.filter(i => i.category?.toLowerCase().includes('household'));
+          const spicesItems = items.filter(i => i.category?.toLowerCase().includes('spices'));
+          // Original items should still be present
+          expect(householdItems.some(i => i.name === 'Paper Towels')).toBe(true);
+          expect(spicesItems.some(i => i.name === 'Salt')).toBe(true);
+        },
+      ],
+    ])('with %s', (description, apiResponse, assertion) => {
+      it(`should supplement missing categories correctly`, async () => {
+        mockApiGet.mockResolvedValue(apiResponse);
+        
+        const items = await service.getGroceryItems();
+        
+        assertion(items);
+        expect(mockApiGet).toHaveBeenCalledWith('/groceries/search?q=');
+      });
+    });
+
+    it('should not add duplicate items when supplementing', async () => {
+      // API returns items that already exist in mock data
+      const apiResponse = [
+        { id: '1', name: 'Paper Towels', category: 'Household', imageUrl: '', defaultQuantity: 1 },
+        { id: '2', name: 'Salt', category: 'Spices', imageUrl: '', defaultQuantity: 1 },
+      ];
+      mockApiGet.mockResolvedValue(apiResponse);
+      
+      const items = await service.getGroceryItems();
+      
+      // Count items by name (case-insensitive)
+      const itemNames = items.map(i => i.name.toLowerCase());
+      const uniqueNames = new Set(itemNames);
+      
+      // Should not have duplicates
+      expect(itemNames.length).toBe(uniqueNames.size);
     });
   });
 });

@@ -14,3 +14,5 @@ export {
 } from './quickActionLists';
 
 export { mockFrequentlyAddedItems } from './frequentlyAddedItems';
+
+export { mockGroceriesDB } from './groceryDatabase';

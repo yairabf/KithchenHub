@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, NetworkError } from '../../services/api';
 import { getPublicCatalogCacheKey } from '../storage/dataModeStorage';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
-import { mockGroceriesDB } from '../../data/groceryDatabase';
+import { mockGroceriesDB } from '../../mocks/shopping/groceryDatabase';
 import { config } from '../../config';
 import { SHOPPING_CATEGORIES, DEFAULT_CATEGORY } from '../../features/shopping/constants/categories';
 import type { GroceryItem } from '../../features/shopping/components/GrocerySearchBar';
@@ -43,6 +43,12 @@ export enum CatalogSource {
 const GROCERY_ITEMS_CACHE_KEY = getPublicCatalogCacheKey('grocery_catalog');
 const CATEGORIES_CACHE_KEY = getPublicCatalogCacheKey('shopping_categories');
 const CUSTOM_ITEMS_CACHE_KEY = getPublicCatalogCacheKey('custom_grocery_items');
+
+/**
+ * Required categories that must be present in catalog data.
+ * If missing from API/cache, these will be supplemented from mock data.
+ */
+const REQUIRED_CATEGORIES = ['household', 'spices'] as const;
 
 /**
  * CustomItem type from API response
@@ -292,6 +298,71 @@ export class CatalogService {
   }
 
   /**
+   * Checks if items array contains any items with the specified category.
+   * 
+   * @param items - Array of grocery items to check
+   * @param categoryName - Category name to search for (case-insensitive)
+   * @returns True if at least one item has the category
+   */
+  private hasCategoryItems(items: GroceryItem[], categoryName: string): boolean {
+    const normalizedCategory = categoryName.toLowerCase();
+    return items.some(item => 
+      item.category?.toLowerCase().includes(normalizedCategory)
+    );
+  }
+
+  /**
+   * Filters items by category name (case-insensitive partial match).
+   * 
+   * @param items - Array of grocery items to filter
+   * @param categoryName - Category name to filter by (case-insensitive)
+   * @returns Array of items matching the category
+   */
+  private getCategoryItems(items: GroceryItem[], categoryName: string): GroceryItem[] {
+    const normalizedCategory = categoryName.toLowerCase();
+    return items.filter(item => 
+      item.category?.toLowerCase().includes(normalizedCategory)
+    );
+  }
+
+  /**
+   * Supplements merged items with missing required category items from mock data.
+   * Ensures all required categories are present even if API doesn't return them.
+   * 
+   * @param mergedItems - Current merged grocery items
+   * @param categoryName - Category name to supplement if missing
+   * @returns Updated array with supplemented items (if needed)
+   */
+  private supplementMissingCategoryItems(
+    mergedItems: GroceryItem[],
+    categoryName: string
+  ): GroceryItem[] {
+    if (this.hasCategoryItems(mergedItems, categoryName)) {
+      return mergedItems;
+    }
+    
+    const mockItems = this.getCategoryItems(mockGroceriesDB, categoryName);
+    if (mockItems.length === 0) {
+      return mergedItems;
+    }
+    
+    const existingNames = new Set(mergedItems.map(i => i.name.toLowerCase()));
+    const uniqueItems = mockItems.filter(
+      item => !existingNames.has(item.name.toLowerCase())
+    );
+    
+    if (uniqueItems.length > 0) {
+      this.logCatalogEvent('log', `Supplemented with ${categoryName} items from mock data`, {
+        added: uniqueItems.length,
+        category: categoryName,
+      });
+      return [...mergedItems, ...uniqueItems];
+    }
+    
+    return mergedItems;
+  }
+
+  /**
    * Internal method to fetch grocery items with fallback strategy
    * 
    * @returns Array of grocery items (merged with custom items if available)
@@ -299,7 +370,10 @@ export class CatalogService {
   private async fetchGroceryItemsWithFallback(): Promise<GroceryItem[]> {
     // If mock data is enabled, skip API and use mock data directly
     if (config?.mockData?.enabled) {
-      this.logCatalogEvent('log', 'Mock data enabled, using mock catalog data', { itemCount: mockGroceriesDB.length, source: CatalogSource.MOCK });
+      this.logCatalogEvent('log', 'Mock data enabled, using mock catalog data', { 
+        itemCount: mockGroceriesDB.length,
+        source: CatalogSource.MOCK 
+      });
       return mockGroceriesDB;
     }
 
@@ -313,7 +387,10 @@ export class CatalogService {
       // Cache successful response
       await this.cacheGroceryItems(catalogItems);
       
-      this.logCatalogEvent('log', 'Fetched from API', { itemCount: catalogItems.length, source: CatalogSource.API });
+      this.logCatalogEvent('log', 'Fetched from API', { 
+        itemCount: catalogItems.length,
+        source: CatalogSource.API 
+      });
     } catch (error) {
       // Handle network errors - fallback to cache
       if (error instanceof NetworkError) {
@@ -321,11 +398,17 @@ export class CatalogService {
         const cached = await this.getCachedGroceryItems();
         
         if (cached.length > 0) {
-          this.logCatalogEvent('log', 'Using cached catalog data', { itemCount: cached.length, source: CatalogSource.CACHE });
+          this.logCatalogEvent('log', 'Using cached catalog data', { 
+            itemCount: cached.length,
+            source: CatalogSource.CACHE 
+          });
           catalogItems = cached;
         } else {
           // Cache empty - fallback to mock data
-          this.logCatalogEvent('warn', 'Cache empty, using mock catalog data', { itemCount: mockGroceriesDB.length, source: CatalogSource.MOCK });
+          this.logCatalogEvent('warn', 'Cache empty, using mock catalog data', { 
+            itemCount: mockGroceriesDB.length,
+            source: CatalogSource.MOCK 
+          });
           catalogItems = mockGroceriesDB;
         }
       } else {
@@ -339,7 +422,13 @@ export class CatalogService {
     
     // Merge catalog items with custom items
     // Deduplicate by name: if a custom item has the same name as a catalog item, prefer catalog item
-    const mergedItems = this.mergeGroceryItems(catalogItems, customItems);
+    let mergedItems = this.mergeGroceryItems(catalogItems, customItems);
+    
+    // Fallback: Supplement missing required categories from mock data
+    // This ensures all required categories are always available even if API doesn't return them
+    for (const categoryName of REQUIRED_CATEGORIES) {
+      mergedItems = this.supplementMissingCategoryItems(mergedItems, categoryName);
+    }
     
     return mergedItems;
   }
@@ -400,6 +489,9 @@ export class CatalogService {
    * ```
    */
   async getShoppingCategories(): Promise<string[]> {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'catalogService.ts:402',message:'getShoppingCategories called',data:{mockDataEnabled:config?.mockData?.enabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // If mock data is enabled, use static categories
     if (config?.mockData?.enabled) {
       this.logCatalogEvent('log', 'Mock data enabled, using static categories', { 
@@ -547,6 +639,7 @@ export class CatalogService {
     frequentlyAddedItems: GroceryItem[];
   }> {
     const groceryItems = await this.getGroceryItems();
+    
     const categories = buildCategoriesFromGroceries(groceryItems);
     const frequentlyAddedItems = buildFrequentlyAddedItems(groceryItems);
 

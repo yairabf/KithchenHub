@@ -51,7 +51,20 @@ type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 export function ShoppingListsScreen() {
   const { isTablet } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { groceryItems, categories, frequentlyAddedItems } = useCatalog();
+  const { groceryItems, categories: rawCategories, frequentlyAddedItems } = useCatalog();
+  
+  /**
+   * Sorts categories by item count in descending order.
+   * Categories with the most items appear first in the grid.
+   * 
+   * Uses useMemo to prevent unnecessary re-sorting on every render.
+   * Only re-sorts when rawCategories array reference changes.
+   * 
+   * @returns Sorted array of categories (memoized)
+   */
+  const categories = useMemo(() => {
+    return [...rawCategories].sort((a, b) => b.itemCount - a.itemCount);
+  }, [rawCategories]);
 
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
   const [selectedGroceryItem, setSelectedGroceryItem] = useState<GroceryItem | null>(null);
@@ -62,8 +75,14 @@ export function ShoppingListsScreen() {
 
   // Load categories for custom item selection
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ShoppingListsScreen.tsx:65',message:'Calling getShoppingCategories',data:{methodExists:typeof catalogService.getShoppingCategories === 'function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     catalogService.getShoppingCategories()
       .then((cats) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ShoppingListsScreen.tsx:67',message:'getShoppingCategories resolved',data:{categoryCount:cats?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         setAvailableCategories(cats);
         // Set default category if not in list
         if (cats.length > 0 && !cats.includes(selectedItemCategory)) {
@@ -71,6 +90,9 @@ export function ShoppingListsScreen() {
         }
       })
       .catch((error) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ShoppingListsScreen.tsx:catch',message:'getShoppingCategories error',data:{errorMessage:error?.message,errorName:error?.name,errorType:typeof error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         console.error('Failed to load categories:', error);
       });
   }, []);

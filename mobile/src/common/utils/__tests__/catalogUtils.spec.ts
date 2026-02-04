@@ -11,6 +11,54 @@ import type { Category } from '../../../mocks/shopping';
 describe('buildCategoriesFromGroceries', () => {
   describe.each([
     [
+      'deprecated category "teas" normalized to "beverages"',
+      [
+        { id: '1', name: 'Green Tea', image: '', category: 'Teas', defaultQuantity: 1 },
+        { id: '2', name: 'Coffee', image: '', category: 'Beverages', defaultQuantity: 1 },
+      ],
+      [{ name: 'Beverages', itemCount: 2 }],
+    ],
+    [
+      'deprecated category "oils" normalized to "condiments"',
+      [
+        { id: '1', name: 'Olive Oil', image: '', category: 'Oils', defaultQuantity: 1 },
+        { id: '2', name: 'Ketchup', image: '', category: 'Condiments', defaultQuantity: 1 },
+      ],
+      [{ name: 'Condiments', itemCount: 2 }],
+    ],
+    [
+      'deprecated category "sweets" normalized to "bakery"',
+      [
+        { id: '1', name: 'Chocolate Cake', image: '', category: 'Sweets', defaultQuantity: 1 },
+        { id: '2', name: 'Bread', image: '', category: 'Bakery', defaultQuantity: 1 },
+      ],
+      [{ name: 'Bakery', itemCount: 2 }],
+    ],
+    [
+      'deprecated category "supplies" normalized to "household"',
+      [
+        { id: '1', name: 'Party Cups', image: '', category: 'Supplies', defaultQuantity: 1 },
+        { id: '2', name: 'Paper Towels', image: '', category: 'Household', defaultQuantity: 1 },
+      ],
+      [{ name: 'Household', itemCount: 2 }],
+    ],
+    [
+      'case-insensitive normalization',
+      [
+        { id: '1', name: 'Tea', image: '', category: 'TEAS', defaultQuantity: 1 },
+        { id: '2', name: 'Coffee', image: '', category: 'beverages', defaultQuantity: 1 },
+      ],
+      [{ name: 'Beverages', itemCount: 2 }],
+    ],
+    [
+      'whitespace trimmed before normalization',
+      [
+        { id: '1', name: 'Tea', image: '', category: '  teas  ', defaultQuantity: 1 },
+        { id: '2', name: 'Coffee', image: '', category: 'beverages', defaultQuantity: 1 },
+      ],
+      [{ name: 'Beverages', itemCount: 2 }],
+    ],
+    [
       'empty array',
       [],
       [],
@@ -51,6 +99,63 @@ describe('buildCategoriesFromGroceries', () => {
         { id: '2', name: 'Unknown', image: '', category: null as any, defaultQuantity: 1 },
       ],
       [{ name: 'Fruits', itemCount: 1 }, { name: 'Other', itemCount: 1 }],
+    ],
+    [
+      'deprecated category "teas" normalized to "beverages"',
+      [
+        { id: '1', name: 'Green Tea', image: '', category: 'Teas', defaultQuantity: 1 },
+        { id: '2', name: 'Coffee', image: '', category: 'Beverages', defaultQuantity: 1 },
+      ],
+      [{ name: 'Beverages', itemCount: 2 }],
+    ],
+    [
+      'deprecated category "oils" normalized to "condiments"',
+      [
+        { id: '1', name: 'Olive Oil', image: '', category: 'Oils', defaultQuantity: 1 },
+        { id: '2', name: 'Ketchup', image: '', category: 'Condiments', defaultQuantity: 1 },
+      ],
+      [{ name: 'Condiments', itemCount: 2 }],
+    ],
+    [
+      'deprecated category "sweets" normalized to "bakery"',
+      [
+        { id: '1', name: 'Chocolate Cake', image: '', category: 'Sweets', defaultQuantity: 1 },
+        { id: '2', name: 'Bread', image: '', category: 'Bakery', defaultQuantity: 1 },
+      ],
+      [{ name: 'Bakery', itemCount: 2 }],
+    ],
+    [
+      'deprecated category "supplies" normalized to "household"',
+      [
+        { id: '1', name: 'Party Cups', image: '', category: 'Supplies', defaultQuantity: 1 },
+        { id: '2', name: 'Paper Towels', image: '', category: 'Household', defaultQuantity: 1 },
+      ],
+      [{ name: 'Household', itemCount: 2 }],
+    ],
+    [
+      'case-insensitive normalization',
+      [
+        { id: '1', name: 'Tea', image: '', category: 'TEAS', defaultQuantity: 1 },
+        { id: '2', name: 'Coffee', image: '', category: 'beverages', defaultQuantity: 1 },
+      ],
+      [{ name: 'Beverages', itemCount: 2 }],
+    ],
+    [
+      'whitespace trimmed before normalization',
+      [
+        { id: '1', name: 'Tea', image: '', category: '  teas  ', defaultQuantity: 1 },
+        { id: '2', name: 'Coffee', image: '', category: 'beverages', defaultQuantity: 1 },
+      ],
+      [{ name: 'Beverages', itemCount: 2 }],
+    ],
+    [
+      'deduplication prevents duplicate categories',
+      [
+        { id: '1', name: 'Apple', image: '', category: 'Fruits', defaultQuantity: 1 },
+        { id: '2', name: 'Banana', image: '', category: 'fruits', defaultQuantity: 1 },
+        { id: '3', name: 'Orange', image: '', category: 'FRUITS', defaultQuantity: 1 },
+      ],
+      [{ name: 'Fruits', itemCount: 3 }],
     ],
   ])('with %s', (description, items, expectedCategories) => {
     it(`should build categories correctly`, () => {
