@@ -855,8 +855,10 @@ The backend implements a backend-driven OAuth flow where all OAuth secrets and t
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `GET` | `/shopping-lists` | Protected | Get all shopping lists for household |
+| `GET` | `/shopping-lists/main` | Protected | Get main shopping list for household |
 | `POST` | `/shopping-lists` | Protected | Create new shopping list |
 | `GET` | `/shopping-lists/:id` | Protected | Get shopping list with items |
+| `PATCH` | `/shopping-lists/:id` | Protected | Update shopping list (name, color) |
 | `DELETE` | `/shopping-lists/:id` | Protected | Soft-delete shopping list |
 | `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list (catalog items by ID or custom items by name; custom items automatically created/linked if not exists) |
 | `GET` | `/shopping-items/custom` | Protected | Get household's custom items (shared across all household members, sorted alphabetically) |

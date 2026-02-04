@@ -138,12 +138,20 @@ export function ShoppingListPanel({
                 <Ionicons name={list.icon} size={20} color={list.color} />
               </View>
               <View style={styles.listCardContent}>
-                <Text style={[
-                  styles.listCardName,
-                  selectedList.id === list.id && styles.listCardNameActive
-                ]}>
-                  {list.name}
-                </Text>
+                <View style={styles.listCardNameRow}>
+                  <Text style={[
+                    styles.listCardName,
+                    selectedList.id === list.id && styles.listCardNameActive
+                  ]}>
+                    {list.name}
+                  </Text>
+                  {list.isMain && (
+                    <View style={styles.mainBadge}>
+                      <Ionicons name="home" size={12} color={colors.recipes} />
+                      <Text style={styles.mainBadgeText}>Main</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.listCardCount}>{list.itemCount} items</Text>
               </View>
               {selectedList.id === list.id && (

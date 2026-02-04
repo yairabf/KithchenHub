@@ -21,6 +21,9 @@ The Dashboard feature serves as the home screen of Kitchen Hub, providing users 
 - **Key functionality**:
   - Header with Kitchen Hub logo, live clock and date (time on all devices; full date on tablet), notification button, and user profile (role: "KITCHEN LEAD" or "Guest", display name, avatar)
   - "Add to Shopping List" card with GrocerySearchBar, mic button, add button, and suggested item chips (from catalog/frequently added); tapping a suggestion adds the item to the active list (quantity 1) or increments existing
+    - Uses `quickAddItem` utility function for consistent item addition behavior
+    - GrocerySearchBar supports custom items and quick-add functionality
+    - Refreshes shopping data after adding items to ensure UI is up-to-date
   - Quick stat cards: Shopping Lists, Saved Recipes (each navigates to the corresponding tab)
   - "Important Chores" list: today's chores with avatar, name, status (Done/Pending), assignee, due date/time; tap to toggle completion; "View All" and "Add Household Task" open Chores tab or chore modal
   - Two-column responsive layout (tablet: 7/5 flex; phone: single column)
@@ -80,9 +83,24 @@ const formattedDate = formatDateForDisplay(currentTime);
 The dashboard screen composes:
 
 - **GrocerySearchBar** (from `features/shopping`) – search and quick-add for groceries in the "Add to Shopping List" card
+  - Supports custom items (`allowCustomItems={true}`)
+  - Uses `useClickOutside` hook for dropdown behavior
+  - Integrated with `quickAddItem` utility for item addition
 - **SafeImage** (from `common/components`) – avatar and chore assignee images
 
 All other UI is inline in DashboardScreen.
+
+## Utilities
+
+### Quick Add Integration
+
+- **File**: `mobile/src/features/shopping/utils/quickAddUtils.ts`
+- **Usage**: DashboardScreen uses `quickAddItem` utility function for adding items to the main shopping list
+- **Behavior**: 
+  - Checks if item already exists in the list
+  - Increments quantity if exists, creates new item otherwise
+  - Uses optimistic updates for responsive UI
+  - Refreshes shopping data after successful addition to ensure UI consistency
 
 ## UI Sections
 

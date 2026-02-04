@@ -2,7 +2,11 @@ export class ShoppingListSummaryDto {
   id: string;
   name: string;
   color?: string;
+  icon?: string;
+  isMain: boolean;
   itemCount: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export class ShoppingItemDto {

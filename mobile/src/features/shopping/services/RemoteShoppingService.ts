@@ -38,7 +38,10 @@ type ShoppingListSummaryDto = {
   name: string;
   color?: string | null;
   icon?: string | null;
+  isMain: boolean;
   itemCount?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type ShoppingListDetailDto = {
@@ -71,6 +74,7 @@ const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => (
   itemCount: list.itemCount ?? 0,
   icon: (list.icon as ShoppingList['icon']) ?? DEFAULT_LIST_ICON,
   color: list.color ?? DEFAULT_LIST_COLOR,
+  isMain: list.isMain ?? false,
 });
 
 const buildShoppingItemsFromDetails = (

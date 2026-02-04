@@ -1,0 +1,27 @@
+---
+alwaysApply: true
+---
+# Consult Skills and Rules Before Development/Planning
+
+**When:** At the start of any development task, plan, or implementation (before writing code or a detailed plan).
+
+**What to do:**
+
+1. **List available skills**  
+   Scan `.cursor/skills/`. For each subdirectory that contains a `SKILL.md`, treat it as a skill (e.g. `auto-code-review`, `vercel-react-native-skills`, `web-design-guidelines`).
+
+2. **Decide what’s relevant**  
+   Read each skill’s `SKILL.md` (frontmatter + “When to Apply” / “When to Use”). Match the current task to the skill’s triggers:
+   - **React Native / Expo / mobile UI or performance** → `vercel-react-native-skills`
+   - **UI review / accessibility / design audit** → `web-design-guidelines`
+   - **After implementation is done** → `auto-code-review` (apply when finishing a feature/plan)
+
+3. **Load and apply relevant rules**  
+   For each relevant skill:
+   - If it has a **`rules/`** folder (e.g. `vercel-react-native-skills/rules/`): read the rule files that match the task (e.g. list performance → `list-performance-*.md`, images → `ui-expo-image.md`, animations → `animation-*.md`). Apply their guidance while designing or coding.
+   - If it references **AGENTS.md** or a single doc: read that when the skill applies and follow its guidance.
+
+4. **Use them during work**  
+   While planning or implementing, explicitly follow the relevant skill rules (e.g. FlashList for long lists, expo-image for images, Pressable over TouchableOpacity) and mention which skill/rule you’re applying when it matters.
+
+**Do not** read every rule file up front; only open skills and rule files that are relevant to the current task to keep context focused.

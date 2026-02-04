@@ -41,6 +41,10 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - Floating action button for quick add
   - **Guest Support**: Loads private list data from local storage (AsyncStorage) for guest users while signed-in users use the API
   - **Add-item quantity**: New items are added with quantity 1; adding an item that already exists in the list increments its quantity. Quantity input resets to 1 after add.
+  - **Tab-based Refresh**: Accepts `isActive` prop to detect when tab becomes active and refresh data
+    - Uses `useEffect` with `prevIsActiveRef` to detect transition from inactive to active
+    - Triggers `loadShoppingData()` only when tab transitions from inactive to active
+    - Prevents unnecessary refreshes on every render
   - **Direct State Management**: Uses `useState` hooks for all modes (no cache layer)
     - `shoppingLists` and `allItems` state managed directly via `useState`
     - Data loaded via `shoppingService.getShoppingData()` on mount and refresh
@@ -52,6 +56,11 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - **Optimistic UI Updates**: All operations use optimistic updates with automatic revert on error via `executeWithOptimisticUpdate` helper
     - Optimistic updates work for both guest and signed-in modes
     - Rapid quantity increments use `latestQuantity` tracking to prevent race conditions
+  - **Quick Add Utility**: Uses `quickAddItem` utility function for reusable item addition logic
+    - Extracted from screen handlers for code reuse
+    - Used by both `ShoppingListsScreen` and `DashboardScreen`
+    - Handles existing item detection and quantity increment
+    - Supports optimistic updates with error handling
 
 #### Code Snippet - Service and State Initialization
 
@@ -116,6 +125,18 @@ useEffect(() => {
 - **Usage**: Used by `ShoppingListsScreen` to enable instant cross-device synchronization
 - **Interface**: Accepts `onListChange` and `onItemChange` callbacks that update state directly
 
+### useClickOutside (Shared Hook)
+
+- **File**: `mobile/src/common/hooks/useClickOutside.ts`
+- **Purpose**: Reusable hook for detecting clicks outside a container element (web platform only)
+- **Usage**: Used by `GrocerySearchBar` to handle dropdown close behavior
+- **Features**:
+  - Detects clicks outside container and dropdown elements
+  - Supports nested containers (container + dropdown)
+  - Platform-aware (only works on web)
+  - Error handling with fallback behavior
+- **Interface**: Accepts `enabled`, `onOutsideClick`, `containerRef`, `testId`, `dropdownRef`, `dropdownTestId`
+
 ## Components
 
 ### ShoppingListPanel
@@ -176,6 +197,11 @@ interface GrocerySearchBarProps {
   - Quick-add buttons for rapid multi-item addition
   - Dropdown showing up to 8 results
   - **Custom Items Integration**: Custom items (prefixed with `custom-` ID) are merged with catalog items and appear in search results
+  - **Click-Outside Detection**: Uses `useClickOutside` hook for reliable dropdown close behavior
+    - Dropdown stays open when clicking + button (for rapid multi-item addition)
+    - Dropdown closes when clicking outside container or dropdown
+    - Platform-aware (web only)
+    - Handles nested container and dropdown elements
 
 ### CategoriesGrid
 
@@ -274,9 +300,11 @@ interface CategoryPickerProps {
   - Used in custom item creation modals for category selection
   - Icons are generated via `sandbox/generate_category_icons.py` and bundled with app for offline availability
 
-## Entity Creation (New)
+## Utilities
 
-The feature implementation now uses a Factory Pattern to separate business logic from UI components and ensure TDD compliance.
+### Entity Creation (Factory Pattern)
+
+The feature implementation uses a Factory Pattern to separate business logic from UI components and ensure TDD compliance.
 
 - **Factory**: `mobile/src/features/shopping/utils/shoppingFactory.ts`
 - **Tests**: `mobile/src/features/shopping/utils/__tests__/shoppingFactory.test.ts`
@@ -287,6 +315,27 @@ The feature implementation now uses a Factory Pattern to separate business logic
 import { createShoppingItem } from '../utils/shoppingFactory';
 const newItem = createShoppingItem(groceryItem, listId, quantity);
 ```
+
+### Quick Add Utility
+
+- **File**: `mobile/src/features/shopping/utils/quickAddUtils.ts`
+- **Purpose**: Reusable utility function for adding grocery items to shopping lists
+- **Features**:
+  - Checks if item already exists in the list
+  - Increments quantity if item exists, creates new item otherwise
+  - Uses optimistic updates for responsive UI
+  - Handles both catalog items and custom items
+  - Supports rapid multi-item addition (keeps dropdown open)
+- **Usage**: Used by both `ShoppingListsScreen` and `DashboardScreen` for consistent item addition behavior
+- **Interface**: 
+  ```typescript
+  export async function quickAddItem(
+    groceryItem: GroceryItem,
+    selectedList: ShoppingList,
+    dependencies: QuickAddDependencies
+  ): Promise<void>
+  ```
+- **Dependencies**: Requires `allItems`, `setAllItems`, `createItem`, `updateItem`, `executeWithOptimisticUpdate`, `logShoppingError`
 
 ## Key Types
 
@@ -809,6 +858,8 @@ The sync queue processor implements **partial batch recovery** and **crash-safe 
   - Prioritizes custom items over catalog items, especially exact matches
   - Sort order: exact matches (custom first) > starts-with matches (custom first) > partial matches (custom first) > alphabetical
   - Includes comprehensive parameterized tests (13 test cases)
+- `quickAddUtils` - Quick add utility (`mobile/src/features/shopping/utils/quickAddUtils.ts`) - Reusable function for adding items to shopping lists with quantity management and optimistic updates. Used by both ShoppingListsScreen and DashboardScreen
+- `useClickOutside` - Click-outside detection hook (`mobile/src/common/hooks/useClickOutside.ts`) - Reusable hook for detecting clicks outside container elements (web platform only). Used by GrocerySearchBar for dropdown close behavior
 - `useShoppingRealtime` - Realtime sync hook (`mobile/src/features/shopping/hooks/useShoppingRealtime.ts`) - Custom hook that manages Supabase realtime subscriptions for shopping lists and items. Handles both signed-in (cache-based) and guest (state-based) modes. Used by ShoppingListsScreen for instant cross-device synchronization
 - `SHOPPING_CATEGORIES` - Category constants (`mobile/src/features/shopping/constants/categories.ts`) - Defines available shopping categories for custom items
   - Categories: fruits, vegetables, dairy, meat, seafood, bakery, grains, snacks, nuts, other

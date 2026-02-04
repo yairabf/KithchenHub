@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
@@ -34,6 +35,7 @@ import { createShoppingService } from '../services/shoppingService';
 import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSelectedList } from '../utils/selectionUtils';
+import { quickAddItem } from '../utils/quickAddUtils';
 import { determineUserDataMode } from '../../../common/types/dataModes';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import {
@@ -48,7 +50,12 @@ type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 
 
-export function ShoppingListsScreen() {
+interface ShoppingListsScreenProps {
+  isActive?: boolean;
+}
+
+export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
+  const { isActive = true } = props;
   const { isTablet } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
   const { groceryItems, categories: rawCategories, frequentlyAddedItems } = useCatalog();
@@ -137,46 +144,82 @@ export function ShoppingListsScreen() {
     itemCount: 0,
     icon: 'cart-outline',
     color: colors.shopping,
+    isMain: false,
   }), []);
   const activeList = selectedList ?? shoppingLists[0] ?? fallbackList;
   
   const listIdFilter = buildListIdFilter(shoppingLists.map((list) => list.id));
 
-  // Load shopping data for all modes (direct API calls, no cache)
-  useEffect(() => {
+  /**
+   * Sorts shopping lists so the main list always appears first.
+   * 
+   * @param lists - Array of shopping lists to sort
+   * @returns Sorted array with main list first
+   */
+  const sortListsWithMainFirst = useCallback((lists: ShoppingList[]) => {
+    return [...lists].sort((a, b) => {
+      if (a.isMain && !b.isMain) return -1;
+      if (!a.isMain && b.isMain) return 1;
+      return 0;
+    });
+  }, []);
+
+  // Load shopping data function - reusable for both initial load and refresh
+  const loadShoppingData = useCallback(async () => {
     if (isAuthLoading) return;
     
-    let isMounted = true;
-    const loadShoppingData = async () => {
-      setIsListsLoading(true);
-      setIsItemsLoading(true);
-      try {
-        const data = await shoppingService.getShoppingData();
-        if (!isMounted) return;
-        setShoppingLists(data.shoppingLists);
-        setAllItems(data.shoppingItems);
-        setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
-      } catch (error) {
-        if (!isMounted) return;
-        console.error('Failed to load shopping data:', error);
-      } finally {
-        if (isMounted) {
-          setIsListsLoading(false);
-          setIsItemsLoading(false);
-        }
-      }
-    };
-    loadShoppingData();
-    return () => { isMounted = false; };
-  }, [shoppingService, isAuthLoading]);
+    setIsListsLoading(true);
+    setIsItemsLoading(true);
+    try {
+      const data = await shoppingService.getShoppingData();
+      // Sort lists so main list is always first
+      const sortedLists = sortListsWithMainFirst(data.shoppingLists);
+      setShoppingLists(sortedLists);
+      setAllItems(data.shoppingItems);
+      setSelectedList((current) => getSelectedList(sortedLists, current?.id));
+    } catch (error) {
+      console.error('Failed to load shopping data:', error);
+    } finally {
+      setIsListsLoading(false);
+      setIsItemsLoading(false);
+    }
+  }, [shoppingService, isAuthLoading, sortListsWithMainFirst]);
 
+  // Load shopping data on mount
+  useEffect(() => {
+    loadShoppingData();
+  }, [loadShoppingData]);
+
+  // Track previous active state to detect when tab becomes active
+  const prevIsActiveRef = useRef<boolean>(false);
+  
+  // Refresh shopping data when Shopping tab becomes active (transitions from inactive to active)
+  useEffect(() => {
+    const wasInactive = !prevIsActiveRef.current;
+    const isNowActive = isActive;
+    
+    // Only refresh when transitioning from inactive to active
+    if (wasInactive && isNowActive) {
+      loadShoppingData();
+    }
+    
+    // Update ref for next comparison
+    prevIsActiveRef.current = isActive;
+  }, [isActive, loadShoppingData]);
+
+  /**
+   * Handles manual refresh of shopping data (pull-to-refresh).
+   * Fetches latest data from the service and updates state.
+   */
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       const data = await shoppingService.getShoppingData();
-      setShoppingLists(data.shoppingLists);
+      // Sort lists so main list is always first
+      const sortedLists = sortListsWithMainFirst(data.shoppingLists);
+      setShoppingLists(sortedLists);
       setAllItems(data.shoppingItems);
-      setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
+      setSelectedList((current) => getSelectedList(sortedLists, current?.id));
     } catch (error) {
       console.error('Failed to refresh shopping data:', error);
     } finally {
@@ -200,11 +243,13 @@ export function ShoppingListsScreen() {
 
   // Memoize callbacks to prevent unnecessary re-subscriptions
   const handleRealtimeListChange = useCallback((lists: ShoppingList[]) => {
-    setShoppingLists(lists);
+    // Sort lists so main list is always first
+    const sortedLists = sortListsWithMainFirst(lists);
+    setShoppingLists(sortedLists);
     setSelectedList((currentSelected) =>
-      getSelectedList(lists, currentSelected?.id),
+      getSelectedList(sortedLists, currentSelected?.id),
     );
-  }, []);
+  }, [sortListsWithMainFirst]);
 
   const handleRealtimeItemChange = useCallback((items: ShoppingItem[]) => {
     setAllItems(items);
@@ -267,8 +312,9 @@ export function ShoppingListsScreen() {
     const created = await shoppingService.createList(list);
     // For list creation, we need to update the lists state since realtime might not catch it immediately
     const data = await shoppingService.getShoppingData();
-    setShoppingLists(data.shoppingLists);
-    setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
+    const sortedLists = sortListsWithMainFirst(data.shoppingLists);
+    setShoppingLists(sortedLists);
+    setSelectedList((current) => getSelectedList(sortedLists, current?.id));
     return created;
   };
 
@@ -413,84 +459,14 @@ export function ShoppingListsScreen() {
   };
 
   const handleQuickAddItem = async (groceryItem: GroceryItem) => {
-    const quantity = 1;
-    
-    // Use default category for custom items in quick add (user can select category in modal)
-    const categoryToUse = groceryItem.id.startsWith('custom-') 
-      ? normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase())
-      : groceryItem.category;
-
-    // Check if item already exists in the selected list
-    const existingItem = allItems.find(
-      item => item.name === groceryItem.name && item.listId === activeList.id
-    );
-
-    if (existingItem) {
-      // Update existing item quantity - use functional update to read latest state (handles rapid clicks)
-      const itemId = existingItem.id;
-      const itemLocalId = existingItem.localId;
-      const baseQuantity = existingItem.quantity;
-      
-      await executeWithOptimisticUpdate(
-        async () => {
-          // Read current state to get latest quantity (handles rapid clicks)
-          const currentItems = allItems;
-          const currentItem = currentItems.find(
-            item => item.id === itemId || item.localId === itemLocalId
-          );
-          const currentQuantity = currentItem?.quantity ?? baseQuantity;
-          const nextQuantity = currentQuantity + quantity;
-          
-          return await updateItem(itemId, { quantity: nextQuantity });
-        },
-        () => {
-          // Optimistic update for all modes - read latest state using functional update
-          setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
-            if (item.id === itemId || item.localId === itemLocalId) {
-              const currentQuantity = item.quantity;
-              return { ...item, quantity: currentQuantity + quantity };
-            }
-            return item;
-          }));
-        },
-        () => {
-          // Revert - restore previous quantity
-          setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
-            if (item.id === itemId || item.localId === itemLocalId) {
-              return { ...item, quantity: baseQuantity };
-            }
-            return item;
-          }));
-        },
-        'Failed to update shopping item quantity:'
-      );
-    } else {
-      // Create new item with optimistic UI update (all modes)
-      const tempItem = createShoppingItem(groceryItem, activeList.id, quantity);
-      setAllItems((prev: ShoppingItem[]) => [...prev, tempItem]);
-
-      try {
-        const newItem = await createItem({
-          name: groceryItem.name,
-          listId: activeList.id,
-          quantity,
-          category: categoryToUse,
-          image: groceryItem.image,
-          catalogItemId: groceryItem.id.startsWith('custom-') ? undefined : groceryItem.id,
-        } as any); // Type assertion needed because ShoppingItem doesn't have catalogItemId
-        
-        // Replace temp item with real item from service
-        setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
-          item.localId === tempItem.localId ? newItem : item
-        ));
-      } catch (error) {
-        // Remove temp item on error
-        setAllItems((prev: ShoppingItem[]) => prev.filter((item) => item.localId !== tempItem.localId));
-        logShoppingError('Failed to create shopping item:', error);
-      }
-    }
-
-    // Keep dropdown open and search query intact for rapid multi-item addition
+    await quickAddItem(groceryItem, activeList, {
+      allItems,
+      setAllItems,
+      createItem,
+      updateItem,
+      executeWithOptimisticUpdate,
+      logShoppingError,
+    });
   };
 
   const handleAddToList = async () => {

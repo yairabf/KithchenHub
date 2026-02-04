@@ -79,6 +79,7 @@ model ShoppingList {
   name        String
   color       String?
   icon        String?
+  isMain      Boolean   @default(false) @map("is_main")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
@@ -87,6 +88,7 @@ model ShoppingList {
   items     ShoppingItem[]
 
   @@index([householdId, name])
+  @@index([householdId, isMain])
   @@map("shopping_lists")
 }
 

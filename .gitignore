@@ -80,6 +80,7 @@ Thumbs.db
 
 # Test artifacts
 .jest/
+test-results/
 
 .playwright-mcp/
 .cursor/skills/*

@@ -31,6 +31,10 @@ import {
 } from './RecipeDetailScreen.utils';
 import { useRecipes } from '../hooks/useRecipes';
 import { useAuth } from '../../../contexts/AuthContext';
+import { createShoppingService } from '../../shopping/services/shoppingService';
+import { IngredientConflictModal } from '../../shopping/components/IngredientConflictModal';
+import { config } from '../../../config';
+import type { ShoppingItem } from '../../../mocks/shopping';
 
 export function RecipeDetailScreen({
   recipe,
@@ -49,6 +53,15 @@ export function RecipeDetailScreen({
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const fetchingRef = useRef<string | null>(null);
   const lastFetchedIdRef = useRef<string | null>(null);
+  const [conflictModalVisible, setConflictModalVisible] = useState(false);
+  const [conflictingIngredient, setConflictingIngredient] = useState<Ingredient | null>(null);
+  const [existingItem, setExistingItem] = useState<ShoppingItem | null>(null);
+  
+  const shouldUseMockData = config.mockData.enabled || !user || user?.isGuest === true;
+  const shoppingService = useMemo(
+    () => createShoppingService(shouldUseMockData ? 'guest' : 'signed-in'),
+    [shouldUseMockData]
+  );
   
   // Check if recipe has full details (ingredients/instructions)
   const hasFullDetails = useMemo(() => {
@@ -210,24 +223,142 @@ export function RecipeDetailScreen({
   }, []);
 
   const handleAddIngredient = useCallback(
-    (ingredient: Ingredient) => {
-      if (onAddToShoppingList) {
-        onAddToShoppingList([ingredient]);
+    async (ingredient: Ingredient) => {
+      try {
+        const data = await shoppingService.getShoppingData();
+        const mainList = data.shoppingLists.find(list => list.isMain);
+        
+        if (!mainList) {
+          showToast('No main shopping list found. Please create one.');
+          return;
+        }
+
+        const normalizedName = ingredient.name.trim().toLowerCase();
+        const existingItemInList = data.shoppingItems.find(
+          item => item.listId === mainList.id && 
+                  item.name.trim().toLowerCase() === normalizedName
+        );
+
+        if (existingItemInList) {
+          // Show conflict modal
+          setConflictingIngredient(ingredient);
+          setExistingItem(existingItemInList);
+          setConflictModalVisible(true);
+        } else {
+          // Add new item
+          await shoppingService.createItem({
+            listId: mainList.id,
+            name: ingredient.name,
+            quantity: ingredient.quantity || 1,
+            unit: ingredient.unit,
+            image: ingredient.image,
+          });
+          showToast(`${ingredient.name} added to ${mainList.name}`);
+        }
+      } catch (error) {
+        console.error('Failed to add ingredient:', error);
+        showToast('Failed to add ingredient');
       }
-      showToast(`${ingredient.name} added`);
     },
-    [onAddToShoppingList, showToast]
+    [shoppingService, showToast]
   );
 
-  const handleAddAllIngredients = useCallback(() => {
-    const ingredients = displayRecipe.ingredients || [];
-    if (onAddToShoppingList && ingredients.length > 0) {
-      onAddToShoppingList(ingredients);
-      showToast(`All ${ingredients.length} ingredients added`);
-    } else if (ingredients.length === 0) {
-      showToast('No ingredients to add');
+  const handleReplaceIngredient = useCallback(async () => {
+    if (!conflictingIngredient || !existingItem) return;
+    
+    try {
+      await shoppingService.updateItem(existingItem.id, {
+        quantity: conflictingIngredient.quantity || 1,
+        unit: conflictingIngredient.unit,
+      });
+      showToast(`${conflictingIngredient.name} quantity updated`);
+      setConflictModalVisible(false);
+      setConflictingIngredient(null);
+      setExistingItem(null);
+    } catch (error) {
+      console.error('Failed to replace ingredient:', error);
+      showToast('Failed to update ingredient');
     }
-  }, [onAddToShoppingList, displayRecipe.ingredients, showToast]);
+  }, [conflictingIngredient, existingItem, shoppingService, showToast]);
+
+  const handleAddToQuantity = useCallback(async () => {
+    if (!conflictingIngredient || !existingItem) return;
+    
+    try {
+      const currentQuantity = typeof existingItem.quantity === 'number' 
+        ? existingItem.quantity 
+        : parseFloat(String(existingItem.quantity)) || 0;
+      const ingredientQuantity = typeof conflictingIngredient.quantity === 'number'
+        ? conflictingIngredient.quantity
+        : parseFloat(String(conflictingIngredient.quantity)) || 0;
+      
+      await shoppingService.updateItem(existingItem.id, {
+        quantity: currentQuantity + ingredientQuantity,
+      });
+      showToast(`${conflictingIngredient.name} quantity updated`);
+      setConflictModalVisible(false);
+      setConflictingIngredient(null);
+      setExistingItem(null);
+    } catch (error) {
+      console.error('Failed to add to quantity:', error);
+      showToast('Failed to update ingredient');
+    }
+  }, [conflictingIngredient, existingItem, shoppingService, showToast]);
+
+  const handleAddAllIngredients = useCallback(async () => {
+    const ingredients = displayRecipe.ingredients || [];
+    if (ingredients.length === 0) {
+      showToast('No ingredients to add');
+      return;
+    }
+
+    try {
+      const data = await shoppingService.getShoppingData();
+      const mainList = data.shoppingLists.find(list => list.isMain);
+      
+      if (!mainList) {
+        showToast('No main shopping list found. Please create one.');
+        return;
+      }
+
+      // Process each ingredient
+      for (const ingredient of ingredients) {
+        const normalizedName = ingredient.name.trim().toLowerCase();
+        const existingItemInList = data.shoppingItems.find(
+          item => item.listId === mainList.id && 
+                  item.name.trim().toLowerCase() === normalizedName
+        );
+
+        if (existingItemInList) {
+          // For "Add All", increment quantity if exists
+          const currentQuantity = typeof existingItemInList.quantity === 'number' 
+            ? existingItemInList.quantity 
+            : parseFloat(String(existingItemInList.quantity)) || 0;
+          const ingredientQuantity = typeof ingredient.quantity === 'number'
+            ? ingredient.quantity
+            : parseFloat(String(ingredient.quantity)) || 0;
+          
+          await shoppingService.updateItem(existingItemInList.id, {
+            quantity: currentQuantity + ingredientQuantity,
+          });
+        } else {
+          // Add new item
+          await shoppingService.createItem({
+            listId: mainList.id,
+            name: ingredient.name,
+            quantity: ingredient.quantity || 1,
+            unit: ingredient.unit,
+            image: ingredient.image,
+          });
+        }
+      }
+      
+      showToast(`All ${ingredients.length} ingredients added to ${mainList.name}`);
+    } catch (error) {
+      console.error('Failed to add all ingredients:', error);
+      showToast('Failed to add ingredients');
+    }
+  }, [shoppingService, displayRecipe.ingredients, showToast]);
 
   // Handle scroll position tracking
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -348,6 +479,22 @@ export function RecipeDetailScreen({
         type="success"
         onHide={hideToast}
       />
+
+      {/* Ingredient Conflict Modal */}
+      {conflictingIngredient && existingItem && (
+        <IngredientConflictModal
+          visible={conflictModalVisible}
+          ingredient={conflictingIngredient}
+          existingItem={existingItem}
+          onClose={() => {
+            setConflictModalVisible(false);
+            setConflictingIngredient(null);
+            setExistingItem(null);
+          }}
+          onReplace={handleReplaceIngredient}
+          onAddToQuantity={handleAddToQuantity}
+        />
+      )}
 
       {/* Share Modal */}
       <ShareModal

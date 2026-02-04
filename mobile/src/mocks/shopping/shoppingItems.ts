@@ -27,6 +27,7 @@ export interface ShoppingList extends BaseEntity {
   itemCount: number;
   icon: IoniconsName;
   color: string;
+  isMain: boolean;
 }
 
 // Mock Data
@@ -83,9 +84,9 @@ export const getListItemCount = (listId: string) => {
 };
 
 export const mockShoppingLists: ShoppingList[] = [
-  { id: '1', localId: '550e8400-e29b-41d4-a716-446655440050', name: 'Weekly Groceries', itemCount: getListItemCount('1'), icon: 'cart-outline', color: '#10B981' },
-  { id: '2', localId: '550e8400-e29b-41d4-a716-446655440051', name: 'Party Supplies', itemCount: getListItemCount('2'), icon: 'gift-outline', color: '#F59E0B' },
-  { id: '3', localId: '550e8400-e29b-41d4-a716-446655440052', name: 'Meal Prep', itemCount: getListItemCount('3'), icon: 'restaurant-outline', color: '#8B5CF6' },
-  { id: '4', localId: '550e8400-e29b-41d4-a716-446655440053', name: 'Pantry Restock', itemCount: getListItemCount('4'), icon: 'cube-outline', color: '#EF4444' },
-  { id: '5', localId: '550e8400-e29b-41d4-a716-446655440054', name: 'Healthy Snacks', itemCount: getListItemCount('5'), icon: 'nutrition-outline', color: '#06B6D4' },
+  { id: '1', localId: '550e8400-e29b-41d4-a716-446655440050', name: 'Weekly Groceries', itemCount: getListItemCount('1'), icon: 'cart-outline', color: '#10B981', isMain: true },
+  { id: '2', localId: '550e8400-e29b-41d4-a716-446655440051', name: 'Party Supplies', itemCount: getListItemCount('2'), icon: 'gift-outline', color: '#F59E0B', isMain: false },
+  { id: '3', localId: '550e8400-e29b-41d4-a716-446655440052', name: 'Meal Prep', itemCount: getListItemCount('3'), icon: 'restaurant-outline', color: '#8B5CF6', isMain: false },
+  { id: '4', localId: '550e8400-e29b-41d4-a716-446655440053', name: 'Pantry Restock', itemCount: getListItemCount('4'), icon: 'cube-outline', color: '#EF4444', isMain: false },
+  { id: '5', localId: '550e8400-e29b-41d4-a716-446655440054', name: 'Healthy Snacks', itemCount: getListItemCount('5'), icon: 'nutrition-outline', color: '#06B6D4', isMain: false },
 ];

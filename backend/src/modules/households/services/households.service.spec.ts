@@ -23,6 +23,25 @@ describe('HouseholdsService', () => {
   const mockHouseholdName = 'My Household';
 
   beforeEach(async () => {
+    const userMock = {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    };
+    const householdMock = { create: jest.fn() };
+    const shoppingListMock = {
+      create: jest.fn().mockResolvedValue(undefined),
+    };
+    const transactionMock = jest
+      .fn()
+      .mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          user: userMock,
+          household: householdMock,
+          shoppingList: shoppingListMock,
+        };
+        return fn(tx);
+      });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HouseholdsService,
@@ -38,13 +57,10 @@ describe('HouseholdsService', () => {
         {
           provide: PrismaService,
           useValue: {
-            user: {
-              findUnique: jest.fn(),
-              update: jest.fn(),
-            },
-            household: {
-              create: jest.fn(),
-            },
+            user: userMock,
+            household: householdMock,
+            shoppingList: shoppingListMock,
+            $transaction: transactionMock,
           },
         },
       ],
@@ -130,6 +146,15 @@ describe('HouseholdsService', () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: mockUserId },
         data: { role: 'Admin' },
+      });
+      expect(prisma.shoppingList.create).toHaveBeenCalledWith({
+        data: {
+          householdId: mockHouseholdId,
+          name: 'Weekly Shopping',
+          color: '#4CAF50',
+          icon: 'cart-outline',
+          isMain: true,
+        },
       });
       expect(result.id).toBe(mockHouseholdId);
       expect(result.name).toBe(mockHouseholdName);

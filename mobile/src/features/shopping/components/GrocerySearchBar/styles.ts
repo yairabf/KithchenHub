@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, spacing, borderRadius, shadows } from '../../../../theme';
 
 // Search bar dimension constants for consistent styling
@@ -10,6 +10,17 @@ export const styles = StyleSheet.create({
   container: {
     position: 'relative',
     zIndex: 1000,
+  },
+  backdrop: {
+    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: Platform.OS === 'web' ? '100vw' : '100%',
+    height: Platform.OS === 'web' ? '100vh' : '100%',
+    zIndex: 998,
+    backgroundColor: 'transparent',
   },
   searchBar: {
     flexDirection: 'row',
@@ -48,6 +59,7 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.xl,
     pointerEvents: 'auto',
+    zIndex: 1000,
   },
   searchDropdownScroll: {
     maxHeight: 300,
@@ -71,7 +83,7 @@ export const styles = StyleSheet.create({
     height: 48,
     borderRadius: borderRadius.md,
     backgroundColor: colors.quantityBg,
-  },
+  } as const,
   searchResultInfo: {
     flex: 1,
   },

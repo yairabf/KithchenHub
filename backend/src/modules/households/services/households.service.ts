@@ -91,28 +91,45 @@ export class HouseholdsService {
     if (user.householdId)
       throw new ForbiddenException('User already has a household');
 
-    const household = await this.prisma.household.create({
-      data: {
-        name,
-        users: {
-          connect: { id: userId },
+    // Use transaction to ensure atomicity
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Create household
+      const household = await tx.household.create({
+        data: {
+          name,
+          users: {
+            connect: { id: userId },
+          },
         },
-      },
-      include: {
-        users: true,
-      },
-    });
+        include: {
+          users: true,
+        },
+      });
 
-    // Update user to be Admin
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { role: 'Admin' },
+      // Update user to be Admin
+      await tx.user.update({
+        where: { id: userId },
+        data: { role: 'Admin' },
+      });
+
+      // Create default main shopping list
+      await tx.shoppingList.create({
+        data: {
+          householdId: household.id,
+          name: 'Weekly Shopping',
+          color: '#4CAF50', // Green color for main list
+          icon: 'cart-outline',
+          isMain: true,
+        },
+      });
+
+      return household;
     });
 
     return {
-      id: household.id,
-      name: household.name,
-      members: household.users.map((member) => ({
+      id: result.id,
+      name: result.name,
+      members: result.users.map((member) => ({
         id: member.id,
         email: member.email,
         name: member.name,
