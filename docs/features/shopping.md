@@ -2,7 +2,7 @@
 
 **Exports** (from `mobile/src/features/shopping/index.ts`): `ShoppingListsScreen`, `CategoryModal`, `AllItemsModal`, `ShoppingQuickActionModal`, `GrocerySearchBar`, `GroceryItem` (type from GrocerySearchBar).
 
-**Source**: `mobile/src/features/shopping/` — 1 screen (ShoppingListsScreen), 7 components (ShoppingListPanel, GrocerySearchBar, CategoriesGrid, FrequentlyAddedGrid, CategoryModal, AllItemsModal, ShoppingQuickActionModal), hooks (useShoppingRealtime), services, utils.
+**Source**: `mobile/src/features/shopping/` — 1 screen (ShoppingListsScreen), 8 components (ShoppingListPanel, GrocerySearchBar, CategoriesGrid, FrequentlyAddedGrid, CategoryModal, AllItemsModal, ShoppingQuickActionModal, CategoryPicker), hooks (useShoppingRealtime), services, utils.
 
 ## Overview
 
@@ -41,18 +41,19 @@ The Shopping feature provides comprehensive shopping list management with the ab
   - Floating action button for quick add
   - **Guest Support**: Loads private list data from local storage (AsyncStorage) for guest users while signed-in users use the API
   - **Add-item quantity**: New items are added with quantity 1; adding an item that already exists in the list increments its quantity. Quantity input resets to 1 after add.
-  - **Cache-Aware Repository** (signed-in users): Uses `CacheAwareShoppingRepository` wrapper with `useCachedEntities` hooks for reactive cache updates
-    - Cache updates automatically trigger UI re-renders via React hooks
-    - No manual state management needed for signed-in users
+  - **Direct State Management**: Uses `useState` hooks for all modes (no cache layer)
+    - `shoppingLists` and `allItems` state managed directly via `useState`
+    - Data loaded via `shoppingService.getShoppingData()` on mount and refresh
     - **Realtime Sync**: Uses `useShoppingRealtime` hook for instant cross-device synchronization
-      - Hook manages Supabase subscriptions and updates cache via repository methods
-      - Cache events automatically trigger UI updates when realtime changes arrive
+      - Hook manages Supabase subscriptions and updates state directly
+      - State updates trigger UI re-renders automatically
       - Subscriptions are filtered by household ID for security (RLS)
-  - **Service Integration**: All CRUD operations (toggle, delete, update, create) always call repository/service methods - no userMode branching in handlers
-  - **Optimistic UI Updates**: Guest mode operations use optimistic updates with automatic revert on error via `executeWithOptimisticUpdate` helper
-    - Signed-in mode relies on cache events for UI updates (no optimistic updates needed)
+  - **Service Integration**: All CRUD operations (toggle, delete, update, create) always call service methods directly
+  - **Optimistic UI Updates**: All operations use optimistic updates with automatic revert on error via `executeWithOptimisticUpdate` helper
+    - Optimistic updates work for both guest and signed-in modes
+    - Rapid quantity increments use `latestQuantity` tracking to prevent race conditions
 
-#### Code Snippet - Service and Repository Initialization
+#### Code Snippet - Service and State Initialization
 
 ```typescript
 // Determine data mode based on user authentication state
@@ -65,26 +66,39 @@ const userMode = useMemo(() => {
 
 const isSignedIn = userMode === 'signed-in';
 
-// Create service and repository
+// Create service - use directly for all modes
 const shoppingService = useMemo(
   () => createShoppingService(userMode),
   [userMode]
 );
 
-const repository = useMemo(() => {
-  return isSignedIn ? new CacheAwareShoppingRepository(shoppingService) : null;
-}, [shoppingService, isSignedIn]);
+// Use state management for all modes (no cache)
+const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
+const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
+const [isListsLoading, setIsListsLoading] = useState(false);
+const [isItemsLoading, setIsItemsLoading] = useState(false);
 
-// Use cache hooks for signed-in users
-const { data: cachedLists, isLoading: isListsLoading } = useCachedEntities<ShoppingList>('shoppingLists');
-const { data: cachedItems, isLoading: isItemsLoading } = useCachedEntities<ShoppingItem>('shoppingItems');
-
-// For guest mode, use service directly
-const [guestLists, setGuestLists] = useState<ShoppingList[]>([]);
-const [guestItems, setGuestItems] = useState<ShoppingItem[]>([]);
-
-const shoppingLists = isSignedIn ? cachedLists : guestLists;
-const allItems = isSignedIn ? cachedItems : guestItems;
+// Load shopping data for all modes (direct API calls, no cache)
+useEffect(() => {
+  if (isAuthLoading) return;
+  
+  const loadShoppingData = async () => {
+    setIsListsLoading(true);
+    setIsItemsLoading(true);
+    try {
+      const data = await shoppingService.getShoppingData();
+      setShoppingLists(data.shoppingLists);
+      setAllItems(data.shoppingItems);
+      setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
+    } catch (error) {
+      console.error('Failed to load shopping data:', error);
+    } finally {
+      setIsListsLoading(false);
+      setIsItemsLoading(false);
+    }
+  };
+  loadShoppingData();
+}, [shoppingService, isAuthLoading]);
 ```
 
 ## Hooks
@@ -96,11 +110,11 @@ const allItems = isSignedIn ? cachedItems : guestItems;
 - **Features**:
   - Sets up subscriptions for shopping lists and items
   - Filters by household ID for RLS compliance
-  - Updates cache for signed-in users via repository
-  - Updates local state for guest users via callbacks
+  - Updates state directly via callbacks for all modes (no cache layer)
   - Handles cleanup and error states
   - Memoizes dependencies to prevent unnecessary re-subscriptions
 - **Usage**: Used by `ShoppingListsScreen` to enable instant cross-device synchronization
+- **Interface**: Accepts `onListChange` and `onItemChange` callbacks that update state directly
 
 ## Components
 
@@ -125,7 +139,7 @@ const allItems = isSignedIn ? cachedItems : guestItems;
 ### GrocerySearchBar
 
 - **File**: `mobile/src/features/shopping/components/GrocerySearchBar/`
-- **Purpose**: Smart search component with dropdown results
+- **Purpose**: Smart search component with dropdown results and intelligent sorting
 - **Props**:
 
 ```typescript
@@ -151,9 +165,17 @@ interface GrocerySearchBarProps {
 
 - **Features**:
   - Filter by name or category
+  - **Intelligent Search Sorting**: Prioritizes custom items (household-defined) over catalog items
+    - Exact match custom items appear first
+    - Then exact match catalog items
+    - Then starts-with matches (custom items prioritized)
+    - Then partial matches (custom items prioritized)
+    - Alphabetical sorting within same priority group
+    - Uses `searchSortingUtils.ts` for sorting logic
   - Support for custom item creation
   - Quick-add buttons for rapid multi-item addition
   - Dropdown showing up to 8 results
+  - **Custom Items Integration**: Custom items (prefixed with `custom-` ID) are merged with catalog items and appear in search results
 
 ### CategoriesGrid
 
@@ -224,6 +246,28 @@ interface FrequentlyAddedGridProps {
   - Integrated grocery search bar
   - Rapid item additions
 
+### CategoryPicker
+
+- **File**: `mobile/src/features/shopping/components/CategoryPicker/`
+- **Purpose**: Horizontal scrollable category selector for custom item creation
+- **Props**:
+
+```typescript
+interface CategoryPickerProps {
+  selectedCategory: string;
+  onSelectCategory: (category: string) => void;
+  categories: string[];
+}
+```
+
+- **Features**:
+  - Horizontal scrollable list of shopping categories
+  - Displays category icons from bundled assets (`mobile/assets/categories/`)
+  - Shows translated category names via i18n
+  - Highlights selected category
+  - Used in custom item creation modals for category selection
+  - Icons are generated via `sandbox/generate_category_icons.py` and bundled with app for offline availability
+
 ## Entity Creation (New)
 
 The feature implementation now uses a Factory Pattern to separate business logic from UI components and ensure TDD compliance.
@@ -291,39 +335,32 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
 
 ## State Management
 
-- **Cache-Aware State** (signed-in users):
-  - Uses `useCachedEntities` hooks for reactive cache updates
-    - `useCachedEntities<ShoppingList>('shoppingLists')` - Provides cached lists with loading states
-    - `useCachedEntities<ShoppingItem>('shoppingItems')` - Provides cached items with loading states
-  - Cache updates automatically trigger UI re-renders via React hooks
-  - **Realtime Sync**: Uses `useShoppingRealtime` hook for instant cross-device synchronization
-    - Hook manages Supabase subscriptions and updates cache via repository methods
-    - Cache events automatically trigger UI updates (no manual state management needed)
-    - Subscriptions filtered by household ID for RLS compliance
-  - Repository pattern: `CacheAwareShoppingRepository` wraps `RemoteShoppingService` with cache-first reads and write-through caching
-    - Repository provides `applyRealtimeListChange()` and `applyRealtimeItemChange()` methods for realtime updates
-- **Local state** (guest users):
-  - All state managed within ShoppingListsScreen via `useState`
-    - `guestLists` - All shopping lists (active only - deleted items filtered by service)
-    - `guestItems` - All shopping items across lists (active only - deleted items filtered by service)
+- **Direct State Management** (all modes):
+  - Uses `useState` hooks for all modes (no cache layer)
+    - `shoppingLists` - All shopping lists (active only - deleted items filtered by service)
+    - `allItems` - All shopping items across lists (active only - deleted items filtered by service)
+    - `isListsLoading` / `isItemsLoading` - Loading states
     - `selectedList` - Currently active list
-    - `groceryItems` - Grocery database items
-    - `categories` - Category definitions
-    - `frequentlyAddedItems` - Frequently added grocery items
     - Various modal visibility states
+  - Data loaded via `shoppingService.getShoppingData()` on mount and refresh
+  - **Realtime Sync**: Uses `useShoppingRealtime` hook for instant cross-device synchronization
+    - Hook manages Supabase subscriptions and updates state directly via callbacks
+    - State updates trigger UI re-renders automatically
+    - Subscriptions filtered by household ID for RLS compliance
 - **Service**: `createShoppingService(mode)` factory creates service instance based on data mode
-  - Loads all data via `shoppingService.getShoppingData()` on mount (guest mode)
+  - Loads all data via `shoppingService.getShoppingData()` on mount and refresh
   - Mode determined by `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
-  - **Service handles mode internally**: Screen handlers always call repository/service methods; service implementation (LocalShoppingService vs RemoteShoppingService) handles guest vs signed-in logic
-- **Repository Pattern** (signed-in users):
-  - `CacheAwareShoppingRepository` wraps `RemoteShoppingService` with cache-first reads and write-through caching
-  - Used by `ShoppingListsScreen` for signed-in users to provide reactive cache updates
-  - **Catalog Data**: Uses `catalogService.getGroceryItems()` with API → Cache → Mock fallback strategy
-    - Delegates to centralized `CatalogService` for consistent catalog fetching
-    - No duplicate type definitions or mapping functions (uses shared types from `common/types/catalog.ts`)
+  - **Service handles mode internally**: Screen handlers always call service methods; service implementation (LocalShoppingService vs RemoteShoppingService) handles guest vs signed-in logic
+- **Catalog Data**: Uses `catalogService.getGroceryItems()` with API → Cache → Mock fallback strategy
+  - Fetches both catalog items and custom items (household-scoped)
+  - Merges custom items with catalog items, deduplicating by name (catalog items take precedence)
+  - Custom items prefixed with `custom-` ID for identification
+  - Delegates to centralized `CatalogService` for consistent catalog fetching
 - **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
-- **Optimistic Updates**: Guest mode CRUD operations use `executeWithOptimisticUpdate()` helper for responsive UX with automatic error revert
-  - Signed-in mode relies on cache events for UI updates (no optimistic updates needed)
+- **Optimistic Updates**: All CRUD operations use `executeWithOptimisticUpdate()` helper for responsive UX with automatic error revert
+  - Works for both guest and signed-in modes
+  - Rapid quantity increments use `latestQuantity` variable tracking to prevent race conditions
+  - Functional state updates ensure latest state is used for API calls
 
 ## Service Layer
 
@@ -366,6 +403,9 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
   - `RemoteShoppingService` (`mobile/src/features/shopping/services/RemoteShoppingService.ts`): 
     - Calls backend via `api.ts` (`/shopping-lists`, `/shopping-lists/{id}` endpoints)
     - **Catalog Data**: Uses `catalogService.getGroceryItems()` with API → Cache → Mock fallback strategy
+      - Fetches custom items from `/shopping-items/custom` endpoint (household-scoped)
+      - Merges custom items with catalog items (catalog items take precedence on name conflicts)
+      - Custom items are mapped to `GroceryItem` format with `custom-` prefix IDs
       - Delegates to centralized `CatalogService` for consistent catalog fetching
       - Uses shared `catalogUtils` functions (`buildCategoriesFromGroceries`, `buildFrequentlyAddedItems`) for consistency
       - No duplicate type definitions or mapping functions (uses shared types from `common/types/catalog.ts`)
@@ -732,7 +772,12 @@ The sync queue processor implements **partial batch recovery** and **crash-safe 
 - `isEntityActive` - Utility to filter active entities (`mobile/src/common/types/entityMetadata.ts`) - used by `LocalShoppingService.getShoppingData()` to filter deleted items
 - `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
 - `getSelectedList`, `getActiveListId` - Selection utilities from `utils/selectionUtils.ts` for preventing stale list state
-- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Provides catalog data with API → Cache → Mock fallback strategy. Used by all shopping services (LocalShoppingService, RemoteShoppingService, CacheAwareShoppingRepository) for consistent catalog fetching
+- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Provides catalog data with API → Cache → Mock fallback strategy
+  - Fetches custom items from `/shopping-items/custom` endpoint (household-scoped)
+  - Merges custom items with catalog items using `mergeGroceryItems()` utility
+  - Custom items prefixed with `custom-` ID and mapped to `GroceryItem` format
+  - Deduplicates items by name (catalog items take precedence over custom items)
+  - Used by all shopping services for consistent catalog fetching
 - `catalogUtils` - Catalog utilities (`mobile/src/common/utils/catalogUtils.ts`) - Shared functions for building categories and frequently added items. Used by all services for consistent data transformation
 - `GrocerySearchItemDto` - Shared type (`mobile/src/common/types/catalog.ts`) - Centralized DTO type for catalog API responses, preventing code duplication
 - `isValidImageUrl` - Image validation utility (`mobile/src/common/utils/imageUtils.ts`) - Validates image URL strings (handles empty strings, whitespace-only strings, null/undefined). Used by `CategoriesGrid` to determine if category images should be rendered
@@ -751,9 +796,16 @@ The sync queue processor implements **partial batch recovery** and **crash-safe 
 - `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueue/processor`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects per-item and per-checkpoint backoff delays, and handles error classification (network/auth/validation/server errors). **Partial Batch Recovery**: Retries only failed items after partial failures by matching `operationId`s from backend response. **Checkpointing**: Uses lightweight `SyncCheckpoint` records to re-drive in-flight batches after crashes without deadlocking. Safety-first logic: never deletes queue items without explicit confirmation in `succeeded` array. Handles confirmed responses even on error status codes. Backward compatible with old servers (missing `succeeded` array)
 - `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
 - `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Used by ShoppingItemCard to display sync status indicators
-- `useCachedEntities` - Cache entities hook (`mobile/src/common/hooks/useCachedEntities.ts`) - React hook that provides reactive cache updates for signed-in users. Automatically triggers UI re-renders when cache changes. Used by ShoppingListsScreen for lists and items
+- `searchSortingUtils` - Search sorting utilities (`mobile/src/features/shopping/components/GrocerySearchBar/searchSortingUtils.ts`) - Provides intelligent sorting for search results
+  - `compareGroceryItemsForSearch()` - Main comparison function for sorting grocery items
+  - Prioritizes custom items over catalog items, especially exact matches
+  - Sort order: exact matches (custom first) > starts-with matches (custom first) > partial matches (custom first) > alphabetical
+  - Includes comprehensive parameterized tests (13 test cases)
 - `useShoppingRealtime` - Realtime sync hook (`mobile/src/features/shopping/hooks/useShoppingRealtime.ts`) - Custom hook that manages Supabase realtime subscriptions for shopping lists and items. Handles both signed-in (cache-based) and guest (state-based) modes. Used by ShoppingListsScreen for instant cross-device synchronization
-- `CacheAwareShoppingRepository` - Cache-aware repository (`mobile/src/common/repositories/cacheAwareShoppingRepository.ts`) - Wraps RemoteShoppingService with cache-first reads and write-through caching. Provides reactive cache updates via useCachedEntities hooks
+- `SHOPPING_CATEGORIES` - Category constants (`mobile/src/features/shopping/constants/categories.ts`) - Defines available shopping categories for custom items
+  - Categories: fruits, vegetables, dairy, meat, seafood, bakery, grains, snacks, nuts, other
+  - Includes `normalizeShoppingCategory()` utility for category validation
+  - Used by CategoryPicker component and custom item creation flows
 - `SyncStatusIndicator` - Sync status indicator component (`mobile/src/common/components/SyncStatusIndicator/`) - Visual indicator component showing pending, confirmed, or failed sync status. Displays clock icon for pending, warning icon for failed, checkmark for confirmed
 - `determineIndicatorStatus` - Status determination utility (`mobile/src/common/utils/syncStatusUtils.ts`) - Utility function that determines indicator status from sync status flags (failed > pending > confirmed priority)
 

@@ -37,16 +37,11 @@ export async function cleanupTestUserData(
         where: { householdId },
       });
 
-      // Delete user items
-      await prisma.userItem.deleteMany({
+      // Delete custom items (household-scoped)
+      await prisma.customItem.deleteMany({
         where: { householdId },
       });
     }
-
-    // Delete user items that belong to the user
-    await prisma.userItem.deleteMany({
-      where: { userId },
-    });
 
     // Delete refresh tokens
     await prisma.refreshToken.deleteMany({
