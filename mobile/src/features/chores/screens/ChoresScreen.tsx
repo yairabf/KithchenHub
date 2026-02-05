@@ -243,14 +243,15 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   // Calculate progress (only for today's chores)
   const progress = useMemo(() => {
     const total = todayChores.length;
-    const completed = todayChores.filter(c => c.completed).length;
-    const progressValue = total > 0 ? (completed / total) * 100 : 0;
+    const completedCount = todayChores.filter(c => c.isCompleted).length;
+    const progressValue = total > 0 ? (completedCount / total) * 100 : 0;
+    
     // #region agent log
     console.log('[ChoresScreen] Progress calculated:', {
       total,
-      completed,
+      completed: completedCount,
       progressValue,
-      todayChores: todayChores.map(c => ({ name: c.name, completed: c.completed }))
+      todayChores: todayChores.map(c => ({ title: c.title, isCompleted: c.isCompleted }))
     });
     // #endregion
     return progressValue;

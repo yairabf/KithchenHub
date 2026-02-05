@@ -77,6 +77,7 @@ export function ShoppingListPanel({
 
     return (
       <ShoppingItemCard
+        key={item.id}
         item={item}
         index={index}
         bgColor={bgColor}
