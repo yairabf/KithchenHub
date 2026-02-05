@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { FrequentlyAddedGridProps } from './types';
+import { FrequentlyAddedGridItem } from './FrequentlyAddedGridItem';
 
 const MAX_DISPLAY_ITEMS = 8;
 
@@ -29,27 +30,11 @@ export function FrequentlyAddedGrid({
       </View>
       <View style={styles.grid}>
         {displayItems.map((item) => (
-          <TouchableOpacity
+          <FrequentlyAddedGridItem
             key={item.id}
-            style={styles.itemTile}
-            onPress={() => onItemPress(item)}
-            activeOpacity={0.8}
-            accessibilityLabel={`Add ${item.name} to list`}
-            accessibilityRole="button"
-          >
-            <View style={styles.itemImageContainer}>
-              <Image
-                source={{ uri: item.image }}
-                style={styles.itemImage}
-              />
-            </View>
-            <View style={styles.itemNameContainer}>
-              <Text style={styles.itemName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Ionicons name="add-circle" size={14} color={colors.primary} />
-            </View>
-          </TouchableOpacity>
+            item={item}
+            onAdd={() => onItemPress(item)}
+          />
         ))}
       </View>
     </View>

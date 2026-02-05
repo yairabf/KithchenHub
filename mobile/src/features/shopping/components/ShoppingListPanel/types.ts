@@ -1,6 +1,16 @@
 import type { ShoppingItem, ShoppingList } from '../../../../mocks/shopping';
 import type { GroceryItem } from '../GrocerySearchBar';
 
+/** Props for the ShoppingItemCard sub-component (single list item with swipe and quantity) */
+export interface ShoppingItemCardProps {
+  item: ShoppingItem;
+  index: number;
+  bgColor: string;
+  onDeleteItem: (id: string) => void;
+  onQuantityChange: (id: string, delta: number) => void;
+  onToggleItemChecked: (id: string) => void;
+}
+
 export interface ShoppingListPanelProps {
   shoppingLists: ShoppingList[];
   selectedList: ShoppingList;
