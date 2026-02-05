@@ -62,4 +62,49 @@ export const styles = StyleSheet.create({
   assigneeChipTextSelected: {
     color: colors.textLight,
   },
+  iconContainer: {
+    marginRight: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconSelectionSection: {
+    marginTop: 16,
+    marginBottom: spacing.md,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  iconList: {
+    paddingVertical: 4,
+    gap: 12,
+  },
+  iconOption: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  iconOptionSelected: {
+    backgroundColor: colors.surface, // Fallback if choresLight is missing
+    borderColor: colors.chores,
+    borderWidth: 2,
+  },
+  iconOptionText: {
+    fontSize: 24,
+  },
+  iconOptionTextSelected: {
+    // Add if needed
+  },
 });

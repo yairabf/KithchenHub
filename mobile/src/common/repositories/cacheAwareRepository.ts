@@ -40,7 +40,7 @@ async function readCachedEntities<T extends EntityTimestamps>(
 ): Promise<T[]> {
   try {
     const result = await readCacheArray<T>(entityType);
-    
+
     // Handle future_version status: prefer network but don't blow away local data
     if (result.status === 'future_version') {
       // Log for investigation but return the data (preserve local)
@@ -50,13 +50,13 @@ async function readCachedEntities<T extends EntityTimestamps>(
       );
       return result.data;
     }
-    
+
     // Handle corrupt status: return empty array (will trigger network fetch)
     if (result.status === 'corrupt') {
       console.error(`Cache for ${entityType} is corrupt. Returning empty array.`);
       return [];
     }
-    
+
     // Handle ok and migrated statuses: return data normally
     return result.data;
   } catch (error) {
@@ -124,7 +124,7 @@ export async function getCached<T extends EntityTimestamps>(
   forceRefresh: boolean = false
 ): Promise<T[]> {
   console.log(`[getCached] Starting for ${entityType}, isOnline: ${isOnline}, forceRefresh: ${forceRefresh}`);
-  
+
   // If forceRefresh is true, always fetch from API and replace cache entirely
   if (forceRefresh && isOnline) {
     console.log(`[getCached] ${entityType} force refresh requested, fetching from API...`);
@@ -136,7 +136,7 @@ export async function getCached<T extends EntityTimestamps>(
     cacheEvents.emitCacheChange(entityType);
     return fresh;
   }
-  
+
   // Read cache with status tracking
   const cacheResult = await readCacheArray<T>(entityType);
   const cached = cacheResult.data;
@@ -235,9 +235,9 @@ export async function setCached<T extends EntityTimestamps>(
   const deduplicated = Array.from(
     new Map(entities.map((entity) => [getId(entity), entity])).values()
   );
-  
+
   await writeCachedEntities(entityType, deduplicated, getId);
-  
+
   // Emit cache change event to trigger UI updates
   cacheEvents.emitCacheChange(entityType);
 }
@@ -282,19 +282,19 @@ export async function addEntityToCache<T extends EntityTimestamps>(
   try {
     const current = await readCachedEntitiesForUpdate<T>(entityType);
     const entityId = getId(newEntity);
-    
+
     // Check if entity already exists (by ID) to prevent duplicates
     const exists = current.some(entity => getId(entity) === entityId);
     if (exists) {
       console.warn(`[addEntityToCache] Entity with ID ${entityId} already exists in cache for ${entityType}, skipping add`);
       return;
     }
-    
+
     // Deduplicate current array before adding (defensive)
     const deduplicatedCurrent = Array.from(
       new Map(current.map((entity) => [getId(entity), entity])).values()
     );
-    
+
     await setCached(entityType, [...deduplicatedCurrent, newEntity], getId);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -353,7 +353,7 @@ export async function updateEntityInCache<T extends EntityTimestamps>(
     // Read cache with status check to detect corruption
     const cacheResult = await readCacheArray<T>(entityType);
     const current = cacheResult.data;
-    
+
     // Detect corrupt cache and log warning
     if (cacheResult.status === 'corrupt') {
       console.error(`[updateEntityInCache] Cache for ${entityType} is corrupt (status: corrupt). This may cause data loss. Invalidating cache and fetching fresh data.`);
@@ -364,9 +364,9 @@ export async function updateEntityInCache<T extends EntityTimestamps>(
       console.warn(`[updateEntityInCache] Added entity ${updatedId} to empty cache after corruption. Fresh data should be fetched on next read.`);
       return;
     }
-    
+
     console.log(`[updateEntityInCache] Updating ${entityType} cache: current count=${current.length}, status=${cacheResult.status}, updating ID=${updatedId}`);
-    
+
     // Check if any entity matches
     const matchedEntities = current.filter(matchFn);
     if (matchedEntities.length === 0) {
@@ -375,11 +375,11 @@ export async function updateEntityInCache<T extends EntityTimestamps>(
       await setCached(entityType, [...current, updatedEntity], getId);
       return;
     }
-    
+
     if (matchedEntities.length > 1) {
       console.warn(`[updateEntityInCache] Multiple entities matched for ${entityType} with ID ${updatedId}, updating all matches`);
     }
-    
+
     // Update matched entities
     const updatedCache = current.map(entity => {
       if (matchFn(entity)) {
@@ -393,7 +393,7 @@ export async function updateEntityInCache<T extends EntityTimestamps>(
       }
       return entity;
     });
-    
+
     // Validate all entities in updated cache have IDs
     const entitiesWithoutIds = updatedCache.filter(e => !getId(e));
     if (entitiesWithoutIds.length > 0) {
@@ -403,7 +403,7 @@ export async function updateEntityInCache<T extends EntityTimestamps>(
     } else {
       await setCached(entityType, updatedCache, getId);
     }
-    
+
     console.log(`[updateEntityInCache] Successfully updated ${entityType} cache: new count=${updatedCache.length}`);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -445,6 +445,50 @@ const SIGNED_IN_ENTITY_TYPES: SyncEntityType[] = [
  * Use on web app mount so each tab/refresh fetches fresh data from the server
  * and multiple browser tabs show consistent data.
  */
+/**
+ * Invalidates all signed-in entity caches.
+ * Use on web app mount so each tab/refresh fetches fresh data from the server
+ * and multiple browser tabs show consistent data.
+ */
 export async function invalidateAllSignedInCaches(): Promise<void> {
   await Promise.all(SIGNED_IN_ENTITY_TYPES.map((entityType) => invalidateCache(entityType)));
 }
+
+/**
+ * Removes an entity from cache
+ * 
+ * Helper function that reads current cache, removes matching entity, and writes back.
+ * Handles errors gracefully - logs but doesn't throw if cache update fails.
+ * 
+ * @param entityType - The entity type to update
+ * @param entityId - The ID of the entity to remove
+ * @param getId - Function to extract entity ID
+ * @throws Error if cache read fails (unexpected errors only)
+ */
+export async function removeEntityFromCache<T extends EntityTimestamps>(
+  entityType: SyncEntityType,
+  entityId: string,
+  getId: (entity: T) => string
+): Promise<void> {
+  try {
+    const current = await readCachedEntitiesForUpdate<T>(entityType);
+
+    // Check if entity exists
+    const exists = current.some(entity => getId(entity) === entityId);
+    if (!exists) {
+      console.warn(`[removeEntityFromCache] Entity with ID ${entityId} not found in cache for ${entityType}, skipping remove`);
+      return;
+    }
+
+    // Filter out the entity
+    const updatedCache = current.filter(entity => getId(entity) !== entityId);
+
+    await setCached(entityType, updatedCache, getId);
+    console.log(`[removeEntityFromCache] Successfully removed entity ${entityId} from ${entityType} cache`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[removeEntityFromCache] Failed to remove entity from cache for ${entityType}:`, errorMessage);
+    // Don't throw - cache update is best-effort
+  }
+}
+

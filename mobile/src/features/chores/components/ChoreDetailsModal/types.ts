@@ -1,11 +1,6 @@
-export interface Chore {
-  id: string;
-  name: string;
-  assignee?: string;
-  dueDate: string;
-  dueTime?: string;
-  icon?: string;
-}
+import { Chore } from '../../../../mocks/chores';
+
+export type { Chore };
 
 export interface ChoreDetailsModalProps {
   visible: boolean;

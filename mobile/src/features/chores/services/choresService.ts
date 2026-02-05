@@ -50,11 +50,11 @@ const parseDate = (value?: string | Date | null): Date | null => {
  */
 const parseDueDateString = (dueDate?: string, dueTime?: string): string | undefined => {
   if (!dueDate) return undefined;
-  
+
   try {
     const dueDateLower = dueDate.toLowerCase();
     let baseDate = new Date();
-    
+
     if (dueDateLower === 'today') {
       baseDate = new Date();
       baseDate.setHours(0, 0, 0, 0);
@@ -82,7 +82,7 @@ const parseDueDateString = (dueDate?: string, dueTime?: string): string | undefi
         baseDate = parsed;
       }
     }
-    
+
     // Parse time if provided
     if (dueTime) {
       const timeMatch = dueTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
@@ -90,17 +90,17 @@ const parseDueDateString = (dueDate?: string, dueTime?: string): string | undefi
         let hours = parseInt(timeMatch[1], 10);
         const minutes = parseInt(timeMatch[2], 10);
         const period = timeMatch[3]?.toUpperCase();
-        
+
         if (period === 'PM' && hours !== 12) {
           hours += 12;
         } else if (period === 'AM' && hours === 12) {
           hours = 0;
         }
-        
+
         baseDate.setHours(hours, minutes, 0, 0);
       }
     }
-    
+
     return baseDate.toISOString();
   } catch (error) {
     console.error('Error parsing dueDate string:', error);
@@ -140,7 +140,9 @@ const formatTimeLabel = (date: Date | null): string | undefined => {
 const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
   const dueDate = parseDate(dto.dueDate);
   const isRecurring = Boolean(dto.repeat);
-  const resolvedSection: Chore['section'] = isRecurring ? 'recurring' : section;
+  // CRITICAL FIX: If the chore is in the 'today' bucket from the backend, keep it there.
+  // Only use 'recurring' section if it's NOT today.
+  const resolvedSection: Chore['section'] = section === 'today' ? 'today' : (isRecurring ? 'recurring' : section);
 
   return {
     id: dto.id,
@@ -154,6 +156,7 @@ const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
     isCompleted: dto.isCompleted,
     section: resolvedSection,
     icon: DEFAULT_CHORE_ICON,
+    originalDate: dueDate,
   };
 };
 
@@ -168,7 +171,7 @@ export class LocalChoresService implements IChoresService {
     if (!chore.title) {
       throw new Error('Chore must have a title');
     }
-    
+
     const newChore = createChore({
       title: chore.title,
       icon: chore.icon || DEFAULT_CHORE_ICON,
@@ -177,7 +180,7 @@ export class LocalChoresService implements IChoresService {
       dueTime: chore.dueTime,
       section: chore.section || 'today',
     });
-    
+
     const existingChores = await guestStorage.getChores();
     await guestStorage.saveChores([...existingChores, newChore]);
     return newChore;
@@ -186,7 +189,7 @@ export class LocalChoresService implements IChoresService {
   async updateChore(choreId: string, updates: Partial<Chore>): Promise<Chore> {
     const existingChores = await guestStorage.getChores();
     const choreIndex = findEntityIndex(existingChores, choreId, 'Chore');
-    
+
     return updateEntityInStorage(
       existingChores,
       choreIndex,
@@ -198,7 +201,7 @@ export class LocalChoresService implements IChoresService {
   async deleteChore(choreId: string): Promise<void> {
     const existingChores = await guestStorage.getChores();
     const choreIndex = findEntityIndex(existingChores, choreId, 'Chore');
-    
+
     await updateEntityInStorage(
       existingChores,
       choreIndex,
@@ -210,7 +213,7 @@ export class LocalChoresService implements IChoresService {
   async toggleChore(choreId: string): Promise<Chore> {
     const existingChores = await guestStorage.getChores();
     const choreIndex = findEntityIndex(existingChores, choreId, 'Chore');
-    
+
     return updateEntityInStorage(
       existingChores,
       choreIndex,
@@ -244,7 +247,7 @@ export class RemoteChoresService implements IChoresService {
     if (!chore.title) {
       throw new Error('Chore must have a title');
     }
-    
+
     // Apply timestamp for optimistic UI and offline queue
     const withTimestamps = withCreatedAtAndUpdatedAt(chore as Chore);
     const payload = toSupabaseTimestamps(withTimestamps);
@@ -252,7 +255,7 @@ export class RemoteChoresService implements IChoresService {
     const dto = {
       title: payload.title || chore.title,
       assigneeId: undefined, // Would need to map assignee name to ID
-      dueDate: undefined, // Would need to parse dueDate string
+      dueDate: parseDueDateString(chore.dueDate || 'Today', chore.dueTime), // CRITICAL FIX: Parse due date
       repeat: undefined,
     };
     const response = await api.post<{ id: string }>('/chores', dto);
@@ -263,23 +266,23 @@ export class RemoteChoresService implements IChoresService {
     if (!created) {
       throw new Error(`Failed to retrieve created chore with id: ${response.id}`);
     }
-    
+
     // Write-through cache update: add new entity to cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
     await addEntityToCache('chores', created, (c) => c.id);
-    
+
     return created;
   }
 
   async updateChore(choreId: string, updates: Partial<Chore>): Promise<Chore> {
     // Get existing chore first
-    const existing = await this.getChores().then(chores => 
+    const existing = await this.getChores().then(chores =>
       chores.find(c => c.id === choreId)
     );
     if (!existing) {
       throw new Error(`Chore not found: ${choreId}`);
     }
-    
+
     // Apply timestamp for optimistic UI and offline queue
     const updated = { ...existing, ...updates };
     const withTimestamps = withUpdatedAt(updated);
@@ -291,7 +294,7 @@ export class RemoteChoresService implements IChoresService {
       dueDate?: string;
       repeat?: string;
     } = {};
-    
+
     if (updates.title !== undefined) {
       dto.title = updates.title;
     }
@@ -308,31 +311,31 @@ export class RemoteChoresService implements IChoresService {
     if (!updatedChore) {
       throw new Error(`Failed to retrieve updated chore with id: ${choreId}`);
     }
-    
+
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
     await updateEntityInCache('chores', updatedChore, (c) => c.id, (c) => c.id === choreId);
-    
+
     return updatedChore;
   }
 
   async deleteChore(choreId: string): Promise<void> {
     // Get existing chore
-    const existing = await this.getChores().then(chores => 
+    const existing = await this.getChores().then(chores =>
       chores.find(c => c.id === choreId)
     );
     if (!existing) {
       throw new Error(`Chore not found: ${choreId}`);
     }
-    
+
     // Apply timestamp for optimistic UI and offline queue
     const deleted = markDeleted(existing);
     const withTimestamps = withUpdatedAt(deleted);
     const payload = toSupabaseTimestamps(withTimestamps);
-    
-    // Use PATCH instead of DELETE with body (more compatible)
-    await api.patch(`/chores/${choreId}`, { deleted_at: payload.deleted_at });
-    
+
+    // Use DELETE as expected by backend
+    await api.delete(`/chores/${choreId}`);
+
     // Write-through cache update: update entity in cache with deleted timestamp
     // Note: Cache updates are best-effort; failures are logged but don't throw
     await updateEntityInCache('chores', withTimestamps, (c) => c.id, (c) => c.id === choreId);
@@ -340,35 +343,34 @@ export class RemoteChoresService implements IChoresService {
 
   async toggleChore(choreId: string): Promise<Chore> {
     // Get existing chore
-    const existing = await this.getChores().then(chores => 
+    const existing = await this.getChores().then(chores =>
       chores.find(c => c.id === choreId)
     );
     if (!existing) {
       throw new Error(`Chore not found: ${choreId}`);
     }
-    
+
     // Apply timestamp for optimistic UI and offline queue
-    const updated = { 
-      ...existing, 
-      isCompleted: !existing.isCompleted 
+    const updated = {
+      ...existing,
+      isCompleted: !existing.isCompleted
     };
     const withTimestamps = withUpdatedAt(updated);
     const payload = toSupabaseTimestamps(withTimestamps);
-    
-    await api.patch(`/chores/${choreId}`, { 
-      is_completed: !existing.isCompleted,
-      updated_at: payload.updated_at 
+
+    await api.patch(`/chores/${choreId}/status`, {
+      isCompleted: !existing.isCompleted
     });
     // Server is authority: fetch the updated chore to get server timestamps
     const updatedChore = await this.getChores().then(chores => chores.find(c => c.id === choreId));
     if (!updatedChore) {
       throw new Error(`Failed to retrieve updated chore with id: ${choreId}`);
     }
-    
+
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
     await updateEntityInCache('chores', updatedChore, (c) => c.id, (c) => c.id === choreId);
-    
+
     return updatedChore;
   }
 }
@@ -392,7 +394,7 @@ export const createChoresService = (
   // Validate service compatibility
   const serviceType = mode === 'guest' ? 'local' : 'remote';
   validateServiceCompatibility(serviceType, mode);
-  
+
   return mode === 'guest' ? new LocalChoresService() : new RemoteChoresService();
 };
 

@@ -10,6 +10,7 @@ export interface Chore extends BaseEntity {
   isCompleted: boolean;
   section: 'today' | 'thisWeek' | 'recurring';
   icon?: string;
+  originalDate?: Date | null;
 }
 
 export const mockChores: Chore[] = [

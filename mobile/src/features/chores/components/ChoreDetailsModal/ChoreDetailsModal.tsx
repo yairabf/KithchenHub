@@ -13,6 +13,8 @@ import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { DateTimePicker } from '../../../../common/components/DateTimePicker';
 import { styles } from './styles';
 import { ChoreDetailsModalProps, Chore } from './types';
+import { CHORE_ICONS } from '../../constants';
+
 
 export function ChoreDetailsModal({
   visible,
@@ -24,73 +26,23 @@ export function ChoreDetailsModal({
   const { members } = useHousehold();
   const [selectedAssignee, setSelectedAssignee] = useState<string | undefined>(chore?.assignee);
   const [choreName, setChoreName] = useState<string>(chore?.title || '');
+  const [selectedIcon, setSelectedIcon] = useState<string>(chore?.icon || '📋');
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
 
-  // Helper function to parse the chore's date/time strings into a Date object
-  const parseChoreDateTime = (dueDate: string, dueTime?: string): Date | null => {
-    try {
-      // Handle relative dates like "Today", "Tomorrow"
-      let baseDate = dayjs();
-      const dueDateLower = dueDate.toLowerCase();
-
-      if (dueDateLower === 'today') {
-        baseDate = dayjs().startOf('day');
-      } else if (dueDateLower === 'tomorrow') {
-        baseDate = dayjs().add(1, 'day').startOf('day');
-      } else {
-        // Try to parse as a date string
-        baseDate = dayjs(dueDate);
-        if (!baseDate.isValid()) {
-          // If it's a weekday name, find the next occurrence
-          const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-          const targetDay = weekdays.indexOf(dueDateLower);
-          if (targetDay !== -1) {
-            const today = dayjs().day();
-            const daysToAdd = targetDay >= today ? targetDay - today : 7 - today + targetDay;
-            baseDate = dayjs().add(daysToAdd, 'day').startOf('day');
-          } else {
-            return null;
-          }
-        }
-      }
-
-      // Parse time if provided
-      if (dueTime) {
-        const timeMatch = dueTime.match(/(\d+):(\d+)\s*(AM|PM)?/i);
-        if (timeMatch) {
-          let hours = parseInt(timeMatch[1]);
-          const minutes = parseInt(timeMatch[2]);
-          const period = timeMatch[3]?.toUpperCase();
-
-          if (period === 'PM' && hours !== 12) {
-            hours += 12;
-          } else if (period === 'AM' && hours === 12) {
-            hours = 0;
-          }
-
-          baseDate = baseDate.hour(hours).minute(minutes);
-        }
-      }
-
-      return baseDate.toDate();
-    } catch (error) {
-      console.error('Error parsing chore date/time:', error);
-      return null;
-    }
-  };
+  // ... existing code ...
 
   useEffect(() => {
     if (visible && chore) {
       setSelectedAssignee(chore.assignee);
-      setChoreName(chore.name);
-      setSelectedDateTime(parseChoreDateTime(chore.dueDate, chore.dueTime));
+      setChoreName(chore.title);
+      setSelectedIcon(chore.icon || '📋');
+      // ... date logic
     }
   }, [visible, chore]);
 
   const handleSave = () => {
     if (chore) {
-      // Update assignee using the existing callback
-      onUpdateAssignee(chore.id, selectedAssignee);
+      // ... existing code ...
 
       // Build updates object
       const updates: Partial<Chore> = {};
@@ -99,11 +51,19 @@ export function ChoreDetailsModal({
         updates.title = choreName;
       }
 
+      if (selectedIcon !== chore.icon) {
+        updates.icon = selectedIcon;
+      }
+
+      // ... existing date logic ...
+
       // Update date/time if changed and valid
       if (selectedDateTime && onUpdateChore) {
         const dateObj = dayjs(selectedDateTime);
         updates.dueDate = dateObj.format('MMM D, YYYY');
         updates.dueTime = dateObj.format('h:mm A');
+        // FIX: Update originalDate as well so local/guest mode keeps it in sync
+        updates.originalDate = selectedDateTime;
       }
 
       // Apply updates if any
@@ -127,7 +87,9 @@ export function ChoreDetailsModal({
       confirmColor={colors.chores}
     >
       <View style={styles.choreNameSection}>
-        <Text style={styles.choreIcon}>{chore.icon || '📋'}</Text>
+        <View style={styles.iconContainer}>
+          <Text style={styles.choreIcon}>{selectedIcon}</Text>
+        </View>
         <TextInput
           style={styles.choreNameInput}
           value={choreName}
@@ -135,6 +97,28 @@ export function ChoreDetailsModal({
           placeholder="Chore name"
           placeholderTextColor={colors.textMuted}
         />
+      </View>
+
+      <View style={styles.iconSelectionSection}>
+        <Text style={styles.sectionLabel}>ICON:</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.iconList}
+        >
+          {CHORE_ICONS.map((icon) => (
+            <TouchableOpacity
+              key={icon}
+              style={[
+                styles.iconOption,
+                selectedIcon === icon && styles.iconOptionSelected
+              ]}
+              onPress={() => setSelectedIcon(icon)}
+            >
+              <Text style={styles.iconOptionText}>{icon}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <View style={styles.dateTimeSection}>
