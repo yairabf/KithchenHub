@@ -7,6 +7,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { DEFAULT_MAIN_SHOPPING_LIST } from '../../shopping/constants/defaults';
 
 /**
  * Households Service Unit Tests
@@ -150,9 +151,9 @@ describe('HouseholdsService', () => {
       expect(prisma.shoppingList.create).toHaveBeenCalledWith({
         data: {
           householdId: mockHouseholdId,
-          name: 'Weekly Shopping',
-          color: '#4CAF50',
-          icon: 'cart-outline',
+          name: DEFAULT_MAIN_SHOPPING_LIST.NAME,
+          color: DEFAULT_MAIN_SHOPPING_LIST.COLOR,
+          icon: DEFAULT_MAIN_SHOPPING_LIST.ICON,
           isMain: true,
         },
       });
