@@ -25,8 +25,11 @@ export interface Category extends BaseEntity {
 export interface ShoppingList extends BaseEntity {
   name: string;
   itemCount: number;
+  /** Icon name from @expo/vector-icons Ionicons library (e.g., 'cart-outline', 'list-outline') */
   icon: IoniconsName;
+  /** Hex color code for list theme (e.g., '#4CAF50' for green) */
   color: string;
+  /** Flag indicating if this is the main/default shopping list for the household */
   isMain: boolean;
 }
 
