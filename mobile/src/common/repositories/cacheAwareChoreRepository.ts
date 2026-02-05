@@ -9,12 +9,13 @@ import type { Chore } from '../../mocks/chores';
 import type { IChoresService } from '../../features/chores/services/choresService';
 import type { ICacheAwareRepository } from './baseCacheAwareRepository';
 import { EntityTimestamps } from '../types/entityMetadata';
-import { 
-  getCached, 
+import {
+  getCached,
   invalidateCache,
   readCachedEntitiesForUpdate,
   addEntityToCache,
-  updateEntityInCache
+  updateEntityInCache,
+  removeEntityFromCache
 } from './cacheAwareRepository';
 import { getIsOnline } from '../utils/networkStatus';
 import { api } from '../../services/api';
@@ -99,9 +100,9 @@ const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
  */
 export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
   private readonly entityType = 'chores' as const;
-  
-  constructor(private readonly service: IChoresService) {}
-  
+
+  constructor(private readonly service: IChoresService) { }
+
   /**
    * Gets the ID from a chore entity
    */
@@ -121,7 +122,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
   private createOptimisticChore(data: Partial<Chore>): Chore {
     const localId = Crypto.randomUUID();
     const now = new Date().toISOString();
-    
+
     return withCreatedAt({
       id: localId,
       localId: localId,
@@ -164,7 +165,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
   ): Promise<void> {
     const localId = entity.localId ?? entity.id;
     const serverId = entity.id !== localId ? entity.id : undefined;
-    
+
     await syncQueueStorage.enqueue(
       this.entityType,
       op,
@@ -172,7 +173,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       entity // Full entity payload
     );
   }
-  
+
   /**
    * Fetches chores from API (used by cache layer)
    * 
@@ -193,7 +194,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
     console.log('[fetchChoresFromApi] Normalized chores:', normalized.length);
     return normalized;
   }
-  
+
   /**
    * Cache-first read with background refresh
    * Returns cached data immediately, refreshes in background if stale
@@ -207,7 +208,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       false // Don't force refresh on normal findAll
     );
   }
-  
+
   /**
    * Force refresh from API (bypasses cache)
    * Fetches fresh data from API and updates cache
@@ -221,7 +222,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       true // Force refresh
     );
   }
-  
+
   /**
    * Find single chore by ID (reads directly from cache, no network fetch)
    * 
@@ -235,7 +236,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
     const chores = await readCachedEntitiesForUpdate<Chore>(this.entityType);
     return chores.find(c => c.id === id || c.localId === id) ?? null;
   }
-  
+
   /**
    * Creates a chore with write-through caching and offline queueing
    * 
@@ -245,23 +246,32 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
   async create(chore: Partial<Chore>): Promise<Chore> {
     // Step 1: Create optimistic entity
     const optimisticEntity = this.createOptimisticChore(chore);
-    
+
     // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
     await addEntityToCache(
       this.entityType,
       optimisticEntity,
       (c) => this.getId(c)
     );
-    
+
     // Step 3: Emit cache event (UI updates instantly) - ALWAYS SECOND
     cacheEvents.emitCacheChange(this.entityType);
-    
+
     // Step 4: Handle sync (online vs offline) - AFTER cache update
     const isOnline = getIsOnline();
-    
+
     if (isOnline) {
       try {
         const created = await this.service.createChore(chore);
+
+        // CRITICAL: Remove optimistic entity first to prevent duplication
+        // The server entity has a new ID, so the cache would treat it as a separate item
+        await removeEntityFromCache<Chore>(
+          this.entityType,
+          optimisticEntity.id,
+          (c: Chore) => this.getId(c)
+        );
+
         await addEntityToCache(
           this.entityType,
           created,
@@ -280,7 +290,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       return optimisticEntity;
     }
   }
-  
+
   /**
    * Updates a chore with write-through caching and offline queueing
    */
@@ -288,17 +298,17 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
     // Step 1: Read current cache
     const current = await readCachedEntitiesForUpdate<Chore>(this.entityType);
     const existing = current.find(c => c.id === id || c.localId === id);
-    
+
     if (!existing) {
       throw new Error(`Chore with id ${id} not found in cache`);
     }
-    
+
     // Step 2: Create optimistic updated entity
     const optimisticEntity = this.ensureLocalId(withUpdatedAt({
       ...existing,
       ...updates,
     } as Chore));
-    
+
     // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
     await updateEntityInCache(
       this.entityType,
@@ -306,13 +316,13 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       (c) => this.getId(c),
       (c) => c.id === id || c.localId === id
     );
-    
+
     // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
     cacheEvents.emitCacheChange(this.entityType);
-    
+
     // Step 5: Handle sync (online vs offline) - AFTER cache update
     const isOnline = getIsOnline();
-    
+
     if (isOnline) {
       try {
         const updated = await this.service.updateChore(id, updates);
@@ -335,7 +345,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       return optimisticEntity;
     }
   }
-  
+
   /**
    * Deletes a chore (soft-delete) with write-through caching and offline queueing
    */
@@ -343,14 +353,14 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
     // Step 1: Read current cache
     const current = await readCachedEntitiesForUpdate<Chore>(this.entityType);
     const existing = current.find(c => c.id === id || c.localId === id);
-    
+
     if (!existing) {
       return;
     }
-    
+
     // Step 2: Create optimistic deleted entity
     const optimisticEntity = this.ensureLocalId(markDeleted(existing));
-    
+
     // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
     await updateEntityInCache(
       this.entityType,
@@ -358,13 +368,13 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       (c) => this.getId(c),
       (c) => c.id === id || c.localId === id
     );
-    
+
     // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
     cacheEvents.emitCacheChange(this.entityType);
-    
+
     // Step 5: Handle sync (online vs offline) - AFTER cache update
     const isOnline = getIsOnline();
-    
+
     if (isOnline) {
       try {
         await this.service.deleteChore(id);
@@ -378,7 +388,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       await this.enqueueWrite('delete', optimisticEntity);
     }
   }
-  
+
   /**
    * Toggles chore completion with write-through caching and offline queueing
    */
@@ -386,17 +396,17 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
     // Step 1: Read current cache
     const current = await readCachedEntitiesForUpdate<Chore>(this.entityType);
     const existing = current.find(c => c.id === id || c.localId === id);
-    
+
     if (!existing) {
       throw new Error(`Chore with id ${id} not found in cache`);
     }
-    
+
     // Step 2: Create optimistic toggled entity
     const optimisticEntity = this.ensureLocalId(withUpdatedAt({
       ...existing,
       isCompleted: !existing.isCompleted,
     } as Chore));
-    
+
     // Step 3: Update cache immediately (write-through) - ALWAYS FIRST
     await updateEntityInCache(
       this.entityType,
@@ -404,13 +414,13 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       (c) => this.getId(c),
       (c) => c.id === id || c.localId === id
     );
-    
+
     // Step 4: Emit cache event (UI updates instantly) - ALWAYS SECOND
     cacheEvents.emitCacheChange(this.entityType);
-    
+
     // Step 5: Handle sync (online vs offline) - AFTER cache update
     const isOnline = getIsOnline();
-    
+
     if (isOnline) {
       try {
         const updated = await this.service.toggleChore(id);
@@ -433,7 +443,7 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       return optimisticEntity;
     }
   }
-  
+
   /**
    * Invalidate cache (force refresh on next read)
    */

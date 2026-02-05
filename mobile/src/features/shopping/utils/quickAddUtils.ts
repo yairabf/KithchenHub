@@ -5,9 +5,18 @@ import { createShoppingItem } from './shoppingFactory';
 import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../constants/categories';
 
 /**
- * Type for shopping item creation that includes catalogItemId for API requests
+ * Type for shopping item creation that includes catalogItemId for API requests.
+ * This type extends the base ShoppingItem with optional catalog fields
+ * while making standard fields optional for creation (id, timestamps, etc).
  */
-type ShoppingItemWithCatalog = Partial<ShoppingItem> & {
+export type ShoppingItemCreateInput = {
+  name: string;
+  listId: string;
+  quantity: number;
+  category: string;
+  image?: string;
+  unit?: string;
+  isChecked?: boolean;
   catalogItemId?: string;
   masterItemId?: string;
 };
@@ -27,7 +36,7 @@ export interface QuickAddDependencies {
   /**
    * Function to create a new shopping item via service
    */
-  createItem: (item: ShoppingItemWithCatalog) => Promise<ShoppingItem>;
+  createItem: (item: ShoppingItemCreateInput) => Promise<ShoppingItem>;
   /**
    * Function to update an existing shopping item via service
    */
@@ -150,7 +159,7 @@ export async function quickAddItem(
         category: categoryToUse,
         image: groceryItem.image,
         catalogItemId: groceryItem.id.startsWith('custom-') ? undefined : groceryItem.id,
-      } as any); // Type assertion needed because ShoppingItem doesn't have catalogItemId
+      });
       
       // Replace temp item with real item from service
       setAllItems((prev: ShoppingItem[]) => prev.map((item) =>

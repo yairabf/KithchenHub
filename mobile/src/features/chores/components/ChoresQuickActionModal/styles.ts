@@ -35,48 +35,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchDropdown: {
-    position: 'absolute',
-    top: 56,
-    left: 0,
-    right: 60,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    maxHeight: 240,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 1000,
-  },
-  searchDropdownScroll: {
-    maxHeight: 240,
-  },
-  searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  searchResultIcon: {
-    fontSize: 24,
-    marginRight: spacing.sm,
-  },
-  searchResultInfo: {
-    flex: 1,
-  },
-  searchResultName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  searchResultCategory: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
+
   dueDateSection: {
     marginBottom: spacing.md,
   },
@@ -146,5 +105,30 @@ export const styles = StyleSheet.create({
   },
   choreAssigneeChipTextSelected: {
     color: colors.textLight,
+  },
+  iconSelectionSection: {
+    marginBottom: spacing.md,
+  },
+  iconList: {
+    paddingVertical: 4,
+    gap: 12,
+  },
+  iconOption: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  iconOptionSelected: {
+    backgroundColor: colors.surface, // Fallback if choresLight is missing
+    borderColor: colors.chores,
+    borderWidth: 2,
+  },
+  iconOptionText: {
+    fontSize: 24,
   },
 });

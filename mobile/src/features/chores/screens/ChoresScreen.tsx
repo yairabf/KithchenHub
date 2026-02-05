@@ -39,7 +39,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { width } = useWindowDimensions();
   const { user } = useAuth();
-  
+
   // Determine data mode based on user authentication state
   const userMode = useMemo(() => {
     if (config.mockData.enabled) {
@@ -47,26 +47,27 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     }
     return determineUserDataMode(user);
   }, [user]);
-  
+
   const isSignedIn = userMode === 'signed-in';
-  
+
   const choresService = useMemo(
     () => createChoresService(userMode),
     [userMode]
   );
-  
+
   const repository = useMemo(() => {
     return isSignedIn ? new CacheAwareChoreRepository(choresService) : null;
   }, [choresService, isSignedIn]);
-  
+
   // Use cache hook for signed-in users
   const { data: cachedChores } = useCachedEntities<Chore>('chores');
-  
+
   // For guest mode, use service directly
   const [guestChores, setGuestChores] = useState<Chore[]>([]);
-  
-  const chores = isSignedIn ? cachedChores : guestChores;
-  
+
+  const chores = (isSignedIn ? cachedChores : guestChores)
+    .filter(c => !c.deletedAt);
+
   // For signed-in users, trigger initial fetch ONLY on first login (when cache is missing)
   // Subsequent navigations will use cache (no API calls)
   // Note: findAll() will only fetch from API if cache is missing, otherwise returns cache
@@ -94,7 +95,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       setIsRefreshing(false);
     }
   };
-  
+
   // Load chores for guest mode
   useEffect(() => {
     if (!isSignedIn) {

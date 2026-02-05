@@ -50,6 +50,30 @@ export interface UseClickOutsideOptions {
 }
 
 /**
+ * Helper function to check if a click event occurred inside a given element.
+ * Checks both direct containment and closest ancestor matching the testID.
+ * 
+ * @param element - The element to check against (can be null)
+ * @param target - The click target element
+ * @param testId - Optional testID to match via querySelector
+ * @returns true if click is inside the element, false otherwise
+ */
+function isClickInsideElement(
+  element: HTMLElement | null,
+  target: HTMLElement,
+  testId?: string
+): boolean {
+  if (!element) return false;
+  
+  const isDirectlyInside = element.contains(target);
+  const isInAncestor = testId && target.closest 
+    ? target.closest(`[data-testid="${testId}"]`) !== null
+    : false;
+  
+  return isDirectlyInside || isInAncestor;
+}
+
+/**
  * Hook that detects clicks outside a container element and calls a callback.
  * Only attaches event listeners on web platform.
  * 
@@ -92,16 +116,9 @@ export function useClickOutside({
           return;
         }
 
-        // Check if click is inside container or dropdown
-        const clickedInsideContainer = containerElement
-          ? containerElement.contains(target) ||
-            (target.closest && target.closest(`[data-testid="${testId}"]`) !== null)
-          : false;
-
-        const clickedInsideDropdown = dropdownElement
-          ? dropdownElement.contains(target) ||
-            (target.closest && target.closest(`[data-testid="${dropdownTestId}"]`) !== null)
-          : false;
+        // Check if click is inside container or dropdown using helper
+        const clickedInsideContainer = isClickInsideElement(containerElement, target, testId);
+        const clickedInsideDropdown = isClickInsideElement(dropdownElement, target, dropdownTestId);
 
         // Only call callback if clicking outside both container and dropdown
         if (!clickedInsideContainer && !clickedInsideDropdown) {

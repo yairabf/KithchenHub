@@ -57,6 +57,9 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 
 ### Core Modules
 - **Shopping Lists**: Multi-list management with items, grocery catalog integration, and **custom items** (household-defined items shared across all household members; automatically created when adding non-catalog items; `GET /shopping-items/custom`)
+  - **Main List**: Each household has a designated main shopping list created automatically (`isMain: true`)
+  - **Default Main List**: Created with name "Weekly Shopping", green color (#4CAF50), and cart icon
+  - **Main List Endpoint**: `GET /shopping-lists/main` retrieves the household's main shopping list
 - **Recipes**: Recipe CRUD with ingredients, instructions, and soft-delete (`DELETE /recipes/:id`)
 - **Chores**: Task management with assignees, completion tracking, and soft-delete (`DELETE /chores/:id`)
 - **Dashboard**: Aggregated household activity summaries
@@ -504,6 +507,8 @@ Represents a shopping list belonging to a household.
 | `householdId` | String (CUID) | Foreign Key, Required | Reference to `Household.id` |
 | `name` | String | Required | List name |
 | `color` | String? | Nullable | List color (for UI) |
+| `icon` | String? | Nullable | Ionicons icon name (e.g., 'cart-outline') |
+| `isMain` | Boolean | Default: false | Flag indicating if this is the main/default shopping list |
 | `createdAt` | DateTime | Auto-generated | Creation timestamp |
 | `updatedAt` | DateTime | Auto-updated | Last update timestamp |
 | `deletedAt` | DateTime? | Nullable | Soft-delete timestamp (null = active) |

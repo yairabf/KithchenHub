@@ -12,6 +12,7 @@ import {
   UpdateHouseholdDto,
   InviteMemberDto,
 } from '../dtos';
+import { DEFAULT_MAIN_SHOPPING_LIST } from '../../shopping/constants/defaults';
 
 /**
  * Household service managing household operations and member management.
@@ -116,9 +117,9 @@ export class HouseholdsService {
       await tx.shoppingList.create({
         data: {
           householdId: household.id,
-          name: 'Weekly Shopping',
-          color: '#4CAF50', // Green color for main list
-          icon: 'cart-outline',
+          name: DEFAULT_MAIN_SHOPPING_LIST.NAME,
+          color: DEFAULT_MAIN_SHOPPING_LIST.COLOR,
+          icon: DEFAULT_MAIN_SHOPPING_LIST.ICON,
           isMain: true,
         },
       });

@@ -1,8 +1,8 @@
 # Shopping Feature
 
-**Exports** (from `mobile/src/features/shopping/index.ts`): `ShoppingListsScreen`, `CategoryModal`, `AllItemsModal`, `ShoppingQuickActionModal`, `GrocerySearchBar`, `GroceryItem` (type from GrocerySearchBar).
+**Exports** (from `mobile/src/features/shopping/index.ts`): `ShoppingListsScreen`, `CategoryModal`, `AllItemsModal`, `ShoppingQuickActionModal`, `GrocerySearchBar`, `IngredientConflictModal`, `GroceryItem` (type from GrocerySearchBar).
 
-**Source**: `mobile/src/features/shopping/` — 1 screen (ShoppingListsScreen), 8 components (ShoppingListPanel, GrocerySearchBar, CategoriesGrid, FrequentlyAddedGrid, CategoryModal, AllItemsModal, ShoppingQuickActionModal, CategoryPicker), hooks (useShoppingRealtime), services, utils.
+**Source**: `mobile/src/features/shopping/` — 1 screen (ShoppingListsScreen), 9 components (ShoppingListPanel, GrocerySearchBar, CategoriesGrid, FrequentlyAddedGrid, CategoryModal, AllItemsModal, ShoppingQuickActionModal, CategoryPicker, IngredientConflictModal), hooks (useShoppingRealtime, useClickOutside), services, utils (quickAddUtils, selectionUtils).
 
 ## Overview
 
@@ -299,6 +299,36 @@ interface CategoryPickerProps {
   - Highlights selected category
   - Used in custom item creation modals for category selection
   - Icons are generated via `sandbox/generate_category_icons.py` and bundled with app for offline availability
+
+### IngredientConflictModal
+
+- **File**: `mobile/src/features/shopping/components/IngredientConflictModal/`
+- **Purpose**: Handles quantity conflicts when adding recipe ingredients to a shopping list
+- **Props**:
+
+```typescript
+interface IngredientConflictModalProps {
+  visible: boolean;
+  onDismiss: () => void;
+  ingredient: {
+    name: string;
+    existingQuantity: number;
+    newQuantity: number;
+    unit?: string;
+  };
+  onReplace: () => void;
+  onAdd: () => void;
+}
+```
+
+- **Features**:
+  - Shows when adding recipe ingredient that already exists in shopping list
+  - Displays existing and new quantity with unit
+  - **Replace**: Replaces existing quantity with new quantity
+  - **Add**: Adds new quantity to existing quantity
+  - **Cancel**: Dismisses modal without changes
+  - Clear visual comparison of quantities
+  - Supports optional units (e.g., "2 cups" vs "3 cups")
 
 ## Utilities
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,10 @@ import { useHousehold } from '../../../../contexts/HouseholdContext';
 import { ManageHouseholdModal } from '../../../settings/components/ManageHouseholdModal';
 import { DateTimePicker } from '../../../../common/components/DateTimePicker';
 import { styles } from './styles';
-import { ChoresQuickActionModalProps, ChoreTemplate } from './types';
-import { createChoresService } from '../../services/choresService';
-import { config } from '../../../../config';
+import { ChoresQuickActionModalProps } from './types';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { getDirectionalIcon } from '../../../../common/utils/rtlIcons';
-import { mockChoresDB } from '../../../../mocks/chores';
+import { CHORE_ICONS } from '../../constants';
+
 
 export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQuickActionModalProps) {
   const { members } = useHousehold();
@@ -29,17 +27,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(new Date());
   const [showManageHousehold, setShowManageHousehold] = useState(false);
   const [selectedIcon, setSelectedIcon] = useState<string>('📋');
-  const [searchResults, setSearchResults] = useState<ChoreTemplate[]>([]);
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [choreTemplates, setChoreTemplates] = useState<ChoreTemplate[]>([]);
   const inputRef = useRef<TextInput>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isMockDataEnabled = config.mockData.enabled;
-  const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
-  const choresService = useMemo(
-    () => createChoresService(shouldUseMockData),
-    [shouldUseMockData]
-  );
 
   const getDueDateSection = (date: Date): 'today' | 'thisWeek' => {
     const today = dayjs().startOf('day');
@@ -49,76 +37,6 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
       return 'today';
     }
     return 'thisWeek';
-  };
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadChoreTemplates = async () => {
-      if (shouldUseMockData) {
-        setChoreTemplates(mockChoresDB);
-        return;
-      }
-
-      try {
-        const chores = await choresService.getChores();
-        if (isMounted) {
-          const templates = chores.map((chore) => ({
-            id: chore.id,
-            name: chore.title,
-            icon: chore.icon ?? '🧹',
-            category: chore.section === 'today' ? 'Today' : 'Upcoming',
-          }));
-          setChoreTemplates(templates);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error('Failed to load chore templates:', error);
-          setChoreTemplates([]);
-        }
-      }
-    };
-
-    if (visible) {
-      loadChoreTemplates();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [choresService, shouldUseMockData, visible]);
-
-  // Search functionality with debounce
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (newChoreText.trim().length > 0) {
-      searchTimeoutRef.current = setTimeout(() => {
-        const query = newChoreText.toLowerCase().trim();
-        const results = choreTemplates.filter(chore =>
-          chore.name.toLowerCase().startsWith(query)
-        );
-        setSearchResults(results);
-        setShowSearchDropdown(results.length > 0);
-      }, 300);
-    } else {
-      setSearchResults([]);
-      setShowSearchDropdown(false);
-    }
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [newChoreText, choreTemplates]);
-
-  const handleSelectChoreTemplate = (choreTemplate: ChoreTemplate) => {
-    setNewChoreText(choreTemplate.name);
-    setSelectedIcon(choreTemplate.icon);
-    setShowSearchDropdown(false);
   };
 
   const handleAddChore = () => {
@@ -147,7 +65,6 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
     setSelectedIcon('📋');
     setSelectedAssignee(undefined);
     setSelectedDateTime(new Date());
-    setShowSearchDropdown(false);
 
     // Close modal after adding
     onClose();
@@ -178,7 +95,6 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
               style={styles.clearButton}
               onPress={() => {
                 setNewChoreText('');
-                setShowSearchDropdown(false);
               }}
             >
               <Ionicons name="close-circle" size={20} color={colors.textMuted} />
@@ -191,32 +107,29 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
             <Ionicons name="add" size={24} color={colors.textLight} />
           </TouchableOpacity>
         </View>
+      </View>
 
-        {/* Search Results Dropdown */}
-        {showSearchDropdown && (
-          <View style={styles.searchDropdown}>
-            <ScrollView
-              style={styles.searchDropdownScroll}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
+      {/* Icon Selection */}
+      <View style={styles.iconSelectionSection}>
+        <Text style={styles.assigneeLabel}>ICON:</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.iconList}
+        >
+          {CHORE_ICONS.map((icon) => (
+            <TouchableOpacity
+              key={icon}
+              style={[
+                styles.iconOption,
+                selectedIcon === icon && styles.iconOptionSelected
+              ]}
+              onPress={() => setSelectedIcon(icon)}
             >
-              {searchResults.map((chore) => (
-                <TouchableOpacity
-                  key={chore.id}
-                  style={styles.searchResultItem}
-                  onPress={() => handleSelectChoreTemplate(chore)}
-                >
-                  <Text style={styles.searchResultIcon}>{chore.icon}</Text>
-                  <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName}>{chore.name}</Text>
-                    <Text style={styles.searchResultCategory}>{chore.category}</Text>
-                  </View>
-                  <Ionicons name={getDirectionalIcon('arrow-forward')} size={20} color={colors.textMuted} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+              <Text style={styles.iconOptionText}>{icon}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {/* Due Date & Time Selector */}
