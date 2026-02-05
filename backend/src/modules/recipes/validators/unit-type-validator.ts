@@ -11,6 +11,30 @@ import {
   UNIT_TYPE_MAPPING,
 } from '../constants/units.constants';
 
+/**
+ * When quantityAmount is present it must be a finite number.
+ * Ensures count/unspecified unit types cannot send string amounts that would break Prisma.
+ * Applied on another property (e.g. name) so it is not gated by ValidateIf on quantityAmount.
+ */
+@ValidatorConstraint({
+  name: 'quantityAmountNumericWhenPresent',
+  async: false,
+})
+export class QuantityAmountNumericWhenPresentConstraint implements ValidatorConstraintInterface {
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    const obj = args.object as Record<string, unknown>;
+    const amount = obj.quantityAmount;
+    if (amount === undefined || amount === null) {
+      return true;
+    }
+    return typeof amount === 'number' && Number.isFinite(amount);
+  }
+
+  defaultMessage(): string {
+    return 'quantityAmount must be a number when provided';
+  }
+}
+
 /** Returns true if unit type is weight or volume and amount is a positive number; otherwise true (skip). */
 function isPositiveAmountRequiredForMeasuredType(
   unitType: UnitType | undefined,

@@ -16,16 +16,18 @@ import {
   IsValidUnitTypeMatch,
   HasPositiveAmountWhenMeasured,
   IngredientAmountRequiredForMeasuredConstraint,
+  QuantityAmountNumericWhenPresentConstraint,
 } from '../validators/unit-type-validator';
 
 export class IngredientInputDto {
   @IsString()
   @IsNotEmpty()
   @Validate(IngredientAmountRequiredForMeasuredConstraint)
+  @Validate(QuantityAmountNumericWhenPresentConstraint)
   name: string;
 
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @ValidateIf(
     (obj) =>
       obj.quantityUnitType === UnitType.WEIGHT ||
@@ -34,6 +36,11 @@ export class IngredientInputDto {
   @Min(0.0001, {
     message: 'Amount must be a positive number for weight or volume units',
   })
+  @ValidateIf(
+    (obj) =>
+      obj.quantityUnitType === UnitType.WEIGHT ||
+      obj.quantityUnitType === UnitType.VOLUME,
+  )
   @HasPositiveAmountWhenMeasured()
   quantityAmount?: number;
 

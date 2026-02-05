@@ -86,6 +86,24 @@ describe('IngredientInputDto Validation', () => {
       },
       false,
     ],
+    [
+      'non-numeric quantityAmount with count unit type fails',
+      {
+        name: 'Eggs',
+        quantityAmount: 'two',
+        quantityUnit: UnitCode.PIECE,
+        quantityUnitType: UnitType.COUNT,
+      },
+      false,
+    ],
+    [
+      'non-numeric quantityAmount with omitted unit type fails',
+      {
+        name: 'Salt',
+        quantityAmount: 'pinch',
+      },
+      false,
+    ],
   ])('%s', (_, input, shouldBeValid) => {
     it(`should ${shouldBeValid ? 'pass' : 'fail'} validation`, async () => {
       const dto = plainToInstance(IngredientInputDto, input);
