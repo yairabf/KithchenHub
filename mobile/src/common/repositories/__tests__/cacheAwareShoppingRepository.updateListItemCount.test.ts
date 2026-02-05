@@ -7,8 +7,8 @@
 import { CacheAwareShoppingRepository } from '../cacheAwareShoppingRepository';
 import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping';
 import { readCachedEntitiesForUpdate, updateEntityInCache } from '../cacheAwareRepository';
-import { cacheEvents } from '../../../utils/cacheEvents';
-import { getIsOnline } from '../../../utils/networkStatus';
+import { cacheEvents } from '../../utils/cacheEvents';
+import { getIsOnline } from '../../utils/networkStatus';
 
 // Mock dependencies
 jest.mock('../cacheAwareRepository', () => ({
@@ -18,24 +18,41 @@ jest.mock('../cacheAwareRepository', () => ({
   getCached: jest.fn(),
 }));
 
-jest.mock('../../../utils/cacheEvents', () => ({
+jest.mock('../../utils/cacheEvents', () => ({
   cacheEvents: {
     emitCacheChange: jest.fn(),
   },
 }));
 
-jest.mock('../../../utils/networkStatus', () => ({
+jest.mock('../../utils/networkStatus', () => ({
   getIsOnline: jest.fn(),
 }));
 
-jest.mock('../../services/api', () => ({
-  api: {
-    post: jest.fn(),
-    get: jest.fn(),
-    put: jest.fn(),
-    patch: jest.fn(),
-  },
-}));
+jest.mock('../../../services/api', () => {
+  const ApiError = class ApiError extends Error {
+    statusCode: number;
+    constructor(message: string, statusCode: number) {
+      super(message);
+      this.name = 'ApiError';
+      this.statusCode = statusCode;
+    }
+  };
+  return {
+    api: {
+      post: jest.fn(),
+      get: jest.fn(),
+      put: jest.fn(),
+      patch: jest.fn(),
+    },
+    ApiError,
+    NetworkError: class NetworkError extends Error {
+      constructor(message: string) {
+        super(message);
+        this.name = 'NetworkError';
+      }
+    },
+  };
+});
 
 describe('CacheAwareShoppingRepository.updateListItemCount', () => {
   let repository: CacheAwareShoppingRepository;
@@ -103,7 +120,7 @@ describe('CacheAwareShoppingRepository.updateListItemCount', () => {
           { id: 'item-3', listId: 'list-1', deletedAt: undefined },
         ],
         2,
-        true,
+        false, // list already has itemCount: 2, so no update needed
       ],
       [
         'should handle items with list.id reference',
@@ -212,19 +229,20 @@ describe('CacheAwareShoppingRepository.updateListItemCount', () => {
         .mockResolvedValueOnce([mockList]);
 
       (getIsOnline as jest.Mock).mockReturnValue(true);
-      mockService.updateList.mockRejectedValue(new Error('API Error'));
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const { ApiError } = require('../../../services/api');
+      mockService.updateList.mockRejectedValue(new ApiError('API Error', 500));
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       await (repository as any).updateListItemCount('list-1');
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Failed to update list item count via API'),
-        expect.any(Error)
+        expect.any(String)
       );
       // Should still update cache optimistically
       expect(updateEntityInCache).toHaveBeenCalled();
       
-      consoleErrorSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should not throw on cache read errors', async () => {
