@@ -220,6 +220,8 @@ interface Instruction {
 }
 ```
 
+Note: The API also supports canonical unit fields; see the Backend Ingredient Unit Schema section above.
+
 - **Features**:
   - Recipe title input
   - Category selection with horizontal scroll
@@ -231,11 +233,25 @@ interface Instruction {
     - Quantity, unit, and name inputs for each ingredient
     - Add/remove ingredients
     - Auto-populate from grocery database
-  - **Instructions section**:
-    - Numbered steps
-    - Add/remove step functionality
-    - Minimum 1 step required
-  - Form validation (title and at least one ingredient required)
+- **Instructions section**:
+  - Numbered steps
+  - Add/remove step functionality
+  - Minimum 1 step required
+- Form validation (title and at least one ingredient required)
+
+## Backend Ingredient Unit Schema
+
+The backend now supports a canonical unit system for ingredients. Legacy fields are still accepted and returned, but are deprecated.
+
+Canonical fields:
+- `quantityAmount?: number`
+- `quantityUnit?: string` (examples: `g`, `kg`, `ml`, `tbsp`, `cup`, `piece`)
+- `quantityUnitType?: string` (one of `weight`, `volume`, `count`)
+- `quantityModifier?: string` (free-form text, for cases like \"pinch\")
+
+Legacy fields (deprecated):
+- `quantity?: number`
+- `unit?: string`
 
 ## Recipe Image Uploads (Mobile)
 

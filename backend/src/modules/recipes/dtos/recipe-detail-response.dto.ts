@@ -1,6 +1,12 @@
 export class RecipeIngredientDto {
   name: string;
+  quantityAmount?: number;
+  quantityUnit?: string;
+  quantityUnitType?: string;
+  quantityModifier?: string;
+  /** @deprecated Use quantityAmount */
   quantity?: number;
+  /** @deprecated Use quantityUnit */
   unit?: string;
 }
 

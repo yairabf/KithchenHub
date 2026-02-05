@@ -158,14 +158,26 @@ describe('RecipesService - Soft-Delete Behavior', () => {
           imageUrl: createDto.imageUrl,
         }),
       );
-      expect(result).toEqual({
-        id: 'recipe-new-1',
-        title: 'New Pasta',
-        prepTime: 25,
-        ingredients: createDto.ingredients,
-        instructions: createDto.instructions,
-        imageUrl: 'https://example.com/pasta.jpg',
+      expect(result.id).toBe('recipe-new-1');
+      expect(result.title).toBe('New Pasta');
+      expect(result.prepTime).toBe(25);
+      expect(result.imageUrl).toBe('https://example.com/pasta.jpg');
+      expect(result.ingredients).toHaveLength(2);
+      expect(result.ingredients[0]).toMatchObject({
+        name: 'Spaghetti',
+        quantityAmount: 400,
+        quantityUnit: 'g',
+        quantity: 400,
+        unit: 'g',
       });
+      expect(result.ingredients[1]).toMatchObject({
+        name: 'Olive oil',
+        quantityAmount: 2,
+        quantityUnit: 'tbsp',
+        quantity: 2,
+        unit: 'tbsp',
+      });
+      expect(result.instructions).toEqual(createDto.instructions);
       expect(Array.isArray(result.ingredients)).toBe(true);
       expect(Array.isArray(result.instructions)).toBe(true);
     });
