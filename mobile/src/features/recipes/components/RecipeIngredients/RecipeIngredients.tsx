@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from './styles';
 import { colors, pastelColors } from '../../../../theme/colors';
-import { GroceryCard, GroceryCardContent, IngredientInfo } from '../../../../common/components/GroceryCard';
+import { ListItemCardWrapper } from '../../../../common/components/ListItemCardWrapper';
+import { GroceryCardContent, IngredientInfo } from '../../../../common/components/GroceryCard';
 import type { RecipeIngredientsProps } from './types';
 
 /**
@@ -52,7 +53,7 @@ export function RecipeIngredients({
           <View style={styles.ingredientsList}>
             {(recipe.ingredients || []).map((ingredient, index) => (
               <View key={ingredient.id || `ing-${index}`} style={styles.ingredientCardWrapper}>
-                <GroceryCard
+                <ListItemCardWrapper
                   backgroundColor={pastelColors[index % pastelColors.length]}
                 >
                   <GroceryCardContent
@@ -60,7 +61,7 @@ export function RecipeIngredients({
                     title={ingredient.name || ''}
                     subtitle={
                       <IngredientInfo
-                        quantity={ingredient.quantity}
+                        quantity={String(ingredient.quantity)}
                         unit={ingredient.unit}
                       />
                     }
@@ -81,7 +82,7 @@ export function RecipeIngredients({
                     }
                     imagePosition={ingredient.image ? 'left' : 'none'}
                   />
-                </GroceryCard>
+                </ListItemCardWrapper>
               </View>
             ))}
           </View>

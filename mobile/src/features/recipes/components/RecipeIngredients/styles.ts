@@ -17,6 +17,8 @@ export const styles = StyleSheet.create({
   },
   ingredientsList: {
     gap: spacing.md,
+    paddingHorizontal: spacing.sm, // Prevents shadow clipping (8px breathing room)
+    paddingVertical: spacing.xs,   // Prevents shadow clipping top/bottom
   },
   ingredientCardWrapper: {
     width: '100%',
