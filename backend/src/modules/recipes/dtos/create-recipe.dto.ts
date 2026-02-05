@@ -4,17 +4,59 @@ import {
   IsOptional,
   IsArray,
   IsNumber,
+  IsEnum,
+  ValidateIf,
+  Min,
+  ValidateNested,
+  Validate,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { UnitType, UnitCode } from '../constants/units.constants';
+import {
+  IsValidUnitTypeMatch,
+  HasPositiveAmountWhenMeasured,
+  IngredientAmountRequiredForMeasuredConstraint,
+} from '../validators/unit-type-validator';
 
 export class IngredientInputDto {
   @IsString()
   @IsNotEmpty()
+  @Validate(IngredientAmountRequiredForMeasuredConstraint)
   name: string;
 
   @IsNumber()
   @IsOptional()
+  @ValidateIf(
+    (obj) =>
+      obj.quantityUnitType === UnitType.WEIGHT ||
+      obj.quantityUnitType === UnitType.VOLUME,
+  )
+  @Min(0.0001, {
+    message: 'Amount must be a positive number for weight or volume units',
+  })
+  @HasPositiveAmountWhenMeasured()
+  quantityAmount?: number;
+
+  @IsOptional()
+  @IsEnum(UnitCode)
+  @ValidateIf((obj) => obj.quantityUnitType != null)
+  @IsValidUnitTypeMatch()
+  quantityUnit?: UnitCode;
+
+  @IsEnum(UnitType)
+  @IsOptional()
+  quantityUnitType?: UnitType;
+
+  @IsString()
+  @IsOptional()
+  quantityModifier?: string;
+
+  /** @deprecated Use quantityAmount, quantityUnit, quantityUnitType instead */
+  @IsNumber()
+  @IsOptional()
   quantity?: number;
 
+  /** @deprecated Use quantityUnit instead */
   @IsString()
   @IsOptional()
   unit?: string;
@@ -48,10 +90,14 @@ export class CreateRecipeDto {
 
   @IsArray()
   @IsNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => IngredientInputDto)
   ingredients: IngredientInputDto[];
 
   @IsArray()
   @IsNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => InstructionInputDto)
   instructions: InstructionInputDto[];
 
   @IsString()

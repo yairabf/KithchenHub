@@ -33,23 +33,44 @@ type RecipeEntityShape = {
   imageUrl?: string | null;
 };
 
+type IngredientRow = {
+  name: string;
+  quantityAmount?: number;
+  quantityUnit?: string;
+  quantityUnitType?: string;
+  quantityModifier?: string;
+  quantity?: number;
+  unit?: string;
+};
+
 /**
  * Maps a repository recipe entity to RecipeDetailDto.
  * Prisma JSON columns (ingredients, instructions) are untyped; we normalize to DTO shape here.
+ * Supports both new (quantityAmount/quantityUnit/quantityUnitType) and legacy (quantity/unit) ingredient shape.
  *
  * @param recipe - Recipe entity from repository
  * @returns RecipeDetailDto for API response
  */
 function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
+  const ingredients: RecipeIngredientDto[] = Array.isArray(recipe.ingredients)
+    ? (recipe.ingredients as IngredientRow[]).map((ing) => ({
+        name: ing.name,
+        quantityAmount: ing.quantityAmount ?? ing.quantity,
+        quantityUnit: ing.quantityUnit ?? ing.unit,
+        quantityUnitType: ing.quantityUnitType,
+        quantityModifier: ing.quantityModifier,
+        quantity: ing.quantity,
+        unit: ing.unit,
+      }))
+    : [];
+
   return {
     id: recipe.id,
     title: recipe.title,
     category: recipe.category ?? undefined,
     prepTime: recipe.prepTime ?? undefined,
     cookTime: recipe.cookTime ?? undefined,
-    ingredients: Array.isArray(recipe.ingredients)
-      ? (recipe.ingredients as unknown as RecipeIngredientDto[])
-      : [],
+    ingredients,
     instructions: Array.isArray(recipe.instructions)
       ? (recipe.instructions as unknown as RecipeInstructionDto[])
       : [],
@@ -270,13 +291,13 @@ export class RecipesService {
       : [];
 
     const itemsAdded = await Promise.all(
-      ingredients.map(async (ingredient: any) =>
+      ingredients.map(async (ingredient: IngredientRow) =>
         this.prisma.shoppingItem.create({
           data: {
             listId: dto.targetListId,
             name: ingredient.name,
-            quantity: ingredient.quantity || 1,
-            unit: ingredient.unit,
+            quantity: ingredient.quantityAmount ?? ingredient.quantity ?? 1,
+            unit: ingredient.quantityUnit ?? ingredient.unit,
             category: 'Recipe Ingredients',
           },
         }),
