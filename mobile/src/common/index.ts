@@ -11,13 +11,11 @@ export type { DateTimePickerProps } from './components/DateTimePicker';
 
 // Grocery card components
 export {
-  GroceryCard,
   GroceryCardContent,
   QuantityControls,
   IngredientInfo,
 } from './components/GroceryCard';
 export type {
-  GroceryCardProps,
   GroceryCardContentProps,
   QuantityControlsProps,
   IngredientInfoProps,

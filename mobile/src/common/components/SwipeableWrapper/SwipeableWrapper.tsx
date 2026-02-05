@@ -26,7 +26,6 @@ export function SwipeableWrapper({
   children,
   onSwipeDelete,
   disabled = false,
-  backgroundColor = colors.surface,
   borderRadius: customBorderRadius,
 }: SwipeableWrapperProps) {
   const translateX = useSharedValue(0);
@@ -161,11 +160,6 @@ export function SwipeableWrapper({
     [effectiveBorderRadius]
   );
 
-  const cardStyle = useMemo(
-    () => ({ backgroundColor, borderRadius: effectiveBorderRadius }),
-    [backgroundColor, effectiveBorderRadius]
-  );
-
   return (
     <View style={styles.container}>
       {/* Left delete background (swipe right) */}
@@ -192,7 +186,8 @@ export function SwipeableWrapper({
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[
           styles.card,
-          cardStyle,
+          // Apply border radius to the animated view to match content
+          borderRadiusStyle,
           cardAnimatedStyle
         ]}>
           {children}

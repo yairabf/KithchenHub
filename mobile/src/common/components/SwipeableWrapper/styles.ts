@@ -7,7 +7,7 @@ export const DELETE_THRESHOLD = SCREEN_WIDTH * 0.3; // 30% of screen width
 export const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    marginBottom: 8,
+    // marginBottom removed - layout should be handled by parent list/container
   },
   deleteBackground: {
     position: 'absolute',
@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
     right: 0,
   },
   card: {
-    borderRadius: borderRadius.lg,
-    ...shadows.md,
+    // Styling handled by child component (ListItemCardWrapper)
+    // Only transform is applied via animated styles
   },
 });
