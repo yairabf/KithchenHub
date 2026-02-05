@@ -1,6 +1,12 @@
 import { StyleSheet } from 'react-native';
 import { colors, shadows, spacing } from '../../../../theme';
 
+/** Minimum height for shopping list item cards so every card has uniform dimensions */
+const SHOPPING_ITEM_CARD_MIN_HEIGHT = 82;
+
+/** 12px - used for list header margin, drawer gap, list card padding/gap, search bar margin */
+const SPACING_12 = spacing.sm + spacing.xs;
+
 export const styles = StyleSheet.create({
   leftColumn: {
     flex: 1,
@@ -9,7 +15,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: SPACING_12,
   },
   listLabel: {
     fontSize: 16,
@@ -28,16 +34,16 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
   },
   listsDrawerContent: {
-    gap: 12,
-    paddingVertical: 4,
+    gap: SPACING_12,
+    paddingVertical: spacing.xs,
   },
   listCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    gap: 12,
+    borderRadius: SPACING_12,
+    padding: SPACING_12,
+    gap: SPACING_12,
     minWidth: 180,
     borderWidth: 2,
     borderColor: 'transparent',
@@ -101,9 +107,9 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
+    borderRadius: SPACING_12,
+    padding: SPACING_12,
+    gap: spacing.sm,
     minWidth: 140,
     borderWidth: 2,
     borderColor: colors.border,
@@ -115,10 +121,15 @@ export const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   searchBarContainer: {
-    marginBottom: 12,
+    marginBottom: SPACING_12,
   },
   itemsList: {
-    gap: 8,
+    gap: spacing.md, // 16px spacing between items for better visual separation
+  },
+  /** Ensures every shopping item card has the same width and height for a uniform list */
+  shoppingItemCard: {
+    width: '100%',
+    minHeight: SHOPPING_ITEM_CARD_MIN_HEIGHT,
   },
   checkedCard: {
     opacity: 0.65,
@@ -126,10 +137,5 @@ export const styles = StyleSheet.create({
   checkedTitle: {
     color: colors.textMuted,
     textDecorationLine: 'line-through',
-  },
-  syncStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
   },
 });

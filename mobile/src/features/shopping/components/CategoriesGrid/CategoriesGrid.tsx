@@ -11,6 +11,7 @@ import { isValidImageUrl } from '../../../../common/utils/imageUtils';
 import { colors, spacing } from '../../../../theme';
 import { styles } from './styles';
 import { CategoriesGridProps } from './types';
+import { CategoriesGridItem } from './CategoriesGridItem';
 
 const INITIAL_CATEGORIES_LIMIT = 9;
 
@@ -18,13 +19,13 @@ const INITIAL_CATEGORIES_LIMIT = 9;
  * Category overlay component that displays item count and name over category background.
  * Used consistently across icon, image, and placeholder rendering paths.
  */
-function CategoryOverlay({ 
-  backgroundColor, 
-  itemCount, 
-  name 
-}: { 
-  backgroundColor: string; 
-  itemCount: number; 
+function CategoryOverlay({
+  backgroundColor,
+  itemCount,
+  name
+}: {
+  backgroundColor: string;
+  itemCount: number;
   name: string;
 }) {
   return (
@@ -68,7 +69,7 @@ function getCategoryIcon(categoryId: string): ReturnType<typeof require> | null 
       case 'condiments': iconResult = require('../../../../../assets/categories/condiments.png'); break;
       case 'spices': iconResult = require('../../../../../assets/categories/spices.png'); break;
       case 'household': iconResult = require('../../../../../assets/categories/household.png'); break;
-      default: 
+      default:
         return null;
     }
     return iconResult;
@@ -84,7 +85,7 @@ export function CategoriesGrid({
   onSeeAllPress,
 }: CategoriesGridProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   // Deduplicate categories by ID to prevent duplicates
   // This is defensive programming - even though buildCategoriesFromGroceries deduplicates,
   // this ensures no duplicates slip through from other data sources
@@ -98,7 +99,7 @@ export function CategoriesGrid({
       return true;
     });
   }, [categories]);
-  
+
   const hasMoreCategories = uniqueCategories.length > INITIAL_CATEGORIES_LIMIT;
   const displayedCategories = isExpanded
     ? uniqueCategories
@@ -117,61 +118,14 @@ export function CategoriesGrid({
         </TouchableOpacity>
       </View>
       <View style={styles.categoriesGrid}>
-        {displayedCategories.map((category) => {
-          const categoryIcon = getCategoryIcon(category.id);
-          const hasImage = isValidImageUrl(category.image);
-          const hasIcon = categoryIcon !== null;
-          
-          return (
-            <TouchableOpacity
-              key={category.id}
-              style={styles.categoryTile}
-              onPress={() => onCategoryPress(category.name)}
-              activeOpacity={0.8}
-            >
-              {hasIcon ? (
-                <ImageBackground
-                  testID={`category-icon-background-${category.id}`}
-                  source={categoryIcon}
-                  style={styles.categoryBg}
-                  imageStyle={styles.categoryBgImage}
-                  resizeMode="cover"
-                >
-                  <CategoryOverlay 
-                    backgroundColor={category.backgroundColor}
-                    itemCount={category.itemCount}
-                    name={category.name}
-                  />
-                </ImageBackground>
-              ) : hasImage ? (
-                <ImageBackground
-                  testID={`category-image-background-${category.id}`}
-                  source={{ uri: category.image }}
-                  style={styles.categoryBg}
-                  imageStyle={styles.categoryBgImage}
-                  resizeMode="cover"
-                >
-                  <CategoryOverlay 
-                    backgroundColor={category.backgroundColor}
-                    itemCount={category.itemCount}
-                    name={category.name}
-                  />
-                </ImageBackground>
-              ) : (
-                <View 
-                  testID={`category-no-image-${category.id}`}
-                  style={[styles.categoryBg, { backgroundColor: category.backgroundColor }]}
-                >
-                  <CategoryOverlay 
-                    backgroundColor={category.backgroundColor}
-                    itemCount={category.itemCount}
-                    name={category.name}
-                  />
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+        {displayedCategories.map((category) => (
+          <CategoriesGridItem
+            key={category.id}
+            category={category}
+            onPress={() => onCategoryPress(category.name)}
+            categoryIcon={getCategoryIcon(category.id)}
+          />
+        ))}
       </View>
       {hasMoreCategories && (
         <TouchableOpacity

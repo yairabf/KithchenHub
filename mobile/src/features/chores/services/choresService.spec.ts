@@ -77,7 +77,7 @@ describe('LocalChoresService', () => {
     it('should persist chore to guestStorage', async () => {
       (guestStorage.getChores as jest.Mock).mockResolvedValue([]);
       
-      const chore = await service.createChore({ name: 'Test Chore' });
+      const chore = await service.createChore({ title: 'Test Chore' });
       
       // Verify storage was called
       expect(guestStorage.saveChores).toHaveBeenCalled();
@@ -86,7 +86,7 @@ describe('LocalChoresService', () => {
       // Verify chore can be retrieved
       (guestStorage.getChores as jest.Mock).mockResolvedValue([chore]);
       const retrieved = await service.getChores();
-      expect(retrieved).toContainEqual(expect.objectContaining({ name: 'Test Chore' }));
+      expect(retrieved).toContainEqual(expect.objectContaining({ title: 'Test Chore' }));
     });
   });
 });

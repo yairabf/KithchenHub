@@ -11,9 +11,10 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, pastelColors, spacing } from '../../../theme';
+import { colors, pastelColors, spacing, borderRadius } from '../../../theme';
 import { ProgressRing } from '../components/ProgressRing';
 import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
+import { ListItemCardWrapper } from '../../../common/components/ListItemCardWrapper';
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
@@ -242,14 +243,15 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   // Calculate progress (only for today's chores)
   const progress = useMemo(() => {
     const total = todayChores.length;
-    const completed = todayChores.filter(c => c.completed).length;
-    const progressValue = total > 0 ? (completed / total) * 100 : 0;
+    const completedCount = todayChores.filter(c => c.isCompleted).length;
+    const progressValue = total > 0 ? (completedCount / total) * 100 : 0;
+    
     // #region agent log
     console.log('[ChoresScreen] Progress calculated:', {
       total,
-      completed,
+      completed: completedCount,
       progressValue,
-      todayChores: todayChores.map(c => ({ name: c.name, completed: c.completed }))
+      todayChores: todayChores.map(c => ({ title: c.title, isCompleted: c.isCompleted }))
     });
     // #endregion
     return progressValue;
@@ -273,57 +275,59 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       <SwipeableWrapper
         key={chore.id}
         onSwipeDelete={() => handleDeleteChore(chore.id)}
-        backgroundColor={bgColor}
+        borderRadius={borderRadius.xxl}
       >
-        <TouchableOpacity
-          style={styles.choreCard}
+        <ListItemCardWrapper
+          backgroundColor={bgColor}
           onPress={() => toggleChore(chore.id)}
-          activeOpacity={0.7}
+          testID={`chore-card-${chore.id}`}
         >
-          <TouchableOpacity
-            style={styles.choreCardEditButton}
-            onPress={handleEditPress}
-            activeOpacity={0.6}
-          >
-            <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <View style={styles.choreCardIcon}>
-            <Text style={styles.choreCardIconText}>{chore.icon || '📋'}</Text>
-            {/* Sync status indicator in icon area */}
-            {(syncStatus.isPending || syncStatus.isFailed) && (
-              <View style={styles.syncStatusContainer}>
-                <SyncStatusIndicator status={indicatorStatus} size="small" />
-              </View>
-            )}
-          </View>
-          <View style={styles.choreCardContent}>
-            <Text
-              style={[styles.choreCardName, chore.isCompleted && styles.choreCompleted]}
-              numberOfLines={1}
+          <View style={styles.choreCard}>
+            <TouchableOpacity
+              style={styles.choreCardEditButton}
+              onPress={handleEditPress}
+              activeOpacity={0.6}
             >
-              {chore.title}
-            </Text>
-            <Text style={styles.choreCardTime} numberOfLines={1}>
-              {chore.dueDate} {chore.dueTime}
-            </Text>
-          </View>
-          {chore.assignee && (
-            <View style={styles.choreCardAssignee}>
-              <Text style={styles.choreCardAssigneeText} numberOfLines={1}>
-                {chore.assignee}
+              <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <View style={styles.choreCardIcon}>
+              <Text style={styles.choreCardIconText}>{chore.icon || '📋'}</Text>
+              {/* Sync status indicator in icon area */}
+              {(syncStatus.isPending || syncStatus.isFailed) && (
+                <View style={styles.syncStatusContainer}>
+                  <SyncStatusIndicator status={indicatorStatus} size="small" />
+                </View>
+              )}
+            </View>
+            <View style={styles.choreCardContent}>
+              <Text
+                style={[styles.choreCardName, chore.isCompleted && styles.choreCompleted]}
+                numberOfLines={1}
+              >
+                {chore.title}
+              </Text>
+              <Text style={styles.choreCardTime} numberOfLines={1}>
+                {chore.dueDate} {chore.dueTime}
               </Text>
             </View>
-          )}
-          <View style={styles.choreCardCheck}>
-            {chore.isCompleted ? (
-              <View style={styles.checkmark}>
-                <Ionicons name="checkmark" size={18} color={colors.success} />
+            {chore.assignee && (
+              <View style={styles.choreCardAssignee}>
+                <Text style={styles.choreCardAssigneeText} numberOfLines={1}>
+                  {chore.assignee}
+                </Text>
               </View>
-            ) : (
-              <View style={styles.uncheckmark} />
             )}
+            <View style={styles.choreCardCheck}>
+              {chore.isCompleted ? (
+                <View style={styles.checkmark}>
+                  <Ionicons name="checkmark" size={18} color={colors.success} />
+                </View>
+              ) : (
+                <View style={styles.uncheckmark} />
+              )}
+            </View>
           </View>
-        </TouchableOpacity>
+        </ListItemCardWrapper>
       </SwipeableWrapper>
     );
   });

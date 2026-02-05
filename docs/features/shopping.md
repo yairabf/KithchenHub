@@ -148,14 +148,7 @@ useEffect(() => {
   - Search bar for finding groceries
   - Swipeable shopping item rows with quantity controls
   - "New List" button
-  - **Sync Status Indicators** (signed-in users only):
-    - Each shopping item displays a sync status indicator next to quantity controls
-    - Shows pending state (clock icon) when item is queued for sync
-    - Shows failed state (warning icon) when sync has permanently failed
-    - Hidden when item is confirmed (synced successfully)
-    - Uses `useEntitySyncStatusWithEntity` hook per item to determine status
-    - Integrates with sync queue system for real-time status updates
-    - Implemented via `ShoppingItemCard` component to properly use React hooks
+  - **Note:** In-card sync status indicator was removed from shopping item rows; sync is still handled by the API when signed in. Sync status can be surfaced elsewhere (e.g. global or list-level) if needed.
 
 ### GrocerySearchBar
 
@@ -882,7 +875,7 @@ The sync queue processor implements **partial batch recovery** and **crash-safe 
 - `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueue/storage`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`) and crash-safe checkpoints (`SyncCheckpoint`)
 - `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueue/processor`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects per-item and per-checkpoint backoff delays, and handles error classification (network/auth/validation/server errors). **Partial Batch Recovery**: Retries only failed items after partial failures by matching `operationId`s from backend response. **Checkpointing**: Uses lightweight `SyncCheckpoint` records to re-drive in-flight batches after crashes without deadlocking. Safety-first logic: never deletes queue items without explicit confirmation in `succeeded` array. Handles confirmed responses even on error status codes. Backward compatible with old servers (missing `succeeded` array)
 - `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
-- `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Used by ShoppingItemCard to display sync status indicators
+- `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Not currently used in ShoppingItemCard (in-card sync indicator was removed); available for list-level or global sync UI if needed.
 - `searchSortingUtils` - Search sorting utilities (`mobile/src/features/shopping/components/GrocerySearchBar/searchSortingUtils.ts`) - Provides intelligent sorting for search results
   - `compareGroceryItemsForSearch()` - Main comparison function for sorting grocery items
   - Prioritizes custom items over catalog items, especially exact matches
@@ -895,7 +888,7 @@ The sync queue processor implements **partial batch recovery** and **crash-safe 
   - Categories: fruits, vegetables, dairy, meat, seafood, bakery, grains, snacks, nuts, other
   - Includes `normalizeShoppingCategory()` utility for category validation
   - Used by CategoryPicker component and custom item creation flows
-- `SyncStatusIndicator` - Sync status indicator component (`mobile/src/common/components/SyncStatusIndicator/`) - Visual indicator component showing pending, confirmed, or failed sync status. Displays clock icon for pending, warning icon for failed, checkmark for confirmed
+- `SyncStatusIndicator` - Sync status indicator component (`mobile/src/common/components/SyncStatusIndicator/`) - Visual indicator component showing pending, confirmed, or failed sync status. Not used on shopping item cards; available for list-level or global sync UI.
 - `determineIndicatorStatus` - Status determination utility (`mobile/src/common/utils/syncStatusUtils.ts`) - Utility function that determines indicator status from sync status flags (failed > pending > confirmed priority)
 
 ## UI Flow

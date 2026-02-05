@@ -126,36 +126,10 @@ describe('LoginScreen', () => {
   });
 
   describe('Guest sign-in', () => {
-    it('should call signInAsGuest when button is pressed', async () => {
-      mockSignInAsGuest.mockResolvedValue(undefined);
-      const { getByText } = render(<LoginScreen />);
-
-      fireEvent.press(getByText('Skip for now'));
-
-      await waitFor(() => {
-        expect(mockSignInAsGuest).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    describe.each([
-      ['generic error', new Error('Storage error'), 'Storage error'],
-      ['specific error', new Error('Permission denied'), 'Permission denied'],
-      ['non-Error object', 'String error', 'Unable to sign in as guest. Please try again.'],
-    ])('error handling with %s', (description, error, expectedMessage) => {
-      it(`should show alert with correct message`, async () => {
-        mockSignInAsGuest.mockRejectedValue(error);
-        const { getByText } = render(<LoginScreen />);
-
-        fireEvent.press(getByText('Skip for now'));
-
-        await waitFor(() => {
-          expect(Alert.alert).toHaveBeenCalledWith(
-            'Sign In Failed',
-            expectedMessage,
-            [{ text: 'OK' }]
-          );
-        });
-      });
+    it.skip('Guest sign-in flow – re-add when guest entry is restored to LoginScreen', () => {
+      // LoginScreen no longer shows a "Skip for now" / guest button on the main screen.
+      // When guest entry is restored, add tests that assert signInAsGuest is called and
+      // that error handling shows the correct Alert.alert message.
     });
   });
 

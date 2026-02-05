@@ -113,7 +113,7 @@ describe('ImportService', () => {
 
             expect(data.recipes).toBeDefined();
             expect(data.recipes?.length).toBe(mockRecipes.length);
-            expect(data.recipes?.[0].title).toBe(mockRecipes[0].name);
+            expect(data.recipes?.[0].title).toBe(mockRecipes[0].title);
 
             expect(data.shoppingLists).toBeDefined();
             expect(data.shoppingLists?.length).toBe(mockShoppingLists.length);
@@ -137,7 +137,7 @@ describe('ImportService', () => {
             const mockRecipe = mockRecipes[0];
 
             expect(firstRecipe?.id).toBe(mockRecipe.localId);
-            expect(firstRecipe?.title).toBe(mockRecipe.name);
+            expect(firstRecipe?.title).toBe(mockRecipe.title);
             // Mock recipe has "20 min", we might map to undefined or try to parse if we added logic.
             // For now, key fields verification:
             expect(firstRecipe?.ingredients.length).toBe(mockRecipe.ingredients.length);

@@ -25,11 +25,11 @@ jest.mock('react-native', () => {
 });
 
 // Mock useClickOutside hook
-jest.mock('../../../../common/hooks/useClickOutside', () => ({
+jest.mock('../../../../../common/hooks/useClickOutside', () => ({
   useClickOutside: jest.fn(),
 }));
 
-import { useClickOutside } from '../../../../common/hooks/useClickOutside';
+import { useClickOutside } from '../../../../../common/hooks/useClickOutside';
 
 const mockUseClickOutside = useClickOutside as jest.MockedFunction<typeof useClickOutside>;
 
@@ -192,8 +192,13 @@ describe('GrocerySearchBar', () => {
         expect(mockUseClickOutside).toHaveBeenCalled();
       });
 
-      const callArgs = mockUseClickOutside.mock.calls[0][0];
-      expect(callArgs.enabled).toBe(true);
+      const calls = mockUseClickOutside.mock.calls;
+      const callWithEnabled = calls.find((c) => c[0]?.enabled === true);
+      expect(callWithEnabled).toBeDefined();
+      const callArgs = callWithEnabled?.[0];
+      if (callArgs == null) {
+        throw new Error('Expected at least one useClickOutside call with enabled=true');
+      }
       expect(callArgs.testId).toBe('grocery-search-container');
       expect(callArgs.dropdownTestId).toBe('grocery-search-dropdown');
       expect(typeof callArgs.onOutsideClick).toBe('function');
@@ -245,7 +250,7 @@ describe('GrocerySearchBar', () => {
     });
 
     it('should clear input and close dropdown when clear button is pressed', async () => {
-      const { getByPlaceholderText, queryByTestId } = render(
+      const { getByPlaceholderText, getByTestId, queryByTestId } = render(
         <GrocerySearchBar
           items={mockItems}
           onSelectItem={mockOnSelectItem}
@@ -261,18 +266,14 @@ describe('GrocerySearchBar', () => {
         expect(dropdown).toBeTruthy();
       });
 
-      // Find and press the clear button (Ionicons close-circle)
-      // In React Native Testing Library, we need to find the parent TouchableOpacity
-      const clearButton = getByPlaceholderText('Search groceries to add...').parent?.parent;
-      if (clearButton) {
-        fireEvent.press(clearButton);
+      const clearButton = getByTestId('grocery-search-clear');
+      fireEvent.press(clearButton);
 
-        await waitFor(() => {
-          expect(input.props.value).toBe('');
-          const dropdown = queryByTestId('grocery-search-dropdown');
-          expect(dropdown).toBeFalsy();
-        });
-      }
+      await waitFor(() => {
+        expect(input.props.value).toBe('');
+        const dropdown = queryByTestId('grocery-search-dropdown');
+        expect(dropdown).toBeFalsy();
+      });
     });
   });
 

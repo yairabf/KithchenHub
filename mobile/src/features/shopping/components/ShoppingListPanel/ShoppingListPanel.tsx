@@ -7,19 +7,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
-import { GroceryCard, GroceryCardContent, QuantityControls } from '../../../../common/components/GroceryCard';
+import { ListItemCardWrapper } from '../../../../common/components/ListItemCardWrapper';
+import { GroceryCardContent, QuantityControls } from '../../../../common/components/GroceryCard';
 import { GrocerySearchBar } from '../GrocerySearchBar';
-import { useEntitySyncStatusWithEntity } from '../../../../common/hooks/useSyncStatus';
-import { SyncStatusIndicator } from '../../../../common/components/SyncStatusIndicator';
-import { determineIndicatorStatus } from '../../../../common/utils/syncStatusUtils';
 import { colors, borderRadius, pastelColors } from '../../../../theme';
 import { styles } from './styles';
-import { ShoppingListPanelProps } from './types';
-import type { ShoppingItem } from '../../../../mocks/shopping';
+import { ShoppingListPanelProps, ShoppingItemCardProps } from './types';
 
 /**
  * Shopping Item Card Component
- * Separate component to allow hook usage
+ * Renders a single list item with swipe-to-delete and quantity controls.
  */
 function ShoppingItemCard({
   item,
@@ -28,28 +25,19 @@ function ShoppingItemCard({
   onDeleteItem,
   onQuantityChange,
   onToggleItemChecked,
-}: {
-  item: ShoppingItem;
-  index: number;
-  bgColor: string;
-  onDeleteItem: (id: string) => void;
-  onQuantityChange: (id: string, delta: number) => void;
-  onToggleItemChecked: (id: string) => void;
-}) {
+}: ShoppingItemCardProps) {
   const isChecked = item.isChecked;
-  
-  // Check sync status for signed-in users
-  const syncStatus = useEntitySyncStatusWithEntity('shoppingItems', item);
-  const indicatorStatus = determineIndicatorStatus(syncStatus);
 
   return (
     <SwipeableWrapper
       key={item.id}
       onSwipeDelete={() => onDeleteItem(item.id)}
-      backgroundColor={bgColor}
       borderRadius={borderRadius.xxl}
     >
-      <GroceryCard backgroundColor={bgColor} style={isChecked ? styles.checkedCard : undefined}>
+      <ListItemCardWrapper
+        backgroundColor={bgColor}
+        style={[styles.shoppingItemCard, isChecked ? styles.checkedCard : undefined]}
+      >
         <GroceryCardContent
           image={item.image}
           title={item.name}
@@ -57,21 +45,15 @@ function ShoppingItemCard({
           titleStyle={isChecked ? styles.checkedTitle : undefined}
           onPress={() => onToggleItemChecked(item.id)}
           rightElement={
-            <View style={styles.syncStatusRow}>
-              {/* Sync status indicator */}
-              {(syncStatus.isPending || syncStatus.isFailed) && (
-                <SyncStatusIndicator status={indicatorStatus} size="small" />
-              )}
-              <QuantityControls
-                quantity={item.quantity}
-                onIncrement={() => onQuantityChange(item.id, 1)}
-                onDecrement={() => onQuantityChange(item.id, -1)}
-                minQuantity={1}
-              />
-            </View>
+            <QuantityControls
+              quantity={item.quantity}
+              onIncrement={() => onQuantityChange(item.id, 1)}
+              onDecrement={() => onQuantityChange(item.id, -1)}
+              minQuantity={1}
+            />
           }
         />
-      </GroceryCard>
+      </ListItemCardWrapper>
     </SwipeableWrapper>
   );
 }
@@ -95,6 +77,7 @@ export function ShoppingListPanel({
 
     return (
       <ShoppingItemCard
+        key={item.id}
         item={item}
         index={index}
         bgColor={bgColor}

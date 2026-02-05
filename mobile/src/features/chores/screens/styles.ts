@@ -49,14 +49,14 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  // Unified Chore Cards
+  // Unified Chore Cards - same container look as ShoppingItemCard (GroceryCard)
   choreList: {
     gap: spacing.sm,
   },
   choreCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    // Styling handled by ListItemCardWrapper
   },
   choreCardIcon: {
     marginRight: spacing.sm,

@@ -102,7 +102,7 @@ describe('mapUserResponseToUser', () => {
       id: 'user-123',
       email: 'test@example.com',
       name: 'Test User',
-      photoUrl: 'https://example.com/avatar.jpg',
+      avatarUrl: 'https://example.com/avatar.jpg',
       householdId: 'household-123',
       isGuest: false,
     });
