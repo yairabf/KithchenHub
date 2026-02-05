@@ -67,7 +67,7 @@ type RecipeApiResponse = {
  */
 function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
   // Map ingredients: backend RecipeIngredientDto[] -> frontend Ingredient[]
-  const ingredients = dto.ingredients.map((ing, index) => ({
+  const ingredients = (dto.ingredients ?? []).map((ing, index) => ({
     id: `ing-${index}`,
     quantity: ing.quantity ?? 0,
     unit: ing.unit || '',
@@ -75,7 +75,7 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
   }));
 
   // Map instructions: backend RecipeInstructionDto[] -> frontend Instruction[]
-  const instructions = dto.instructions.map((inst, index) => ({
+  const instructions = (dto.instructions ?? []).map((inst, index) => ({
     id: `inst-${index}`,
     instruction: inst.instruction,
   }));

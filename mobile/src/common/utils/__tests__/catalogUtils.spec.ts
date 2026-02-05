@@ -185,7 +185,7 @@ describe('buildCategoriesFromGroceries', () => {
     expect(categories1[0].localId).toBe(categories2[0].localId);
   });
 
-  it('should use first item image as category fallback image', () => {
+  it('should set category image to empty string (CategoriesGrid uses icon assets)', () => {
     const items: GroceryItem[] = [
       { id: '1', name: 'Apple', image: 'apple.jpg', category: 'Fruits', defaultQuantity: 1 },
       { id: '2', name: 'Banana', image: '', category: 'Fruits', defaultQuantity: 1 },
@@ -193,7 +193,7 @@ describe('buildCategoriesFromGroceries', () => {
 
     const categories = buildCategoriesFromGroceries(items);
 
-    expect(categories[0].image).toBe('apple.jpg');
+    expect(categories[0].image).toBe('');
   });
 
   it('should use empty string if no items have images', () => {
@@ -207,46 +207,19 @@ describe('buildCategoriesFromGroceries', () => {
   });
 
   describe.each([
-    ['empty string', '', ''],
-    ['whitespace only', '   ', ''],
-    ['whitespace with tabs', '\t\n\r', ''],
-    ['valid image', 'apple.jpg', 'apple.jpg'],
-    ['image with leading whitespace', '  apple.jpg', '  apple.jpg'], // Image is stored as-is, validation just checks if it's valid
-    ['image with trailing whitespace', 'apple.jpg  ', 'apple.jpg  '], // Image is stored as-is
-    ['image with both leading and trailing whitespace', '  apple.jpg  ', '  apple.jpg  '], // Image is stored as-is
-  ])('image validation: %s', (description, imageInput, expectedImage) => {
-    it(`should handle ${description} correctly`, () => {
+    ['empty string', ''],
+    ['whitespace only', '   '],
+    ['valid image', 'apple.jpg'],
+  ])('image validation: %s', (description, imageInput) => {
+    it(`should set category image to empty string regardless of item image (${description})`, () => {
       const items: GroceryItem[] = [
         { id: '1', name: 'Apple', image: imageInput, category: 'Fruits', defaultQuantity: 1 },
       ];
 
       const categories = buildCategoriesFromGroceries(items);
 
-      expect(categories[0].image).toBe(expectedImage);
+      expect(categories[0].image).toBe('');
     });
-  });
-
-  it('should use first valid image when multiple items have images', () => {
-    const items: GroceryItem[] = [
-      { id: '1', name: 'Apple', image: 'apple.jpg', category: 'Fruits', defaultQuantity: 1 },
-      { id: '2', name: 'Banana', image: 'banana.jpg', category: 'Fruits', defaultQuantity: 1 },
-      { id: '3', name: 'Orange', image: '', category: 'Fruits', defaultQuantity: 1 },
-    ];
-
-    const categories = buildCategoriesFromGroceries(items);
-
-    expect(categories[0].image).toBe('apple.jpg');
-  });
-
-  it('should skip items with whitespace-only images and use first valid image', () => {
-    const items: GroceryItem[] = [
-      { id: '1', name: 'Apple', image: '   ', category: 'Fruits', defaultQuantity: 1 },
-      { id: '2', name: 'Banana', image: 'banana.jpg', category: 'Fruits', defaultQuantity: 1 },
-    ];
-
-    const categories = buildCategoriesFromGroceries(items);
-
-    expect(categories[0].image).toBe('banana.jpg');
   });
 });
 

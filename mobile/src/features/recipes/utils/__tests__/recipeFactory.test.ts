@@ -40,7 +40,7 @@ describe('recipeFactory', () => {
             const recipe = createRecipe(recipeData);
 
             expect(recipe.cookTime).toBeUndefined(); // cookTime is optional number
-            expect(recipe.category).toBe('Dinner');
+            expect(recipe.category).toBe('');
         });
     });
 });

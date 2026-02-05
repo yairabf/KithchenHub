@@ -7,6 +7,7 @@ import { api } from '../../../services/api';
 import { mockRecipes } from '../../../mocks/recipes';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import { isDevMode } from '../../../common/utils/devMode';
+import { invalidateCache } from '../../../common/repositories/cacheAwareRepository';
 
 // Mock AsyncStorage (required for cache-aware repository)
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -80,7 +81,7 @@ describe('Recipe Services', () => {
 
         it('createRecipe returns a new recipe object with createdAt and persists to guestStorage', async () => {
             (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
-            const newRecipeData = { name: 'Test Recipe' };
+            const newRecipeData = { title: 'Test Recipe' };
             const beforeCreation = Date.now();
             const recipe = await service.createRecipe(newRecipeData);
             const afterCreation = Date.now();
@@ -88,7 +89,7 @@ describe('Recipe Services', () => {
             expect(recipe.id).toBeDefined();
             expect(recipe.localId).toBeDefined();
             expect(recipe.title).toBe('Test Recipe');
-            expect(recipe.category).toBe('Dinner'); // Default
+            expect(recipe.category).toBeUndefined();
             // Verify createdAt is set and is a valid Date
             expect(recipe.createdAt).toBeInstanceOf(Date);
             expect(recipe.createdAt!.getTime()).toBeGreaterThanOrEqual(beforeCreation);
@@ -99,8 +100,8 @@ describe('Recipe Services', () => {
 
         describe.each([
             [
-                'updates name and imageUrl',
-                { name: 'Updated Recipe', imageUrl: 'https://example.com/image.jpg' },
+                'updates title and imageUrl',
+                { title: 'Updated Recipe', imageUrl: 'https://example.com/image.jpg' },
             ],
             [
                 'updates description only',
@@ -111,8 +112,8 @@ describe('Recipe Services', () => {
                 const existingRecipe = {
                     id: 'local-1',
                     localId: 'uuid-1',
-                    name: 'Original Recipe',
-                    cookTime: '30 min',
+                    title: 'Original Recipe',
+                    cookTime: 30,
                     category: 'Dinner',
                     ingredients: [],
                     instructions: [],
@@ -131,7 +132,7 @@ describe('Recipe Services', () => {
         it('updateRecipe throws error when recipe not found', async () => {
             (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
 
-            await expect(service.updateRecipe('non-existent', { name: 'Test' })).rejects.toThrow(
+            await expect(service.updateRecipe('non-existent', { title: 'Test' })).rejects.toThrow(
                 'Recipe not found: non-existent'
             );
         });
@@ -199,8 +200,8 @@ describe('Recipe Services', () => {
                 expect(recipes).toHaveLength(mockRecipes.length);
                 expect(guestStorage.saveRecipes).toHaveBeenCalledWith(
                     expect.arrayContaining([
-                        expect.objectContaining({ name: 'Pancakes' }),
-                        expect.objectContaining({ name: 'Pasta Carbonara' }),
+                        expect.objectContaining({ title: 'Pancakes' }),
+                        expect.objectContaining({ title: 'Pasta Carbonara' }),
                     ])
                 );
                 // Verify all seeded recipes have createdAt
@@ -308,7 +309,7 @@ describe('Recipe Services', () => {
                 (guestStorage.getRecipes as jest.Mock).mockResolvedValue([]);
                 (guestStorage.saveRecipes as jest.Mock).mockResolvedValue(undefined);
                 
-                const recipe = await service.createRecipe({ name: 'Test Recipe' });
+                const recipe = await service.createRecipe({ title: 'Test Recipe' });
                 
                 // Verify storage was called
                 expect(guestStorage.saveRecipes).toHaveBeenCalled();
@@ -364,7 +365,7 @@ describe('Recipe Services', () => {
                 const existingRecipe = { id: recipeId, title: 'Original', cookTime: 30, category: 'Dinner', ingredients: [], instructions: [] };
                 const mockResult = { id: recipeId, ...existingRecipe, ...updates };
                 
-                // Mock getRecipes to return the existing recipe
+                await invalidateCache('recipes');
                 (api.get as jest.Mock).mockResolvedValue([existingRecipe]);
                 (api.put as jest.Mock).mockResolvedValue(mockResult);
 

@@ -189,7 +189,7 @@ export function GrocerySearchBar({
           onFocus={handleInputFocus}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={handleClear}>
+          <TouchableOpacity onPress={handleClear} testID="grocery-search-clear">
             <Ionicons name="close-circle" size={20} color={colors.textMuted} />
           </TouchableOpacity>
         )}
