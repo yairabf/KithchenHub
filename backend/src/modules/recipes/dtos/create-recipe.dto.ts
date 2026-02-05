@@ -46,7 +46,6 @@ export class IngredientInputDto {
 
   @IsOptional()
   @IsEnum(UnitCode)
-  @ValidateIf((obj) => obj.quantityUnitType != null)
   @IsValidUnitTypeMatch()
   quantityUnit?: UnitCode;
 

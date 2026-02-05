@@ -104,6 +104,15 @@ describe('IngredientInputDto Validation', () => {
       },
       false,
     ],
+    [
+      'invalid quantityUnit when unit type omitted fails',
+      {
+        name: 'Herbs',
+        quantityAmount: 1,
+        quantityUnit: 'handful',
+      },
+      false,
+    ],
   ])('%s', (_, input, shouldBeValid) => {
     it(`should ${shouldBeValid ? 'pass' : 'fail'} validation`, async () => {
       const dto = plainToInstance(IngredientInputDto, input);
