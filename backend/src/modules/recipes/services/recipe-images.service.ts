@@ -1,18 +1,34 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { ImageProcessingService } from '../images/image-processing.service';
 import { StoragePort } from '../../../infrastructure/storage/storage.interface';
 
+const DEFAULT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
+
+const resolveSignedUrlTtlSeconds = (configService: ConfigService) => {
+  const configuredTtl = configService.get<number>(
+    'RECIPE_IMAGE_SIGNED_URL_TTL_SECONDS',
+  );
+  if (Number.isFinite(configuredTtl) && (configuredTtl as number) > 0) {
+    return configuredTtl as number;
+  }
+  return DEFAULT_SIGNED_URL_TTL_SECONDS;
+};
+
 @Injectable()
 export class RecipeImagesService {
   private readonly logger = new Logger(RecipeImagesService.name);
-  private readonly signedUrlTtlSeconds = 60 * 60 * 24;
+  private readonly signedUrlTtlSeconds: number;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly imageProcessing: ImageProcessingService,
     @Inject('StoragePort') private readonly storage: StoragePort,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.signedUrlTtlSeconds = resolveSignedUrlTtlSeconds(this.configService);
+  }
 
   async uploadRecipeImage(
     recipeId: string,

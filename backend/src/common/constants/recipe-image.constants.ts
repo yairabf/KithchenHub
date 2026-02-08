@@ -8,3 +8,8 @@ export const RECIPE_IMAGE_ALLOWED_MIME_TYPES = [
 
 export type RecipeImageAllowedMimeType =
   (typeof RECIPE_IMAGE_ALLOWED_MIME_TYPES)[number];
+
+export const RECIPE_IMAGE_MAIN_MAX_DIMENSION = 1600;
+export const RECIPE_IMAGE_THUMB_SIZE = 400;
+export const RECIPE_IMAGE_MAIN_WEBP_QUALITY = 80;
+export const RECIPE_IMAGE_THUMB_WEBP_QUALITY = 75;

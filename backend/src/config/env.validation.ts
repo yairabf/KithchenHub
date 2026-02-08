@@ -33,6 +33,12 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  RECIPE_IMAGE_SIGNED_URL_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .default(86400),
   /**
    * Logging configuration
    */
