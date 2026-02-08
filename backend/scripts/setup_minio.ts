@@ -6,7 +6,10 @@ import * as path from 'path';
 // Load .env from backend root
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'household-uploads';
+const BUCKET_NAME =
+    process.env.STORAGE_BUCKET ||
+    process.env.S3_BUCKET_NAME ||
+    'household-uploads';
 const REGION = process.env.S3_REGION || 'us-east-1';
 const ENDPOINT = process.env.S3_ENDPOINT || 'http://localhost:9000';
 const ACCESS_KEY = process.env.S3_ACCESS_KEY || 'minioadmin';
