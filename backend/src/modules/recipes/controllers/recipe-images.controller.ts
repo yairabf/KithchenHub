@@ -86,7 +86,13 @@ export class RecipeImagesController {
       throw new BadRequestException('File too large. Max 5MB allowed.');
     }
 
-    const FileType = require('file-type') as { fromBuffer: (buf: Buffer) => Promise<{ mime: string; ext: string } | undefined> };
+    // file-type@16 is CJS; require() avoids ERR_REQUIRE_ESM when tsconfig module is commonjs
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const FileType = require('file-type') as {
+      fromBuffer: (
+        buf: Buffer,
+      ) => Promise<{ mime: string; ext: string } | undefined>;
+    };
     const detected = await FileType.fromBuffer(buffer);
     if (!detected || !isAllowedImageType(detected.mime)) {
       throw new BadRequestException(INVALID_IMAGE_TYPE_MESSAGE);
