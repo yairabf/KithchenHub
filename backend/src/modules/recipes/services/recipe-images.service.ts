@@ -6,6 +6,7 @@ import { StoragePort } from '../../../infrastructure/storage/storage.interface';
 @Injectable()
 export class RecipeImagesService {
   private readonly logger = new Logger(RecipeImagesService.name);
+  private readonly signedUrlTtlSeconds = 60 * 60 * 24;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -36,13 +37,31 @@ export class RecipeImagesService {
 
     // 2. Increment Version
     const newVersion = recipe.imageVersion + 1;
-    const imageKey = `recipes/${recipeId}/image_v${newVersion}.webp`;
-    const thumbKey = `recipes/${recipeId}/thumb_v${newVersion}.webp`;
+    const imageKey = `households/${householdId}/recipes/${recipeId}/image_v${newVersion}.webp`;
+    const thumbKey = `households/${householdId}/recipes/${recipeId}/thumb_v${newVersion}.webp`;
+    const cacheControl = 'public, max-age=31536000, immutable';
+    const metadata = {
+      householdId,
+      recipeId,
+      imageVersion: String(newVersion),
+    };
 
     // 3. Upload to Storage
     await Promise.all([
-      this.storage.upload(imageKey, main, 'image/webp'),
-      this.storage.upload(thumbKey, thumbnail, 'image/webp'),
+      this.storage.putObject(
+        imageKey,
+        main,
+        'image/webp',
+        cacheControl,
+        metadata,
+      ),
+      this.storage.putObject(
+        thumbKey,
+        thumbnail,
+        'image/webp',
+        cacheControl,
+        metadata,
+      ),
     ]);
 
     // 4. Update DB
@@ -53,13 +72,14 @@ export class RecipeImagesService {
         imageKey,
         thumbKey,
         imageUrl: null, // Clear legacy URL
+        imageUpdatedAt: new Date(),
       },
     });
 
     // 5. Generate Signed URLs
     const [signedImageUrl, signedThumbUrl] = await Promise.all([
-      this.storage.getSignedUrl(imageKey),
-      this.storage.getSignedUrl(thumbKey),
+      this.storage.getSignedUrl(imageKey, this.signedUrlTtlSeconds),
+      this.storage.getSignedUrl(thumbKey, this.signedUrlTtlSeconds),
     ]);
 
     return {
@@ -76,8 +96,10 @@ export class RecipeImagesService {
     if (!recipe.imageKey) return { imageUrl: null, thumbUrl: null };
 
     const [imageUrl, thumbUrl] = await Promise.all([
-      this.storage.getSignedUrl(recipe.imageKey),
-      recipe.thumbKey ? this.storage.getSignedUrl(recipe.thumbKey) : null,
+      this.storage.getSignedUrl(recipe.imageKey, this.signedUrlTtlSeconds),
+      recipe.thumbKey
+        ? this.storage.getSignedUrl(recipe.thumbKey, this.signedUrlTtlSeconds)
+        : null,
     ]);
 
     return { imageUrl, thumbUrl };
