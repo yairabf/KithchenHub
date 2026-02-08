@@ -15,6 +15,7 @@ import { styles } from './styles';
 import { ShoppingQuickActionModalProps } from './types';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { getActiveListId } from '../../utils/selectionUtils';
+import { useDebouncedRemoteSearch } from '../../../../common/hooks';
 import { useCatalog } from '../../../../common/hooks/useCatalog';
 
 export function ShoppingQuickActionModal({ visible, onClose }: ShoppingQuickActionModalProps) {
@@ -25,26 +26,13 @@ export function ShoppingQuickActionModal({ visible, onClose }: ShoppingQuickActi
   const [activeListId, setActiveListId] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
-
-  // Debounced search effect
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchQuery.trim()) {
-        try {
-          const results = await searchGroceries(searchQuery);
-          setSearchResults(results);
-        } catch (error) {
-          console.error('Quick action search failed:', error);
-          setSearchResults([]);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, searchGroceries]);
+  const { results: searchResults } = useDebouncedRemoteSearch<GroceryItem>({
+    query: searchQuery,
+    searchFn: searchGroceries,
+    onError: (error) => {
+      console.error('Quick action search failed:', error);
+    },
+  });
   const isMockDataEnabled = config.mockData.enabled;
   const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
   const shoppingService = useMemo(

@@ -26,7 +26,6 @@ import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { catalogService } from '../../../common/services/catalogService';
 import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../constants/categories';
-import { useResponsive } from '../../../common/hooks';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
@@ -37,6 +36,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { getSelectedList } from '../utils/selectionUtils';
 import { quickAddItem } from '../utils/quickAddUtils';
 import { determineUserDataMode } from '../../../common/types/dataModes';
+import { useDebouncedRemoteSearch, useResponsive } from '../../../common/hooks';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import {
   applyShoppingItemChange,
@@ -61,26 +61,13 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const { groceryItems, categories: rawCategories, frequentlyAddedItems, searchGroceries } = useCatalog();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
-
-  // Debounced search effect
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchQuery.trim()) {
-        try {
-          const results = await searchGroceries(searchQuery);
-          setSearchResults(results);
-        } catch (error) {
-          console.error('Search failed:', error);
-          setSearchResults([]);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, searchGroceries]);
+  const { results: searchResults } = useDebouncedRemoteSearch<GroceryItem>({
+    query: searchQuery,
+    searchFn: searchGroceries,
+    onError: (error) => {
+      console.error('Search failed:', error);
+    },
+  });
 
   /**
    * Sorts categories by item count in descending order.

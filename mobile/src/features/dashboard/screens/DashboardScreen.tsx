@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatTimeForDisplay, formatDateForDisplay } from '../../../common/utils/dateTimeUtils';
 import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
-import { useResponsive } from '../../../common/hooks';
+import { useDebouncedRemoteSearch, useResponsive } from '../../../common/hooks';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { colors } from '../../../theme';
 import { SafeImage } from '../../../common/components/SafeImage';
@@ -64,26 +64,13 @@ export function DashboardScreen({
   }, []);
 
   const { groceryItems, frequentlyAddedItems, searchGroceries } = useCatalog();
-  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
-
-  // Debounced search effect
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (searchValue.trim()) {
-        try {
-          const results = await searchGroceries(searchValue);
-          setSearchResults(results);
-        } catch (error) {
-          console.error('Search failed:', error);
-          setSearchResults([]);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchValue, searchGroceries]);
+  const { results: searchResults } = useDebouncedRemoteSearch<GroceryItem>({
+    query: searchValue,
+    searchFn: searchGroceries,
+    onError: (error) => {
+      console.error('Search failed:', error);
+    },
+  });
 
   const suggestedItems =
     frequentlyAddedItems.length > 0
