@@ -80,9 +80,12 @@ function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
     instructions: Array.isArray(recipe.instructions)
       ? (recipe.instructions as unknown as RecipeInstructionDto[])
       : [],
+    hasImage: Boolean(recipe.imageKey || recipe.imageUrl),
     imageUrl: recipe.imageUrl ?? undefined,
     imageVersion: recipe.imageVersion ?? undefined,
     imageUpdatedAt: recipe.imageUpdatedAt ?? undefined,
+    imageKey: recipe.imageKey ?? null,
+    thumbKey: recipe.thumbKey ?? null,
   };
 }
 
@@ -145,8 +148,11 @@ export class RecipesService {
           category: recipe.category ?? undefined,
           prepTime: recipe.prepTime ?? undefined,
           cookTime: recipe.cookTime ?? undefined,
+          hasImage: Boolean(recipe.imageKey || recipe.imageUrl),
           imageUrl: finalImageUrl ?? undefined,
           thumbUrl: thumbUrl ?? undefined,
+          imageKey: recipe.imageKey ?? null,
+          thumbKey: recipe.thumbKey ?? null,
           imageVersion: recipe.imageVersion ?? undefined,
           imageUpdatedAt: recipe.imageUpdatedAt ?? undefined,
         };
@@ -199,6 +205,9 @@ export class RecipesService {
     mapped.thumbUrl = thumbUrl ?? undefined;
     mapped.imageVersion = recipe.imageVersion ?? undefined;
     mapped.imageUpdatedAt = recipe.imageUpdatedAt ?? undefined;
+    mapped.imageKey = recipe.imageKey ?? null;
+    mapped.thumbKey = recipe.thumbKey ?? null;
+    mapped.hasImage = Boolean(recipe.imageKey || recipe.imageUrl);
 
     this.logger.log(`Recipe ${recipeId} found, returning details`);
     return mapped;
