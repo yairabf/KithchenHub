@@ -6,7 +6,7 @@ import { IMAGE_CONSTRAINTS } from './imageConstraints';
 
 jest.mock('expo-image-manipulator', () => ({
   manipulateAsync: jest.fn(),
-  SaveFormat: { JPEG: 'jpeg' },
+  SaveFormat: { WEBP: 'webp' },
 }));
 
 jest.mock('expo-file-system', () => ({
@@ -51,7 +51,7 @@ describe('resizeAndValidateImage', () => {
       [{ resize: { width: 1600, height: 1200 } }],
       expect.objectContaining({
         compress: IMAGE_CONSTRAINTS.jpegQuality,
-        format: ImageManipulator.SaveFormat.JPEG,
+        format: ImageManipulator.SaveFormat.WEBP,
       })
     );
     expect(result).toEqual({
