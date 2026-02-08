@@ -38,7 +38,7 @@ const envSchema = z.object({
     .int()
     .positive()
     .optional()
-    .default(86400),
+    .default(604800),
   /**
    * Logging configuration
    */

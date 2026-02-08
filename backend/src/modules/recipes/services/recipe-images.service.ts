@@ -4,7 +4,7 @@ import { PrismaService } from '../../../infrastructure/database/prisma/prisma.se
 import { ImageProcessingService } from '../images/image-processing.service';
 import { StoragePort } from '../../../infrastructure/storage/storage.interface';
 
-const DEFAULT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
+const DEFAULT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 /**
  * Reads RECIPE_IMAGE_SIGNED_URL_TTL_SECONDS from config. ConfigService may return
