@@ -5,6 +5,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import * as Sentry from '@sentry/node';
+import multipart from '@fastify/multipart';
 import { AppModule } from './app.module';
 import { loadConfiguration } from './config/configuration';
 
@@ -44,9 +45,16 @@ async function bootstrap(): Promise<void> {
     initializeSentry(config);
 
     console.log('🔨 Creating NestJS application...');
+    const fastifyAdapter = new FastifyAdapter();
+    await fastifyAdapter.register(multipart, {
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+      },
+    });
+
     const app = await NestFactory.create<NestFastifyApplication>(
       AppModule,
-      new FastifyAdapter(),
+      fastifyAdapter,
     );
     console.log('✅ NestJS application created');
 

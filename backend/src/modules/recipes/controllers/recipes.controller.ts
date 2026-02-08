@@ -9,7 +9,11 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  Req,
+  Logger,
 } from '@nestjs/common';
+import { FastifyRequest } from 'fastify';
+import '@fastify/multipart'; // Required for type augmentation
 import { RecipesService } from '../services/recipes.service';
 import { CreateRecipeDto, UpdateRecipeDto, CookRecipeDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
@@ -23,6 +27,8 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 @Controller({ path: 'recipes', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class RecipesController {
+  private readonly logger = new Logger(RecipesController.name);
+
   constructor(private recipesService: RecipesService) {}
 
   @Get()
@@ -31,24 +37,8 @@ export class RecipesController {
     @Query('category') category?: string,
     @Query('search') search?: string,
   ) {
-    console.log('[RecipesController] GET /recipes - getRecipes called');
-    console.log(
-      '[RecipesController] User:',
-      JSON.stringify({
-        id: user.userId,
-        email: user.email,
-        householdId: user.householdId,
-      }),
-    );
-    console.log(
-      '[RecipesController] Query params:',
-      JSON.stringify({ category, search }),
-    );
-
     if (!user.householdId) {
-      console.error(
-        '[RecipesController] Error: User must belong to a household',
-      );
+      this.logger.warn('getRecipes called without householdId');
       throw new BadRequestException('User must belong to a household');
     }
 
@@ -56,12 +46,7 @@ export class RecipesController {
       category,
       search,
     });
-
-    console.log('[RecipesController] Returning', result.length, 'recipes');
-    console.log(
-      '[RecipesController] Recipes:',
-      JSON.stringify(result, null, 2),
-    );
+    this.logger.debug(`getRecipes returned ${result.length} recipes`);
     return result;
   }
 
@@ -70,33 +55,12 @@ export class RecipesController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: CreateRecipeDto,
   ) {
-    console.log('[RecipesController] POST /recipes - createRecipe called');
-    console.log(
-      '[RecipesController] User:',
-      JSON.stringify({
-        id: user.userId,
-        email: user.email,
-        householdId: user.householdId,
-      }),
-    );
-    console.log('[RecipesController] DTO:', JSON.stringify(dto, null, 2));
-
     if (!user.householdId) {
-      console.error(
-        '[RecipesController] Error: User must belong to a household',
-      );
+      this.logger.warn('createRecipe called without householdId');
       throw new BadRequestException('User must belong to a household');
     }
 
-    const result = await this.recipesService.createRecipe(
-      user.householdId,
-      dto,
-    );
-    console.log(
-      '[RecipesController] Recipe created successfully:',
-      JSON.stringify(result, null, 2),
-    );
-    return result;
+    return this.recipesService.createRecipe(user.householdId, dto);
   }
 
   @Get(':id')
@@ -104,33 +68,12 @@ export class RecipesController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') recipeId: string,
   ) {
-    console.log('[RecipesController] GET /recipes/:id - getRecipe called');
-    console.log(
-      '[RecipesController] User:',
-      JSON.stringify({
-        id: user.userId,
-        email: user.email,
-        householdId: user.householdId,
-      }),
-    );
-    console.log('[RecipesController] Recipe ID:', recipeId);
-
     if (!user.householdId) {
-      console.error(
-        '[RecipesController] Error: User must belong to a household',
-      );
+      this.logger.warn('getRecipe called without householdId');
       throw new BadRequestException('User must belong to a household');
     }
 
-    const result = await this.recipesService.getRecipe(
-      recipeId,
-      user.householdId,
-    );
-    console.log(
-      '[RecipesController] Recipe details fetched:',
-      JSON.stringify(result, null, 2),
-    );
-    return result;
+    return this.recipesService.getRecipe(recipeId, user.householdId);
   }
 
   @Put(':id')
@@ -167,5 +110,30 @@ export class RecipesController {
     }
     await this.recipesService.deleteRecipe(recipeId, user.householdId);
     return { success: true };
+  }
+
+  @Post(':id/image')
+  async uploadRecipeImage(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') recipeId: string,
+    @Req() req: FastifyRequest,
+  ) {
+    if (!user.householdId) {
+      this.logger.warn('uploadRecipeImage called without householdId');
+      throw new BadRequestException('User must belong to a household');
+    }
+
+    const data = await req.file();
+    if (!data) {
+      throw new BadRequestException('File is required');
+    }
+
+    const buffer = await data.toBuffer();
+    return this.recipesService.uploadImage(
+      recipeId,
+      user.householdId,
+      buffer,
+      data.mimetype,
+    );
   }
 }
