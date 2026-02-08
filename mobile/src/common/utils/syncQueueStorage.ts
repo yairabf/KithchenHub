@@ -459,9 +459,15 @@ class SyncQueueStorageImpl implements SyncQueueStorage {
         status: 'PENDING',
       };
       
+      if (__DEV__) {
+        console.log(
+          `[SyncQueue] enqueue entityType=${entityType} op=${op} localId=${target.localId}`
+        );
+      }
+
       // Add to queue
       queue.push(queuedWrite);
-      
+
       // Compact again (in case new item can be merged with existing)
       queue = compactQueue(queue);
       

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { spacing } from '../../../theme';
+import { boxShadow } from '../../../theme/shadows';
 
 export const styles = StyleSheet.create({
   // Default (tablet/desktop) styles
@@ -26,11 +27,7 @@ export const styles = StyleSheet.create({
     borderRadius: 40,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 12,
+    ...boxShadow(8, 24, 'rgba(0, 0, 0, 0.15)'),
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.5)',
     gap: spacing.sm,

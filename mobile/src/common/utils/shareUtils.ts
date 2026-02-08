@@ -66,8 +66,8 @@ interface ShoppingItem {
 }
 
 interface Chore {
-  name: string;
-  completed: boolean;
+  title: string;
+  isCompleted: boolean;
   icon?: string;
   assignee?: string;
   dueDate: string;
@@ -75,19 +75,23 @@ interface Chore {
 
 interface RecipeIngredient {
   name: string;
-  quantity: string;
-  unit: string;
+  quantityAmount?: number | string;
+  quantityUnit?: string;
+  quantity?: number | string;
+  unit?: string;
 }
 
 interface RecipeInstruction {
-  text: string;
+  text?: string;
+  instruction?: string;
 }
 
 interface Recipe {
-  name: string;
+  title?: string;
+  name?: string;
   description?: string;
-  cookTime: string;
-  prepTime?: string;
+  cookTime?: string | number;
+  prepTime?: string | number;
   servings?: number;
   ingredients: RecipeIngredient[];
   instructions: RecipeInstruction[];
@@ -118,7 +122,8 @@ export function formatShoppingListText(
   Object.entries(itemsByCategory).forEach(([category, categoryItems]) => {
     itemLines.push(`\n${category}:`);
     categoryItems.forEach(item => {
-      itemLines.push(`  • ${item.name} (${item.quantity})`);
+      // Use ceil to match "General Count" display strategy
+      itemLines.push(`  • ${item.name} (${Math.ceil(item.quantity)})`);
     });
   });
 
@@ -170,8 +175,8 @@ export function formatRecipeText(recipe: Recipe): string {
   if (!recipe) {
     return 'Recipe not available';
   }
-  
-  const recipeName = recipe.title || 'Untitled Recipe';
+
+  const recipeName = recipe.title || recipe.name || 'Untitled Recipe';
   const header = `Recipe: ${recipeName}`;
   const lines: string[] = [];
 
@@ -194,8 +199,8 @@ export function formatRecipeText(recipe: Recipe): string {
     lines.push(`  ${SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS}`);
   } else {
     ingredients.forEach(ing => {
-      const quantity = ing.quantity || '';
-      const unit = ing.unit || '';
+      const quantity = ing.quantityAmount ?? ing.quantity ?? '';
+      const unit = ing.quantityUnit ?? ing.unit ?? '';
       const name = ing.name || '';
       lines.push(`  • ${quantity} ${unit} ${name}`.trim());
     });
@@ -207,7 +212,7 @@ export function formatRecipeText(recipe: Recipe): string {
     lines.push(`  ${SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS}`); // Reuse empty string constant
   } else {
     instructions.forEach((step, index) => {
-      const instruction = step?.instruction || '';
+      const instruction = step?.instruction || step?.text || '';
       lines.push(`  ${index + 1}. ${instruction}`);
     });
   }

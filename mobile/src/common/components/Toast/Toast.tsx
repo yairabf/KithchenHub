@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -47,32 +47,39 @@ export function Toast({
 }: ToastProps) {
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     if (visible) {
+      setIsMounted(true);
       translateY.value = withSpring(0, { damping: 15, stiffness: 120 });
       opacity.value = withTiming(1, { duration: ANIMATION_DURATION });
 
       const timer = setTimeout(() => {
         translateY.value = withTiming(-100, { duration: ANIMATION_DURATION });
         opacity.value = withTiming(0, { duration: ANIMATION_DURATION }, () => {
-          runOnJS(onHide)();
+          runOnJS(() => {
+            onHide();
+            setIsMounted(false);
+          })();
         });
       }, duration);
 
       return () => clearTimeout(timer);
     } else {
-      translateY.value = -100;
-      opacity.value = 0;
+      translateY.value = withTiming(-100, { duration: ANIMATION_DURATION });
+      opacity.value = withTiming(0, { duration: ANIMATION_DURATION }, () => {
+        runOnJS(setIsMounted)(false);
+      });
     }
-  }, [visible, duration, onHide, translateY, opacity]);
+  }, [visible, duration, onHide]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
     opacity: opacity.value,
   }));
 
-  if (!visible && opacity.value === 0) {
+  if (!isMounted) {
     return null;
   }
 

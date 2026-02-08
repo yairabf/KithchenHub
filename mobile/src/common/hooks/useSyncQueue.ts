@@ -1,32 +1,40 @@
 /**
  * useSyncQueue Hook
- * 
- * React hook that manages sync worker loop based on network status and app lifecycle.
- * Automatically starts/stops worker loop when network comes back online or app comes to foreground.
+ *
+ * Manages the sync worker so POST /auth/sync is only called when there is something to sync.
+ *
+ * Why does auth/sync get called?
+ * - The worker runs when the app is online and either (1) just came to foreground, or (2) network
+ *   just came back online, or (3) something was just enqueued (create/update/delete).
+ * - It only sends a request when the sync queue has items (pending creates/updates/deletes).
+ * - So if you "keep" seeing sync requests, the queue has items that are being sent (and possibly
+ *   retried if the backend doesn't confirm them in the response).
+ *
+ * We only start the worker when the queue actually has items (or when we don't know yet), so
+ * opening the app with nothing to sync does not hit the backend.
  */
 
 import { useEffect, useRef } from 'react';
 import { useNetwork } from '../../contexts/NetworkContext';
 import { getSyncQueueProcessor } from '../utils/syncQueueProcessor';
+import { syncQueueStorage } from '../utils/syncQueueStorage';
 import { useAppLifecycle } from '../../contexts/AppLifecycleContext';
 
 /**
- * Hook that manages sync worker loop
- * 
- * Automatically starts worker loop when:
- * - Network status changes from offline to online
- * - App comes to foreground (if online)
- * 
- * Automatically stops worker loop when:
- * - Network goes offline
- * - App goes to background
- * 
- * @example
- * ```typescript
- * // In MainNavigator or App root component
- * useSyncQueue();
- * ```
+ * Starts the sync worker only if the queue has items (so we don't hit the backend when empty).
  */
+async function startWorkerIfQueueHasItems(
+  processor: ReturnType<typeof getSyncQueueProcessor>
+): Promise<void> {
+  if (processor.isRunning()) return;
+  const queue = await syncQueueStorage.getAll();
+  if (queue.length === 0) return;
+  if (__DEV__) {
+    console.log(`[SyncQueue] Queue has ${queue.length} item(s) → starting sync worker`);
+  }
+  processor.start();
+}
+
 export function useSyncQueue(): void {
   const { isOffline } = useNetwork();
   const { isForeground } = useAppLifecycle();
@@ -34,50 +42,39 @@ export function useSyncQueue(): void {
   const lastOfflineStateRef = useRef<boolean | null>(null);
   const lastForegroundStateRef = useRef<boolean>(false);
 
-  // Initialize processor
   useEffect(() => {
     if (!processorRef.current) {
       processorRef.current = getSyncQueueProcessor();
     }
   }, []);
 
-  // Start/stop worker loop based on network status
+  // Start worker only when queue has items; stop when offline
   useEffect(() => {
     if (!processorRef.current) return;
 
-    const wasOffline = lastOfflineStateRef.current;
     const isNowOnline = !isOffline;
-
-    // Track offline state
     lastOfflineStateRef.current = isOffline;
 
     if (isNowOnline && !processorRef.current.isRunning()) {
-      // Network came back online - start worker loop
-      console.log('Network came back online, starting sync worker');
-      processorRef.current.start();
+      startWorkerIfQueueHasItems(processorRef.current);
     } else if (isOffline && processorRef.current.isRunning()) {
-      // Network went offline - stop worker loop
-      console.log('Network went offline, stopping sync worker');
+      if (__DEV__) console.log('[SyncQueue] Network offline → stopping sync worker');
       processorRef.current.stop();
     }
   }, [isOffline]);
 
-  // Start/stop worker based on app foreground/background
+  // On foreground + online, start worker only if queue has items
   useEffect(() => {
     if (!processorRef.current) return;
 
     const wasBackground = !lastForegroundStateRef.current;
     const isNowForeground = isForeground;
-
     lastForegroundStateRef.current = isForeground;
 
     if (wasBackground && isNowForeground && !isOffline && !processorRef.current.isRunning()) {
-      // App came to foreground and online - start worker
-      console.log('App came to foreground, starting sync worker');
-      processorRef.current.start();
+      startWorkerIfQueueHasItems(processorRef.current);
     } else if (!isNowForeground && processorRef.current.isRunning()) {
-      // App went to background - stop worker (RN timers unreliable in background)
-      console.log('App went to background, stopping sync worker');
+      if (__DEV__) console.log('[SyncQueue] App background → stopping sync worker');
       processorRef.current.stop();
     }
   }, [isForeground, isOffline]);

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
+import { boxShadow } from '../../../theme/shadows';
 import { GuestDataImportModal } from '../components/GuestDataImportModal';
 
 type AuthStackParamList = {
@@ -134,11 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    ...boxShadow(4, 8, 'rgba(0, 0, 0, 0.15)'),
     marginBottom: spacing.lg,
   },
   logoEmoji: {

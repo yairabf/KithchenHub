@@ -4,6 +4,7 @@ export interface ScreenHeaderProps {
   leftIcon?: 'back' | 'home' | 'none';
   onLeftPress?: () => void;
   rightActions?: {
+    edit?: { onPress: () => void; label?: string };
     share?: { onPress: () => void; label?: string };
     add?: { onPress: () => void; label?: string };
   };

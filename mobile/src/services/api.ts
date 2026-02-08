@@ -8,7 +8,8 @@ const DEFAULT_API_BASE_URL = Platform.select({
 });
 
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-const API_BASE_URL = rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/, '') : DEFAULT_API_BASE_URL;
+export const API_BASE_URL =
+  rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/, '') : DEFAULT_API_BASE_URL;
 
 const API_VERSION = process.env.EXPO_PUBLIC_API_VERSION || '1';
 

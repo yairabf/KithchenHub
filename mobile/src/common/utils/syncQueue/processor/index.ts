@@ -50,6 +50,9 @@ import {
 } from './syncQueueProcessor.types';
 import { classifySyncError, isValidSyncResult } from './syncQueueProcessor.errorHandling';
 
+/** Enable to trace why auth/sync is called repeatedly. Logs worker lifecycle and queue state. */
+const DEBUG_SYNC_QUEUE = __DEV__;
+
 function createBatches<T>(items: T[], batchSize: number): T[][] {
   const batches: T[][] = [];
   for (let i = 0; i < items.length; i += batchSize) {
@@ -89,9 +92,15 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    */
   start(): void {
     if (this.workerRunning) {
+      if (DEBUG_SYNC_QUEUE) {
+        console.log('[SyncWorker] start() ignored: already running');
+      }
       return; // Already running
     }
 
+    if (DEBUG_SYNC_QUEUE) {
+      console.log('[SyncWorker] start() -> starting worker loop');
+    }
     this.workerRunning = true;
     this.workerCancellationToken.cancelled = false;
     this.workerPromise = this.runWorkerLoop();
@@ -125,10 +134,15 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    * Checks cancellation token to allow race-free stopping
    */
   private async runWorkerLoop(): Promise<void> {
+    if (DEBUG_SYNC_QUEUE) {
+      console.log('[SyncWorker] runWorkerLoop() entered');
+    }
     while (this.workerRunning && !this.workerCancellationToken.cancelled) {
       // Check if online
       if (!getIsOnline()) {
-        // Wait and check again, but check cancellation during wait
+        if (DEBUG_SYNC_QUEUE) {
+          console.log('[SyncWorker] offline, waiting 5s…');
+        }
         await waitForDelayWithCancellation(5000, () => this.workerCancellationToken.cancelled);
         if (this.workerCancellationToken.cancelled) {
           break;
@@ -136,41 +150,51 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         continue;
       }
 
-      // Check cancellation before expensive operations
       if (this.workerCancellationToken.cancelled) {
         break;
       }
 
-      // Check if queue has items
       const queue = await syncQueueStorage.getAll();
 
+      if (DEBUG_SYNC_QUEUE) {
+        const readyCount = filterItemsReadyForRetry(queue).length;
+        console.log(
+          `[SyncWorker] queue size=${queue.length}, ready=${readyCount}`
+        );
+      }
+
       if (queue.length === 0) {
-        // Queue empty, stop worker
+        if (DEBUG_SYNC_QUEUE) {
+          console.log('[SyncWorker] stopping: queue empty');
+        }
         this.workerRunning = false;
         break;
       }
 
-      // If a checkpoint exists, re-drive it first to guarantee crash-safe progress.
       const checkpointProcessed = await this.processCheckpointIfPresent(queue);
       if (checkpointProcessed) {
-        // Continue loop immediately (either checkpoint cleared or still in-flight with backoff)
         continue;
       }
 
-      // Filter items that are ready for retry (respect backoff)
       const readyItems = filterItemsReadyForRetry(queue);
 
       if (readyItems.length === 0) {
-        // All items are in backoff, compute time until next attempt
         const nextAttemptTime = calculateEarliestNextAttempt(queue);
         if (nextAttemptTime === null) {
-          // No items waiting, stop worker
+          if (DEBUG_SYNC_QUEUE) {
+            console.log('[SyncWorker] stopping: no items waiting (backoff done)');
+          }
           this.workerRunning = false;
           break;
         }
 
         const now = Date.now();
         const waitTime = Math.max(0, nextAttemptTime - now);
+        if (DEBUG_SYNC_QUEUE) {
+          console.log(
+            `[SyncWorker] all in backoff, waiting ${Math.round(waitTime / 1000)}s`
+          );
+        }
         await waitForDelayWithCancellation(waitTime, () => this.workerCancellationToken.cancelled);
         if (this.workerCancellationToken.cancelled) {
           break;
@@ -178,20 +202,18 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         continue;
       }
 
-      // Process only ready items (pass filtered set to avoid re-reading queue)
       try {
         await this.processReadyItems(readyItems);
       } catch (error) {
         console.error('Worker loop error:', error);
-        // Continue loop even if processing fails
       }
-
-      // If there are ready items, process immediately (no extra sleep)
-      // Loop will check again on next iteration
     }
 
     this.workerRunning = false;
     this.workerPromise = null;
+    if (DEBUG_SYNC_QUEUE) {
+      console.log('[SyncWorker] runWorkerLoop() exited');
+    }
   }
 
   /**
@@ -336,7 +358,12 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         return;
       }
 
-      // Call sync endpoint
+      if (DEBUG_SYNC_QUEUE) {
+        console.log(
+          `[SyncWorker] POST /auth/sync batchSize=${batch.length} requestId=${requestId}`
+        );
+      }
+
       try {
         const result = await api.post<SyncResult>('/auth/sync', syncPayload);
         await this.handleSyncResult(batch, result);
@@ -773,8 +800,13 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    * @param result - Sync result from backend
    */
   private async handleSyncResult(queue: QueuedWrite[], result: SyncResult): Promise<void> {
-    // Backward compatibility: if succeeded array is missing
     if (!result.succeeded) {
+      if (DEBUG_SYNC_QUEUE) {
+        console.warn(
+          '[SyncWorker] Backend did not return succeeded array (status=%s). Using backward-compat path.',
+          result.status
+        );
+      }
       await this.handleBackwardCompatibleResult(queue, result);
       return;
     }
@@ -965,10 +997,16 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    */
   private logSyncResult(syncedCount: number, failedCount: number, totalCount: number): void {
     const unknownCount = totalCount - syncedCount - failedCount;
-    console.log(
+    const msg =
       `Sync queue processed: ${syncedCount} synced, ${failedCount} failed, ` +
-        `${unknownCount} unknown (kept for retry)`
-    );
+      `${unknownCount} unknown (kept for retry)`;
+    console.log(msg);
+    if (DEBUG_SYNC_QUEUE && unknownCount > 0) {
+      console.warn(
+        '[SyncWorker] Items kept for retry (missing from backend succeeded/conflicts). ' +
+          'Check backend returns operationId for every item.'
+      );
+    }
   }
 }
 
