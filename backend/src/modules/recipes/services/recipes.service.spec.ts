@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Recipe, ShoppingList, ShoppingItem } from '@prisma/client';
 import { RecipesService } from './recipes.service';
 import { RecipesRepository } from '../repositories/recipes.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
@@ -14,6 +15,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
   let service: RecipesService;
   let repository: RecipesRepository;
   let prisma: PrismaService;
+  let recipeImagesService: RecipeImagesService;
   let module: TestingModule;
 
   const mockHouseholdId = 'household-123';
@@ -59,6 +61,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
     service = module.get<RecipesService>(RecipesService);
     repository = module.get<RecipesRepository>(RecipesRepository);
     prisma = module.get<PrismaService>(PrismaService);
+    recipeImagesService = module.get<RecipeImagesService>(RecipeImagesService);
   });
 
   describe('getRecipes', () => {
@@ -80,7 +83,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
 
       jest
         .spyOn(repository, 'findRecipesByHousehold')
-        .mockResolvedValue(mockRecipes as any);
+        .mockResolvedValue(mockRecipes as unknown as Recipe[]);
 
       const result = await service.getRecipes(mockHouseholdId);
 
@@ -110,7 +113,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
 
       jest
         .spyOn(repository, 'findRecipesByHousehold')
-        .mockResolvedValue(mockRecipes as any);
+        .mockResolvedValue(mockRecipes as unknown as Recipe[]);
 
       const result = await service.getRecipes(mockHouseholdId, {
         search: 'pasta',
@@ -122,6 +125,183 @@ describe('RecipesService - Soft-Delete Behavior', () => {
       );
       expect(result).toHaveLength(1);
     });
+
+    it.each<
+      [
+        string,
+        {
+          imageUrl: string | null;
+          imageKey: string | null;
+          thumbKey: string | null;
+        },
+        Record<string, unknown>,
+        { imageUrl: string | null; thumbUrl: string | null },
+      ]
+    >([
+      [
+        'image keys exist',
+        {
+          imageUrl: null,
+          imageKey: 'households/h1/recipes/r1/image_v2.webp',
+          thumbKey: 'households/h1/recipes/r1/thumb_v2.webp',
+        },
+        {
+          hasImage: true,
+          imageUrl: 'signed-image-url',
+          thumbUrl: 'signed-thumb-url',
+          imageKey: 'households/h1/recipes/r1/image_v2.webp',
+          thumbKey: 'households/h1/recipes/r1/thumb_v2.webp',
+        },
+        { imageUrl: 'signed-image-url', thumbUrl: 'signed-thumb-url' },
+      ],
+      [
+        'legacy imageUrl only',
+        {
+          imageUrl: 'https://example.com/legacy.jpg',
+          imageKey: null,
+          thumbKey: null,
+        },
+        {
+          hasImage: true,
+          imageUrl: 'https://example.com/legacy.jpg',
+          imageKey: null,
+          thumbKey: null,
+        },
+        { imageUrl: null, thumbUrl: null },
+      ],
+    ])(
+      'getRecipes when %s',
+      async (
+        _label,
+        recipeImageFields,
+        expectedMatch,
+        getRecipeImageUrlsReturn,
+      ) => {
+        const mockRecipes = [
+          {
+            id: 'recipe-1',
+            householdId: mockHouseholdId,
+            title: 'Recipe',
+            prepTime: 10,
+            ingredients: [],
+            instructions: [],
+            ...recipeImageFields,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          },
+        ];
+
+        jest
+          .spyOn(repository, 'findRecipesByHousehold')
+          .mockResolvedValue(mockRecipes as unknown as Recipe[]);
+        jest
+          .spyOn(recipeImagesService, 'getRecipeImageUrls')
+          .mockResolvedValue(getRecipeImageUrlsReturn);
+
+        const result = await service.getRecipes(mockHouseholdId);
+
+        expect(result[0]).toMatchObject(expectedMatch);
+        if (expectedMatch.thumbUrl === undefined) {
+          expect(result[0].thumbUrl).toBeUndefined();
+        }
+      },
+    );
+  });
+
+  describe('getRecipe', () => {
+    it.each<
+      [
+        string,
+        {
+          imageUrl: string | null;
+          imageKey: string | null;
+          thumbKey: string | null;
+        },
+        Record<string, unknown>,
+        { imageUrl: string | null; thumbUrl: string | null },
+      ]
+    >([
+      [
+        'image keys exist',
+        {
+          imageUrl: null,
+          imageKey: 'households/h1/recipes/r1/image_v2.webp',
+          thumbKey: 'households/h1/recipes/r1/thumb_v2.webp',
+        },
+        {
+          hasImage: true,
+          imageUrl: 'signed-image-url',
+          thumbUrl: 'signed-thumb-url',
+          imageKey: 'households/h1/recipes/r1/image_v2.webp',
+          thumbKey: 'households/h1/recipes/r1/thumb_v2.webp',
+        },
+        { imageUrl: 'signed-image-url', thumbUrl: 'signed-thumb-url' },
+      ],
+      [
+        'legacy imageUrl only',
+        {
+          imageUrl: 'https://example.com/legacy.jpg',
+          imageKey: null,
+          thumbKey: null,
+        },
+        {
+          hasImage: true,
+          imageUrl: 'https://example.com/legacy.jpg',
+          thumbUrl: undefined,
+          imageKey: null,
+          thumbKey: null,
+        },
+        { imageUrl: null, thumbUrl: null },
+      ],
+      [
+        'no image',
+        { imageUrl: null, imageKey: null, thumbKey: null },
+        { hasImage: false },
+        { imageUrl: null, thumbUrl: null },
+      ],
+    ])(
+      'getRecipe when %s',
+      async (
+        _label,
+        recipeImageFields,
+        expectedMatch,
+        getRecipeImageUrlsReturn,
+      ) => {
+        const mockRecipe = {
+          id: mockRecipeId,
+          householdId: mockHouseholdId,
+          title: 'Recipe',
+          prepTime: 10,
+          ingredients: [],
+          instructions: [],
+          ...recipeImageFields,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          deletedAt: null,
+        };
+
+        jest
+          .spyOn(repository, 'findRecipeById')
+          .mockResolvedValue(mockRecipe as unknown as Recipe);
+        jest
+          .spyOn(recipeImagesService, 'getRecipeImageUrls')
+          .mockResolvedValue(getRecipeImageUrlsReturn);
+
+        const result = await service.getRecipe(mockRecipeId, mockHouseholdId);
+
+        expect(result).toMatchObject(expectedMatch);
+        if (expectedMatch.hasImage === false) {
+          expect(result.imageUrl).toBeUndefined();
+          expect(result.thumbUrl).toBeUndefined();
+        } else if (
+          'thumbUrl' in expectedMatch &&
+          expectedMatch.thumbUrl === undefined
+        ) {
+          expect(result.thumbUrl).toBeUndefined();
+        }
+      },
+    );
   });
 
   describe('createRecipe', () => {
@@ -155,7 +335,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
 
       jest
         .spyOn(repository, 'createRecipe')
-        .mockResolvedValue(createdEntity as any);
+        .mockResolvedValue(createdEntity as unknown as Recipe);
 
       const result = await service.createRecipe(mockHouseholdId, createDto);
 
@@ -215,7 +395,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
 
       jest
         .spyOn(repository, 'createRecipe')
-        .mockResolvedValue(createdEntity as any);
+        .mockResolvedValue(createdEntity as unknown as Recipe);
 
       const result = await service.createRecipe(mockHouseholdId, createDto);
 
@@ -287,14 +467,14 @@ describe('RecipesService - Soft-Delete Behavior', () => {
 
       jest
         .spyOn(repository, 'findRecipeById')
-        .mockResolvedValue(mockRecipe as any);
+        .mockResolvedValue(mockRecipe as unknown as Recipe);
       jest
         .spyOn(prisma.shoppingList, 'findFirst')
-        .mockResolvedValue(mockList as any);
+        .mockResolvedValue(mockList as unknown as ShoppingList);
       jest
         .spyOn(prisma.shoppingItem, 'create')
-        .mockResolvedValueOnce(mockCreatedItems[0] as any)
-        .mockResolvedValueOnce(mockCreatedItems[1] as any);
+        .mockResolvedValueOnce(mockCreatedItems[0] as unknown as ShoppingItem)
+        .mockResolvedValueOnce(mockCreatedItems[1] as unknown as ShoppingItem);
 
       const result = await service.cookRecipe(mockRecipeId, mockHouseholdId, {
         targetListId: 'list-123',
@@ -327,7 +507,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
 
       jest
         .spyOn(repository, 'findRecipeById')
-        .mockResolvedValue(mockRecipe as any);
+        .mockResolvedValue(mockRecipe as unknown as Recipe);
       jest.spyOn(prisma.shoppingList, 'findFirst').mockResolvedValue(null);
 
       await expect(
@@ -363,7 +543,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
       };
       jest
         .spyOn(repository, 'findRecipeById')
-        .mockResolvedValue(mockRecipe as any);
+        .mockResolvedValue(mockRecipe as unknown as Recipe);
 
       await expect(
         service.deleteRecipe(mockRecipeId, mockHouseholdId),
@@ -386,7 +566,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
       };
       jest
         .spyOn(repository, 'findRecipeById')
-        .mockResolvedValue(mockRecipe as any);
+        .mockResolvedValue(mockRecipe as unknown as Recipe);
       jest.spyOn(repository, 'deleteRecipe').mockResolvedValue(undefined);
 
       await service.deleteRecipe(mockRecipeId, mockHouseholdId);

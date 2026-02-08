@@ -6,12 +6,19 @@ import { StoragePort } from '../../../infrastructure/storage/storage.interface';
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
 
-const resolveSignedUrlTtlSeconds = (configService: ConfigService) => {
-  const configuredTtl = configService.get<number>(
+/**
+ * Reads RECIPE_IMAGE_SIGNED_URL_TTL_SECONDS from config. ConfigService may return
+ * raw env strings, so we parse with Number() and validate instead of assuming
+ * a number type.
+ */
+const resolveSignedUrlTtlSeconds = (configService: ConfigService): number => {
+  const raw = configService.get<string | number>(
     'RECIPE_IMAGE_SIGNED_URL_TTL_SECONDS',
   );
-  if (Number.isFinite(configuredTtl) && (configuredTtl as number) > 0) {
-    return configuredTtl as number;
+  const parsed =
+    typeof raw === 'number' ? raw : raw != null ? Number(raw) : NaN;
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
   }
   return DEFAULT_SIGNED_URL_TTL_SECONDS;
 };

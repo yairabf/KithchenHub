@@ -7,14 +7,13 @@ import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 jest.mock(
   'file-type',
   () => ({
-    fileTypeFromBuffer: jest.fn(),
+    fromBuffer: jest.fn(),
   }),
   { virtual: true },
 );
 
 const getFileTypeMock = () =>
-  (jest.requireMock('file-type') as { fileTypeFromBuffer: jest.Mock })
-    .fileTypeFromBuffer;
+  (jest.requireMock('file-type') as { fromBuffer: jest.Mock }).fromBuffer;
 
 describe('RecipeImagesController', () => {
   let controller: RecipeImagesController;
