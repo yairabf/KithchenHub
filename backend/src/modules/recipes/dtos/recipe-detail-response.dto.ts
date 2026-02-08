@@ -24,4 +24,7 @@ export class RecipeDetailDto {
   ingredients: RecipeIngredientDto[];
   instructions: RecipeInstructionDto[];
   imageUrl?: string;
+  thumbUrl?: string | null;
+  imageVersion?: number;
+  imageUpdatedAt?: Date | null;
 }

@@ -164,6 +164,7 @@ model Recipe {
   imageVersion Int       @default(1) @map("image_version")
   imageKey     String?   @map("image_key")
   thumbKey     String?   @map("thumb_key")
+  imageUpdatedAt DateTime? @map("image_updated_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")

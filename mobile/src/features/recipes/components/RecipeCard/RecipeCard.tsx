@@ -35,9 +35,12 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
       activeOpacity={0.8}
     >
       <View style={styles.recipeImageContainer}>
-        {recipe.imageUrl ? (
+        {recipe.thumbUrl || recipe.imageUrl ? (
           // @ts-ignore - Image source type mismatch with string
-          <Image source={{ uri: recipe.imageUrl }} style={styles.recipeImage} />
+          <Image
+            source={{ uri: recipe.thumbUrl || recipe.imageUrl }}
+            style={styles.recipeImage}
+          />
         ) : (
           <View style={styles.recipeImagePlaceholder}>
             <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />

@@ -35,6 +35,8 @@ type RecipeEntityShape = {
   imageUrl?: string | null;
   imageKey?: string | null;
   thumbKey?: string | null;
+  imageVersion?: number | null;
+  imageUpdatedAt?: Date | null;
 };
 
 type IngredientRow = {
@@ -79,6 +81,8 @@ function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
       ? (recipe.instructions as unknown as RecipeInstructionDto[])
       : [],
     imageUrl: recipe.imageUrl ?? undefined,
+    imageVersion: recipe.imageVersion ?? undefined,
+    imageUpdatedAt: recipe.imageUpdatedAt ?? undefined,
   };
 }
 
@@ -126,10 +130,11 @@ export class RecipesService {
 
     const mapped = await Promise.all(
       recipes.map(async (recipe) => {
-        const { imageUrl } = await this.recipeImagesService.getRecipeImageUrls({
-          imageKey: recipe.imageKey,
-          thumbKey: recipe.thumbKey,
-        });
+        const { imageUrl, thumbUrl } =
+          await this.recipeImagesService.getRecipeImageUrls({
+            imageKey: recipe.imageKey,
+            thumbKey: recipe.thumbKey,
+          });
 
         // Fallback to legacy imageUrl if new system has no image
         const finalImageUrl = imageUrl || recipe.imageUrl;
@@ -141,6 +146,9 @@ export class RecipesService {
           prepTime: recipe.prepTime ?? undefined,
           cookTime: recipe.cookTime ?? undefined,
           imageUrl: finalImageUrl ?? undefined,
+          thumbUrl: thumbUrl ?? undefined,
+          imageVersion: recipe.imageVersion ?? undefined,
+          imageUpdatedAt: recipe.imageUpdatedAt ?? undefined,
         };
       }),
     );
@@ -180,13 +188,17 @@ export class RecipesService {
     const mapped = mapRecipeToDetailDto(recipe);
 
     // Resolve new image URLs
-    const { imageUrl } = await this.recipeImagesService.getRecipeImageUrls({
-      imageKey: recipe.imageKey,
-      thumbKey: recipe.thumbKey,
-    });
+    const { imageUrl, thumbUrl } =
+      await this.recipeImagesService.getRecipeImageUrls({
+        imageKey: recipe.imageKey,
+        thumbKey: recipe.thumbKey,
+      });
 
     // Fallback to legacy
     mapped.imageUrl = imageUrl || recipe.imageUrl || undefined;
+    mapped.thumbUrl = thumbUrl ?? undefined;
+    mapped.imageVersion = recipe.imageVersion ?? undefined;
+    mapped.imageUpdatedAt = recipe.imageUpdatedAt ?? undefined;
 
     this.logger.log(`Recipe ${recipeId} found, returning details`);
     return mapped;

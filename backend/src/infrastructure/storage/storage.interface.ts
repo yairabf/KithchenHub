@@ -1,5 +1,11 @@
 export interface StoragePort {
-  upload(key: string, buffer: Buffer, mimeType: string): Promise<void>;
-  getSignedUrl(key: string): Promise<string>;
+  putObject(
+    key: string,
+    buffer: Buffer,
+    contentType: string,
+    cacheControl?: string,
+    metadata?: Record<string, string>,
+  ): Promise<void>;
+  getSignedUrl(key: string, expiresInSeconds: number): Promise<string>;
   delete(key: string): Promise<void>;
 }

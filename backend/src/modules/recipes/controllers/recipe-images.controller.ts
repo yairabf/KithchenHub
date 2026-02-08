@@ -9,6 +9,19 @@ import {
 import { RecipeImagesService } from '../services/recipe-images.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  RECIPE_IMAGE_ALLOWED_MIME_TYPES,
+  RECIPE_IMAGE_MAX_SIZE_BYTES,
+  RecipeImageAllowedMimeType,
+} from '../../../common/constants';
+
+type RecipeImageUploadRequest = {
+  user: { householdId: string };
+  file: () => Promise<{
+    mimetype: string;
+    toBuffer: () => Promise<Buffer>;
+  } | null>;
+};
 
 @ApiTags('recipes')
 @Controller({ path: 'recipes', version: '1' })
@@ -31,7 +44,7 @@ export class RecipeImagesController {
   })
   async uploadImage(
     @Param('id') id: string,
-    @Req() req: any, // Using any for FastifyRequest with multipart support
+    @Req() req: RecipeImageUploadRequest,
   ) {
     const householdId = req.user.householdId;
 
@@ -40,26 +53,7 @@ export class RecipeImagesController {
       throw new BadRequestException('File is required');
     }
 
-    // Basic file type validation
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/webp',
-    ];
-    if (!allowedMimeTypes.includes(data.mimetype)) {
-      throw new BadRequestException(
-        'Invalid file type. Only JPG, PNG and WebP are allowed.',
-      );
-    }
-
-    const buffer = await data.toBuffer();
-
-    // Size validation (multipart limit is 5MB in main.ts)
-    if (buffer.length > 5 * 1024 * 1024) {
-      // 5MB
-      throw new BadRequestException('File too large. Max 5MB allowed.');
-    }
+    const buffer = await this.validateImageFile(data);
 
     return this.recipeImagesService.uploadRecipeImage(
       id,
@@ -67,5 +61,28 @@ export class RecipeImagesController {
       data.mimetype,
       householdId,
     );
+  }
+
+  private async validateImageFile(data: {
+    mimetype: string;
+    toBuffer: () => Promise<Buffer>;
+  }): Promise<Buffer> {
+    if (
+      !RECIPE_IMAGE_ALLOWED_MIME_TYPES.includes(
+        data.mimetype as RecipeImageAllowedMimeType,
+      )
+    ) {
+      throw new BadRequestException(
+        'Invalid file type. Only JPG, PNG and WebP are allowed.',
+      );
+    }
+
+    const buffer = await data.toBuffer();
+
+    if (buffer.length > RECIPE_IMAGE_MAX_SIZE_BYTES) {
+      throw new BadRequestException('File too large. Max 5MB allowed.');
+    }
+
+    return buffer;
   }
 }
