@@ -86,8 +86,8 @@ export class RecipeImagesController {
       throw new BadRequestException('File too large. Max 5MB allowed.');
     }
 
-    const { fileTypeFromBuffer } = await import('file-type');
-    const detected = await fileTypeFromBuffer(buffer);
+    const FileType = require('file-type') as { fromBuffer: (buf: Buffer) => Promise<{ mime: string; ext: string } | undefined> };
+    const detected = await FileType.fromBuffer(buffer);
     if (!detected || !isAllowedImageType(detected.mime)) {
       throw new BadRequestException(INVALID_IMAGE_TYPE_MESSAGE);
     }

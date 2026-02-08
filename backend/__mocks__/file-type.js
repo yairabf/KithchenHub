@@ -1,3 +1,3 @@
 module.exports = {
-  fileTypeFromBuffer: jest.fn(),
+  fromBuffer: jest.fn(),
 };
