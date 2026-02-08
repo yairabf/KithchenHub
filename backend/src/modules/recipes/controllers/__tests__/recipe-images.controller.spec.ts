@@ -4,9 +4,13 @@ import { RecipeImagesService } from '../../services/recipe-images.service';
 import { BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 
-jest.mock('file-type', () => ({
-  fileTypeFromBuffer: jest.fn(),
-}));
+jest.mock(
+  'file-type',
+  () => ({
+    fileTypeFromBuffer: jest.fn(),
+  }),
+  { virtual: true },
+);
 
 const getFileTypeMock = () =>
   (jest.requireMock('file-type') as { fileTypeFromBuffer: jest.Mock })
