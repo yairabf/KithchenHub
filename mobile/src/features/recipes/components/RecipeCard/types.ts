@@ -5,7 +5,8 @@ export interface Recipe {
   localId?: string; // Optional for backward compatibility
   name?: string; // Optional for backward compatibility with title field
   title?: string; // Optional for backward compatibility with name field
-  cookTime?: string;
+  cookTime?: number | string;
+  prepTime?: number | string;
   category?: string;
   imageUrl?: string;
 }
@@ -16,4 +17,5 @@ export interface RecipeCardProps {
   onPress: () => void;
   width: number;
   style?: ViewStyle;
+  onEdit?: () => void;
 }

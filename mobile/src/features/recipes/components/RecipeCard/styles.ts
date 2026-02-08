@@ -13,6 +13,14 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.transparent.white50,
     position: 'relative',
   },
+  editButton: {
+    position: 'absolute',
+    top: spacing.xs,
+    left: spacing.xs,
+    backgroundColor: colors.transparent.white80,
+    borderRadius: 12,
+    padding: spacing.xs,
+  },
   recipeImagePlaceholder: {
     flex: 1,
     justifyContent: 'center',

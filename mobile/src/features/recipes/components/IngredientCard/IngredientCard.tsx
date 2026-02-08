@@ -10,7 +10,7 @@ export function IngredientCard({
   backgroundColor,
   onAddToList,
 }: IngredientCardProps) {
-  const displayQty = parseFloat(ingredient.quantity);
+  const displayQty = parseFloat(String(ingredient.quantityAmount ?? ingredient.quantity ?? ''));
   const formattedQty = Number.isInteger(displayQty)
     ? displayQty.toString()
     : displayQty.toFixed(1);
@@ -19,7 +19,7 @@ export function IngredientCard({
     <View style={[styles.card, { backgroundColor }]}>
       <View style={styles.content}>
         <Text style={styles.quantityText}>
-          {formattedQty} {ingredient.unit}
+          {formattedQty} {ingredient.quantityUnit ?? ingredient.unit}
         </Text>
         <Text style={styles.nameText}>{ingredient.name}</Text>
       </View>

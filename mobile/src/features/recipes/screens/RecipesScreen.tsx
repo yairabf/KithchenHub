@@ -25,7 +25,7 @@ import { uploadRecipeImage } from '../../../services/imageUploadService';
 import { config } from '../../../config';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
-import { createRecipe } from '../utils/recipeFactory';
+import { createRecipe, mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
 import { useRecipes } from '../hooks/useRecipes';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useCatalog } from '../../../common/hooks/useCatalog';
@@ -91,13 +91,17 @@ const calculateCardMargin = (index: number): ViewStyle => {
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { width, isTablet } = useResponsive();
   const { user } = useAuth();
-  const { recipes, isLoading, addRecipe, updateRecipe, refresh } = useRecipes();
-  const { groceryItems } = useCatalog(); // Use catalog hook for grocery items
+  const { recipes, isLoading, addRecipe, updateRecipe, refresh, getRecipeById } = useRecipes();
+  const { groceryItems, searchGroceries } = useCatalog(); // Use catalog hook for grocery items and search
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddRecipeModal, setShowAddRecipeModal] = useState(false);
   const [isSavingRecipe, setIsSavingRecipe] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [showEditRecipeModal, setShowEditRecipeModal] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
 
   // Calculate card width dynamically based on screen size
   // Account for container padding and gap between columns
@@ -130,11 +134,11 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       seen.add(id);
       return true;
     });
-    
+
     if (filtered.length !== recipes.length) {
       console.warn(`[RecipesScreen] Filtered ${recipes.length - filtered.length} recipes (missing IDs or duplicates). Original: ${recipes.length}, Filtered: ${filtered.length}`);
     }
-    
+
     return filtered;
   }, [recipes]);
 
@@ -142,7 +146,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     // Safely handle recipes that might be missing fields (e.g., from API list endpoint)
     const recipeName = recipe?.title || '';
     const recipeCategory = recipe?.category || 'Dinner';
-    
+
     const matchesCategory = selectedCategory === 'All' || recipeCategory === selectedCategory;
     const matchesSearch = recipeName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -150,6 +154,25 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
 
   const handleAddRecipe = () => {
     setShowAddRecipeModal(true);
+  };
+
+  const handleEditRecipe = async (recipe: Recipe) => {
+    setIsLoadingEdit(true);
+    try {
+      const full = await getRecipeById(recipe.id);
+      const hasDetails = !!full?.ingredients?.length && !!full?.instructions?.length;
+      if (!hasDetails) {
+        Alert.alert('Unable to edit recipe', 'Recipe details are still loading. Please try again.');
+        return;
+      }
+      setEditingRecipe(full);
+      setShowEditRecipeModal(true);
+    } catch (error) {
+      console.error('Failed to load recipe details for edit:', error);
+      Alert.alert('Unable to edit recipe', 'Failed to load recipe details.');
+    } finally {
+      setIsLoadingEdit(false);
+    }
   };
 
   const handleRefresh = async () => {
@@ -194,6 +217,47 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       Alert.alert('Unable to save recipe', message);
     } finally {
       setIsSavingRecipe(false);
+    }
+  };
+
+  const handleUpdateRecipe = async (data: NewRecipeData) => {
+    if (!editingRecipe) return;
+    try {
+      setIsSavingEdit(true);
+      const updates = mapFormDataToRecipeUpdates(data);
+
+      if (data.removeImage) {
+        // Type cast to any to allow null if the backend supports it, or use undefined if that's what clears it.
+        // Assuming backend handles null/undefined for clearing.
+        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: undefined });
+      } else if (data.imageLocalUri) {
+        const resized = await resizeAndValidateImage(data.imageLocalUri);
+        if (!user || user.isGuest) {
+          await attachGuestImage(editingRecipe.id, resized.uri, updateRecipe);
+          await updateRecipe(editingRecipe.id, updates);
+        } else {
+          if (!user.householdId) {
+            throw new Error('Household ID is missing for uploads.');
+          }
+          await updateRecipe(editingRecipe.id, updates);
+          await uploadImageWithCleanup({
+            recipeId: editingRecipe.id,
+            imageUri: resized.uri,
+            householdId: user.householdId,
+            updateRecipe,
+          });
+        }
+      } else {
+        await updateRecipe(editingRecipe.id, updates);
+      }
+
+      setShowEditRecipeModal(false);
+      setEditingRecipe(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred';
+      Alert.alert('Unable to update recipe', message);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -250,8 +314,8 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             ))}
           </ScrollView>
 
-          <ScrollView 
-            style={styles.content} 
+          <ScrollView
+            style={styles.content}
             contentContainerStyle={styles.contentContainer}
             refreshControl={
               <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
@@ -264,6 +328,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                   recipe={recipe}
                   backgroundColor={pastelColors[index % pastelColors.length]}
                   onPress={() => onSelectRecipe?.(recipe)}
+                  onEdit={() => handleEditRecipe(recipe)}
                   width={cardWidth}
                   style={calculateCardMargin(index)}
                 />
@@ -281,6 +346,23 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         isSaving={isSavingRecipe}
         categories={recipeCategories.filter((c) => c !== 'All')}
         groceryItems={groceryItems}
+        searchGroceries={searchGroceries}
+      />
+
+      {/* Edit Recipe Modal */}
+      <AddRecipeModal
+        visible={showEditRecipeModal}
+        onClose={() => {
+          setShowEditRecipeModal(false);
+          setEditingRecipe(null);
+        }}
+        onSave={handleUpdateRecipe}
+        isSaving={isSavingEdit}
+        categories={recipeCategories.filter((c) => c !== 'All')}
+        groceryItems={groceryItems}
+        mode="edit"
+        initialRecipe={editingRecipe ? mapRecipeToFormData(editingRecipe) : undefined}
+        searchGroceries={searchGroceries}
       />
     </SafeAreaView>
   );

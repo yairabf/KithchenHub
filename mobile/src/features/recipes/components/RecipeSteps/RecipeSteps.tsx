@@ -31,15 +31,18 @@ export function RecipeSteps({
   return (
     <View style={styles.container}>
       <View style={styles.instructionsList}>
-        {safeInstructions.map((step, index) => (
-          <InstructionStep
-            key={step.id || `step-${index}`}
-            step={step}
-            stepNumber={index + 1}
-            isCompleted={completedSteps.has(step.id)}
-            onToggle={() => onToggleStep(step.id)}
-          />
-        ))}
+        {safeInstructions.map((step, index) => {
+          const stepKey = String(step.step ?? index + 1);
+          return (
+            <InstructionStep
+              key={stepKey}
+              step={step}
+              stepNumber={step.step ?? index + 1}
+              isCompleted={completedSteps.has(stepKey)}
+              onToggle={() => onToggleStep(stepKey)}
+            />
+          );
+        })}
       </View>
     </View>
   );

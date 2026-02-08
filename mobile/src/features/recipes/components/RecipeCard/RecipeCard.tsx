@@ -8,12 +8,25 @@ import { determineIndicatorStatus } from '../../../../common/utils/syncStatusUti
 import { styles } from './styles';
 import { RecipeCardProps } from './types';
 
-export function RecipeCard({ recipe, backgroundColor, onPress, width, style }: RecipeCardProps) {
+export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onEdit }: RecipeCardProps) {
   // Check sync status for signed-in users
   const syncStatus = useEntitySyncStatusWithEntity('recipes', recipe);
 
   // Determine status for indicator
   const indicatorStatus = determineIndicatorStatus(syncStatus);
+
+  const formatMinutes = (value?: number | string): string => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? `${value} min` : '—';
+    }
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return Number.isFinite(parsed) ? `${parsed} min` : '—';
+    }
+    return '—';
+  };
+
+  const timeLabel = recipe.prepTime ?? recipe.cookTime;
 
   return (
     <TouchableOpacity
@@ -25,6 +38,16 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style }: R
         <View style={styles.recipeImagePlaceholder}>
           <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
         </View>
+        {typeof onEdit === 'function' && (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={onEdit}
+            accessibilityRole="button"
+            accessibilityLabel="Edit recipe"
+          >
+            <Ionicons name="create-outline" size={14} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
         {/* Sync status indicator in top-right corner of image */}
         {(syncStatus.isPending || syncStatus.isFailed) && (
           <View style={styles.syncStatusContainer}>
@@ -38,7 +61,7 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style }: R
         </Text>
         <View style={styles.recipeMetaRow}>
           <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.recipeMeta}>{recipe.cookTime ? `${recipe.cookTime} min` : 'N/A'}</Text>
+          <Text style={styles.recipeMeta}>{formatMinutes(timeLabel)}</Text>
         </View>
       </View>
     </TouchableOpacity>
