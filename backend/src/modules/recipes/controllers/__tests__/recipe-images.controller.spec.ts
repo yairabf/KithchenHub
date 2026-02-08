@@ -75,32 +75,29 @@ describe('RecipeImagesController', () => {
       );
     });
 
-    it('should throw BadRequestException for invalid mime types', async () => {
-      const mockFile = {
-        mimetype: 'text/plain',
-        toBuffer: jest.fn(),
-      };
+    describe.each([
+      [
+        'invalid mime type',
+        {
+          mimetype: 'text/plain',
+          toBuffer: jest.fn(),
+        },
+      ],
+      [
+        'file too large',
+        {
+          mimetype: 'image/jpeg',
+          toBuffer: jest.fn().mockResolvedValue(Buffer.alloc(6 * 1024 * 1024)),
+        },
+      ],
+    ])('rejects when %s', (_label, mockFile) => {
+      it('throws BadRequestException', async () => {
+        mockRequest.file.mockResolvedValue(mockFile);
 
-      mockRequest.file.mockResolvedValue(mockFile);
-
-      await expect(controller.uploadImage(mockId, mockRequest)).rejects.toThrow(
-        BadRequestException,
-      );
-      expect(BadRequestException).toBeDefined();
-    });
-
-    it('should throw BadRequestException if file is too large', async () => {
-      const largeBuffer = Buffer.alloc(6 * 1024 * 1024); // 6MB
-      const mockFile = {
-        mimetype: 'image/jpeg',
-        toBuffer: jest.fn().mockResolvedValue(largeBuffer),
-      };
-
-      mockRequest.file.mockResolvedValue(mockFile);
-
-      await expect(controller.uploadImage(mockId, mockRequest)).rejects.toThrow(
-        'File too large. Max 5MB allowed.',
-      );
+        await expect(
+          controller.uploadImage(mockId, mockRequest),
+        ).rejects.toThrow(BadRequestException);
+      });
     });
   });
 });

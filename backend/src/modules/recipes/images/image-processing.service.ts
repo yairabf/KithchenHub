@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as sharp from 'sharp';
 
 @Injectable()
@@ -19,7 +19,8 @@ export class ImageProcessingService {
 
       const thumbnail = await sharp(buffer)
         .resize(400, 400, {
-          fit: 'inside',
+          fit: 'cover',
+          position: 'center',
           withoutEnlargement: true,
         })
         .webp({ quality: 75 })
@@ -28,7 +29,9 @@ export class ImageProcessingService {
       return { main, thumbnail };
     } catch (error) {
       this.logger.error('Failed to process image', error);
-      throw error;
+      throw new BadRequestException(
+        'Image could not be processed. Please use a valid JPG, PNG or WebP image.',
+      );
     }
   }
 }
