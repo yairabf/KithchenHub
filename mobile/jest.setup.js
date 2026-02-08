@@ -69,6 +69,16 @@ jest.mock('expo-file-system/legacy', () => ({
   getInfoAsync: jest.fn(async () => ({ exists: true, uri: '', size: 1024 })),
 }));
 
+// FormData - simple mock to support file uploads in tests
+global.FormData = class FormDataMock {
+  constructor() {
+    this._parts = [];
+  }
+  append(...args) {
+    this._parts.push(args);
+  }
+};
+
 // NativeEventEmitter - allow null argument so Keyboard (and others) load when native module is missing
 jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter', () => {
   return class NativeEventEmitter {
