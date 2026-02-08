@@ -59,6 +59,7 @@ kitchen-hub/
 │   └── package.json    # Backend dependencies
 ├── docs/                # Documentation
 │   ├── features/       # Feature documentation
+│   ├── guides/         # How-to and configuration guides
 │   ├── architecture/   # Architecture docs
 │   └── screenshots/    # App screenshots
 ├── .cursor/            # Cursor IDE configuration

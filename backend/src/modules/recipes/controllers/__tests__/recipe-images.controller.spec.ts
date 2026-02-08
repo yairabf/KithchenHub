@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RecipeImagesController } from '../recipe-images.controller';
 import { RecipeImagesService } from '../../services/recipe-images.service';
+import { RecipeImageRateLimitGuard } from '../../guards/recipe-image-rate-limit.guard';
 import { BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 
@@ -35,6 +36,8 @@ describe('RecipeImagesController', () => {
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RecipeImageRateLimitGuard)
       .useValue({ canActivate: () => true })
       .compile();
 

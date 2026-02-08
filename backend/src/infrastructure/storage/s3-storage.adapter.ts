@@ -24,11 +24,8 @@ export class S3StorageAdapter implements StoragePort {
     const endpoint = this.configService.get<string>('S3_ENDPOINT');
     const accessKeyId = this.configService.get<string>('S3_ACCESS_KEY');
     const secretAccessKey = this.configService.get<string>('S3_SECRET_KEY');
-    this.bucket = this.configService.get<string>('STORAGE_BUCKET');
-
-    if (!this.bucket) {
-      throw new Error('STORAGE_BUCKET environment variable is not defined');
-    }
+    this.bucket =
+      this.configService.get<string>('STORAGE_BUCKET') ?? 'household-uploads';
 
     this.s3Client = new S3Client({
       region,

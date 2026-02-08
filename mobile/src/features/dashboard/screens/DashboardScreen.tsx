@@ -5,6 +5,7 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,17 +77,23 @@ export function DashboardScreen({
     frequentlyAddedItems.length > 0
       ? frequentlyAddedItems.slice(0, SUGGESTED_ITEMS_MAX)
       : groceryItems.slice(0, SUGGESTED_ITEMS_MAX);
-  const { todayChores, toggleChore, isLoading: choresLoading } = useDashboardChores();
+  const {
+    todayChores,
+    toggleChore,
+    refresh: refreshChores,
+    isLoading: choresLoading,
+  } = useDashboardChores();
 
   const shouldUseMockData = config.mockData.enabled || !user || user?.isGuest === true;
   const shoppingService = useMemo(
     () => createShoppingService(shouldUseMockData ? 'guest' : 'signed-in'),
     [shouldUseMockData]
   );
-  const { recipes } = useRecipes();
+  const { recipes, refresh: refreshRecipes } = useRecipes();
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [shoppingListsCount, setShoppingListsCount] = useState(0);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadShoppingData = useCallback(async () => {
     try {
@@ -100,6 +107,19 @@ export function DashboardScreen({
       setAllItems([]);
     }
   }, [shoppingService]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.allSettled([
+        loadShoppingData(),
+        refreshRecipes(),
+        refreshChores(),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadShoppingData, refreshRecipes, refreshChores]);
 
   useEffect(() => {
     loadShoppingData();
@@ -390,7 +410,13 @@ export function DashboardScreen({
         </View>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+        }
+      >
         {/* Two-column layout */}
         <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
           {/* Left column: Shopping widget + Quick stats */}

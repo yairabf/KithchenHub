@@ -32,6 +32,7 @@ function filterTodayChores(chores: Chore[]): Chore[] {
 export interface UseDashboardChoresReturn {
   todayChores: Chore[];
   toggleChore: (id: string) => Promise<void>;
+  refresh: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -127,9 +128,28 @@ export function useDashboardChores(): UseDashboardChoresReturn {
     [repository, choresService]
   );
 
+  const refresh = useCallback(async () => {
+    if (repository) {
+      try {
+        await repository.refresh();
+      } catch (error) {
+        console.error('Failed to refresh chores:', error);
+      }
+      return;
+    }
+
+    try {
+      const data = await choresService.getChores();
+      setGuestChores(data);
+    } catch (error) {
+      console.error('Failed to refresh chores:', error);
+    }
+  }, [repository, choresService]);
+
   return {
     todayChores,
     toggleChore,
+    refresh,
     isLoading,
   };
 }

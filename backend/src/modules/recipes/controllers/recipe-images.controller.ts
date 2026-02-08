@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { RecipeImagesService } from '../services/recipe-images.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { RecipeImageRateLimitGuard } from '../guards/recipe-image-rate-limit.guard';
 import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import {
   RECIPE_IMAGE_ALLOWED_MIME_TYPES,
@@ -39,6 +40,7 @@ export class RecipeImagesController {
   constructor(private readonly recipeImagesService: RecipeImagesService) {}
 
   @Post(':id/image')
+  @UseGuards(RecipeImageRateLimitGuard)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

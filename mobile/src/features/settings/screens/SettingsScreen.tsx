@@ -45,9 +45,9 @@ export function SettingsScreen() {
   };
 
   const handleClearGuestData = async () => {
+    setShowClearDataConfirm(false);
     try {
       await clearGuestData();
-      setShowClearDataConfirm(false);
       setToastType('success');
       setToastMessage('Guest data deleted');
     } catch (error) {

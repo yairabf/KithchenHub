@@ -14,10 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ingredient unit validation constraints for amount requirements and unit/type matching.
 - Migration script to backfill legacy ingredient units into canonical unit fields.
 - Unit-focused tests covering constants, DTO validation, and controller behavior.
+- Documented public, cache-optimized recipe image access via unguessable URLs.
 
 ### Changed
 
 - Recipe create DTO to accept `quantityAmount`, `quantityUnit`, `quantityUnitType`, and `quantityModifier` with nested validation.
 - Recipe detail DTO to return the new quantity fields while keeping legacy `quantity` and `unit` (deprecated).
 - Recipe service mapping to normalize ingredient shapes and shopping list item creation to prefer canonical unit fields.
-

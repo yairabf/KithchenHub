@@ -3,6 +3,13 @@
 ## Overview
 This document describes the ingredient unit fields supported by the Recipes API. The API accepts canonical unit fields and still supports legacy `quantity` and `unit` for backward compatibility.
 
+## Recipe Image Caching
+- Image access is public via unguessable, versioned URLs to maximize caching.
+- Image URLs are versioned via storage keys (e.g., `image_v{n}.webp`) so clients can cache aggressively.
+- Uploaded images are stored with `Cache-Control: public, max-age=31536000, immutable`.
+- Image URLs are signed; the default signed URL TTL is 7 days. URLs only change when the image version changes or the signed URL expires.
+- Manual refresh in the app refetches recipe data. Images only change when the server returns a new version.
+
 ## Ingredient Fields
 Canonical fields:
 - `quantityAmount?: number` - The numeric amount.
