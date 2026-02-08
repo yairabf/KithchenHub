@@ -36,7 +36,7 @@ const CATEGORY_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
  */
 function normalizeCategoryName(categoryName: string): string {
   const normalized = categoryName.toLowerCase().trim();
-  
+
   // Map deprecated categories to consolidated ones
   const categoryMapping: Record<string, string> = {
     'teas': 'beverages',
@@ -44,7 +44,7 @@ function normalizeCategoryName(categoryName: string): string {
     'sweets': 'bakery', // Default sweets to bakery (cakes, cookies, brownies)
     'supplies': 'household', // Supplies merged into household
   };
-  
+
   return categoryMapping[normalized] || normalized;
 }
 
@@ -72,10 +72,10 @@ export function buildCategoriesFromGroceries(items: GroceryItem[]): Category[] {
     // Use normalized lowercase name for ID, but capitalize first letter for display
     const displayName = categoryNameLower.charAt(0).toUpperCase() + categoryNameLower.slice(1);
     const categoryId = categoryNameLower.replace(/\s+/g, '-');
-    
+
     // Generate deterministic UUID based on normalized category name (stable across calls)
     const localId = uuidv5(categoryNameLower, CATEGORY_NAMESPACE);
-    
+
     return {
       id: categoryId,
       localId,
@@ -85,7 +85,7 @@ export function buildCategoriesFromGroceries(items: GroceryItem[]): Category[] {
       backgroundColor: pastelColors[index % pastelColors.length],
     };
   });
-  
+
   // Deduplicate by category ID (in case of any edge cases)
   const seenIds = new Set<string>();
   const deduplicated = categoriesArray.filter(cat => {
@@ -95,8 +95,38 @@ export function buildCategoriesFromGroceries(items: GroceryItem[]): Category[] {
     seenIds.add(cat.id);
     return true;
   });
-  
+
   return deduplicated;
+}
+
+/**
+ * Builds category list from category names (string[]).
+ * Used when full catalog is not available (lite load).
+ * 
+ * @param names - Array of category names
+ * @returns Array of categories with metadata
+ */
+export function buildCategoriesFromNames(names: string[]): Category[] {
+  // Deduplicate and normalize input names first
+  const uniqueNames = Array.from(new Set(names.map(n => normalizeCategoryName(n))));
+
+  return uniqueNames.map((categoryNameLower, index) => {
+    // Use normalized lowercase name for ID, but capitalize first letter for display
+    const displayName = categoryNameLower.charAt(0).toUpperCase() + categoryNameLower.slice(1);
+    const categoryId = categoryNameLower.replace(/\s+/g, '-');
+
+    // Generate deterministic UUID based on normalized category name
+    const localId = uuidv5(categoryNameLower, CATEGORY_NAMESPACE);
+
+    return {
+      id: categoryId,
+      localId,
+      name: displayName,
+      itemCount: 0, // Count not available in lite mode
+      image: '',
+      backgroundColor: pastelColors[index % pastelColors.length],
+    };
+  });
 }
 
 /**

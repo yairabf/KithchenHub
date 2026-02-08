@@ -14,7 +14,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, NetworkError } from '../../services/api';
 import { getPublicCatalogCacheKey } from '../storage/dataModeStorage';
-import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
+import { buildCategoriesFromGroceries, buildFrequentlyAddedItems, buildCategoriesFromNames } from '../utils/catalogUtils';
 import { mockGroceriesDB } from '../../mocks/shopping/groceryDatabase';
 import { config } from '../../config';
 import { SHOPPING_CATEGORIES, DEFAULT_CATEGORY } from '../../features/shopping/constants/categories';
@@ -183,6 +183,41 @@ export class CatalogService {
   }
 
   /**
+   * Searches groceries by query string.
+   * Calls API only if query is not empty.
+   * 
+   * @param query - Search query
+   * @returns Array of matching grocery items
+   */
+  async searchGroceries(query: string): Promise<GroceryItem[]> {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      return [];
+    }
+
+    try {
+      // Fetch from API
+      const results = await api.get<GrocerySearchItemDto[] | undefined>(`/groceries/search?q=${encodeURIComponent(trimmedQuery)}`);
+      const list = Array.isArray(results) ? results : [];
+      const apiItems = list.map(mapGroceryItem);
+
+      // Get custom items to merge (filter in memory)
+      const customItems = await this.getCustomItems();
+      const matchingCustom = customItems.filter(ci =>
+        ci.name.toLowerCase().includes(trimmedQuery.toLowerCase())
+      );
+
+      // Merge results
+      return this.mergeGroceryItems(apiItems, matchingCustom);
+    } catch (error) {
+      console.error('Search failed:', error);
+      // Fallback: try to search in cached items if we have any? 
+      // For now, return empty on error effectively, or maybe custom items.
+      return [];
+    }
+  }
+
+  /**
    * Internal logging helper that conditionally logs based on environment.
    * Only logs in development mode to avoid performance impact in production.
    * 
@@ -267,10 +302,10 @@ export class CatalogService {
       const results = await api.get<CustomItemDto[] | undefined>('/shopping-items/custom');
       const list = Array.isArray(results) ? results : [];
       const customItems = list.map(mapCustomItemToGroceryItem);
-      
+
       // Cache successful response
       await this.cacheCustomItems(customItems);
-      
+
       this.logCatalogEvent('log', 'Fetched custom items from API', { itemCount: customItems.length });
       return customItems;
     } catch (error) {
@@ -278,20 +313,20 @@ export class CatalogService {
       if (error instanceof NetworkError) {
         this.logCatalogEvent('warn', 'Network unavailable, falling back to cached custom items', { source: CatalogSource.CACHE });
         const cached = await this.getCachedCustomItems();
-        
+
         if (cached.length > 0) {
           this.logCatalogEvent('log', 'Using cached custom items', { itemCount: cached.length, source: CatalogSource.CACHE });
           return cached;
         }
-        
+
         // No cached custom items - return empty array (non-critical)
         return [];
       }
-      
+
       // For auth errors (401/403), user might not be signed in - return empty array
       // For other errors, log but don't throw (non-critical)
-      this.logCatalogEvent('warn', 'Failed to fetch custom items (non-critical)', { 
-        error: error instanceof Error ? error.message : String(error) 
+      this.logCatalogEvent('warn', 'Failed to fetch custom items (non-critical)', {
+        error: error instanceof Error ? error.message : String(error)
       });
       return [];
     }
@@ -306,7 +341,7 @@ export class CatalogService {
    */
   private hasCategoryItems(items: GroceryItem[], categoryName: string): boolean {
     const normalizedCategory = categoryName.toLowerCase();
-    return items.some(item => 
+    return items.some(item =>
       item.category?.toLowerCase().includes(normalizedCategory)
     );
   }
@@ -320,7 +355,7 @@ export class CatalogService {
    */
   private getCategoryItems(items: GroceryItem[], categoryName: string): GroceryItem[] {
     const normalizedCategory = categoryName.toLowerCase();
-    return items.filter(item => 
+    return items.filter(item =>
       item.category?.toLowerCase().includes(normalizedCategory)
     );
   }
@@ -340,17 +375,17 @@ export class CatalogService {
     if (this.hasCategoryItems(mergedItems, categoryName)) {
       return mergedItems;
     }
-    
+
     const mockItems = this.getCategoryItems(mockGroceriesDB, categoryName);
     if (mockItems.length === 0) {
       return mergedItems;
     }
-    
+
     const existingNames = new Set(mergedItems.map(i => i.name.toLowerCase()));
     const uniqueItems = mockItems.filter(
       item => !existingNames.has(item.name.toLowerCase())
     );
-    
+
     if (uniqueItems.length > 0) {
       this.logCatalogEvent('log', `Supplemented with ${categoryName} items from mock data`, {
         added: uniqueItems.length,
@@ -358,7 +393,7 @@ export class CatalogService {
       });
       return [...mergedItems, ...uniqueItems];
     }
-    
+
     return mergedItems;
   }
 
@@ -368,68 +403,49 @@ export class CatalogService {
    * @returns Array of grocery items (merged with custom items if available)
    */
   private async fetchGroceryItemsWithFallback(): Promise<GroceryItem[]> {
-    // If mock data is enabled, skip API and use mock data directly
+    // If mock data is enabled, use mock data directly
     if (config?.mockData?.enabled) {
-      this.logCatalogEvent('log', 'Mock data enabled, using mock catalog data', { 
+      this.logCatalogEvent('log', 'Mock data enabled, using mock catalog data', {
         itemCount: mockGroceriesDB.length,
-        source: CatalogSource.MOCK 
+        source: CatalogSource.MOCK
       });
       return mockGroceriesDB;
     }
 
-    // Try API first for regular grocery items
+    // OPTIMIZATION: Do NOT fetch full catalog from API.
+    // Instead of calling /groceries/search?q= (which now returns empty),
+    // we just get custom items.
+    // The "All Items" list is effectively empty on start, waiting for search.
+
     let catalogItems: GroceryItem[] = [];
+
+    // We intentionally keep catalogItems empty here.
+    // If we wanted to support "offline full catalog", we would need to check cache here.
+    // But for "on-demand" strategy, we start empty.
+
     try {
-      const results = await api.get<GrocerySearchItemDto[] | undefined>('/groceries/search?q=');
-      const list = Array.isArray(results) ? results : [];
-      catalogItems = list.map(mapGroceryItem);
-      
-      // Cache successful response
-      await this.cacheGroceryItems(catalogItems);
-      
-      this.logCatalogEvent('log', 'Fetched from API', { 
-        itemCount: catalogItems.length,
-        source: CatalogSource.API 
-      });
+      // Check cache just in case we have data from previous searches?
+      // No, previous searches are partial.
+      // We rely on searchGroceries for data.
     } catch (error) {
-      // Handle network errors - fallback to cache
-      if (error instanceof NetworkError) {
-        this.logCatalogEvent('warn', 'Network unavailable, falling back to cache', { source: CatalogSource.CACHE });
-        const cached = await this.getCachedGroceryItems();
-        
-        if (cached.length > 0) {
-          this.logCatalogEvent('log', 'Using cached catalog data', { 
-            itemCount: cached.length,
-            source: CatalogSource.CACHE 
-          });
-          catalogItems = cached;
-        } else {
-          // Cache empty - fallback to mock data
-          this.logCatalogEvent('warn', 'Cache empty, using mock catalog data', { 
-            itemCount: mockGroceriesDB.length,
-            source: CatalogSource.MOCK 
-          });
-          catalogItems = mockGroceriesDB;
-        }
-      } else {
-        // Re-throw non-network errors
-        throw error;
-      }
+      // ...
     }
 
-    // Fetch custom items (non-critical - if fails, still return catalog items)
+    // Fetch custom items
     const customItems = await this.getCustomItems();
-    
-    // Merge catalog items with custom items
-    // Deduplicate by name: if a custom item has the same name as a catalog item, prefer catalog item
+
+    // Merge (basically just custom items since catalogItems is empty)
     let mergedItems = this.mergeGroceryItems(catalogItems, customItems);
-    
+
     // Fallback: Supplement missing required categories from mock data
-    // This ensures all required categories are always available even if API doesn't return them
+    // This isn't strictly necessary if we rely on on-demand, but ensures category existence
+    // for local development or fallback UI.
+    // However, without full catalog, supplementing might look weird (only 1-2 items per category).
+    // Let's keep it for now as a safety net for "empty" feel.
     for (const categoryName of REQUIRED_CATEGORIES) {
       mergedItems = this.supplementMissingCategoryItems(mergedItems, categoryName);
     }
-    
+
     return mergedItems;
   }
 
@@ -448,12 +464,12 @@ export class CatalogService {
     const catalogItemNames = new Set(
       catalogItems.map(item => item.name.toLowerCase())
     );
-    
+
     // Filter out custom items that have the same name as catalog items
     const uniqueCustomItems = customItems.filter(
       customItem => !catalogItemNames.has(customItem.name.toLowerCase())
     );
-    
+
     // Return catalog items first, then unique custom items
     return [...catalogItems, ...uniqueCustomItems];
   }
@@ -490,13 +506,13 @@ export class CatalogService {
    */
   async getShoppingCategories(): Promise<string[]> {
     // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'catalogService.ts:402',message:'getShoppingCategories called',data:{mockDataEnabled:config?.mockData?.enabled},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'catalogService.ts:402', message: 'getShoppingCategories called', data: { mockDataEnabled: config?.mockData?.enabled }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
     // #endregion
     // If mock data is enabled, use static categories
     if (config?.mockData?.enabled) {
-      this.logCatalogEvent('log', 'Mock data enabled, using static categories', { 
-        categoryCount: SHOPPING_CATEGORIES.length, 
-        source: CatalogSource.MOCK 
+      this.logCatalogEvent('log', 'Mock data enabled, using static categories', {
+        categoryCount: SHOPPING_CATEGORIES.length,
+        source: CatalogSource.MOCK
       });
       return [...SHOPPING_CATEGORIES];
     }
@@ -505,59 +521,59 @@ export class CatalogService {
     try {
       const categories = await api.get<string[] | undefined>('/groceries/categories');
       const categoryList = Array.isArray(categories) ? categories : [];
-      
+
       // Validate categories are strings and normalize to lowercase
       const validCategories = categoryList
         .filter((cat): cat is string => typeof cat === 'string' && cat.length > 0)
         .map(cat => cat.toLowerCase());
-      
+
       // Deduplicate categories
       const uniqueCategories = Array.from(new Set(validCategories));
-      
+
       // Ensure "other" category is always included
       const defaultCategoryLower = DEFAULT_CATEGORY.toLowerCase();
       const finalCategories = uniqueCategories.includes(defaultCategoryLower)
         ? uniqueCategories
         : [...uniqueCategories, defaultCategoryLower];
-      
+
       // Ensure we have at least the default category
       if (finalCategories.length === 0) {
         this.logCatalogEvent('warn', 'API returned empty categories, using static fallback');
         return [...SHOPPING_CATEGORIES];
       }
-      
+
       // Cache successful response
       await this.cacheCategories(finalCategories);
-      
-      this.logCatalogEvent('log', 'Fetched categories from API', { 
-        categoryCount: finalCategories.length, 
-        source: CatalogSource.API 
+
+      this.logCatalogEvent('log', 'Fetched categories from API', {
+        categoryCount: finalCategories.length,
+        source: CatalogSource.API
       });
       return finalCategories;
     } catch (error) {
       // Handle network errors - fallback to cache
       if (error instanceof NetworkError) {
-        this.logCatalogEvent('warn', 'Network unavailable, falling back to cached categories', { 
-          source: CatalogSource.CACHE 
+        this.logCatalogEvent('warn', 'Network unavailable, falling back to cached categories', {
+          source: CatalogSource.CACHE
         });
         const cached = await this.getCachedCategories();
-        
+
         if (cached.length > 0) {
-          this.logCatalogEvent('log', 'Using cached categories', { 
-            categoryCount: cached.length, 
-            source: CatalogSource.CACHE 
+          this.logCatalogEvent('log', 'Using cached categories', {
+            categoryCount: cached.length,
+            source: CatalogSource.CACHE
           });
           return cached;
         }
-        
+
         // Cache empty - fallback to static categories
-        this.logCatalogEvent('warn', 'Cache empty, using static categories', { 
-          categoryCount: SHOPPING_CATEGORIES.length, 
-          source: CatalogSource.MOCK 
+        this.logCatalogEvent('warn', 'Cache empty, using static categories', {
+          categoryCount: SHOPPING_CATEGORIES.length,
+          source: CatalogSource.MOCK
         });
         return [...SHOPPING_CATEGORIES];
       }
-      
+
       // Re-throw non-network errors
       throw error;
     }
@@ -638,10 +654,20 @@ export class CatalogService {
     categories: Category[];
     frequentlyAddedItems: GroceryItem[];
   }> {
+    // 1. Get Categories (Lite approach using /groceries/categories)
+    // This avoids fetching the full grocery list
+    const categoryNames = await this.getShoppingCategories();
+    const categories = buildCategoriesFromNames(categoryNames);
+
+    // 2. Custom Items (Lite approach)
+    // We only fetch custom items for the "all items" list initially
     const groceryItems = await this.getGroceryItems();
-    
-    const categories = buildCategoriesFromGroceries(groceryItems);
-    const frequentlyAddedItems = buildFrequentlyAddedItems(groceryItems);
+
+    // 3. Frequently Added
+    // Since we don't have full catalog, we can't compute this client-side efficiently.
+    // For now, we return empty list or maybe top custom items?
+    // Returning empty is safer to avoid confusion.
+    const frequentlyAddedItems: GroceryItem[] = [];
 
     return {
       groceryItems,
