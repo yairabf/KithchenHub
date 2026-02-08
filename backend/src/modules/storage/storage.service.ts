@@ -69,12 +69,8 @@ export class StorageService {
     });
     this.logger.log(`Initialized S3 Storage Provider (Endpoint: ${endpoint})`);
 
-    // Try to ensure bucket exists on startup (best effort)
-    this.ensureBucketExists().catch((err) => {
-      this.logger.error(
-        `Failed to ensure bucket exists on startup: ${err.message}`,
-      );
-    });
+    // Await bucket creation so first upload does not fail with NoSuchBucket on fresh setups
+    await this.ensureBucketExists();
   }
 
   private async ensureBucketExists() {
