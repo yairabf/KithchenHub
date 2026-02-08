@@ -4,6 +4,7 @@ import {
   IsArray,
   IsNumber,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IngredientInputDto, InstructionInputDto } from './create-recipe.dto';
@@ -37,7 +38,9 @@ export class UpdateRecipeDto {
   @Type(() => InstructionInputDto)
   instructions?: InstructionInputDto[];
 
+  /** Optional URL; pass null to clear the recipe image. */
+  @ValidateIf((o) => o.imageUrl != null)
   @IsString()
   @IsOptional()
-  imageUrl?: string;
+  imageUrl?: string | null;
 }

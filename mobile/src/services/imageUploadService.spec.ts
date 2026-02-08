@@ -1,211 +1,83 @@
-import { buildRecipeImagePath, deleteRecipeImage, uploadRecipeImage } from './imageUploadService';
-import { supabase } from './supabase';
+import { uploadRecipeImage, deleteRecipeImage } from './imageUploadService';
+import { apiClient } from './api';
 
-jest.mock('./supabase', () => ({
-  supabase: {
-    storage: {
-      from: jest.fn(),
-    },
+jest.mock('./api', () => ({
+  apiClient: {
+    post: jest.fn(),
   },
 }));
 
-const mockStorageFrom = supabase.storage.from as jest.Mock;
-
 describe('imageUploadService', () => {
+  const mockParams = {
+    imageUri: 'file://test.jpg',
+    householdId: 'household-123',
+    recipeId: 'recipe-123',
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    global.fetch = jest.fn().mockResolvedValue({
-      blob: jest.fn().mockResolvedValue('blob'),
-    }) as jest.Mock;
   });
 
-  describe('buildRecipeImagePath', () => {
-    it('builds household-scoped recipe image path', () => {
-      const path = buildRecipeImagePath({
-        householdId: 'house-123',
-        recipeId: 'recipe-456',
-        fileName: 'photo.jpg',
+  describe('uploadRecipeImage', () => {
+    it('should upload image via backend API and return imageUrl', async () => {
+      const mockResponse = {
+        data: {
+          imageUrl: 'https://storage.example.com/image.jpg',
+          imagePath: 'households/h1/recipes/r1/photo.jpg',
+        },
+      };
+
+      (apiClient.post as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await uploadRecipeImage(mockParams);
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/recipes/recipe-123/image',
+        expect.any(FormData),
+        expect.any(Object)
+      );
+      expect(result).toEqual({
+        imageUrl: 'https://storage.example.com/image.jpg',
+        imagePath: 'households/h1/recipes/r1/photo.jpg',
       });
-
-      expect(path).toBe('households/house-123/recipes/recipe-456/photo.jpg');
-    });
-  });
-
-  describe.each([
-    ['missing image uri', { imageUri: '', householdId: 'house', recipeId: 'recipe' }],
-    ['missing household', { imageUri: 'file://x.jpg', householdId: '', recipeId: 'recipe' }],
-    ['missing recipe id', { imageUri: 'file://x.jpg', householdId: 'house', recipeId: '' }],
-  ])('validation: %s', (_label, params) => {
-    it('throws validation error', async () => {
-      await expect(uploadRecipeImage(params)).rejects.toThrow('Missing required');
-    });
-  });
-
-  it('uploads image and returns signed URL', async () => {
-    const upload = jest.fn().mockResolvedValue({ data: { path: 'path' }, error: null });
-    const createSignedUrl = jest.fn().mockResolvedValue({
-      data: { signedUrl: 'https://signed.example.com' },
-      error: null,
-    });
-    mockStorageFrom.mockReturnValue({ upload, createSignedUrl });
-
-    const result = await uploadRecipeImage({
-      imageUri: 'file://resized.jpg',
-      householdId: 'house-123',
-      recipeId: 'recipe-456',
     });
 
-    expect(upload).toHaveBeenCalled();
-    expect(createSignedUrl).toHaveBeenCalled();
-    expect(result.signedUrl).toBe('https://signed.example.com');
-  });
-
-  describe('error handling', () => {
-    it('throws when upload fails with error message', async () => {
-      const upload = jest.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'Network error' },
+    describe.each<[string, Record<string, string>, string]>([
+      ['missing imageUri', { ...mockParams, imageUri: '' }, 'Missing image URI'],
+      ['missing recipeId', { ...mockParams, recipeId: '' }, 'Missing recipe ID'],
+    ])('validation: %s', (_label, params, expectedMessage) => {
+      it(`should throw "${expectedMessage}"`, async () => {
+        await expect(uploadRecipeImage(params)).rejects.toThrow(expectedMessage);
       });
-      const createSignedUrl = jest.fn();
-      mockStorageFrom.mockReturnValue({ upload, createSignedUrl });
-
-      await expect(
-        uploadRecipeImage({
-          imageUri: 'file://resized.jpg',
-          householdId: 'house-123',
-          recipeId: 'recipe-456',
-        })
-      ).rejects.toThrow('Network error');
-      expect(createSignedUrl).not.toHaveBeenCalled();
     });
 
-    it('throws when upload fails without error message', async () => {
-      const upload = jest.fn().mockResolvedValue({
-        data: null,
-        error: null,
-      });
-      const createSignedUrl = jest.fn();
-      mockStorageFrom.mockReturnValue({ upload, createSignedUrl });
+    it('should propagate API errors', async () => {
+      const error = new Error('API Error');
+      (apiClient.post as jest.Mock).mockRejectedValue(error);
 
-      await expect(
-        uploadRecipeImage({
-          imageUri: 'file://resized.jpg',
-          householdId: 'house-123',
-          recipeId: 'recipe-456',
-        })
-      ).rejects.toThrow('Failed to upload recipe image');
-      expect(createSignedUrl).not.toHaveBeenCalled();
-    });
-
-    it('throws when upload returns no path', async () => {
-      const upload = jest.fn().mockResolvedValue({
-        data: { path: null },
-        error: null,
-      });
-      const createSignedUrl = jest.fn();
-      mockStorageFrom.mockReturnValue({ upload, createSignedUrl });
-
-      await expect(
-        uploadRecipeImage({
-          imageUri: 'file://resized.jpg',
-          householdId: 'house-123',
-          recipeId: 'recipe-456',
-        })
-      ).rejects.toThrow('Failed to upload recipe image');
-      expect(createSignedUrl).not.toHaveBeenCalled();
-    });
-
-    it('throws when signed URL creation fails with error message', async () => {
-      const upload = jest.fn().mockResolvedValue({
-        data: { path: 'path' },
-        error: null,
-      });
-      const createSignedUrl = jest.fn().mockResolvedValue({
-        data: null,
-        error: { message: 'Auth error' },
-      });
-      mockStorageFrom.mockReturnValue({ upload, createSignedUrl });
-
-      await expect(
-        uploadRecipeImage({
-          imageUri: 'file://resized.jpg',
-          householdId: 'house-123',
-          recipeId: 'recipe-456',
-        })
-      ).rejects.toThrow('Auth error');
-    });
-
-    it('throws when signed URL creation fails without error message', async () => {
-      const upload = jest.fn().mockResolvedValue({
-        data: { path: 'path' },
-        error: null,
-      });
-      const createSignedUrl = jest.fn().mockResolvedValue({
-        data: null,
-        error: null,
-      });
-      mockStorageFrom.mockReturnValue({ upload, createSignedUrl });
-
-      await expect(
-        uploadRecipeImage({
-          imageUri: 'file://resized.jpg',
-          householdId: 'house-123',
-          recipeId: 'recipe-456',
-        })
-      ).rejects.toThrow('Failed to create signed image URL');
-    });
-
-    it('throws when signed URL creation returns no signedUrl', async () => {
-      const upload = jest.fn().mockResolvedValue({
-        data: { path: 'path' },
-        error: null,
-      });
-      const createSignedUrl = jest.fn().mockResolvedValue({
-        data: { signedUrl: null },
-        error: null,
-      });
-      mockStorageFrom.mockReturnValue({ upload, createSignedUrl });
-
-      await expect(
-        uploadRecipeImage({
-          imageUri: 'file://resized.jpg',
-          householdId: 'house-123',
-          recipeId: 'recipe-456',
-        })
-      ).rejects.toThrow('Failed to create signed image URL');
-    });
-  });
-
-  describe.each([
-    ['empty path', ''],
-    ['whitespace path', '  '],
-  ])('deleteRecipeImage validation: %s', (_label, path) => {
-    it('throws when path is invalid', async () => {
-      await expect(deleteRecipeImage(path)).rejects.toThrow('Missing required path');
+      await expect(uploadRecipeImage(mockParams)).rejects.toThrow('API Error');
     });
   });
 
   describe('deleteRecipeImage', () => {
-    it('removes the image path from storage', async () => {
-      const remove = jest.fn().mockResolvedValue({ data: [{ name: 'file.jpg' }], error: null });
-      mockStorageFrom.mockReturnValue({ remove });
+    it('should log warning when backend not implemented', async () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      await expect(deleteRecipeImage('households/house/recipes/recipe/file.jpg')).resolves.toBeUndefined();
+      await deleteRecipeImage('households/h1/recipes/r1/photo.jpg');
 
-      expect(remove).toHaveBeenCalledWith(['households/house/recipes/recipe/file.jpg']);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('not implemented')
+      );
+
+      consoleSpy.mockRestore();
     });
 
-    describe.each([
-      ['storage error', { data: null, error: { message: 'Delete failed' } }, 'Delete failed'],
-      ['missing data', { data: null, error: null }, 'Failed to delete recipe image'],
-    ])('error handling: %s', (_label, removeResult, expectedMessage) => {
-      it('throws a helpful error message', async () => {
-        const remove = jest.fn().mockResolvedValue(removeResult);
-        mockStorageFrom.mockReturnValue({ remove });
-
-        await expect(deleteRecipeImage('households/house/recipes/recipe/file.jpg')).rejects.toThrow(
-          expectedMessage
-        );
+    describe.each<[string, string]>([
+      ['empty path', ''],
+      ['whitespace path', '   '],
+    ])('validation: %s', (_label, path) => {
+      it('should throw Missing path', async () => {
+        await expect(deleteRecipeImage(path)).rejects.toThrow('Missing path');
       });
     });
   });

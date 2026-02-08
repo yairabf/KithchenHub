@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../../../theme';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { stripToDigitsOnly, stripToNumeric } from '../../../../common/utils';
+import { useDebouncedRemoteSearch } from '../../../../common/hooks';
 import { GrocerySearchBar, GroceryItem } from '../../../shopping/components/GrocerySearchBar';
 import { UnitPicker } from '../UnitPicker';
 import { getUnitLabel } from '../../constants';
@@ -45,28 +46,14 @@ export function AddRecipeModal({
 }: AddRecipeModalProps) {
   const [recipe, setRecipe] = useState<NewRecipeData>(createEmptyRecipe());
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
-
-  // Update search results when query changes
-  useEffect(() => {
-    if (!searchGroceries) return;
-
-    const timer = setTimeout(async () => {
-      if (searchQuery.trim()) {
-        try {
-          const results = await searchGroceries(searchQuery);
-          setSearchResults(results);
-        } catch (error) {
-          console.error('Ingredient search failed:', error);
-          setSearchResults([]);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, searchGroceries]);
+  const { results: searchResults } = useDebouncedRemoteSearch<GroceryItem>({
+    query: searchQuery,
+    searchFn: searchGroceries,
+    enabled: !!searchGroceries,
+    onError: (error) => {
+      console.error('Ingredient search failed:', error);
+    },
+  });
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageIsLocal, setImageIsLocal] = useState(false);
   const [removeImage, setRemoveImage] = useState(false);

@@ -1,6 +1,6 @@
-import { Image } from 'react-native';
+import { Image, Platform } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { IMAGE_CONSTRAINTS } from './imageConstraints';
 
 export interface ResizedImageResult {
@@ -76,6 +76,17 @@ const calculateResizeTarget = (dimensions: ImageDimensions): ImageDimensions | n
  * @throws Error if file size cannot be determined
  */
 const getImageFileSizeBytes = async (uri: string): Promise<number> => {
+  if (Platform.OS === 'web') {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      return blob.size;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Unable to determine image file size on web: ${message}`);
+    }
+  }
+
   const fileInfo = await getFileInfoWithOptionalSize(uri);
 
   if (!isFileInfoWithSize(fileInfo)) {

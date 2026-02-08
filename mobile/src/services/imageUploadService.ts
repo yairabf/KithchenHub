@@ -1,8 +1,5 @@
-import { supabase } from './supabase';
-import { IMAGE_CONSTRAINTS } from '../common/utils/imageConstraints';
-
-const BUCKET_NAME = 'household-uploads';
-const SIGNED_URL_EXPIRATION_SECONDS = 60 * 60 * 24 * 365;
+import { Platform } from 'react-native';
+import { apiClient } from './api';
 
 export interface UploadRecipeImageParams {
   imageUri: string;
@@ -11,113 +8,77 @@ export interface UploadRecipeImageParams {
 }
 
 export interface UploadedImageResult {
-  path: string;
-  signedUrl: string;
+  imageUrl: string;
+  imagePath: string;
+}
+
+/** React Native FormData file shape for multipart upload (native only) */
+interface RNFormDataFilePart {
+  uri: string;
+  type: string;
+  name: string;
+}
+
+const RECIPE_IMAGE_FILENAME = 'recipe-image.jpg';
+
+/**
+ * Builds the file field for multipart upload. On web, FormData expects a Blob/File;
+ * on React Native, the { uri, type, name } shape is used.
+ */
+async function getFilePartForFormData(imageUri: string): Promise<Blob | RNFormDataFilePart> {
+  if (Platform.OS === 'web') {
+    const response = await fetch(imageUri);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image for upload: ${response.status}`);
+    }
+    return await response.blob();
+  }
+  return {
+    uri: imageUri,
+    type: 'image/jpeg',
+    name: RECIPE_IMAGE_FILENAME,
+  };
 }
 
 /**
- * Builds the storage path for a recipe image in Supabase Storage.
- */
-export const buildRecipeImagePath = ({
-  householdId,
-  recipeId,
-  fileName,
-}: {
-  householdId: string;
-  recipeId: string;
-  fileName: string;
-}): string => {
-  return `households/${householdId}/recipes/${recipeId}/${fileName}`;
-};
-
-const createRecipeImageFileName = (timestamp: number): string => {
-  return `${timestamp}.${IMAGE_CONSTRAINTS.outputExtension}`;
-};
-
-const toBlob = async (uri: string): Promise<Blob> => {
-  const response = await fetch(uri);
-  return response.blob();
-};
-
-const assertRequiredParams = (params: UploadRecipeImageParams) => {
-  if (!params.imageUri?.trim()) {
-    throw new Error('Missing required image URI');
-  }
-  if (!params.householdId?.trim()) {
-    throw new Error('Missing required householdId');
-  }
-  if (!params.recipeId?.trim()) {
-    throw new Error('Missing required recipeId');
-  }
-};
-
-/**
- * Ensures the provided storage path is valid.
- * @param path - Supabase storage path to validate.
- */
-const assertRequiredPath = (path: string) => {
-  if (!path?.trim()) {
-    throw new Error('Missing required path');
-  }
-};
-
-/**
- * Uploads a resized JPEG image to Supabase Storage and returns a signed URL.
+ * Uploads a recipe image to the backend.
  */
 export const uploadRecipeImage = async (
   params: UploadRecipeImageParams
 ): Promise<UploadedImageResult> => {
-  assertRequiredParams(params);
+  if (!params.imageUri) throw new Error('Missing image URI');
+  if (!params.recipeId) throw new Error('Missing recipe ID');
 
-  const fileName = createRecipeImageFileName(Date.now());
-  const path = buildRecipeImagePath({
-    householdId: params.householdId,
-    recipeId: params.recipeId,
-    fileName,
-  });
-
-  const storage = supabase.storage.from(BUCKET_NAME);
-  const blob = await toBlob(params.imageUri);
-
-  const { data: uploadData, error: uploadError } = await storage.upload(path, blob, {
-    contentType: IMAGE_CONSTRAINTS.outputMimeType,
-    upsert: true,
-  });
-
-  if (uploadError || !uploadData?.path) {
-    throw new Error(uploadError?.message || 'Failed to upload recipe image');
+  const filePart = await getFilePartForFormData(params.imageUri);
+  const formData = new FormData();
+  if (filePart instanceof Blob) {
+    formData.append('file', filePart, RECIPE_IMAGE_FILENAME);
+  } else {
+    formData.append('file', filePart as unknown as Blob);
   }
 
-  const { data: signedData, error: signedError } = await storage.createSignedUrl(
-    uploadData.path,
-    SIGNED_URL_EXPIRATION_SECONDS
+  const response = await apiClient.post(
+    `/recipes/${params.recipeId}/image`,
+    formData,
+    {
+      transformRequest: (data, headers) => {
+        // Axios on React Native needs this to prevent it from stringifying FormData
+        return data;
+      },
+    }
   );
 
-  if (signedError || !signedData?.signedUrl) {
-    throw new Error(signedError?.message || 'Failed to create signed image URL');
-  }
-
-  return {
-    path: uploadData.path,
-    signedUrl: signedData.signedUrl,
-  };
+  return response.data;
 };
 
 /**
- * Deletes a recipe image from Supabase Storage by path.
- * @param path - Supabase storage path to delete.
+ * Deletes a recipe image (not implemented in backend yet, placeholder).
+ * @param path - Storage path of the image to delete (required for future backend implementation).
  */
 export const deleteRecipeImage = async (path: string): Promise<void> => {
-  assertRequiredPath(path);
-
-  const storage = supabase.storage.from(BUCKET_NAME);
-  const { data, error } = await storage.remove([path]);
-
-  if (error) {
-    throw new Error(error.message || 'Failed to delete recipe image');
+  if (!path?.trim()) {
+    throw new Error('Missing path');
   }
-
-  if (!data) {
-    throw new Error('Failed to delete recipe image');
-  }
+  // TODO: Implement backend endpoint for image deletion when available
+  console.warn('deleteRecipeImage not implemented for backend storage yet');
 };

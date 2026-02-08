@@ -64,11 +64,11 @@ const uploadImageWithCleanup = async ({
   });
 
   try {
-    await updateRecipe(recipeId, { imageUrl: uploaded.signedUrl });
+    await updateRecipe(recipeId, { imageUrl: uploaded.imagePath });
   } catch (updateError) {
     console.error('Failed to update recipe with uploaded image URL. Image uploaded but not linked:', {
       recipeId,
-      imagePath: uploaded.path,
+      imagePath: uploaded.imagePath,
       error: updateError,
     });
     throw updateError;

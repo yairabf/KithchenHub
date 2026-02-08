@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { Recipe } from '@prisma/client';
+import { Prisma, Recipe } from '@prisma/client';
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 
 @Injectable()
@@ -106,14 +106,16 @@ export class RecipesRepository {
       category?: string;
       prepTime?: number;
       cookTime?: number;
-      ingredients?: any;
-      instructions?: any;
-      imageUrl?: string;
+      /** JSON-serializable; cast to Prisma input at boundary */
+      ingredients?: unknown;
+      /** JSON-serializable; cast to Prisma input at boundary */
+      instructions?: unknown;
+      imageUrl?: string | null;
     },
   ): Promise<Recipe> {
     return this.prisma.recipe.update({
       where: { id },
-      data,
+      data: data as Prisma.RecipeUpdateInput,
     });
   }
 

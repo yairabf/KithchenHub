@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { RecipesRepository } from '../repositories/recipes.repository';
+import { StorageService } from '../../storage/storage.service';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 import {
@@ -94,7 +95,20 @@ export class RecipesService {
   constructor(
     private recipesRepository: RecipesRepository,
     private prisma: PrismaService,
+    private storageService: StorageService,
   ) {}
+
+  private isHttpUrl(value: string): boolean {
+    return /^https?:\/\//i.test(value);
+  }
+
+  private async resolveImageUrl(
+    imageUrl?: string | null,
+  ): Promise<string | undefined> {
+    if (!imageUrl) return undefined;
+    if (this.isHttpUrl(imageUrl)) return imageUrl;
+    return this.storageService.createSignedUrl(imageUrl);
+  }
 
   /**
    * Gets all recipes for a household with optional filtering.
@@ -126,14 +140,16 @@ export class RecipesService {
       )}`,
     );
 
-    const mapped = recipes.map((recipe) => ({
-      id: recipe.id,
-      title: recipe.title,
-      category: recipe.category ?? undefined,
-      prepTime: recipe.prepTime ?? undefined,
-      cookTime: recipe.cookTime ?? undefined,
-      imageUrl: recipe.imageUrl ?? undefined,
-    }));
+    const mapped = await Promise.all(
+      recipes.map(async (recipe) => ({
+        id: recipe.id,
+        title: recipe.title,
+        category: recipe.category ?? undefined,
+        prepTime: recipe.prepTime ?? undefined,
+        cookTime: recipe.cookTime ?? undefined,
+        imageUrl: await this.resolveImageUrl(recipe.imageUrl),
+      })),
+    );
 
     this.logger.debug(`Mapped recipes DTO: ${JSON.stringify(mapped, null, 2)}`);
     return mapped;
@@ -169,6 +185,7 @@ export class RecipesService {
     }
 
     const mapped = mapRecipeToDetailDto(recipe);
+    mapped.imageUrl = await this.resolveImageUrl(recipe.imageUrl);
     this.logger.log(`Recipe ${recipeId} found, returning details`);
     this.logger.debug(`Recipe details: ${JSON.stringify(mapped, null, 2)}`);
     return mapped;
@@ -202,6 +219,7 @@ export class RecipesService {
     this.logger.debug(`Created recipe: ${JSON.stringify(recipe, null, 2)}`);
 
     const mapped = mapRecipeToDetailDto(recipe);
+    mapped.imageUrl = await this.resolveImageUrl(recipe.imageUrl);
     this.logger.debug(`Mapped recipe DTO: ${JSON.stringify(mapped, null, 2)}`);
     return mapped;
   }
@@ -241,7 +259,9 @@ export class RecipesService {
       imageUrl: dto.imageUrl,
     });
 
-    return mapRecipeToDetailDto(updatedRecipe);
+    const mapped = mapRecipeToDetailDto(updatedRecipe);
+    mapped.imageUrl = await this.resolveImageUrl(updatedRecipe.imageUrl);
+    return mapped;
   }
 
   /**
@@ -335,5 +355,37 @@ export class RecipesService {
     }
 
     await this.recipesRepository.deleteRecipe(recipeId);
+  }
+
+  async uploadImage(
+    recipeId: string,
+    householdId: string,
+    fileBuffer: Buffer,
+    mimeType: string,
+  ): Promise<{ imageUrl: string; imagePath: string }> {
+    const recipe = await this.recipesRepository.findRecipeById(recipeId);
+
+    if (!recipe) {
+      throw new NotFoundException('Recipe not found');
+    }
+
+    if (recipe.householdId !== householdId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const extension = mimeType.split('/')[1] ?? 'jpg';
+    const fileName = `${Date.now()}.${extension}`;
+    const imagePath = `households/${householdId}/recipes/${recipeId}/${fileName}`;
+
+    const path = await this.storageService.uploadFile(
+      imagePath,
+      fileBuffer,
+      mimeType,
+    );
+
+    await this.recipesRepository.updateRecipe(recipeId, { imageUrl: path });
+
+    const imageUrl = await this.resolveImageUrl(path);
+    return { imageUrl, imagePath: path };
   }
 }

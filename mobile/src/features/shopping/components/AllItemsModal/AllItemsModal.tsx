@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { AllItemsModalProps, GroceryItem } from './types';
+import { useDebouncedRemoteSearch } from '../../../../common/hooks';
 
 export function AllItemsModal({
   visible,
@@ -24,33 +25,15 @@ export function AllItemsModal({
   searchGroceries,
 }: AllItemsModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-
-  // Debounced search effect
-  useEffect(() => {
-    if (!searchGroceries) return;
-
-    const timer = setTimeout(async () => {
-      if (searchQuery.trim()) {
-        setIsSearching(true);
-        try {
-          const results = await searchGroceries(searchQuery);
-          setSearchResults(results);
-        } catch (error) {
-          console.error('All items search failed:', error);
-          setSearchResults([]);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, searchGroceries]);
+  const { results: searchResults, isSearching } = useDebouncedRemoteSearch<GroceryItem>({
+    query: searchQuery,
+    searchFn: searchGroceries,
+    enabled: !!searchGroceries,
+    onError: (error) => {
+      console.error('All items search failed:', error);
+    },
+  });
 
   console.log('AllItemsModal render - visible:', visible, 'items count:', items.length);
 
