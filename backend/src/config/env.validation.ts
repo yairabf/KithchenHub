@@ -39,6 +39,18 @@ const envSchema = z.object({
     .positive()
     .optional()
     .default(604800),
+  RECIPE_IMAGE_UPLOADS_PER_HOUR: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .default(60),
+  RECIPE_IMAGE_UPLOAD_BURST: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .default(10),
   /**
    * Logging configuration
    */
