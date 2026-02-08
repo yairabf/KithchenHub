@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,9 +21,36 @@ export function AllItemsModal({
   onClose,
   onSelectItem,
   onQuickAddItem,
+  searchGroceries,
 }: AllItemsModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  // Debounced search effect
+  useEffect(() => {
+    if (!searchGroceries) return;
+
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        setIsSearching(true);
+        try {
+          const results = await searchGroceries(searchQuery);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('All items search failed:', error);
+          setSearchResults([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchGroceries]);
 
   console.log('AllItemsModal render - visible:', visible, 'items count:', items.length);
 
@@ -32,12 +59,19 @@ export function AllItemsModal({
     if (!searchQuery.trim()) {
       return items;
     }
+
+    // If using remote search, use search results
+    if (searchGroceries) {
+      return searchResults;
+    }
+
+    // Otherwise filter locally
     const query = searchQuery.toLowerCase().trim();
     return items.filter(item =>
       item.name.toLowerCase().includes(query) ||
       item.category.toLowerCase().includes(query)
     );
-  }, [items, searchQuery]);
+  }, [items, searchQuery, searchResults, searchGroceries]);
 
   // Group items by category
   const groupedItems = useMemo(() => {

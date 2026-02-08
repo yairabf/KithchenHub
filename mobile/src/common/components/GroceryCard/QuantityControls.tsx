@@ -25,7 +25,7 @@ export function QuantityControls({
       >
         <Text style={styles.quantityBtnText}>-</Text>
       </TouchableOpacity>
-      <Text style={styles.quantity}>{quantity}</Text>
+      <Text style={styles.quantity}>{Math.ceil(quantity)}</Text>
       <TouchableOpacity style={styles.quantityBtn} onPress={onIncrement}>
         <Text style={styles.quantityBtnText}>+</Text>
       </TouchableOpacity>

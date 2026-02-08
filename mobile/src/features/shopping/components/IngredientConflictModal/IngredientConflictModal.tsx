@@ -4,6 +4,7 @@ import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { colors, spacing, borderRadius } from '../../../../theme';
 import type { Ingredient } from '../../../../mocks/recipes';
 import type { ShoppingItem } from '../../../../mocks/shopping';
+import { addQuantities } from '../../../recipes/utils/unitConversion';
 
 interface IngredientConflictModalProps {
   visible: boolean;
@@ -28,11 +29,29 @@ export function IngredientConflictModal({
   };
 
   const currentQuantity = formatQuantity(existingItem.quantity, existingItem.unit);
-  const recipeQuantity = formatQuantity(ingredient.quantity, ingredient.unit);
+  const recipeQuantity = formatQuantity(
+    ingredient.quantityAmount ?? ingredient.quantity ?? 0,
+    ingredient.quantityUnit ?? ingredient.unit
+  );
+
+  const currentQtyNum = typeof existingItem.quantity === 'number' ? existingItem.quantity : parseFloat(String(existingItem.quantity)) || 0;
+  const ingredientQtyNum = typeof ingredient.quantityAmount === 'number'
+    ? ingredient.quantityAmount
+    : parseFloat(String(ingredient.quantityAmount ?? ingredient.quantity)) || 0;
+
+  // Calculate combined quantity using unit conversion if possible
+  const combinedAmount = addQuantities(
+    currentQtyNum, existingItem.unit || '',
+    ingredientQtyNum, ingredient.quantityUnit || ingredient.unit || '',
+    existingItem.unit || '' // Target existing unit
+  );
+
+  // Fallback to simple addition if incompatible (preserves existing behavior)
+  const finalAmount = combinedAmount !== null ? combinedAmount : (currentQtyNum + ingredientQtyNum);
+
   const combinedQuantity = formatQuantity(
-    (typeof existingItem.quantity === 'number' ? existingItem.quantity : parseFloat(String(existingItem.quantity)) || 0) +
-    (typeof ingredient.quantity === 'number' ? ingredient.quantity : parseFloat(String(ingredient.quantity)) || 0),
-    existingItem.unit || ingredient.unit
+    finalAmount,
+    existingItem.unit || ingredient.quantityUnit || ingredient.unit
   );
 
   return (
@@ -46,7 +65,7 @@ export function IngredientConflictModal({
         <Text style={styles.message}>
           "{ingredient.name}" is already in your shopping list.
         </Text>
-        
+
         <View style={styles.comparisonRow}>
           <View style={styles.column}>
             <Text style={styles.label}>Current:</Text>
@@ -94,7 +113,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: spacing.md,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: colors.quantityBg,
     borderRadius: borderRadius.lg,
     gap: spacing.md,
   },

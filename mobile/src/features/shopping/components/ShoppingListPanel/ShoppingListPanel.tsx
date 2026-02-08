@@ -70,6 +70,9 @@ export function ShoppingListPanel({
   onQuantityChange,
   onDeleteItem,
   onToggleItemChecked,
+  searchQuery,
+  onSearchChange,
+  searchMode = 'local',
 }: ShoppingListPanelProps) {
   // Memoize the render function to prevent unnecessary re-renders
   const renderShoppingItem = useCallback((item: typeof filteredItems[0], index: number) => {
@@ -158,6 +161,9 @@ export function ShoppingListPanel({
         showShadow={true}
         allowCustomItems={true}
         containerStyle={styles.searchBarContainer}
+        value={searchQuery}
+        onChangeText={onSearchChange}
+        searchMode={searchMode}
       />
 
       {/* Shopping Items */}

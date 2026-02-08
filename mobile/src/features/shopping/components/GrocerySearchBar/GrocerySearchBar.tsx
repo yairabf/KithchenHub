@@ -29,6 +29,7 @@ export function GrocerySearchBar({
   onChangeText,
   containerStyle,
   dropdownStyle,
+  searchMode = 'local',
 }: GrocerySearchBarProps) {
   // Internal state for uncontrolled mode
   const [internalQuery, setInternalQuery] = useState('');
@@ -51,23 +52,28 @@ export function GrocerySearchBar({
   const searchResults = useMemo(() => {
     const trimmedQuery = searchQuery.trim();
     if (!trimmedQuery) return [];
-    
+
     const normalizedQuery = trimmedQuery.toLowerCase();
-    
+
+    // If remote mode, assume items are already filtered by server
+    if (searchMode === 'remote') {
+      return items.slice(0, maxResults);
+    }
+
     // Filter items that match the query
     const filtered = items.filter(item =>
       item.name.toLowerCase().includes(normalizedQuery) ||
       item.category.toLowerCase().includes(normalizedQuery)
     );
-    
+
     // Sort results with custom items prioritized, especially exact matches
     // Create a copy to avoid mutating the filtered array
     const sorted = [...filtered].sort((a, b) =>
       compareGroceryItemsForSearch(a, b, normalizedQuery)
     );
-    
+
     return sorted.slice(0, maxResults);
-  }, [searchQuery, items, maxResults]);
+  }, [searchQuery, items, maxResults, searchMode]);
 
   // Create custom item option when custom items are allowed and there's a query
   const customItem = useMemo((): GroceryItem | null => {
@@ -79,7 +85,7 @@ export function GrocerySearchBar({
     const stableId = `custom-${trimmedQuery.toLowerCase().replace(/\s+/g, '-')}`;
     // Category will be set in the modal, use default for now
     const normalizedCategory = normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase());
-    
+
     return {
       id: stableId,
       name: trimmedQuery,
@@ -203,64 +209,64 @@ export function GrocerySearchBar({
             style={styles.backdrop}
             onPress={handleBackdropPress}
           />
-          <View 
-            ref={dropdownRef} 
-            style={[styles.searchDropdown, dropdownStyle]} 
+          <View
+            ref={dropdownRef}
+            style={[styles.searchDropdown, dropdownStyle]}
             testID="grocery-search-dropdown"
           >
-          <ScrollView
-            style={styles.searchDropdownScroll}
-            keyboardShouldPersistTaps="handled"
-            nestedScrollEnabled
-          >
-            {/* Custom Item Option (shown when no results match) */}
-            {customItem && (
-              <View key={customItem.id} style={[styles.searchResultItem, styles.customItemRow]}>
-                <TouchableOpacity
-                  style={styles.searchResultContent}
-                  onPress={() => handleSelectItem(customItem)}
-                >
-                  <View style={styles.customItemIcon}>
-                    <Ionicons name="add-circle-outline" size={24} color={colors.shopping} />
-                  </View>
-                  <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName}>Add "{customItem.name}"</Text>
-                    <Text style={styles.searchResultCategory}>Custom Item</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addIconButton}
-                  onPress={() => handleQuickAdd(customItem)}
-                  testID={`add-button-custom-${customItem.id}`}
-                >
-                  <Ionicons name="add-circle" size={28} color={colors.shopping} />
-                </TouchableOpacity>
-              </View>
-            )}
+            <ScrollView
+              style={styles.searchDropdownScroll}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+            >
+              {/* Custom Item Option (shown when no results match) */}
+              {customItem && (
+                <View key={customItem.id} style={[styles.searchResultItem, styles.customItemRow]}>
+                  <TouchableOpacity
+                    style={styles.searchResultContent}
+                    onPress={() => handleSelectItem(customItem)}
+                  >
+                    <View style={styles.customItemIcon}>
+                      <Ionicons name="add-circle-outline" size={24} color={colors.shopping} />
+                    </View>
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName}>Add "{customItem.name}"</Text>
+                      <Text style={styles.searchResultCategory}>Custom Item</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.addIconButton}
+                    onPress={() => handleQuickAdd(customItem)}
+                    testID={`add-button-custom-${customItem.id}`}
+                  >
+                    <Ionicons name="add-circle" size={28} color={colors.shopping} />
+                  </TouchableOpacity>
+                </View>
+              )}
 
-            {/* Database Results */}
-            {searchResults.map((item) => (
-              <View key={item.id} style={styles.searchResultItem}>
-                <TouchableOpacity
-                  style={styles.searchResultContent}
-                  onPress={() => handleSelectItem(item)}
-                >
-                  <Image source={{ uri: item.image }} style={styles.searchResultImage} />
-                  <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName}>{item.name}</Text>
-                    <Text style={styles.searchResultCategory}>{item.category}</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addIconButton}
-                  onPress={() => handleQuickAdd(item)}
-                  testID={`add-button-${item.id}`}
-                >
-                  <Ionicons name="add-circle" size={28} color={colors.shopping} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
+              {/* Database Results */}
+              {searchResults.map((item) => (
+                <View key={item.id} style={styles.searchResultItem}>
+                  <TouchableOpacity
+                    style={styles.searchResultContent}
+                    onPress={() => handleSelectItem(item)}
+                  >
+                    <Image source={{ uri: item.image }} style={styles.searchResultImage} />
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName}>{item.name}</Text>
+                      <Text style={styles.searchResultCategory}>{item.category}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.addIconButton}
+                    onPress={() => handleQuickAdd(item)}
+                    testID={`add-button-${item.id}`}
+                  >
+                    <Ionicons name="add-circle" size={28} color={colors.shopping} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
           </View>
         </>
       )}

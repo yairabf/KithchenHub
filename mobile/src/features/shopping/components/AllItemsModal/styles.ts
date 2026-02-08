@@ -1,5 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 import { colors } from '../../../../theme';
+import { boxShadow } from '../../../../theme/shadows';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -21,11 +22,7 @@ export const styles = StyleSheet.create({
     width: SCREEN_WIDTH * 0.75,
     maxWidth: 500,
     backgroundColor: colors.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: -4, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 16,
+    ...boxShadow(0, 12, 'rgba(0, 0, 0, 0.25)', -4),
   },
   header: {
     flexDirection: 'row',
@@ -111,11 +108,7 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...boxShadow(1, 2, 'rgba(0, 0, 0, 0.05)'),
   },
   categoryHeaderLeft: {
     flex: 1,
@@ -140,11 +133,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    ...boxShadow(1, 3, 'rgba(0, 0, 0, 0.05)'),
   },
   itemContent: {
     flexDirection: 'row',
