@@ -1,10 +1,19 @@
 import { uploadRecipeImage, deleteRecipeImage } from './imageUploadService';
-import { apiClient } from './api';
+import { api } from './api';
 
 jest.mock('./api', () => ({
-  apiClient: {
-    post: jest.fn(),
+  api: {
+    upload: jest.fn(),
   },
+}));
+
+jest.mock('../common/utils/imageResize', () => ({
+  resizeAndValidateImage: jest.fn().mockResolvedValue({
+    uri: 'file://resized.jpg',
+    width: 100,
+    height: 100,
+    sizeBytes: 1024,
+  }),
 }));
 
 describe('imageUploadService', () => {
@@ -21,24 +30,21 @@ describe('imageUploadService', () => {
   describe('uploadRecipeImage', () => {
     it('should upload image via backend API and return imageUrl', async () => {
       const mockResponse = {
-        data: {
-          imageUrl: 'https://storage.example.com/image.jpg',
-          imagePath: 'households/h1/recipes/r1/photo.jpg',
-        },
+        imageUrl: 'https://storage.example.com/image.jpg',
+        imageKey: 'households/h1/recipes/r1/photo.webp',
       };
 
-      (apiClient.post as jest.Mock).mockResolvedValue(mockResponse);
+      (api.upload as jest.Mock).mockResolvedValue(mockResponse);
 
       const result = await uploadRecipeImage(mockParams);
 
-      expect(apiClient.post).toHaveBeenCalledWith(
+      expect(api.upload).toHaveBeenCalledWith(
         '/recipes/recipe-123/image',
         expect.any(FormData),
-        expect.any(Object)
       );
       expect(result).toEqual({
         imageUrl: 'https://storage.example.com/image.jpg',
-        imagePath: 'households/h1/recipes/r1/photo.jpg',
+        imageKey: 'households/h1/recipes/r1/photo.webp',
       });
     });
 
@@ -53,23 +59,17 @@ describe('imageUploadService', () => {
 
     it('should propagate API errors', async () => {
       const error = new Error('API Error');
-      (apiClient.post as jest.Mock).mockRejectedValue(error);
+      (api.upload as jest.Mock).mockRejectedValue(error);
 
       await expect(uploadRecipeImage(mockParams)).rejects.toThrow('API Error');
     });
   });
 
   describe('deleteRecipeImage', () => {
-    it('should log warning when backend not implemented', async () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-
-      await deleteRecipeImage('households/h1/recipes/r1/photo.jpg');
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('not implemented')
-      );
-
-      consoleSpy.mockRestore();
+    it('should throw when deletion is not supported', async () => {
+      await expect(
+        deleteRecipeImage('households/h1/recipes/r1/photo.jpg')
+      ).rejects.toThrow('not supported');
     });
 
     describe.each<[string, string]>([

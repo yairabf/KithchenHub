@@ -13,5 +13,6 @@ export { formatTimeForDisplay, formatDateForDisplay } from './dateTimeUtils';
 export { stripToDigitsOnly, stripToNumeric } from './inputSanitization';
 export { IMAGE_CONSTRAINTS } from './imageConstraints';
 export { resizeAndValidateImage, type ResizedImageResult } from './imageResize';
+export { buildImageFormData } from './imageUpload';
 export { isValidImageUrl } from './imageUtils';
 export { isMockDataEnabled } from './mockDataToggle';

@@ -8,7 +8,7 @@ import { isDevMode } from '../../../common/utils/devMode';
 import { getCached, setCached, readCachedEntitiesForUpdate } from '../../../common/repositories/cacheAwareRepository';
 import { EntityTimestamps } from '../../../common/types/entityMetadata';
 import { getIsOnline } from '../../../common/utils/networkStatus';
-import { resizeAndValidateImage } from '../../../common/utils';
+import { resizeAndValidateImage, buildImageFormData } from '../../../common/utils';
 
 /**
  * DTO types for API responses
@@ -590,13 +590,7 @@ export class RemoteRecipeService implements IRecipeService {
         console.log('[RemoteRecipeService] Uploading image for recipe:', recipeId);
 
         const resized = await resizeAndValidateImage(imageUri);
-        const formData = new FormData();
-        const filename = resized.uri.split('/').pop() || 'image.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-        // @ts-ignore - React Native FormData expects specific object structure
-        formData.append('file', { uri: resized.uri, name: filename, type });
+        const formData = await buildImageFormData(resized.uri);
 
         const response = await api.upload<RecipeDetailDto>(
             `/recipes/${recipeId}/image`,
