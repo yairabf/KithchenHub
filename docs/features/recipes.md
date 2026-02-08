@@ -8,6 +8,11 @@
 
 The Recipes feature allows users to browse, search, filter, and create recipes. It displays recipes in a card grid with category filtering and provides a comprehensive recipe creation form with ingredients and step-by-step instructions.
 
+## Recipe Image Uploads
+- Images are uploaded after recipe creation via `POST /recipes/:id/image`.
+- Uploads are limited to 5MB, JPG/PNG/WebP, and capped by input dimensions.
+- Returned `imageUrl` and `thumbUrl` are signed and versioned for caching.
+
 ## Screenshots
 
 ### Main Recipes View
