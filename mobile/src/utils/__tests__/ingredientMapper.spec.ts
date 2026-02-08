@@ -9,24 +9,37 @@ import {
   getIngredientsImages,
   findGroceryItem,
   clearIngredientImageCache,
-  clearGroceryItemsCache,
   clearAllCaches,
 } from '../ingredientMapper';
 import { catalogService } from '../../common/services/catalogService';
 import type { GroceryItem } from '../../features/shopping/components/GrocerySearchBar';
 
-// Mock catalog service
+// Mock catalog service (ingredientMapper uses searchGroceries for on-demand lookup)
 jest.mock('../../common/services/catalogService', () => ({
   catalogService: {
     getGroceryItems: jest.fn(),
+    searchGroceries: jest.fn(),
   },
 }));
 
 const mockGetGroceryItems = catalogService.getGroceryItems as jest.MockedFunction<
   typeof catalogService.getGroceryItems
 >;
+const mockSearchGroceries = catalogService.searchGroceries as jest.MockedFunction<
+  typeof catalogService.searchGroceries
+>;
+
+/** Find item by name (case-insensitive) for readable test setup. */
+function findMockItemByName(items: GroceryItem[], name: string): GroceryItem | undefined {
+  return items.find(i => i.name.toLowerCase() === name.toLowerCase());
+}
 
 describe('ingredientMapper', () => {
+  /** Queries that should return no results (no-match tests). */
+  const QUERIES_NO_MATCH = ['nonexistentitem', 'nonexistent'] as const;
+  /** Query for partial-match test: "chicken" should return "Chicken" first, then "Chicken Breast". */
+  const QUERY_PARTIAL_CHICKEN = 'chicken';
+
   const mockGroceryItems: GroceryItem[] = [
     {
       id: '1',
@@ -62,6 +75,15 @@ describe('ingredientMapper', () => {
     jest.clearAllMocks();
     clearAllCaches();
     mockGetGroceryItems.mockResolvedValue(mockGroceryItems);
+    const chickenItem = findMockItemByName(mockGroceryItems, 'Chicken');
+    const chickenBreastItem = findMockItemByName(mockGroceryItems, 'Chicken Breast');
+    mockSearchGroceries.mockImplementation((query: string) => {
+      if (QUERIES_NO_MATCH.includes(query as (typeof QUERIES_NO_MATCH)[number])) return Promise.resolve([]);
+      if (query === QUERY_PARTIAL_CHICKEN && chickenItem && chickenBreastItem) {
+        return Promise.resolve([chickenItem, chickenBreastItem]);
+      }
+      return Promise.resolve(mockGroceryItems);
+    });
   });
 
   describe('getIngredientImage', () => {
@@ -87,12 +109,12 @@ describe('ingredientMapper', () => {
       
       expect(firstCall).toBe(secondCall);
       expect(firstCall).toBe('https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=100');
-      // Should only call catalogService once due to local cache
-      expect(mockGetGroceryItems).toHaveBeenCalledTimes(1);
+      // Should only call searchGroceries once per unique name due to local cache
+      expect(mockSearchGroceries).toHaveBeenCalledTimes(1);
     });
 
     it('should handle catalog service errors gracefully', async () => {
-      mockGetGroceryItems.mockRejectedValueOnce(new Error('Service unavailable'));
+      mockSearchGroceries.mockRejectedValueOnce(new Error('Service unavailable'));
       
       const result = await getIngredientImage('Chicken Breast');
       
@@ -122,8 +144,8 @@ describe('ingredientMapper', () => {
       expect(results[0]).toBe('https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=100');
       expect(results[1]).toBe('https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100');
       expect(results[2]).toBe('https://images.unsplash.com/photo-1544502066-2c4c0e0e0e0e?w=100');
-      // Should only call catalogService once due to promise-based caching
-      expect(mockGetGroceryItems).toHaveBeenCalledTimes(1);
+      // searchGroceries called per unique ingredient (3 names = 3 calls)
+      expect(mockSearchGroceries).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -165,10 +187,8 @@ describe('ingredientMapper', () => {
     });
 
     it('should handle catalog service errors gracefully', async () => {
-      mockGetGroceryItems.mockRejectedValueOnce(new Error('Service unavailable'));
-      
+      mockSearchGroceries.mockRejectedValue(new Error('Service unavailable'));
       const result = await getIngredientsImages(['Chicken Breast', 'Olive Oil']);
-      
       expect(result).toEqual({
         'Chicken Breast': undefined,
         'Olive Oil': undefined,
@@ -205,7 +225,7 @@ describe('ingredientMapper', () => {
     });
 
     it('should handle catalog service errors gracefully', async () => {
-      mockGetGroceryItems.mockRejectedValueOnce(new Error('Service unavailable'));
+      mockSearchGroceries.mockRejectedValueOnce(new Error('Service unavailable'));
       
       const result = await findGroceryItem('Chicken Breast');
       
@@ -224,32 +244,16 @@ describe('ingredientMapper', () => {
   describe('cache management', () => {
     it('should clear ingredient image cache', async () => {
       await getIngredientImage('Chicken Breast');
-      
       clearIngredientImageCache();
-      
-      // Should still use grocery items cache (only one call)
       await getIngredientImage('Chicken Breast');
-      expect(mockGetGroceryItems).toHaveBeenCalledTimes(1);
+      expect(mockSearchGroceries).toHaveBeenCalledTimes(2);
     });
 
-    it('should clear grocery items cache', async () => {
+    it('should clear all caches and refetch on next call', async () => {
       await getIngredientImage('Chicken Breast');
-      
-      clearGroceryItemsCache();
-      
-      // Should fetch again after clearing
-      await getIngredientImage('Olive Oil');
-      expect(mockGetGroceryItems).toHaveBeenCalledTimes(2);
-    });
-
-    it('should clear all caches', async () => {
-      await getIngredientImage('Chicken Breast');
-      
       clearAllCaches();
-      
-      // Should fetch again after clearing
       await getIngredientImage('Olive Oil');
-      expect(mockGetGroceryItems).toHaveBeenCalledTimes(2);
+      expect(mockSearchGroceries).toHaveBeenCalledTimes(2);
     });
   });
 });

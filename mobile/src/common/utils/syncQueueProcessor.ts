@@ -98,6 +98,15 @@ const BASE_BACKOFF_DELAY_MS = 1000;
  */
 const MAX_BACKOFF_DELAY_MS = 30000;
 
+/** Minimum ms between consecutive POST /auth/sync requests to avoid hammering the backend. */
+const MIN_SYNC_INTERVAL_MS = 3000;
+
+/** Max sync requests per worker run; stops after this even if queue has more (prevents infinite sync loops). */
+const MAX_SYNC_REQUESTS_PER_RUN = 5;
+
+/** Enable to trace why auth/sync is called repeatedly. Logs worker lifecycle and queue state. */
+const DEBUG_SYNC_QUEUE = __DEV__;
+
 /**
  * Calculate exponential backoff delay in milliseconds
  * Formula: baseDelay * (2 ^ attemptCount)
@@ -249,6 +258,9 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
   private workerRunning = false;  // Worker loop state
   private workerCancellationToken: { cancelled: boolean } = { cancelled: false };  // Cancellation token for race-free stopping
   private workerPromise: Promise<void> | null = null;  // Worker loop promise
+  private lastSyncRequestAt = 0;  // Throttle: min interval between POST /auth/sync
+  private syncRequestCountThisRun = 0;  // Cap: stop after MAX_SYNC_REQUESTS_PER_RUN per run
+  private restartTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Start the worker loop
@@ -256,11 +268,21 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    */
   start(): void {
     if (this.workerRunning) {
-      return; // Already running
+      if (DEBUG_SYNC_QUEUE) {
+        console.log('[SyncWorker] start() ignored: already running');
+      }
+      return;
     }
-
+    if (this.restartTimeoutId) {
+      clearTimeout(this.restartTimeoutId);
+      this.restartTimeoutId = null;
+    }
+    if (DEBUG_SYNC_QUEUE) {
+      console.log('[SyncWorker] start() -> starting worker loop');
+    }
     this.workerRunning = true;
     this.workerCancellationToken.cancelled = false;
+    this.syncRequestCountThisRun = 0;
     this.workerPromise = this.runWorkerLoop();
   }
 
@@ -271,6 +293,10 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
   stop(): void {
     this.workerCancellationToken.cancelled = true;
     this.workerRunning = false;
+    if (this.restartTimeoutId) {
+      clearTimeout(this.restartTimeoutId);
+      this.restartTimeoutId = null;
+    }
   }
 
   /**
@@ -292,10 +318,14 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
    * Checks cancellation token to allow race-free stopping
    */
   private async runWorkerLoop(): Promise<void> {
+    if (DEBUG_SYNC_QUEUE) {
+      console.log('[SyncWorker] runWorkerLoop() entered');
+    }
     while (this.workerRunning && !this.workerCancellationToken.cancelled) {
-      // Check if online
       if (!getIsOnline()) {
-        // Wait and check again, but check cancellation during wait
+        if (DEBUG_SYNC_QUEUE) {
+          console.log('[SyncWorker] offline, waiting 5s…');
+        }
         await this.waitForDelayWithCancellation(5000);
         if (this.workerCancellationToken.cancelled) {
           break;
@@ -303,34 +333,54 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         continue;
       }
 
-      // Check cancellation before expensive operations
       if (this.workerCancellationToken.cancelled) {
         break;
       }
 
-      // Check if queue has items
       const queue = await syncQueueStorage.getAll();
-      
+      const readyItems = this.filterItemsReadyForRetry(queue);
+
+      if (DEBUG_SYNC_QUEUE) {
+        console.log(
+          `[SyncWorker] queue size=${queue.length}, ready=${readyItems.length}`
+        );
+      }
+
       if (queue.length === 0) {
-        // Queue empty, stop worker
+        if (DEBUG_SYNC_QUEUE) {
+          console.log('[SyncWorker] stopping: queue empty');
+        }
         this.workerRunning = false;
         break;
       }
 
-      // Filter items that are ready for retry (respect backoff)
-      const readyItems = this.filterItemsReadyForRetry(queue);
-      
+      if (this.syncRequestCountThisRun >= MAX_SYNC_REQUESTS_PER_RUN) {
+        if (DEBUG_SYNC_QUEUE) {
+          console.log(
+            `[SyncWorker] stopping: cap reached (${MAX_SYNC_REQUESTS_PER_RUN} requests this run)`
+          );
+        }
+        this.workerRunning = false;
+        this.scheduleRestartIfQueueNotEmpty(queue.length);
+        break;
+      }
+
       if (readyItems.length === 0) {
-        // All items are in backoff, compute time until next attempt
         const nextAttemptTime = this.calculateEarliestNextAttempt(queue);
         if (nextAttemptTime === null) {
-          // No items waiting, stop worker
+          if (DEBUG_SYNC_QUEUE) {
+            console.log('[SyncWorker] stopping: no items waiting (backoff done)');
+          }
           this.workerRunning = false;
           break;
         }
-        
         const now = Date.now();
         const waitTime = Math.max(0, nextAttemptTime - now);
+        if (DEBUG_SYNC_QUEUE) {
+          console.log(
+            `[SyncWorker] all in backoff, waiting ${Math.round(waitTime / 1000)}s`
+          );
+        }
         await this.waitForDelayWithCancellation(waitTime);
         if (this.workerCancellationToken.cancelled) {
           break;
@@ -338,20 +388,37 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         continue;
       }
 
-      // Process only ready items (pass filtered set to avoid re-reading queue)
       try {
         await this.processReadyItems(readyItems);
       } catch (error) {
         console.error('Worker loop error:', error);
-        // Continue loop even if processing fails
       }
 
-      // If there are ready items, process immediately (no extra sleep)
-      // Loop will check again on next iteration
     }
 
     this.workerRunning = false;
     this.workerPromise = null;
+    if (DEBUG_SYNC_QUEUE) {
+      console.log('[SyncWorker] runWorkerLoop() exited');
+    }
+  }
+
+  private scheduleRestartIfQueueNotEmpty(queueLength: number): void {
+    if (queueLength === 0 || this.workerCancellationToken.cancelled) return;
+    if (this.restartTimeoutId) return;
+    this.restartTimeoutId = setTimeout(async () => {
+      this.restartTimeoutId = null;
+      if (this.workerCancellationToken.cancelled || this.workerRunning || !getIsOnline()) {
+        return;
+      }
+      const queue = await syncQueueStorage.getAll();
+      if (queue.length > 0) {
+        if (DEBUG_SYNC_QUEUE) {
+          console.log('[SyncWorker] restart scheduled: queue still has items');
+        }
+        this.start();
+      }
+    }, MIN_SYNC_INTERVAL_MS);
   }
 
   /**
@@ -551,14 +618,31 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         (syncPayload.chores && syncPayload.chores.length > 0);
       
       if (!hasData) {
-        // All items were compacted, remove them
         for (const item of readyItems) {
           await syncQueueStorage.remove(item.id);
         }
         return;
       }
 
-      // Call sync endpoint
+      if (DEBUG_SYNC_QUEUE) {
+        console.log(
+          `[SyncWorker] POST /auth/sync batchSize=${readyItems.length}`
+        );
+      }
+
+      // Throttle: don't send another request until MIN_SYNC_INTERVAL_MS has passed
+      const now = Date.now();
+      const elapsed = now - this.lastSyncRequestAt;
+      if (elapsed < MIN_SYNC_INTERVAL_MS && this.lastSyncRequestAt > 0) {
+        const waitMs = MIN_SYNC_INTERVAL_MS - elapsed;
+        if (DEBUG_SYNC_QUEUE) {
+          console.log(`[SyncWorker] throttling: waiting ${waitMs}ms before next sync`);
+        }
+        await this.waitForDelayWithCancellation(waitMs);
+      }
+      this.lastSyncRequestAt = Date.now();
+      this.syncRequestCountThisRun += 1;
+
       try {
         const result = await api.post<SyncResult>('/auth/sync', syncPayload);
         // Success response: process results
@@ -672,21 +756,27 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
       throw new Error('Invalid recipe payload in queue: missing required fields');
     }
 
+    const r = recipe as Recipe & { name?: string };
+    // name fallback kept for legacy payloads if isValidRecipe is ever relaxed to accept name
+    type InstructionLike = { instruction?: string; text?: string };
     return {
-      id: recipe.id, // Use id (may be localId or serverId)
+      id: r.id, // Use id (may be localId or serverId)
       operationId, // Include idempotency key
-      title: recipe.name,
-      ingredients: recipe.ingredients.map(ing => ({
+      title: r.title ?? r.name ?? '',
+      ingredients: r.ingredients.map(ing => ({
         name: ing.name,
-        quantity: typeof ing.quantity === 'string' 
-          ? parseFloat(ing.quantity) || undefined 
+        quantity: typeof ing.quantity === 'string'
+          ? parseFloat(ing.quantity) || undefined
           : ing.quantity || undefined,
         unit: ing.unit || undefined,
       })),
-      instructions: recipe.instructions.map((inst, index) => ({
-        step: index + 1,
-        instruction: inst.text,
-      })),
+      instructions: r.instructions.map((inst, index) => {
+        const instObj = inst as InstructionLike;
+        return {
+          step: index + 1,
+          instruction: instObj.instruction ?? instObj.text ?? '',
+        };
+      }),
     };
   }
 
@@ -1009,8 +1099,13 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     queue: QueuedWrite[],
     result: SyncResult
   ): Promise<void> {
-    // Backward compatibility: if succeeded array is missing
     if (!result.succeeded) {
+      if (DEBUG_SYNC_QUEUE) {
+        console.warn(
+          '[SyncWorker] Backend did not return succeeded array (status=%s). Using backward-compat path.',
+          result.status
+        );
+      }
       await this.handleBackwardCompatibleResult(queue, result);
       return;
     }
@@ -1051,13 +1146,23 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
       
       console.log(`Sync queue processed: ${queue.length} synced (backward compatibility mode)`);
     } else {
-      // Partial or failed, but no succeeded array
-      // SAFE: Don't remove anything (can't prove success)
-      // Keep all items for retry
-      console.warn(
-        'Sync result missing succeeded array but status is not synced. ' +
-        'Keeping all items for retry (backward compatibility safety).'
+      // Partial or failed: we have conflicts but no succeeded array.
+      // Treat operationIds in conflicts as failed (increment retry / mark permanent)
+      // so we don't retry the same failed item forever.
+      const conflictOperationIds = new Set(
+        result.conflicts.map((c) => c.operationId)
       );
+      for (const item of queue) {
+        if (conflictOperationIds.has(item.operationId)) {
+          await this.handleFailedItem(item);
+        } else {
+          console.warn(
+            'Sync result missing succeeded array but status is not synced. ' +
+              'Item not in conflicts; keeping for retry.',
+            { operationId: item.operationId, entityType: item.entityType }
+          );
+        }
+      }
     }
   }
 
@@ -1091,10 +1196,12 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     // Process each queued item
     for (const item of queue) {
       if (succeededOperationIds.has(item.operationId)) {
-        // Explicit success: remove from queue
+        // Explicit success: remove this entry and any other entries for the same entity.
+        // (We only send one operationId per entity (compaction), so older duplicates
+        // would never appear in succeeded and would keep the queue non-empty.)
         syncedIds.add(item.id);
         syncedTypes.add(item.entityType);
-        
+
         // Track serverId mapping for creates
         const successEntry = result.succeeded.find(s => s.operationId === item.operationId);
         if (successEntry && successEntry.id !== item.target.localId) {
@@ -1104,8 +1211,20 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
             entityType: item.entityType,
           });
         }
-        
+
         await syncQueueStorage.remove(item.id);
+        // Remove any other entries in this batch for the same entity so the queue can drain
+        for (const other of queue) {
+          if (
+            other.id !== item.id &&
+            other.entityType === item.entityType &&
+            other.target.localId === item.target.localId
+          ) {
+            syncedIds.add(other.id);
+            syncedTypes.add(other.entityType);
+            await syncQueueStorage.remove(other.id);
+          }
+        }
         continue;
       }
       
@@ -1205,6 +1324,12 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
       `Sync queue processed: ${syncedCount} synced, ${failedCount} failed, ` +
       `${unknownCount} unknown (kept for retry)`
     );
+    if (DEBUG_SYNC_QUEUE && unknownCount > 0) {
+      console.warn(
+        '[SyncWorker] Items kept for retry (missing from backend succeeded/conflicts). ' +
+          'Check backend returns operationId for every item.'
+      );
+    }
   }
 }
 

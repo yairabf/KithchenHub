@@ -17,6 +17,10 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+jest.mock('../../../contexts/AuthContext', () => ({
+  useAuth: () => ({ isLoading: false }),
+}));
+
 jest.mock('../../utils/cacheStorage');
 jest.mock('../../utils/cacheEvents');
 
@@ -290,6 +294,7 @@ describe('useCachedEntities', () => {
     });
 
     it('should handle errors during manual refresh', async () => {
+      // Refresh rejects; we expect error to be set and loading cleared so the UI is not stuck.
       const error = new Error('Refresh failed');
       mockReadCacheArray
         .mockResolvedValueOnce({
@@ -314,6 +319,7 @@ describe('useCachedEntities', () => {
 
       await waitFor(() => {
         expect(result.current.error).toBeInstanceOf(Error);
+        expect(result.current.isLoading).toBe(false);
       });
     });
   });
@@ -343,11 +349,11 @@ describe('useCachedEntities', () => {
         );
 
         await waitFor(() => {
-          expect(result.current.isLoading).toBe(false);
+          expect(result.current.data).toEqual(testData);
         });
 
+        expect(result.current.isLoading).toBe(false);
         expect(mockReadCacheArray).toHaveBeenCalledWith(entityType);
-        expect(result.current.data).toEqual(testData);
       });
     }
   );
