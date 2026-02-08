@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { styles } from './styles';
 import { colors } from '../../../../theme/colors';
 import type { RecipeHeaderProps } from './types';
+import { useRecipeImage } from '../../../../common/hooks/useRecipeImage';
 
 /**
  * RecipeHeader component displays recipe metadata including category badges,
@@ -20,15 +21,21 @@ import type { RecipeHeaderProps } from './types';
  * ```
  */
 export function RecipeHeader({ recipe }: RecipeHeaderProps) {
-  const hasImage = Boolean(recipe.imageUrl);
+  const { uri: cachedImageUri } = useRecipeImage({
+    recipeId: recipe.id,
+    variant: 'image',
+    imageVersion: recipe.imageVersion,
+    remoteUrl: recipe.imageUrl ?? null,
+  });
+  const imageUri = cachedImageUri ?? undefined;
 
   return (
     <View style={styles.container}>
       {/* Recipe Image with Title and Description Overlay */}
       <View style={styles.imageContainer}>
-        {hasImage ? (
+        {imageUri ? (
           <ImageBackground
-            source={{ uri: recipe.imageUrl }}
+            source={{ uri: imageUri }}
             style={styles.imageBackground}
             imageStyle={styles.imageStyle}
           >

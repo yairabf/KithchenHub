@@ -7,6 +7,7 @@ import { SyncStatusIndicator } from '../../../../common/components/SyncStatusInd
 import { determineIndicatorStatus } from '../../../../common/utils/syncStatusUtils';
 import { styles } from './styles';
 import { RecipeCardProps } from './types';
+import { useRecipeImage } from '../../../../common/hooks/useRecipeImage';
 
 export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onEdit }: RecipeCardProps) {
   // Check sync status for signed-in users
@@ -14,6 +15,13 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
 
   // Determine status for indicator
   const indicatorStatus = determineIndicatorStatus(syncStatus);
+  const remoteImageUrl = recipe.thumbUrl || recipe.imageUrl || null;
+  const { uri: cachedImageUri } = useRecipeImage({
+    recipeId: recipe.id,
+    variant: 'thumb',
+    imageVersion: recipe.imageVersion,
+    remoteUrl: remoteImageUrl,
+  });
 
   const formatMinutes = (value?: number | string): string => {
     if (typeof value === 'number') {
@@ -35,10 +43,10 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
       activeOpacity={0.8}
     >
       <View style={styles.recipeImageContainer}>
-        {recipe.thumbUrl || recipe.imageUrl ? (
+        {cachedImageUri ? (
           // @ts-ignore - Image source type mismatch with string
           <Image
-            source={{ uri: recipe.thumbUrl || recipe.imageUrl }}
+            source={{ uri: cachedImageUri }}
             style={styles.recipeImage}
           />
         ) : (
