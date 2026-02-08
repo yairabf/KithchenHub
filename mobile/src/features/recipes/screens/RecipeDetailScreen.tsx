@@ -245,7 +245,7 @@ export function RecipeDetailScreen({
           });
           const updated = await updateRecipe(displayRecipe.id, {
             ...updates,
-            imageUrl: uploaded.signedUrl,
+            imageUrl: uploaded.imagePath,
           });
           setFullRecipe(updated);
         }
