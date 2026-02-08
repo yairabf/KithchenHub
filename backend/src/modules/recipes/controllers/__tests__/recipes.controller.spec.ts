@@ -61,6 +61,7 @@ describe('RecipesController - Unit System', () => {
         title: dto.title,
         ingredients: dto.ingredients as RecipeDetailDto['ingredients'],
         instructions: dto.instructions,
+        hasImage: false,
       };
 
       jest.spyOn(service, 'createRecipe').mockResolvedValue(created);
@@ -95,6 +96,7 @@ describe('RecipesController - Unit System', () => {
           },
         ],
         instructions: [{ step: 1, instruction: 'Mix' }],
+        hasImage: false,
       };
 
       jest.spyOn(service, 'getRecipe').mockResolvedValue(mockRecipe);
