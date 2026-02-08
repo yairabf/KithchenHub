@@ -19,6 +19,7 @@ import { DeprecationInterceptor } from './common/versioning';
 import { VersionGuard } from './common/versioning';
 import { LoggerModule } from './common/logger/logger.module';
 import { MonitoringModule } from './common/monitoring/monitoring.module';
+import { StorageModule } from './infrastructure/storage/storage.module';
 
 @Module({
   imports: [
@@ -33,7 +34,9 @@ import { MonitoringModule } from './common/monitoring/monitoring.module';
     DashboardModule,
     ImportModule,
     HealthModule,
+    HealthModule,
     SupabaseModule,
+    StorageModule,
   ],
   controllers: [],
   providers: [
