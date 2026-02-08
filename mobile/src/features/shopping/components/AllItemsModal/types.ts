@@ -12,4 +12,5 @@ export interface AllItemsModalProps {
   onClose: () => void;
   onSelectItem: (item: GroceryItem) => void;
   onQuickAddItem?: (item: GroceryItem) => void;
+  searchGroceries?: (query: string) => Promise<GroceryItem[]>;
 }

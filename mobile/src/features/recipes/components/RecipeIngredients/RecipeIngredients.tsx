@@ -59,10 +59,10 @@ export function RecipeIngredients({
                   <GroceryCardContent
                     image={ingredient.image}
                     title={ingredient.name || ''}
-                    subtitle={
+                      subtitle={
                       <IngredientInfo
-                        quantity={String(ingredient.quantity)}
-                        unit={ingredient.unit}
+                        quantity={String(ingredient.quantityAmount ?? ingredient.quantity ?? '')}
+                        unit={ingredient.quantityUnit ?? ingredient.unit ?? ''}
                       />
                     }
                     rightElement={

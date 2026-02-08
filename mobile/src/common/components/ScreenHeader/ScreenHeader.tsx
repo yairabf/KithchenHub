@@ -96,16 +96,18 @@ export function ScreenHeader({
   const renderRightActions = () => {
     if (!rightActions) return null;
 
-    const { share, add } = rightActions;
+    const { edit, share, add } = rightActions;
 
     // Don't render wrapper if no actual actions are provided
-    if (!share && !add) return null;
+    if (!edit && !share && !add) return null;
 
     return (
       <View style={styles.rightSection}>
         <HeaderActions
+          onEditPress={edit?.onPress}
           onSharePress={share?.onPress}
           onAddPress={add?.onPress}
+          editLabel={edit?.label}
           shareLabel={share?.label}
           addLabel={add?.label}
         />

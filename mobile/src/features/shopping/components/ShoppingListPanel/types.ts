@@ -23,6 +23,10 @@ export interface ShoppingListPanelProps {
   onQuantityChange: (itemId: string, delta: number) => void;
   onDeleteItem: (itemId: string) => void;
   onToggleItemChecked: (itemId: string) => void;
+  // Search props
+  searchQuery?: string;
+  onSearchChange?: (text: string) => void;
+  searchMode?: 'local' | 'remote';
 }
 
 export type { ShoppingItem, ShoppingList, GroceryItem };

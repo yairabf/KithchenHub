@@ -29,12 +29,17 @@ import {
   calculateSpacerHeight,
   calculateShouldShowStickyHeader,
 } from './RecipeDetailScreen.utils';
+import { addQuantities, normalizeToStandardUnit } from '../utils/unitConversion';
 import { useRecipes } from '../hooks/useRecipes';
 import { useAuth } from '../../../contexts/AuthContext';
 import { createShoppingService } from '../../shopping/services/shoppingService';
 import { IngredientConflictModal } from '../../shopping/components/IngredientConflictModal';
 import { config } from '../../../config';
 import type { ShoppingItem } from '../../../mocks/shopping';
+import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
+import { mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
+import { resizeAndValidateImage } from '../../../common/utils';
+import { uploadRecipeImage } from '../../../services/imageUploadService';
 
 export function RecipeDetailScreen({
   recipe,
@@ -44,7 +49,7 @@ export function RecipeDetailScreen({
   const { isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { getRecipeById } = useRecipes();
+  const { getRecipeById, updateRecipe } = useRecipes();
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -56,18 +61,20 @@ export function RecipeDetailScreen({
   const [conflictModalVisible, setConflictModalVisible] = useState(false);
   const [conflictingIngredient, setConflictingIngredient] = useState<Ingredient | null>(null);
   const [existingItem, setExistingItem] = useState<ShoppingItem | null>(null);
-  
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const shouldUseMockData = config.mockData.enabled || !user || user?.isGuest === true;
   const shoppingService = useMemo(
     () => createShoppingService(shouldUseMockData ? 'guest' : 'signed-in'),
     [shouldUseMockData]
   );
-  
+
   // Check if recipe has full details (ingredients/instructions)
   const hasFullDetails = useMemo(() => {
     return recipe.ingredients && recipe.ingredients.length > 0;
   }, [recipe.ingredients]);
-  
+
   // Reset state when recipe ID changes
   useEffect(() => {
     if (lastFetchedIdRef.current !== recipe.id) {
@@ -77,7 +84,7 @@ export function RecipeDetailScreen({
       fetchingRef.current = null;
     }
   }, [recipe.id]);
-  
+
   // Fetch full recipe details if missing
   useEffect(() => {
     // If recipe already has full details or is guest mode, use recipe prop directly
@@ -87,17 +94,17 @@ export function RecipeDetailScreen({
       fetchingRef.current = null;
       return;
     }
-    
+
     // If we already fetched this recipe ID, don't fetch again
     if (lastFetchedIdRef.current === recipe.id) {
       return;
     }
-    
+
     // If we're already fetching this recipe, don't start another fetch
     if (fetchingRef.current === recipe.id) {
       return;
     }
-    
+
     // Fetch full details
     fetchingRef.current = recipe.id;
     setIsLoadingDetails(true);
@@ -117,7 +124,7 @@ export function RecipeDetailScreen({
         fetchingRef.current = null;
       });
   }, [recipe.id, hasFullDetails, getRecipeById, user?.isGuest]);
-  
+
   // Use fullRecipe if available, otherwise fall back to recipe prop
   const displayRecipe = fullRecipe || recipe;
 
@@ -210,6 +217,74 @@ export function RecipeDetailScreen({
     setToastVisible(false);
   }, []);
 
+  const handleUpdateRecipe = useCallback(async (data: NewRecipeData) => {
+    if (!displayRecipe?.id) return;
+    try {
+      setIsSavingEdit(true);
+      const updates = mapFormDataToRecipeUpdates(data);
+
+      if (data.removeImage) {
+        const updated = await updateRecipe(displayRecipe.id, { ...updates, imageUrl: null });
+        setFullRecipe(updated);
+      } else if (data.imageLocalUri) {
+        if (!user || user.isGuest) {
+          const updated = await updateRecipe(displayRecipe.id, {
+            ...updates,
+            imageUrl: data.imageLocalUri,
+          });
+          setFullRecipe(updated);
+        } else {
+          if (!user.householdId) {
+            throw new Error('Household ID is missing for uploads.');
+          }
+          const resized = await resizeAndValidateImage(data.imageLocalUri);
+          const uploaded = await uploadRecipeImage({
+            imageUri: resized.uri,
+            householdId: user.householdId,
+            recipeId: displayRecipe.id,
+          });
+          const updated = await updateRecipe(displayRecipe.id, {
+            ...updates,
+            imageUrl: uploaded.signedUrl,
+          });
+          setFullRecipe(updated);
+        }
+      } else {
+        const updated = await updateRecipe(displayRecipe.id, updates);
+        setFullRecipe(updated);
+      }
+
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Failed to update recipe:', error);
+      showToast('Failed to update recipe');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }, [displayRecipe?.id, updateRecipe, user, showToast, displayRecipe]);
+
+  const parseQuantity = useCallback((value: unknown, fallback: number) => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : fallback;
+    }
+    const parsed = parseFloat(String(value));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }, []);
+
+  const getIngredientAmount = useCallback(
+    (ingredient: Ingredient, fallback: number) =>
+      parseQuantity(
+        ingredient.quantityAmount ?? ingredient.quantity,
+        fallback
+      ),
+    [parseQuantity]
+  );
+
+  const getIngredientUnit = useCallback(
+    (ingredient: Ingredient) => ingredient.quantityUnit ?? ingredient.unit,
+    []
+  );
+
   const handleToggleStep = useCallback((stepId: string) => {
     setCompletedSteps((prev) => {
       const next = new Set(prev);
@@ -227,7 +302,7 @@ export function RecipeDetailScreen({
       try {
         const data = await shoppingService.getShoppingData();
         const mainList = data.shoppingLists.find(list => list.isMain);
-        
+
         if (!mainList) {
           showToast('No main shopping list found. Please create one.');
           return;
@@ -235,8 +310,8 @@ export function RecipeDetailScreen({
 
         const normalizedName = ingredient.name.trim().toLowerCase();
         const existingItemInList = data.shoppingItems.find(
-          item => item.listId === mainList.id && 
-                  item.name.trim().toLowerCase() === normalizedName
+          item => item.listId === mainList.id &&
+            item.name.trim().toLowerCase() === normalizedName
         );
 
         if (existingItemInList) {
@@ -246,11 +321,17 @@ export function RecipeDetailScreen({
           setConflictModalVisible(true);
         } else {
           // Add new item
+          const rawQuantity = getIngredientAmount(ingredient, 1);
+          const { quantity: normalizedQuantity, unit: normalizedUnit } = normalizeToStandardUnit(
+            rawQuantity,
+            getIngredientUnit(ingredient) || ''
+          );
+
           await shoppingService.createItem({
             listId: mainList.id,
             name: ingredient.name,
-            quantity: ingredient.quantity || 1,
-            unit: ingredient.unit,
+            quantity: normalizedQuantity,
+            unit: normalizedUnit,
             image: ingredient.image,
           });
           showToast(`${ingredient.name} added to ${mainList.name}`);
@@ -260,16 +341,17 @@ export function RecipeDetailScreen({
         showToast('Failed to add ingredient');
       }
     },
-    [shoppingService, showToast]
+    [shoppingService, showToast, getIngredientAmount, getIngredientUnit]
   );
 
   const handleReplaceIngredient = useCallback(async () => {
     if (!conflictingIngredient || !existingItem) return;
-    
+
     try {
+      const quantity = getIngredientAmount(conflictingIngredient, 1);
       await shoppingService.updateItem(existingItem.id, {
-        quantity: conflictingIngredient.quantity || 1,
-        unit: conflictingIngredient.unit,
+        quantity,
+        unit: getIngredientUnit(conflictingIngredient),
       });
       showToast(`${conflictingIngredient.name} quantity updated`);
       setConflictModalVisible(false);
@@ -279,21 +361,29 @@ export function RecipeDetailScreen({
       console.error('Failed to replace ingredient:', error);
       showToast('Failed to update ingredient');
     }
-  }, [conflictingIngredient, existingItem, shoppingService, showToast]);
+  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
 
   const handleAddToQuantity = useCallback(async () => {
     if (!conflictingIngredient || !existingItem) return;
-    
+
     try {
-      const currentQuantity = typeof existingItem.quantity === 'number' 
-        ? existingItem.quantity 
+      const currentQuantity = typeof existingItem.quantity === 'number'
+        ? existingItem.quantity
         : parseFloat(String(existingItem.quantity)) || 0;
-      const ingredientQuantity = typeof conflictingIngredient.quantity === 'number'
-        ? conflictingIngredient.quantity
-        : parseFloat(String(conflictingIngredient.quantity)) || 0;
-      
+      const ingredientQuantity = getIngredientAmount(conflictingIngredient, 0);
+
+      const newQuantity = addQuantities(
+        currentQuantity, existingItem.unit || '',
+        ingredientQuantity, getIngredientUnit(conflictingIngredient) || '',
+        existingItem.unit || '' // Target existing unit
+      );
+
+      // If conversion worked, use it. If not compatible (e.g. g vs ml), fallback to simple addition as before
+      // (This preserves existing behavior for edge cases, but fixes compatible ones)
+      const finalQuantity = newQuantity !== null ? newQuantity : currentQuantity + ingredientQuantity;
+
       await shoppingService.updateItem(existingItem.id, {
-        quantity: currentQuantity + ingredientQuantity,
+        quantity: finalQuantity,
       });
       showToast(`${conflictingIngredient.name} quantity updated`);
       setConflictModalVisible(false);
@@ -303,7 +393,7 @@ export function RecipeDetailScreen({
       console.error('Failed to add to quantity:', error);
       showToast('Failed to update ingredient');
     }
-  }, [conflictingIngredient, existingItem, shoppingService, showToast]);
+  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
 
   const handleAddAllIngredients = useCallback(async () => {
     const ingredients = displayRecipe.ingredients || [];
@@ -315,7 +405,7 @@ export function RecipeDetailScreen({
     try {
       const data = await shoppingService.getShoppingData();
       const mainList = data.shoppingLists.find(list => list.isMain);
-      
+
       if (!mainList) {
         showToast('No main shopping list found. Please create one.');
         return;
@@ -325,40 +415,54 @@ export function RecipeDetailScreen({
       for (const ingredient of ingredients) {
         const normalizedName = ingredient.name.trim().toLowerCase();
         const existingItemInList = data.shoppingItems.find(
-          item => item.listId === mainList.id && 
-                  item.name.trim().toLowerCase() === normalizedName
+          item => item.listId === mainList.id &&
+            item.name.trim().toLowerCase() === normalizedName
         );
 
         if (existingItemInList) {
           // For "Add All", increment quantity if exists
-          const currentQuantity = typeof existingItemInList.quantity === 'number' 
-            ? existingItemInList.quantity 
+          const currentQuantity = typeof existingItemInList.quantity === 'number'
+            ? existingItemInList.quantity
             : parseFloat(String(existingItemInList.quantity)) || 0;
-          const ingredientQuantity = typeof ingredient.quantity === 'number'
-            ? ingredient.quantity
-            : parseFloat(String(ingredient.quantity)) || 0;
-          
+          const ingredientQuantity = getIngredientAmount(ingredient, 0);
+
+          const newQuantity = addQuantities(
+            currentQuantity, existingItemInList.unit || '',
+            ingredientQuantity, getIngredientUnit(ingredient) || '',
+            existingItemInList.unit || ''
+          );
+
+          // If conversion worked, use it. If not, fallback to simple addition.
+          const finalQuantity = newQuantity !== null ? newQuantity : currentQuantity + ingredientQuantity;
+
           await shoppingService.updateItem(existingItemInList.id, {
-            quantity: currentQuantity + ingredientQuantity,
+            quantity: finalQuantity,
           });
         } else {
+          // Normalize before adding new item
+          const rawQuantity = getIngredientAmount(ingredient, 1);
+          const { quantity: normalizedQuantity, unit: normalizedUnit } = normalizeToStandardUnit(
+            rawQuantity,
+            getIngredientUnit(ingredient) || ''
+          );
+
           // Add new item
           await shoppingService.createItem({
             listId: mainList.id,
             name: ingredient.name,
-            quantity: ingredient.quantity || 1,
-            unit: ingredient.unit,
+            quantity: normalizedQuantity,
+            unit: normalizedUnit,
             image: ingredient.image,
           });
         }
       }
-      
+
       showToast(`All ${ingredients.length} ingredients added to ${mainList.name}`);
     } catch (error) {
       console.error('Failed to add all ingredients:', error);
       showToast('Failed to add ingredients');
     }
-  }, [shoppingService, displayRecipe.ingredients, showToast]);
+  }, [shoppingService, displayRecipe.ingredients, showToast, getIngredientAmount, getIngredientUnit]);
 
   // Handle scroll position tracking
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -402,6 +506,7 @@ export function RecipeDetailScreen({
           leftIcon="back"
           onLeftPress={onBack}
           rightActions={{
+            edit: { onPress: () => setShowEditModal(true), label: 'Edit recipe' },
             share: { onPress: () => setShowShareModal(true), label: 'Share recipe' },
           }}
           variant="centered"
@@ -417,12 +522,12 @@ export function RecipeDetailScreen({
               top: stickyHeaderTop,
               opacity: stickyHeaderOpacity,
               transform: [{ translateY: stickyHeaderTranslateY }],
-            }
+            },
+            !isHeaderScrolled && { pointerEvents: 'none' as const },
           ]}
-          pointerEvents={isHeaderScrolled ? 'auto' : 'none'}
         >
           <RecipeContentWrapper
-            recipe={recipe}
+            recipe={displayRecipe}
             completedSteps={completedSteps}
             onToggleStep={handleToggleStep}
             onAddIngredient={handleAddIngredient}
@@ -502,6 +607,16 @@ export function RecipeDetailScreen({
         onClose={() => setShowShareModal(false)}
         title="Share Recipe"
         shareText={shareText}
+      />
+
+      {/* Edit Recipe Modal */}
+      <AddRecipeModal
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleUpdateRecipe}
+        isSaving={isSavingEdit}
+        mode="edit"
+        initialRecipe={mapRecipeToFormData(displayRecipe)}
       />
 
     </SafeAreaView>

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { colors, spacing } from '../../../theme';
+import { boxShadow } from '../../../theme/shadows';
 
 export const styles = StyleSheet.create({
   // Default (tablet/desktop) styles
@@ -19,11 +20,7 @@ export const styles = StyleSheet.create({
     minWidth: 56,
   },
   buttonActive: {
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
   },
   icon: {
     marginBottom: 2,

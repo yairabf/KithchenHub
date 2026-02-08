@@ -133,8 +133,27 @@ export const styles = StyleSheet.create({
   unitInput: {
     width: 60,
   },
+  unitTrigger: {
+    width: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  unitTriggerText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  unitTriggerPlaceholder: {
+    fontSize: 14,
+    color: colors.textMuted,
+    flex: 1,
+  },
   nameInput: {
     flex: 1,
+  },
+  nameInputReadOnly: {
+    backgroundColor: colors.quantityBg,
   },
   stepRow: {
     flexDirection: 'row',

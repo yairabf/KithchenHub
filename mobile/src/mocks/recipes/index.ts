@@ -5,10 +5,16 @@ import type { BaseEntity } from '../../common/types/entityMetadata';
  * Note: Does not extend BaseEntity as it's a nested entity, not a top-level domain entity.
  */
 export interface Ingredient {
-  id: string;
-  quantity: number;
-  unit: string;
   name: string;
+  quantityAmount?: number;
+  quantityUnit?: string;
+  quantityUnitType?: string;
+  quantityModifier?: string;
+  /** @deprecated Use quantityAmount */
+  quantity?: number;
+  /** @deprecated Use quantityUnit */
+  unit?: string;
+  id?: string; // Optional for legacy/mock data
   image?: string; // Optional image URL for the ingredient
 }
 
@@ -17,8 +23,9 @@ export interface Ingredient {
  * Note: Does not extend BaseEntity as it's a nested entity, not a top-level domain entity.
  */
 export interface Instruction {
-  id: string;
+  step?: number;
   instruction: string;
+  id?: string; // Optional for legacy/mock data
 }
 
 /**
@@ -37,7 +44,7 @@ export interface Recipe extends BaseEntity {
   instructions: Instruction[];
 }
 
-export const mockRecipes: Recipe[] = [
+const mockRecipesRaw: Recipe[] = [
   {
     id: '1',
     localId: '550e8400-e29b-41d4-a716-446655440100', // Stable UUID
@@ -209,5 +216,24 @@ export const mockRecipes: Recipe[] = [
     ],
   },
 ];
+
+const normalizeMockIngredients = (ingredients: Ingredient[]): Ingredient[] =>
+  ingredients.map((ing) => ({
+    ...ing,
+    quantityAmount: ing.quantityAmount ?? ing.quantity,
+    quantityUnit: ing.quantityUnit ?? ing.unit,
+  }));
+
+const normalizeMockInstructions = (instructions: Instruction[]): Instruction[] =>
+  instructions.map((inst, index) => ({
+    ...inst,
+    step: inst.step ?? index + 1,
+  }));
+
+export const mockRecipes: Recipe[] = mockRecipesRaw.map((recipe) => ({
+  ...recipe,
+  ingredients: normalizeMockIngredients(recipe.ingredients),
+  instructions: normalizeMockInstructions(recipe.instructions),
+}));
 
 export const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner'];

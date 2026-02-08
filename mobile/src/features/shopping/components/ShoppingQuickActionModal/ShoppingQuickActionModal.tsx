@@ -15,16 +15,40 @@ import { styles } from './styles';
 import { ShoppingQuickActionModalProps } from './types';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { getActiveListId } from '../../utils/selectionUtils';
+import { useCatalog } from '../../../../common/hooks/useCatalog';
 
 export function ShoppingQuickActionModal({ visible, onClose }: ShoppingQuickActionModalProps) {
   const { user } = useAuth();
+  const { searchGroceries } = useCatalog();
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
   const [activeListId, setActiveListId] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        try {
+          const results = await searchGroceries(searchQuery);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Quick action search failed:', error);
+          setSearchResults([]);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchGroceries]);
   const isMockDataEnabled = config.mockData.enabled;
   const shouldUseMockData = isMockDataEnabled || !user || user.isGuest;
   const shoppingService = useMemo(
-    () => createShoppingService(shouldUseMockData),
+    () => createShoppingService(shouldUseMockData ? 'guest' : 'signed-in'),
     [shouldUseMockData]
   );
   const hasLists = shoppingLists.length > 0;
@@ -118,12 +142,15 @@ export function ShoppingQuickActionModal({ visible, onClose }: ShoppingQuickActi
 
             {/* Search Bar using reusable component */}
             <GrocerySearchBar
-              items={groceryItems}
+              items={searchQuery ? searchResults : groceryItems}
               onSelectItem={handleSelectGroceryItem}
               onQuickAddItem={handleQuickAddItem}
               variant="background"
               showShadow={false}
               allowCustomItems={true}
+              searchMode="remote"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </>
         ) : (

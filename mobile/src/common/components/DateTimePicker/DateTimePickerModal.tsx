@@ -6,6 +6,7 @@ import { CenteredModal } from '../CenteredModal';
 import { DatePickerWeb } from './DatePickerWeb';
 import { TimePickerWeb } from './TimePickerWeb';
 import { colors, spacing, borderRadius } from '../../../theme';
+import { boxShadow } from '../../../theme/shadows';
 import { DateTimePickerModalProps, ActiveTab } from './types';
 
 export function DateTimePickerModal({
@@ -257,11 +258,7 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     backgroundColor: colors.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...boxShadow(1, 2, 'rgba(0, 0, 0, 0.1)'),
   },
   tabText: {
     fontSize: 14,

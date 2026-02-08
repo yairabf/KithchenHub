@@ -27,6 +27,8 @@ export interface UseCatalogReturn {
   error: Error | null;
   /** Manual refresh function to re-fetch catalog data */
   refresh: () => Promise<void>;
+  /** Search groceries on demand (server-side) */
+  searchGroceries: (query: string) => Promise<GroceryItem[]>;
 }
 
 /**
@@ -60,7 +62,7 @@ export function useCatalog(): UseCatalogReturn {
       setError(null);
 
       const data = await catalogService.getCatalogData();
-      
+
       setGroceryItems(data.groceryItems);
       setCategories(data.categories);
       setFrequentlyAddedItems(data.frequentlyAddedItems);
@@ -69,7 +71,7 @@ export function useCatalog(): UseCatalogReturn {
       const catalogError = err instanceof Error ? err : new Error(errorMessage);
       setError(catalogError);
       console.error('Failed to load catalog data:', catalogError);
-      
+
       // Only clear data on first load (when arrays are empty)
       // Keep stale data on subsequent errors to prevent UI flicker
       setGroceryItems((prev) => {
@@ -94,6 +96,13 @@ export function useCatalog(): UseCatalogReturn {
     await loadCatalogData();
   }, [loadCatalogData]);
 
+  /**
+   * Search groceries on demand
+   */
+  const searchGroceries = useCallback(async (query: string) => {
+    return catalogService.searchGroceries(query);
+  }, []);
+
   // Load catalog data on mount
   useEffect(() => {
     loadCatalogData();
@@ -106,5 +115,6 @@ export function useCatalog(): UseCatalogReturn {
     isLoading,
     error,
     refresh,
+    searchGroceries,
   };
 }

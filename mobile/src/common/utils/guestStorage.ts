@@ -34,7 +34,7 @@ const GUEST_CHORES_KEY = getGuestStorageKey(ENTITY_TYPES.chores);
 
 
 /**
- * Validates that a recipe has required fields
+ * Validates that a recipe has required fields (localId, title per Recipe type).
  * @param recipe - The recipe object to validate
  * @returns True if the recipe is valid, false otherwise
  */
@@ -48,8 +48,8 @@ function validateRecipe(recipe: unknown): recipe is Recipe {
   return (
     typeof candidate.localId === 'string' &&
     candidate.localId.length > 0 &&
-    typeof candidate.name === 'string' &&
-    candidate.name.trim().length > 0
+    typeof candidate.title === 'string' &&
+    candidate.title.trim().length > 0
   );
 }
 

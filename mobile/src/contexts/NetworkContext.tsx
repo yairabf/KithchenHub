@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import NetInfo, { useNetInfo, NetInfoStateType } from '@react-native-community/netinfo';
-import { setNetworkStatusProvider } from '../services/api';
+import { setNetworkStatusProvider, API_BASE_URL } from '../services/api';
 import { setNetworkStatusProvider as setCacheNetworkStatusProvider } from '../common/utils/networkStatus';
 
 type NetworkContextValue = {
@@ -13,7 +14,8 @@ type NetworkContextValue = {
 
 const NetworkContext = createContext<NetworkContextValue | undefined>(undefined);
 
-const NETINFO_CONFIG = {
+/** Default reachability config (native): Google's endpoint; blocked by CORS on web. */
+const NETINFO_CONFIG_NATIVE = {
   reachabilityUrl: 'https://clients3.google.com/generate_204',
   reachabilityTest: (response: Response) => response.status === 204,
   reachabilityShortTimeout: 5_000,
@@ -21,12 +23,23 @@ const NETINFO_CONFIG = {
   reachabilityRequestTimeout: 15_000,
 };
 
+/** On web, use our API health endpoint to avoid CORS (Google blocks cross-origin from localhost). */
+function getNetInfoConfig() {
+  if (Platform.OS === 'web') {
+    return {
+      ...NETINFO_CONFIG_NATIVE,
+      reachabilityUrl: `${API_BASE_URL}/api/v1/health`,
+      reachabilityTest: (response: Response) => response.ok,
+    };
+  }
+  return NETINFO_CONFIG_NATIVE;
+}
+
 export function NetworkProvider({ children }: { children: ReactNode }) {
   const netInfo = useNetInfo();
 
-  // Configure NetInfo once on mount
   useEffect(() => {
-    NetInfo.configure(NETINFO_CONFIG);
+    NetInfo.configure(getNetInfoConfig());
   }, []);
 
   const value = useMemo<NetworkContextValue>(() => {

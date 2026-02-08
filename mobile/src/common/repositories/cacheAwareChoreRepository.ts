@@ -24,6 +24,7 @@ import { markDeleted, withCreatedAt, withUpdatedAt } from '../utils/timestamps';
 import { cacheEvents } from '../utils/cacheEvents';
 import { NetworkError } from '../../services/api';
 import { syncQueueStorage, type SyncOp } from '../utils/syncQueueStorage';
+import { getSyncQueueProcessor } from '../utils/syncQueueProcessor';
 import * as Crypto from 'expo-crypto';
 
 /**
@@ -172,6 +173,9 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
       { localId, serverId },
       entity // Full entity payload
     );
+    if (getIsOnline()) {
+      getSyncQueueProcessor().start();
+    }
   }
 
   /**

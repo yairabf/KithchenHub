@@ -2,7 +2,7 @@
 
 **Exports** (from `mobile/src/features/recipes/index.ts`): `RecipesScreen`, `RecipeCard`, `AddRecipeModal`, `NewRecipeData` (type).
 
-**Source**: `mobile/src/features/recipes/` — 2 screens (RecipesScreen, RecipeDetailScreen), 8 components (RecipeCard, AddRecipeModal, RecipeHeader, RecipeContentWrapper, RecipeIngredients, RecipeSteps, IngredientCard, InstructionStep), hooks (useRecipes), services (recipeService), utils (recipeFactory).
+**Source**: `mobile/src/features/recipes/` — 2 screens (RecipesScreen, RecipeDetailScreen), 9 components (RecipeCard, AddRecipeModal, RecipeHeader, RecipeContentWrapper, RecipeIngredients, RecipeSteps, IngredientCard, InstructionStep, UnitPicker), constants (units), hooks (useRecipes), services (recipeService), utils (recipeFactory, unitConversion).
 
 ## Overview
 
@@ -181,10 +181,20 @@ interface Recipe {
   - "Mark as finished" toggle
   - Visual feedback for completed steps
 
+### UnitPicker
+
+- **File**: `mobile/src/features/recipes/components/UnitPicker/`
+- **Purpose**: Modal for selecting ingredient quantity unit (mass, volume, count, etc.)
+- **Props**: `visible`, `onClose`, `selectedUnit`, `onSelectUnit`; optionally filter by unit type
+- **Features**:
+  - Used by AddRecipeModal for each ingredient's unit field
+  - Aligns with backend canonical unit system (see Backend Ingredient Unit Schema)
+  - Constants and labels from `features/recipes/constants`
+
 ### AddRecipeModal
 
 - **File**: `mobile/src/features/recipes/components/AddRecipeModal/`
-- **Purpose**: Comprehensive recipe creation form
+- **Purpose**: Comprehensive recipe creation and edit form
 - **Props**:
 
 ```typescript
@@ -192,8 +202,11 @@ interface AddRecipeModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (recipe: NewRecipeData) => void;
+  isSaving?: boolean;
   categories?: string[];
   groceryItems?: GroceryItem[];
+  mode?: 'create' | 'edit';
+  initialRecipe?: NewRecipeData;
 }
 
 interface NewRecipeData {
@@ -205,18 +218,21 @@ interface NewRecipeData {
   instructions: Instruction[];
   imageLocalUri?: string;
   imageUrl?: string;
+  removeImage?: boolean;
 }
 
 interface Ingredient {
   id: string;
-  quantity: string;
-  unit: string;
+  quantityAmount: string;
+  quantityUnit: string;
+  quantityUnitType?: string;
+  quantityModifier?: string;
   name: string;
-  }
+}
 
 interface Instruction {
   id: string;
-  text: string;
+  instruction: string;
 }
 ```
 
@@ -225,19 +241,21 @@ Note: The API also supports canonical unit fields; see the Backend Ingredient Un
 - **Features**:
   - Recipe title input
   - Category selection with horizontal scroll
-  - Prep time input
+  - Prep time input (numeric only via `stripToDigitsOnly` from `common/utils/inputSanitization`; `keyboardType="number-pad"`)
   - Description textarea
   - Recipe photo picker (optional)
   - **Ingredients section**:
     - Integrated grocery search bar
-    - Quantity, unit, and name inputs for each ingredient
+    - Quantity (numeric/decimal only via `stripToNumeric`), **UnitPicker** (unit selector modal), and name inputs per ingredient
+    - **Ingredient name lock**: Once an ingredient name is "committed" (added from search or after blur), the name field becomes read-only (`committedIngredientIds` state; lock on blur or when added from search; edit mode pre-commits all existing ingredient ids)
     - Add/remove ingredients
     - Auto-populate from grocery database
-- **Instructions section**:
-  - Numbered steps
-  - Add/remove step functionality
-  - Minimum 1 step required
-- Form validation (title and at least one ingredient required)
+  - **Instructions section**:
+    - Numbered steps (field `instruction`, not `text`)
+    - Add/remove step functionality
+    - Minimum 1 step required
+  - Form validation (title and at least one ingredient required)
+  - Create vs edit mode with optional `initialRecipe`
 
 ## Backend Ingredient Unit Schema
 
@@ -326,18 +344,22 @@ interface Recipe extends BaseEntity {
   instructions: Instruction[];
 }
 
-// Nested sub-entities (do not extend BaseEntity)
+// Nested sub-entities (do not extend BaseEntity). AddRecipeModal uses quantityAmount/quantityUnit; API supports legacy quantity/unit.
 interface Ingredient {
   id: string;
-  quantity: string;
-  unit: string;
+  quantityAmount?: string | number;
+  quantityUnit?: string;
+  quantityUnitType?: string;
+  quantityModifier?: string;
+  quantity?: number;
+  unit?: string;
   name: string;
   image?: string;
 }
 
 interface Instruction {
   id: string;
-  text: string;
+  instruction: string;  // API may use 'text' in payloads; modal uses 'instruction'
 }
 
 // Categories available
@@ -598,7 +620,9 @@ Utility for applying remote updates to local cached state:
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
 - `deleteRecipeImage` - Image cleanup utility (`mobile/src/services/imageUploadService.ts`) for removing orphaned uploads
 - `pastelColors` - Theme colors for card backgrounds
+- `stripToDigitsOnly`, `stripToNumeric` - Input sanitization (`mobile/src/common/utils/inputSanitization.ts`) for numeric-only Prep Time and quantity inputs
 - `GrocerySearchBar` - Reused from shopping feature for ingredient search
+- `UnitPicker` - Recipe unit selector component (same feature)
 - `CenteredModal` - Shared modal component
 - `ScreenHeader` - Shared header component
 - `useAuth` - Authentication context hook

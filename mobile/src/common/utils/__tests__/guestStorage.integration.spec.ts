@@ -29,8 +29,8 @@ describe('guestStorage integration tests', () => {
       recipe: {
         id: 'recipe-1',
         localId: 'recipe-uuid-1',
-        name: 'Test Recipe',
-        cookTime: '30 min',
+        title: 'Test Recipe',
+        cookTime: 30,
         category: 'Dinner',
         ingredients: [],
         instructions: [],
@@ -136,7 +136,7 @@ describe('guestStorage integration tests', () => {
       // Verify each envelope contains only its own data
       const recipeEnvelope = JSON.parse(recipeCall[1]);
       expect(recipeEnvelope.data).toHaveLength(1);
-      expect(recipeEnvelope.data[0].name).toBe('Test Recipe');
+      expect(recipeEnvelope.data[0].title).toBe('Test Recipe');
 
       const listEnvelope = JSON.parse(listCall[1]);
       expect(listEnvelope.data).toHaveLength(1);

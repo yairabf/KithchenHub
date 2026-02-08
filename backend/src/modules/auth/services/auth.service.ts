@@ -336,6 +336,18 @@ export class AuthService {
    * @throws BadRequestException if sync data exceeds size limits
    */
   async syncData(userId: string, syncData: SyncDataDto): Promise<SyncResult> {
+    const listCount = syncData.lists?.length ?? 0;
+    const recipeCount = syncData.recipes?.length ?? 0;
+    const choreCount = syncData.chores?.length ?? 0;
+    const listItemCount =
+      syncData.lists?.reduce(
+        (sum, list) => sum + (list.items?.length ?? 0),
+        0,
+      ) ?? 0;
+    this.logger.log(
+      `sync: lists=${listCount} recipes=${recipeCount} chores=${choreCount} listItems=${listItemCount} requestId=${syncData.requestId ?? 'none'}`,
+    );
+
     this.validateSyncDataSize(syncData);
 
     const user = await this.validateUserHasHousehold(userId);
@@ -1130,6 +1142,7 @@ export class AuthService {
         chore.id,
         requestId,
         async () => {
+          const dueDate = this.parseOptionalDueDate(chore.dueDate);
           await this.prisma.chore.upsert({
             where: { id: chore.id },
             create: {
@@ -1137,19 +1150,31 @@ export class AuthService {
               householdId,
               title: chore.title,
               assigneeId: chore.assigneeId,
-              dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
+              dueDate,
               isCompleted: chore.isCompleted || false,
             },
             update: {
               title: chore.title,
               assigneeId: chore.assigneeId,
-              dueDate: chore.dueDate ? new Date(chore.dueDate) : null,
+              dueDate,
               isCompleted: chore.isCompleted,
             },
           });
         },
       );
     });
+  }
+
+  /**
+   * Parses an optional due date string for chore sync.
+   * Returns null for missing, empty, or invalid date strings to avoid Prisma "Invalid Date" errors.
+   */
+  private parseOptionalDueDate(dueDate: string | undefined): Date | null {
+    if (dueDate == null || String(dueDate).trim() === '') {
+      return null;
+    }
+    const parsed = new Date(dueDate);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   /**

@@ -3,6 +3,10 @@ import { I18nManager, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
+import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+
+// Reduce "Reading from value during component render" warnings (e.g. from third-party or complex animations)
+configureReanimatedLogger({ level: ReanimatedLogLevel.warn, strict: false });
 import { Provider as PaperProvider } from 'react-native-paper';
 import { getLocales } from 'react-native-localize';
 import { AuthProvider } from './src/contexts/AuthContext';

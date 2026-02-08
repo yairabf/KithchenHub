@@ -21,7 +21,15 @@ type RecipeDetailDto = {
   category?: string;
   prepTime?: number;
   cookTime?: number;
-  ingredients: Array<{ name: string; quantity?: number; unit?: string }>;
+  ingredients: Array<{
+    name: string;
+    quantityAmount?: number;
+    quantityUnit?: string;
+    quantityUnitType?: string;
+    quantityModifier?: string;
+    quantity?: number;
+    unit?: string;
+  }>;
   instructions: Array<{ step: number; instruction: string }>;
   imageUrl?: string;
 };
@@ -67,16 +75,19 @@ type RecipeApiResponse = {
  */
 function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
   // Map ingredients: backend RecipeIngredientDto[] -> frontend Ingredient[]
-  const ingredients = (dto.ingredients ?? []).map((ing, index) => ({
-    id: `ing-${index}`,
-    quantity: ing.quantity ?? 0,
-    unit: ing.unit || '',
+  const ingredients = (dto.ingredients ?? []).map((ing) => ({
     name: ing.name,
+    quantityAmount: ing.quantityAmount ?? ing.quantity,
+    quantityUnit: ing.quantityUnit ?? ing.unit,
+    quantityUnitType: ing.quantityUnitType,
+    quantityModifier: ing.quantityModifier,
+    quantity: ing.quantity,
+    unit: ing.unit,
   }));
 
   // Map instructions: backend RecipeInstructionDto[] -> frontend Instruction[]
-  const instructions = (dto.instructions ?? []).map((inst, index) => ({
-    id: `inst-${index}`,
+  const instructions = (dto.instructions ?? []).map((inst) => ({
+    step: inst.step,
     instruction: inst.instruction,
   }));
 
@@ -449,20 +460,36 @@ export class RemoteRecipeService implements IRecipeService {
     private mapRecipeToCreateDto(recipe: Partial<Recipe>): {
         title: string;
         prepTime?: number;
-        ingredients: Array<{ name: string; quantity?: number; unit?: string }>;
+        ingredients: Array<{
+            name: string;
+            quantityAmount?: number;
+            quantityUnit?: string;
+            quantityUnitType?: string;
+            quantityModifier?: string;
+        }>;
         instructions: Array<{ step: number; instruction: string }>;
         imageUrl?: string;
     } {
         // Map ingredients: frontend Ingredient[] -> backend IngredientInputDto[]
-        const ingredients = (recipe.ingredients || []).map((ing, index) => ({
-            name: ing.name,
-            quantity: ing.quantity !== undefined ? ing.quantity : undefined,
-            unit: ing.unit || undefined,
-        }));
+        const ingredients = (recipe.ingredients || []).map((ing) => {
+            const normalizedQuantity =
+                typeof ing.quantityAmount === 'number'
+                    ? ing.quantityAmount
+                    : parseFloat(String(ing.quantityAmount ?? ''));
+            const quantityAmount = Number.isFinite(normalizedQuantity) ? normalizedQuantity : undefined;
+            const quantityUnit = ing.quantityUnit && ing.quantityUnit.trim().length > 0 ? ing.quantityUnit : undefined;
+            return {
+                name: ing.name,
+                quantityAmount,
+                quantityUnit,
+                quantityUnitType: ing.quantityUnitType,
+                quantityModifier: ing.quantityModifier,
+            };
+        });
 
         // Map instructions: frontend Instruction[] -> backend InstructionInputDto[]
         const instructions = (recipe.instructions || []).map((inst, index) => ({
-            step: index + 1,
+            step: inst.step ?? index + 1,
             instruction: inst.instruction,
         }));
 
@@ -476,6 +503,68 @@ export class RemoteRecipeService implements IRecipeService {
             instructions,
             imageUrl: recipe.imageUrl,
         };
+    }
+
+    /**
+     * Maps frontend Recipe updates to backend UpdateRecipeDto format
+     */
+    private mapRecipeToUpdateDto(recipe: Partial<Recipe>): {
+        title?: string;
+        category?: string;
+        prepTime?: number;
+        cookTime?: number;
+        ingredients?: Array<{
+            name: string;
+            quantityAmount?: number;
+            quantityUnit?: string;
+            quantityUnitType?: string;
+            quantityModifier?: string;
+        }>;
+        instructions?: Array<{ step: number; instruction: string }>;
+        imageUrl?: string | null;
+    } {
+        const dto: any = {};
+
+        if (recipe.title !== undefined) {
+            dto.title = recipe.title || 'Untitled Recipe';
+        }
+        if (recipe.category !== undefined) {
+            dto.category = recipe.category;
+        }
+        if (recipe.prepTime !== undefined) {
+            dto.prepTime = recipe.prepTime;
+        }
+        if (recipe.cookTime !== undefined) {
+            dto.cookTime = recipe.cookTime;
+        }
+        if (recipe.ingredients !== undefined) {
+            dto.ingredients = (recipe.ingredients || []).map((ing: any) => {
+                const normalizedQuantity =
+                    typeof ing.quantityAmount === 'number'
+                        ? ing.quantityAmount
+                        : parseFloat(String(ing.quantityAmount ?? ''));
+                const quantityAmount = Number.isFinite(normalizedQuantity) ? normalizedQuantity : undefined;
+                const quantityUnit = ing.quantityUnit && ing.quantityUnit.trim().length > 0 ? ing.quantityUnit : undefined;
+                return {
+                    name: ing.name,
+                    quantityAmount,
+                    quantityUnit,
+                    quantityUnitType: ing.quantityUnitType,
+                    quantityModifier: ing.quantityModifier,
+                };
+            });
+        }
+        if (recipe.instructions !== undefined) {
+            dto.instructions = (recipe.instructions || []).map((inst: any, index: number) => ({
+                step: inst.step ?? index + 1,
+                instruction: inst.instruction,
+            }));
+        }
+        if (recipe.imageUrl !== undefined) {
+            dto.imageUrl = recipe.imageUrl;
+        }
+
+        return dto;
     }
 
     async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
@@ -525,10 +614,7 @@ export class RemoteRecipeService implements IRecipeService {
             throw new Error(`Recipe not found: ${recipeId}`);
         }
         
-        // Apply timestamp for optimistic UI and offline queue
-        const updated = { ...existing, ...updates };
-        const withTimestamps = withUpdatedAt(updated);
-        const payload = toSupabaseTimestamps(withTimestamps);
+        const payload = this.mapRecipeToUpdateDto(updates);
         const response = await api.put<RecipeApiResponse>(`/recipes/${recipeId}`, payload);
         // Server is authority: overwrite with server timestamps
         const updatedRecipe = normalizeTimestampsFromApi<Recipe>(response);

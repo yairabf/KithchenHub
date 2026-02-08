@@ -12,7 +12,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../../../theme';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
+import { stripToDigitsOnly, stripToNumeric } from '../../../../common/utils';
 import { GrocerySearchBar, GroceryItem } from '../../../shopping/components/GrocerySearchBar';
+import { UnitPicker } from '../UnitPicker';
+import { getUnitLabel } from '../../constants';
 import { styles } from './styles';
 import { AddRecipeModalProps, NewRecipeData, Ingredient } from './types';
 
@@ -36,26 +39,73 @@ export function AddRecipeModal({
   isSaving = false,
   categories = DEFAULT_CATEGORIES,
   groceryItems = [],
+  mode = 'create',
+  initialRecipe,
+  searchGroceries,
 }: AddRecipeModalProps) {
   const [recipe, setRecipe] = useState<NewRecipeData>(createEmptyRecipe());
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
+
+  // Update search results when query changes
+  useEffect(() => {
+    if (!searchGroceries) return;
+
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        try {
+          const results = await searchGroceries(searchQuery);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Ingredient search failed:', error);
+          setSearchResults([]);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchGroceries]);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageIsLocal, setImageIsLocal] = useState(false);
+  const [removeImage, setRemoveImage] = useState(false);
+  const [unitPickerIngredientId, setUnitPickerIngredientId] = useState<string | null>(null);
+  /** Ingredient ids whose name field has been "committed" (blurred or added from search); names are then read-only. */
+  const [committedIngredientIds, setCommittedIngredientIds] = useState<Set<string>>(() => new Set());
 
   // Reset form when modal opens
   useEffect(() => {
     if (visible) {
-      setRecipe(createEmptyRecipe());
+      if (mode === 'edit' && initialRecipe) {
+        setRecipe(initialRecipe);
+        setImageUri(initialRecipe.imageUrl ?? null);
+        setImageIsLocal(false);
+        setRemoveImage(false);
+        setCommittedIngredientIds(
+          new Set((initialRecipe.ingredients ?? []).map((i) => i.id)),
+        );
+      } else {
+        setRecipe(createEmptyRecipe());
+        setImageUri(null);
+        setImageIsLocal(false);
+        setRemoveImage(false);
+        setCommittedIngredientIds(new Set());
+      }
       setSearchQuery('');
-      setImageUri(null);
+      setUnitPickerIngredientId(null);
     }
-  }, [visible]);
+  }, [visible, mode, initialRecipe]);
 
   // Validation - ensure arrays exist
   const ingredients = recipe.ingredients || [];
   const instructions = recipe.instructions || [];
+  const hasIngredients = ingredients.some((ing) => ing.name.trim().length > 0);
+  const hasInstructions = instructions.some((inst) => inst.instruction.trim().length > 0);
   const isValid =
     recipe.title.trim().length > 0 &&
-    ingredients.some((ing) => ing.name.trim().length > 0);
+    hasIngredients &&
+    hasInstructions;
 
   // Handlers
   const handleSave = () => {
@@ -65,7 +115,9 @@ export function AddRecipeModal({
         ...recipe,
         ingredients: (recipe.ingredients || []).filter((ing) => ing.name.trim()),
         instructions: (recipe.instructions || []).filter((inst) => inst.instruction.trim()),
-        imageLocalUri: imageUri ?? undefined,
+        imageLocalUri: imageIsLocal ? imageUri ?? undefined : undefined,
+        imageUrl: !imageIsLocal && !removeImage ? imageUri ?? undefined : undefined,
+        removeImage: removeImage || undefined,
       };
       onSave(cleanedRecipe);
     }
@@ -86,11 +138,15 @@ export function AddRecipeModal({
 
     if (!result.canceled && result.assets?.length) {
       setImageUri(result.assets[0].uri);
+      setImageIsLocal(true);
+      setRemoveImage(false);
     }
   };
 
   const handleRemoveImage = () => {
     setImageUri(null);
+    setImageIsLocal(false);
+    setRemoveImage(true);
   };
 
   // Ingredient handlers
@@ -144,16 +200,18 @@ export function AddRecipeModal({
     });
   };
 
-  // Grocery search handler - adds ingredient and clears search
+  // Grocery search handler - adds ingredient and clears search; new ingredient name is locked immediately
   const handleAddIngredientFromSearch = (item: GroceryItem) => {
+    const newId = generateId();
     const currentIngredients = recipe.ingredients || [];
     setRecipe({
       ...recipe,
       ingredients: [
         ...currentIngredients,
-        { id: generateId(), quantity: '', unit: '', name: item.name },
+        { id: newId, quantityAmount: '', quantityUnit: '', name: item.name },
       ],
     });
+    setCommittedIngredientIds((prev) => new Set(prev).add(newId));
     setSearchQuery('');
   };
 
@@ -161,8 +219,8 @@ export function AddRecipeModal({
     <CenteredModal
       visible={visible}
       onClose={onClose}
-      title="New Recipe"
-      confirmText={isSaving ? 'Saving...' : 'Save Recipe'}
+      title={mode === 'edit' ? 'Edit Recipe' : 'New Recipe'}
+      confirmText={isSaving ? 'Saving...' : mode === 'edit' ? 'Save Changes' : 'Save Recipe'}
       cancelText="Cancel"
       onConfirm={handleSave}
       confirmColor={colors.recipes}
@@ -224,7 +282,10 @@ export function AddRecipeModal({
             placeholder="30 mins"
             placeholderTextColor={colors.textMuted}
             value={recipe.prepTime}
-            onChangeText={(text) => setRecipe({ ...recipe, prepTime: text })}
+            onChangeText={(text) =>
+              setRecipe({ ...recipe, prepTime: stripToDigitsOnly(text) })
+            }
+            keyboardType="number-pad"
           />
         </View>
 
@@ -282,7 +343,7 @@ export function AddRecipeModal({
 
           {/* Grocery Search Bar */}
           <GrocerySearchBar
-            items={groceryItems}
+            items={searchGroceries ? (searchQuery ? searchResults : []) : groceryItems}
             onSelectItem={handleAddIngredientFromSearch}
             onQuickAddItem={handleAddIngredientFromSearch}
             placeholder="Search ingredients to add..."
@@ -292,49 +353,76 @@ export function AddRecipeModal({
             onChangeText={setSearchQuery}
             containerStyle={styles.ingredientSearchContainer}
             allowCustomItems={true}
+            searchMode={searchGroceries ? 'remote' : 'local'}
           />
 
-          {(recipe.ingredients || []).map((ing) => (
-            <View key={ing.id} style={styles.ingredientRow}>
-              <TextInput
-                style={[styles.input, styles.qtyInput]}
-                placeholder="Qty"
-                placeholderTextColor={colors.textMuted}
-                value={ing.quantity}
-                onChangeText={(text) =>
-                  handleUpdateIngredient(ing.id, 'quantity', text)
-                }
-              />
-              <TextInput
-                style={[styles.input, styles.unitInput]}
-                placeholder="Unit"
-                placeholderTextColor={colors.textMuted}
-                value={ing.unit}
-                onChangeText={(text) =>
-                  handleUpdateIngredient(ing.id, 'unit', text)
-                }
-              />
-              <TextInput
-                style={[styles.input, styles.nameInput]}
-                placeholder="Ingredient"
-                placeholderTextColor={colors.textMuted}
-                value={ing.name}
-                onChangeText={(text) =>
-                  handleUpdateIngredient(ing.id, 'name', text)
-                }
-              />
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => handleRemoveIngredient(ing.id)}
-              >
-                <Ionicons
-                  name="trash-outline"
-                  size={18}
-                  color={colors.textMuted}
+          {(recipe.ingredients || []).map((ing) => {
+            const isNameLocked = committedIngredientIds.has(ing.id);
+            return (
+              <View key={ing.id} style={styles.ingredientRow}>
+                <TextInput
+                  style={[styles.input, styles.qtyInput]}
+                  placeholder="Qty"
+                  placeholderTextColor={colors.textMuted}
+                  value={ing.quantityAmount}
+                  onChangeText={(text) =>
+                    handleUpdateIngredient(
+                      ing.id,
+                      'quantityAmount',
+                      stripToNumeric(text),
+                    )
+                  }
+                  keyboardType="decimal-pad"
                 />
-              </TouchableOpacity>
-            </View>
-          ))}
+                <TouchableOpacity
+                  style={[styles.input, styles.unitTrigger]}
+                  onPress={() => setUnitPickerIngredientId(ing.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={ing.quantityUnit ? `Unit: ${getUnitLabel(ing.quantityUnit)}` : 'Select unit'}
+                >
+                  <Text
+                    style={ing.quantityUnit ? styles.unitTriggerText : styles.unitTriggerPlaceholder}
+                    numberOfLines={1}
+                  >
+                    {ing.quantityUnit ? getUnitLabel(ing.quantityUnit) : 'Unit'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.nameInput,
+                    isNameLocked && styles.nameInputReadOnly,
+                  ]}
+                  placeholder="Ingredient"
+                  placeholderTextColor={colors.textMuted}
+                  value={ing.name}
+                  onChangeText={(text) =>
+                    handleUpdateIngredient(ing.id, 'name', text)
+                  }
+                  onBlur={() =>
+                    setCommittedIngredientIds((prev) => new Set(prev).add(ing.id))
+                  }
+                  editable={!isNameLocked}
+                  accessibilityLabel={
+                    isNameLocked
+                      ? `Ingredient: ${ing.name} (name cannot be changed)`
+                      : 'Ingredient name'
+                  }
+                />
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => handleRemoveIngredient(ing.id)}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+            );
+          })}
         </View>
 
         {/* Steps Section */}
@@ -349,7 +437,7 @@ export function AddRecipeModal({
                 style={[styles.input, styles.stepInput]}
                 placeholder="Describe this step..."
                 placeholderTextColor={colors.textMuted}
-                value={step.text}
+                value={step.instruction}
                 onChangeText={(text) => handleUpdateStep(step.id, text)}
                 multiline
               />
@@ -373,6 +461,22 @@ export function AddRecipeModal({
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {unitPickerIngredientId && (() => {
+        const ing = ingredients.find((i) => i.id === unitPickerIngredientId);
+        if (!ing) return null;
+        return (
+          <UnitPicker
+            visible={true}
+            onClose={() => setUnitPickerIngredientId(null)}
+            selectedUnit={ing.quantityUnit}
+            onSelectUnit={(code) => {
+              handleUpdateIngredient(ing.id, 'quantityUnit', code);
+              setUnitPickerIngredientId(null);
+            }}
+          />
+        );
+      })()}
     </CenteredModal>
   );
 }

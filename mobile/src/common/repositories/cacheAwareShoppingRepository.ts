@@ -24,6 +24,7 @@ import { markDeleted, withCreatedAt, withUpdatedAt } from '../utils/timestamps';
 import { cacheEvents } from '../utils/cacheEvents';
 import { NetworkError, ApiError } from '../../services/api';
 import { syncQueueStorage, type SyncOp, type QueueTargetId } from '../utils/syncQueueStorage';
+import { getSyncQueueProcessor } from '../utils/syncQueueProcessor';
 import * as Crypto from 'expo-crypto';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
 import { catalogService } from '../services/catalogService';
@@ -294,6 +295,9 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       { localId, serverId },
       entity // Full entity payload
     );
+    if (getIsOnline()) {
+      getSyncQueueProcessor().start();
+    }
   }
 
   /**
@@ -1028,6 +1032,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       household_id?: string | null;
     }>
   ): Promise<void> {
+    if (payload == null) return;
     try {
       // Read current cache
       const current = await readCachedEntitiesForUpdate<ShoppingList>('shoppingLists');
@@ -1077,6 +1082,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
     }>,
     groceryItems: GroceryItem[]
   ): Promise<void> {
+    if (payload == null) return;
     // #region agent log
     fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:934',message:'applyRealtimeItemChange ENTRY',data:{eventType:payload.eventType,itemId:payload.new?.id,itemName:payload.new?.name,listId:payload.new?.list_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion

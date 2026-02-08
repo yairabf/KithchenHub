@@ -58,18 +58,15 @@ export function useCachedEntities<T extends EntityTimestamps>(
       // Update data immediately
       setData(result.data);
       
-      // Loading state logic:
+      // Loading state logic: clear loading when load has completed
       // - If we have data: always clear loading (prevents flicker on cache updates)
-      // - If no data and initial load: show loading only if not skipping
-      // - If no data and cache update: don't change loading state
+      // - If initial load finished (with or without data): clear loading
+      // - If cache update with no data (skipLoadingState = true): don't change loading state
       if (hasData) {
-        // Always clear loading if we have data (prevents flicker when cache updates)
         setIsLoading(false);
       } else if (isInitialLoad && !skipLoadingState) {
-        // Initial load with no data: show loading
-        setIsLoading(true);
+        setIsLoading(false); // Initial load finished with no data
       }
-      // For cache updates with no data (skipLoadingState = true), don't change loading state
       
       if (isInitialLoad) {
         hasInitialLoadRef.current = true;

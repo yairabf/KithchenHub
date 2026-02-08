@@ -2,60 +2,12 @@ import { catalogService } from '../common/services/catalogService';
 import type { GroceryItem } from '../features/shopping/components/GrocerySearchBar';
 
 /**
- * Local cache for grocery items to prevent repeated async calls.
- * Cached on first access and reused for subsequent function calls.
- */
-let cachedItems: GroceryItem[] | null = null;
-
-/**
- * Promise-based cache to prevent race conditions when multiple concurrent calls
- * are made before the first call completes.
- */
-let cachedItemsPromise: Promise<GroceryItem[]> | null = null;
-
-/**
  * Cache for ingredient name to image URL mappings
  * Prevents repeated database searches for the same ingredients
  */
 const imageCache = new Map<string, string | undefined>();
 
-/**
- * Gets grocery items, using local cache if available.
- * Uses promise-based caching to prevent race conditions when called concurrently.
- * This prevents repeated async calls when ingredientMapper functions
- * are called multiple times (e.g., in loops).
- * 
- * @returns Promise resolving to array of grocery items (never empty - falls back to empty array on error)
- */
-async function getCachedGroceryItems(): Promise<GroceryItem[]> {
-  // Return cached items if available
-  if (cachedItems) {
-    return cachedItems;
-  }
 
-  // Return existing promise if already loading (prevents race conditions)
-  if (cachedItemsPromise) {
-    return cachedItemsPromise;
-  }
-
-  // Create new promise and cache it
-  cachedItemsPromise = catalogService
-    .getGroceryItems()
-    .then(items => {
-      cachedItems = items;
-      cachedItemsPromise = null; // Clear promise after completion
-      return items;
-    })
-    .catch(error => {
-      console.error('Failed to fetch grocery items from catalog service:', error);
-      // Return empty array as fallback to prevent complete failure
-      cachedItems = [];
-      cachedItemsPromise = null; // Clear promise on error
-      return cachedItems;
-    });
-
-  return cachedItemsPromise;
-}
 
 /**
  * Clears the local grocery items cache.
@@ -67,10 +19,7 @@ async function getCachedGroceryItems(): Promise<GroceryItem[]> {
  * clearGroceryItemsCache(); // Force fresh catalog fetch
  * ```
  */
-export function clearGroceryItemsCache(): void {
-  cachedItems = null;
-  cachedItemsPromise = null;
-}
+
 
 /**
  * Clears the ingredient image cache
@@ -93,8 +42,6 @@ export function clearIngredientImageCache(): void {
  * ```
  */
 export function clearAllCaches(): void {
-  cachedItems = null;
-  cachedItemsPromise = null;
   imageCache.clear();
 }
 
@@ -135,33 +82,34 @@ export async function getIngredientImage(ingredientName: string): Promise<string
     return imageCache.get(normalizedName);
   }
 
-  // Get grocery items from catalog service (with local cache and error handling)
-  const groceryItems = await getCachedGroceryItems();
+  // Perform on-demand search
+  try {
+    const searchResults = await catalogService.searchGroceries(normalizedName);
 
-  // Return undefined if no items available (error case)
-  if (groceryItems.length === 0) {
-    return undefined;
-  }
+    if (searchResults.length === 0) {
+      imageCache.set(normalizedName, undefined);
+      return undefined;
+    }
 
-  // Try exact match first
-  const exactMatch = groceryItems.find(
-    item => item.name.toLowerCase() === normalizedName
-  );
-  if (exactMatch) {
-    const result = exactMatch.image;
+    // Try exact match first
+    const exactMatch = searchResults.find(
+      item => item.name.toLowerCase() === normalizedName
+    );
+
+    if (exactMatch) {
+      const result = exactMatch.image;
+      imageCache.set(normalizedName, result);
+      return result;
+    }
+
+    // Fallback to first result (search relevance)
+    const result = searchResults[0].image;
     imageCache.set(normalizedName, result);
     return result;
+  } catch (error) {
+    console.error(`Failed to find image for ingredient: ${normalizedName}`, error);
+    return undefined;
   }
-
-  // Try partial match (ingredient name contains grocery item name or vice versa)
-  const partialMatch = groceryItems.find(item => {
-    const itemName = item.name.toLowerCase();
-    return normalizedName.includes(itemName) || itemName.includes(normalizedName);
-  });
-
-  const result = partialMatch?.image;
-  imageCache.set(normalizedName, result);
-  return result;
 }
 
 /**
@@ -190,8 +138,7 @@ export async function getIngredientsImages(
     return {};
   }
 
-  // Ensure grocery items are loaded first (single async call with caching)
-  await getCachedGroceryItems();
+
 
   // Process in parallel since cache is populated
   const results = await Promise.all(
@@ -235,25 +182,26 @@ export async function findGroceryItem(ingredientName: string): Promise<GroceryIt
     return undefined;
   }
 
-  // Get grocery items from catalog service (with local cache and error handling)
-  const groceryItems = await getCachedGroceryItems();
+  // Perform on-demand search
+  try {
+    const searchResults = await catalogService.searchGroceries(normalizedName);
 
-  // Return undefined if no items available (error case)
-  if (groceryItems.length === 0) {
+    if (searchResults.length === 0) {
+      return undefined;
+    }
+
+    // Try exact match first
+    const exactMatch = searchResults.find(
+      item => item.name.toLowerCase() === normalizedName
+    );
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    // Fallback to first result
+    return searchResults[0];
+  } catch (error) {
+    console.error(`Failed to find grocery item: ${normalizedName}`, error);
     return undefined;
   }
-
-  // Try exact match first
-  const exactMatch = groceryItems.find(
-    item => item.name.toLowerCase() === normalizedName
-  );
-  if (exactMatch) {
-    return exactMatch;
-  }
-
-  // Try partial match
-  return groceryItems.find(item => {
-    const itemName = item.name.toLowerCase();
-    return normalizedName.includes(itemName) || itemName.includes(normalizedName);
-  });
 }

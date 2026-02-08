@@ -1,57 +1,58 @@
-import { ViewStyle } from 'react-native';
+/** boxShadow value (React Native New Architecture); avoids deprecated shadow* props */
+type BoxShadowValue = {
+  offsetX: number;
+  offsetY: number;
+  blurRadius: number;
+  color: string;
+  spreadDistance?: number;
+  inset?: boolean;
+};
 
-type ShadowStyle = Pick<ViewStyle, 'shadowColor' | 'shadowOffset' | 'shadowOpacity' | 'shadowRadius' | 'elevation'>;
+type ShadowStyle = {
+  boxShadow?: BoxShadowValue;
+  elevation?: number;
+};
 
 export const shadows: Record<'none' | 'sm' | 'md' | 'lg' | 'xl' | 'float' | 'deep', ShadowStyle> = {
   none: {
-    shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
+    boxShadow: { offsetX: 0, offsetY: 0, blurRadius: 0, color: 'transparent' },
     elevation: 0,
   },
   sm: {
-    shadowColor: '#283618',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    boxShadow: { offsetX: 0, offsetY: 2, blurRadius: 4, color: 'rgba(40, 54, 24, 0.08)' },
     elevation: 2,
   },
   md: {
-    shadowColor: '#283618',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
+    boxShadow: { offsetX: 0, offsetY: 4, blurRadius: 8, color: 'rgba(40, 54, 24, 0.12)' },
     elevation: 4,
   },
   lg: {
-    shadowColor: '#283618',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
+    boxShadow: { offsetX: 0, offsetY: 6, blurRadius: 12, color: 'rgba(40, 54, 24, 0.16)' },
     elevation: 6,
   },
   xl: {
-    shadowColor: '#283618',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.20,
-    shadowRadius: 16,
+    boxShadow: { offsetX: 0, offsetY: 8, blurRadius: 16, color: 'rgba(40, 54, 24, 0.2)' },
     elevation: 10,
   },
-  // Special floating effect - more dramatic depth
   float: {
-    shadowColor: '#283618',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
+    boxShadow: { offsetX: 0, offsetY: 8, blurRadius: 20, color: 'rgba(40, 54, 24, 0.18)' },
     elevation: 12,
   },
-  // Deep shadow for elevated cards with maximum depth
   deep: {
-    shadowColor: '#283618',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
+    boxShadow: { offsetX: 0, offsetY: 12, blurRadius: 24, color: 'rgba(40, 54, 24, 0.25)' },
     elevation: 16,
   },
 };
+
+/** Build a boxShadow style (avoids deprecated shadow* props). */
+export function boxShadow(
+  offsetY: number,
+  blurRadius: number,
+  color: string,
+  offsetX = 0
+): ShadowStyle {
+  return {
+    boxShadow: { offsetX, offsetY, blurRadius, color },
+    elevation: Math.min(blurRadius, 16),
+  };
+}

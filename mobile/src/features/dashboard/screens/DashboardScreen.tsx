@@ -63,7 +63,28 @@ export function DashboardScreen({
     setToastVisible(false);
   }, []);
 
-  const { groceryItems, frequentlyAddedItems } = useCatalog();
+  const { groceryItems, frequentlyAddedItems, searchGroceries } = useCatalog();
+  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchValue.trim()) {
+        try {
+          const results = await searchGroceries(searchValue);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Search failed:', error);
+          setSearchResults([]);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchValue, searchGroceries]);
+
   const suggestedItems =
     frequentlyAddedItems.length > 0
       ? frequentlyAddedItems.slice(0, SUGGESTED_ITEMS_MAX)
@@ -165,7 +186,7 @@ export function DashboardScreen({
     try {
       const data = await shoppingService.getShoppingData();
       const mainList = getMainList(data.shoppingLists);
-      
+
       if (!mainList) {
         showToast('No main shopping list found. Please create one.');
         return;
@@ -185,10 +206,10 @@ export function DashboardScreen({
         showToast(`${item.name} quantity updated`);
       } else {
         // Use default category for custom items, otherwise use item's category
-        const categoryToUse = item.id.startsWith('custom-') 
+        const categoryToUse = item.id.startsWith('custom-')
           ? normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase())
           : item.category;
-        
+
         const newItemData: Partial<ShoppingItem> = {
           listId: mainList.id,
           name: item.name.trim(),
@@ -197,7 +218,7 @@ export function DashboardScreen({
           image: item.image ?? '',
           catalogItemId: item.id.startsWith('custom-') ? undefined : item.id,
         } as any; // Type assertion needed because ShoppingItem doesn't have catalogItemId
-        
+
         await shoppingService.createItem(newItemData);
         showToast(`${item.name} added to ${mainList.name}`);
       }
@@ -247,7 +268,7 @@ export function DashboardScreen({
     try {
       const data = await shoppingService.getShoppingData();
       const mainList = getMainList(data.shoppingLists);
-      
+
       if (!mainList) {
         showToast('No main shopping list found. Please create one.');
         return;
@@ -405,7 +426,7 @@ export function DashboardScreen({
                 <View style={styles.inputRowWithDropdown}>
                   <View style={styles.grocerySearchBarWrapper}>
                     <GrocerySearchBar
-                      items={groceryItems}
+                      items={searchValue ? searchResults : []}
                       value={searchValue}
                       onChangeText={setSearchValue}
                       onSelectItem={handleSelectGroceryItem}
@@ -413,6 +434,7 @@ export function DashboardScreen({
                       variant="background"
                       showShadow={false}
                       allowCustomItems={true}
+                      searchMode="remote"
                       containerStyle={styles.grocerySearchBarContainer}
                     />
                   </View>
@@ -424,17 +446,17 @@ export function DashboardScreen({
                 <View style={styles.suggestedSection}>
                   <Text style={styles.suggestedLabel}>Suggested Items</Text>
                   <View style={styles.suggestionChipsRow}>
-                  {suggestedItems.map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.suggestionChip}
-                      onPress={() => handleSuggestionPress(item)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="add" size={14} color={colors.textSecondary} />
-                      <Text style={styles.suggestionChipText}>{item.name}</Text>
-                    </TouchableOpacity>
-                  ))}
+                    {suggestedItems.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.suggestionChip}
+                        onPress={() => handleSuggestionPress(item)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="add" size={14} color={colors.textSecondary} />
+                        <Text style={styles.suggestionChipText}>{item.name}</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 </View>
               </View>

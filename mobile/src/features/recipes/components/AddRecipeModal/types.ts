@@ -2,14 +2,16 @@ import type { GroceryItem } from '../../../shopping/components/GrocerySearchBar'
 
 export interface Ingredient {
   id: string;
-  quantity: string;
-  unit: string;
+  quantityAmount: string;
+  quantityUnit: string;
+  quantityUnitType?: string;
+  quantityModifier?: string;
   name: string;
 }
 
 export interface Instruction {
   id: string;
-  text: string;
+  instruction: string;
 }
 
 export interface NewRecipeData {
@@ -21,6 +23,7 @@ export interface NewRecipeData {
   instructions: Instruction[];
   imageLocalUri?: string;
   imageUrl?: string;
+  removeImage?: boolean;
 }
 
 export interface AddRecipeModalProps {
@@ -30,4 +33,7 @@ export interface AddRecipeModalProps {
   isSaving?: boolean;
   categories?: string[];
   groceryItems?: GroceryItem[];
+  mode?: 'create' | 'edit';
+  initialRecipe?: NewRecipeData;
+  searchGroceries?: (query: string) => Promise<GroceryItem[]>;
 }

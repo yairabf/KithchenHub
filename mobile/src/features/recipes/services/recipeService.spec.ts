@@ -360,7 +360,7 @@ describe('Recipe Services', () => {
             ['updates imageUrl', { imageUrl: 'https://example.com/image.jpg' }],
             ['updates title', { title: 'Updated Remote' }],
         ])('updateRecipe: %s', (_label, updates) => {
-            it('calls api.put with recipe id and timestamps', async () => {
+            it('calls api.put with recipe id and payload', async () => {
                 const recipeId = 'remote-1';
                 const existingRecipe = { id: recipeId, title: 'Original', cookTime: 30, category: 'Dinner', ingredients: [], instructions: [] };
                 const mockResult = { id: recipeId, ...existingRecipe, ...updates };
@@ -371,11 +371,8 @@ describe('Recipe Services', () => {
 
                 const recipe = await service.updateRecipe(recipeId, updates);
 
-                // Verify api.put was called with payload containing timestamps
-                expect(api.put).toHaveBeenCalledWith(`/recipes/${recipeId}`, expect.objectContaining({
-                    ...updates,
-                    updated_at: expect.any(String),
-                }));
+                // RemoteRecipeService sends mapRecipeToUpdateDto(updates) only; server is authority for timestamps
+                expect(api.put).toHaveBeenCalledWith(`/recipes/${recipeId}`, expect.objectContaining(updates));
                 expect(recipe).toEqual(expect.objectContaining({ id: recipeId, ...updates }));
             });
         });

@@ -23,6 +23,7 @@ import { normalizeTimestampsFromApi } from '../utils/timestamps';
 import { cacheEvents } from '../utils/cacheEvents';
 import { NetworkError } from '../../services/api';
 import { syncQueueStorage, type SyncOp, type QueueTargetId } from '../utils/syncQueueStorage';
+import { getSyncQueueProcessor } from '../utils/syncQueueProcessor';
 import * as Crypto from 'expo-crypto';
 import { withCreatedAt, withUpdatedAt, markDeleted } from '../utils/timestamps';
 
@@ -252,6 +253,9 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
       { localId, serverId },
       entity // Full entity payload
     );
+    if (getIsOnline()) {
+      getSyncQueueProcessor().start();
+    }
   }
 
   /**

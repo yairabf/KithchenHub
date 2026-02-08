@@ -127,6 +127,11 @@ export class ShoppingService {
    */
   async searchGroceries(query: string): Promise<GrocerySearchItemDto[]> {
     const searchTerm = query?.trim() ?? '';
+
+    if (!searchTerm) {
+      return [];
+    }
+
     const rows = await this.prisma.masterGroceryCatalog.findMany({
       where: {
         name: {

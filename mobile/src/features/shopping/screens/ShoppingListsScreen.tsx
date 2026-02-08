@@ -58,8 +58,30 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const { isActive = true } = props;
   const { isTablet } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { groceryItems, categories: rawCategories, frequentlyAddedItems } = useCatalog();
-  
+  const { groceryItems, categories: rawCategories, frequentlyAddedItems, searchGroceries } = useCatalog();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GroceryItem[]>([]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        try {
+          const results = await searchGroceries(searchQuery);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Search failed:', error);
+          setSearchResults([]);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchGroceries]);
+
   /**
    * Sorts categories by item count in descending order.
    * Categories with the most items appear first in the grid.
@@ -83,12 +105,12 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   // Load categories for custom item selection
   useEffect(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ShoppingListsScreen.tsx:65',message:'Calling getShoppingCategories',data:{methodExists:typeof catalogService.getShoppingCategories === 'function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ShoppingListsScreen.tsx:65', message: 'Calling getShoppingCategories', data: { methodExists: typeof catalogService.getShoppingCategories === 'function' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
     // #endregion
     catalogService.getShoppingCategories()
       .then((cats) => {
         // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ShoppingListsScreen.tsx:67',message:'getShoppingCategories resolved',data:{categoryCount:cats?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ShoppingListsScreen.tsx:67', message: 'getShoppingCategories resolved', data: { categoryCount: cats?.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
         // #endregion
         setAvailableCategories(cats);
         // Set default category if not in list
@@ -98,7 +120,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       })
       .catch((error) => {
         // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ShoppingListsScreen.tsx:catch',message:'getShoppingCategories error',data:{errorMessage:error?.message,errorName:error?.name,errorType:typeof error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ShoppingListsScreen.tsx:catch', message: 'getShoppingCategories error', data: { errorMessage: error?.message, errorName: error?.name, errorType: typeof error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
         // #endregion
         console.error('Failed to load categories:', error);
       });
@@ -113,7 +135,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Determine data mode based on user authentication state
   const userMode = useMemo(() => {
     if (config.mockData.enabled) {
@@ -124,19 +146,19 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   const isSignedIn = userMode === 'signed-in';
   const isRealtimeEnabled = isSignedIn && !!user?.householdId;
-  
+
   // Create service - use directly for all modes
   const shoppingService = useMemo(
     () => createShoppingService(userMode),
     [userMode]
   );
-  
+
   // Use state management for all modes (no cache)
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
   const [isListsLoading, setIsListsLoading] = useState(false);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
-  
+
   const fallbackList = useMemo<ShoppingList>(() => ({
     id: 'fallback-list',
     localId: 'fallback-list',
@@ -147,7 +169,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     isMain: false,
   }), []);
   const activeList = selectedList ?? shoppingLists[0] ?? fallbackList;
-  
+
   const listIdFilter = buildListIdFilter(shoppingLists.map((list) => list.id));
 
   /**
@@ -167,7 +189,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   // Load shopping data function - reusable for both initial load and refresh
   const loadShoppingData = useCallback(async () => {
     if (isAuthLoading) return;
-    
+
     setIsListsLoading(true);
     setIsItemsLoading(true);
     try {
@@ -192,17 +214,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   // Track previous active state to detect when tab becomes active
   const prevIsActiveRef = useRef<boolean>(false);
-  
+
   // Refresh shopping data when Shopping tab becomes active (transitions from inactive to active)
   useEffect(() => {
     const wasInactive = !prevIsActiveRef.current;
     const isNowActive = isActive;
-    
+
     // Only refresh when transitioning from inactive to active
     if (wasInactive && isNowActive) {
       loadShoppingData();
     }
-    
+
     // Update ref for next comparison
     prevIsActiveRef.current = isActive;
   }, [isActive, loadShoppingData]);
@@ -280,34 +302,34 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const logShoppingError = (message: string, error: unknown) => {
     console.error(message, error);
   };
-  
+
   // Use service directly for all operations (no cache)
   // Accepts ShoppingItemWithCatalog to support catalogItemId/masterItemId for API requests
   type ShoppingItemWithCatalog = Partial<ShoppingItem> & {
     catalogItemId?: string;
     masterItemId?: string;
   };
-  
+
   const createItem = async (item: ShoppingItemWithCatalog) => {
     // Optimistic update handles UI, realtime will sync the actual creation
     return await shoppingService.createItem(item);
   };
-  
+
   const updateItem = async (itemId: string, updates: Partial<ShoppingItem>) => {
     // Optimistic update handles UI, realtime will sync the actual update
     return await shoppingService.updateItem(itemId, updates);
   };
-  
+
   const deleteItem = async (itemId: string) => {
     // Optimistic update handles UI, realtime will sync the actual deletion
     await shoppingService.deleteItem(itemId);
   };
-  
+
   const toggleItem = async (itemId: string) => {
     // Optimistic update handles UI, realtime will sync the actual toggle
     return await shoppingService.toggleItem(itemId);
   };
-  
+
   const createList = async (list: Partial<ShoppingList>) => {
     const created = await shoppingService.createList(list);
     // For list creation, we need to update the lists state since realtime might not catch it immediately
@@ -485,7 +507,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       const itemId = existingItem.id;
       const itemLocalId = existingItem.localId;
       const baseQuantity = existingItem.quantity;
-      
+
       await executeWithOptimisticUpdate(
         async () => {
           // Read current state to get latest quantity (handles rapid clicks)
@@ -495,7 +517,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
           );
           const currentQuantity = currentItem?.quantity ?? baseQuantity;
           const nextQuantity = currentQuantity + quantity;
-          
+
           return await updateItem(itemId, { quantity: nextQuantity });
         },
         () => {
@@ -526,10 +548,10 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
       try {
         // Use selected category for custom items, otherwise use item's category
-        const categoryToUse = selectedGroceryItem.id.startsWith('custom-') 
+        const categoryToUse = selectedGroceryItem.id.startsWith('custom-')
           ? normalizeShoppingCategory(selectedItemCategory)
           : selectedGroceryItem.category;
-        
+
         const newItem = await createItem({
           name: selectedGroceryItem.name,
           listId: activeList.id,
@@ -538,7 +560,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
           image: selectedGroceryItem.image,
           catalogItemId: selectedGroceryItem.id.startsWith('custom-') ? undefined : selectedGroceryItem.id,
         } as any); // Type assertion needed because ShoppingItem doesn't have catalogItemId
-        
+
         // Replace temp item with real item from service
         setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
           item.localId === tempItem.localId ? newItem : item
@@ -596,7 +618,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         icon: newListIcon,
         color: newListColor,
       });
-      
+
       setSelectedList(newList);
       handleCancelCreateListModal();
     } catch (error) {
@@ -660,8 +682,8 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         }}
       />
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         contentContainerStyle={styles.contentContainer}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
@@ -673,7 +695,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             shoppingLists={shoppingLists}
             selectedList={activeList}
             filteredItems={filteredItems}
-            groceryItems={groceryItems}
+            groceryItems={searchQuery ? searchResults : []}
             onSelectList={(list) => setSelectedList(list)}
             onCreateList={handleOpenCreateListModal}
             onSelectGroceryItem={handleSelectGroceryItem}
@@ -681,6 +703,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             onQuantityChange={handleQuantityChange}
             onDeleteItem={handleDeleteItem}
             onToggleItemChecked={handleToggleItemChecked}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchMode="remote"
           />
 
           {/* Right Column - Discovery */}
@@ -843,9 +868,10 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       <AllItemsModal
         visible={showAllItemsModal}
         items={groceryItems}
-        onClose={handleCloseAllItemsModal}
-        onSelectItem={handleSelectItemFromAllItems}
-        onQuickAddItem={handleQuickAddItemFromAllItems}
+        onClose={() => setShowAllItemsModal(false)}
+        onSelectItem={handleSelectItemFromCategory}
+        onQuickAddItem={handleQuickAddItem}
+        searchGroceries={searchGroceries}
       />
 
       {/* Quick Add Modal */}

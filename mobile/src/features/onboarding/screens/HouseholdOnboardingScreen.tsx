@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../theme';
+import { boxShadow } from '../../../theme/shadows';
 import { householdService } from '../../../services/householdService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
@@ -223,11 +224,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surface,
         borderRadius: 16,
         padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        ...boxShadow(2, 8, 'rgba(0, 0, 0, 0.1)'),
     },
     label: {
         fontSize: 14,
@@ -258,15 +255,10 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 16,
         alignItems: 'center',
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
     },
     buttonDisabled: {
         backgroundColor: colors.border,
-        shadowOpacity: 0,
     },
     buttonText: {
         fontSize: 16,

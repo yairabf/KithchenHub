@@ -66,13 +66,13 @@ describe('guestStorage', () => {
       { scenario: 'invalid JSON', storageValue: 'invalid json', expected: [] },
       { 
         scenario: 'valid envelope format', 
-        storageValue: JSON.stringify({ version: 1, updatedAt: '2026-01-25T12:00:00.000Z', data: [{ id: '1', localId: 'uuid-1', name: 'Test Recipe' }] }), 
-        expected: [{ id: '1', localId: 'uuid-1', name: 'Test Recipe' }] 
+        storageValue: JSON.stringify({ version: 1, updatedAt: '2026-01-25T12:00:00.000Z', data: [{ id: '1', localId: 'uuid-1', title: 'Test Recipe' }] }),
+        expected: [{ id: '1', localId: 'uuid-1', title: 'Test Recipe' }]
       },
       { 
         scenario: 'legacy array format', 
-        storageValue: JSON.stringify([{ id: '1', localId: 'uuid-1', name: 'Test Recipe' }]), 
-        expected: [{ id: '1', localId: 'uuid-1', name: 'Test Recipe' }] 
+        storageValue: JSON.stringify([{ id: '1', localId: 'uuid-1', title: 'Test Recipe' }]),
+        expected: [{ id: '1', localId: 'uuid-1', title: 'Test Recipe' }]
       },
       { scenario: 'non-array data', storageValue: JSON.stringify({ not: 'an array' }), expected: [] },
       { scenario: 'array with invalid items', storageValue: JSON.stringify([{ id: '1' }, { localId: 'uuid-2' }, null]), expected: [] },
@@ -96,8 +96,8 @@ describe('guestStorage', () => {
         {
           id: '1',
           localId: 'uuid-1',
-          name: 'Test Recipe',
-          cookTime: '30 min',
+          title: 'Test Recipe',
+          cookTime: 30,
           category: 'Dinner',
           ingredients: [],
           instructions: [],
@@ -118,7 +118,7 @@ describe('guestStorage', () => {
       expect(writtenData.data[0]).toMatchObject({
         id: '1',
         localId: 'uuid-1',
-        name: 'Test Recipe',
+        title: 'Test Recipe',
       });
     });
 
@@ -286,8 +286,8 @@ describe('guestStorage', () => {
         {
           id: '1',
           localId: 'uuid-1',
-          name: 'Test Recipe',
-          cookTime: '30 min',
+          title: 'Test Recipe',
+          cookTime: 30,
           category: 'Dinner',
           ingredients: [],
           instructions: [],
@@ -307,7 +307,7 @@ describe('guestStorage', () => {
       expect(retrieved[0]).toMatchObject({
         id: '1',
         localId: 'uuid-1',
-        name: 'Test Recipe',
+        title: 'Test Recipe',
       });
     });
 

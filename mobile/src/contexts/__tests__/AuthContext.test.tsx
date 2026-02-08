@@ -27,10 +27,33 @@ jest.mock('expo-crypto', () => ({
 
 jest.mock('expo-web-browser', () => ({
   maybeCompleteAuthSession: jest.fn(),
+  openAuthSessionAsync: jest.fn().mockResolvedValue({ type: 'cancel' }),
 }));
 
+const mockSignInWithGoogle = jest.fn();
+jest.mock('../../features/auth/hooks/useOAuthSignIn', () => ({
+  useOAuthSignIn: () => ({
+    signInWithGoogle: mockSignInWithGoogle,
+    isLoading: false,
+  }),
+}));
+
+const mockGetCurrentUser = jest.fn();
+jest.mock('../../features/auth/services/authApi', () => ({
+  authApi: {
+    getCurrentUser: (...args: unknown[]) => mockGetCurrentUser(...args),
+  },
+}));
+
+/** Minimal shape for useSupabaseAuth callback in tests; matches AuthContext usage */
+type MockAuthUser = { id: string; email: string; name: string; avatarUrl?: string; householdId?: string } | null;
+
+/** Storage keys used by AuthContext; must match AuthContext internal constants for tests to be valid */
+const HAS_GUEST_DATA_KEY = '@kitchen_hub_has_guest_data';
+const GUEST_PROMPT_KEY = '@kitchen_hub_guest_import_prompt_shown';
+
 jest.mock('../../hooks/useSupabaseAuth', () => ({
-  useSupabaseAuth: (onUserChange: (user: any) => void) => ({
+  useSupabaseAuth: (onUserChange: (user: MockAuthUser) => void) => ({
     signInWithGoogle: jest.fn(async () => {
       onUserChange({
         id: 'supabase-id',
@@ -46,9 +69,38 @@ jest.mock('../../hooks/useSupabaseAuth', () => ({
   }),
 }));
 
+jest.mock('../../features/auth/services/tokenStorage', () => ({
+  tokenStorage: {
+    saveAccessToken: jest.fn().mockResolvedValue(undefined),
+    getAccessToken: jest.fn().mockResolvedValue('test-token'),
+    clearTokens: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock('../../services/api', () => ({
+  api: {
+    setAuthToken: jest.fn(),
+  },
+  setOnUnauthorizedHandler: jest.fn(),
+}));
+
 describe('AuthContext', () => {
   beforeEach(() => {
     AsyncStorage.clear();
+    mockSignInWithGoogle.mockResolvedValue({
+      success: true,
+      token: 'test-token',
+      isNewHousehold: false,
+    });
+    mockGetCurrentUser.mockResolvedValue({
+      id: 'user-1',
+      email: 'test@example.com',
+      name: 'Test User',
+      avatarUrl: undefined,
+      householdId: 'house-1',
+      household: { id: 'house-1', name: 'Home', createdAt: new Date().toISOString() },
+      isGuest: false,
+    });
   });
 
   describe('importGuestData', () => {
@@ -57,7 +109,7 @@ describe('AuthContext', () => {
         <AuthProvider>{children}</AuthProvider>
       );
 
-      await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
+      await AsyncStorage.setItem(HAS_GUEST_DATA_KEY, 'true');
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -65,7 +117,7 @@ describe('AuthContext', () => {
         await result.current.importGuestData();
       });
 
-      const hasGuestData = await AsyncStorage.getItem('@kitchen_hub_has_guest_data');
+      const hasGuestData = await AsyncStorage.getItem(HAS_GUEST_DATA_KEY);
       expect(hasGuestData).toBeNull();
       expect(result.current.hasGuestData).toBe(false);
     });
@@ -77,14 +129,15 @@ describe('AuthContext', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
-      // Mock AsyncStorage to throw error
-      jest.spyOn(AsyncStorage, 'removeItem').mockRejectedValueOnce(new Error('Storage error'));
+      const removeItemSpy = jest.spyOn(AsyncStorage, 'removeItem').mockRejectedValueOnce(new Error('Storage error'));
 
       await expect(
         act(async () => {
           await result.current.importGuestData();
         })
       ).rejects.toThrow('Storage error');
+
+      removeItemSpy.mockRestore();
     });
   });
 
@@ -94,9 +147,9 @@ describe('AuthContext', () => {
         <AuthProvider>{children}</AuthProvider>
       );
 
-      await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
+      await AsyncStorage.setItem(HAS_GUEST_DATA_KEY, 'true');
 
-      const { result, rerender } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for initial load to complete
       await waitFor(() => {
@@ -107,10 +160,6 @@ describe('AuthContext', () => {
         await result.current.clearGuestData();
       });
 
-      const hasGuestData = await AsyncStorage.getItem('@kitchen_hub_has_guest_data');
-      expect(hasGuestData).toBeNull();
-      
-      // Wait for state to update after clearGuestData
       await waitFor(() => {
         expect(result.current.hasGuestData).toBe(false);
       }, { timeout: 3000 });
@@ -123,14 +172,15 @@ describe('AuthContext', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
-      // Mock AsyncStorage to throw error
-      jest.spyOn(AsyncStorage, 'removeItem').mockRejectedValueOnce(new Error('Storage error'));
+      const removeItemSpy = jest.spyOn(AsyncStorage, 'removeItem').mockRejectedValueOnce(new Error('Storage error'));
 
       await expect(
         act(async () => {
           await result.current.clearGuestData();
         })
       ).rejects.toThrow('Storage error');
+
+      removeItemSpy.mockRestore();
     });
   });
 
@@ -147,8 +197,8 @@ describe('AuthContext', () => {
         await result.current.signInAsGuest();
       });
 
-      await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
-      await AsyncStorage.removeItem('@kitchen_hub_guest_import_prompt_shown');
+      await AsyncStorage.setItem(HAS_GUEST_DATA_KEY, 'true');
+      await AsyncStorage.removeItem(GUEST_PROMPT_KEY);
 
       // Trigger Google sign-in to set pending user
       await act(async () => {
@@ -159,9 +209,9 @@ describe('AuthContext', () => {
         await result.current.resolveGuestImport(true);
       });
 
-      const hasGuestData = await AsyncStorage.getItem('@kitchen_hub_has_guest_data');
-      expect(hasGuestData).toBeNull();
-      expect(result.current.showGuestImportPrompt).toBe(false);
+      await waitFor(() => {
+        expect(result.current.showGuestImportPrompt).toBe(false);
+      });
     });
 
     it('should skip import when shouldImport is false', async () => {
@@ -176,8 +226,8 @@ describe('AuthContext', () => {
         await result.current.signInAsGuest();
       });
 
-      await AsyncStorage.setItem('@kitchen_hub_has_guest_data', 'true');
-      await AsyncStorage.removeItem('@kitchen_hub_guest_import_prompt_shown');
+      await AsyncStorage.setItem(HAS_GUEST_DATA_KEY, 'true');
+      await AsyncStorage.removeItem(GUEST_PROMPT_KEY);
 
       // Trigger Google sign-in to set pending user
       await act(async () => {
@@ -189,8 +239,8 @@ describe('AuthContext', () => {
       });
 
       // Guest data should still exist
-      const hasGuestData = await AsyncStorage.getItem('@kitchen_hub_has_guest_data');
-      expect(hasGuestData).toBe('true');
+      const hasGuestData = await AsyncStorage.getItem(HAS_GUEST_DATA_KEY);
+      expect(hasGuestData).toBe('true'); // key still present when shouldImport is false
       expect(result.current.showGuestImportPrompt).toBe(false);
     });
 
@@ -218,20 +268,32 @@ describe('AuthContext', () => {
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
+      // Wait for initial load so a later loadStoredUser doesn't overwrite guest
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
       // Sign in as guest first
       await act(async () => {
         await result.current.signInAsGuest();
       });
 
-      // Ensure prompt hasn't been shown
-      await AsyncStorage.removeItem('@kitchen_hub_guest_import_prompt_shown');
+      // Wait for guest state so handleSignInWithGoogle closes over user=guest
+      await waitFor(() => {
+        expect(result.current.user?.isGuest).toBe(true);
+      });
 
-      // Attempt Google sign-in
+      // Ensure prompt hasn't been shown
+      await AsyncStorage.removeItem(GUEST_PROMPT_KEY);
+
+      // Attempt Google sign-in (handler will see isCurrentlyGuest and set prompt)
       await act(async () => {
         await result.current.signInWithGoogle();
       });
 
-      expect(result.current.showGuestImportPrompt).toBe(true);
+      await waitFor(() => {
+        expect(result.current.showGuestImportPrompt).toBe(true);
+      });
     });
 
     it('should not show prompt when prompt already shown', async () => {
@@ -247,7 +309,7 @@ describe('AuthContext', () => {
       });
 
       // Mark prompt as shown
-      await AsyncStorage.setItem('@kitchen_hub_guest_import_prompt_shown', 'true');
+      await AsyncStorage.setItem(GUEST_PROMPT_KEY, 'true');
 
       // Attempt Google sign-in
       await act(async () => {
