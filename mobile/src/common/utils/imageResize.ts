@@ -113,7 +113,7 @@ export const resizeAndValidateImage = async (uri: string): Promise<ResizedImageR
 
   const resized = await ImageManipulator.manipulateAsync(uri, actions, {
     compress: IMAGE_CONSTRAINTS.jpegQuality,
-    format: ImageManipulator.SaveFormat.JPEG,
+    format: ImageManipulator.SaveFormat.WEBP,
   });
 
   const sizeBytes = await getImageFileSizeBytes(resized.uri);

@@ -6,6 +6,7 @@ import { config } from '../../../config';
 import { determineUserDataMode } from '../../../common/types/dataModes';
 import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareRecipeRepository } from '../../../common/repositories/cacheAwareRecipeRepository';
+import { pruneStaleImages } from '../../../common/services/recipeImageCache';
 
 export function useRecipes() {
     const { user, isLoading: isAuthLoading } = useAuth();
@@ -152,7 +153,8 @@ export function useRecipes() {
         } else {
             // Signed-in mode: force refresh from API
             try {
-                await repository.refresh();
+                const refreshed = await repository.refresh();
+                await pruneStaleImages(refreshed);
                 // Cache events will trigger UI update via useCachedEntities
             } catch (error) {
                 console.error('Failed to refresh recipes:', error);

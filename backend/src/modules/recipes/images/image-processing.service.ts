@@ -1,5 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as sharp from 'sharp';
+import {
+  RECIPE_IMAGE_MAIN_MAX_DIMENSION,
+  RECIPE_IMAGE_THUMB_SIZE,
+  RECIPE_IMAGE_MAIN_WEBP_QUALITY,
+  RECIPE_IMAGE_THUMB_WEBP_QUALITY,
+} from '../../../common/constants';
 
 @Injectable()
 export class ImageProcessingService {
@@ -10,20 +16,24 @@ export class ImageProcessingService {
   ): Promise<{ main: Buffer; thumbnail: Buffer }> {
     try {
       const main = await sharp(buffer)
-        .resize(1600, 1600, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .webp({ quality: 80 })
+        .resize(
+          RECIPE_IMAGE_MAIN_MAX_DIMENSION,
+          RECIPE_IMAGE_MAIN_MAX_DIMENSION,
+          {
+            fit: 'inside',
+            withoutEnlargement: true,
+          },
+        )
+        .webp({ quality: RECIPE_IMAGE_MAIN_WEBP_QUALITY })
         .toBuffer();
 
       const thumbnail = await sharp(buffer)
-        .resize(400, 400, {
+        .resize(RECIPE_IMAGE_THUMB_SIZE, RECIPE_IMAGE_THUMB_SIZE, {
           fit: 'cover',
           position: 'center',
           withoutEnlargement: true,
         })
-        .webp({ quality: 75 })
+        .webp({ quality: RECIPE_IMAGE_THUMB_WEBP_QUALITY })
         .toBuffer();
 
       return { main, thumbnail };

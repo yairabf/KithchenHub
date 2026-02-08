@@ -1,20 +1,21 @@
 import { Image } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { resizeAndValidateImage } from './imageResize';
 import { IMAGE_CONSTRAINTS } from './imageConstraints';
 
 jest.mock('expo-image-manipulator', () => ({
   manipulateAsync: jest.fn(),
-  SaveFormat: { JPEG: 'jpeg' },
+  SaveFormat: { WEBP: 'webp' },
 }));
 
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   getInfoAsync: jest.fn(),
 }));
 
 jest.mock('react-native', () => ({
   Image: { getSize: jest.fn() },
+  Platform: { OS: 'ios' },
 }));
 
 const mockManipulateAsync = ImageManipulator.manipulateAsync as jest.Mock;
@@ -51,7 +52,7 @@ describe('resizeAndValidateImage', () => {
       [{ resize: { width: 1600, height: 1200 } }],
       expect.objectContaining({
         compress: IMAGE_CONSTRAINTS.jpegQuality,
-        format: ImageManipulator.SaveFormat.JPEG,
+        format: ImageManipulator.SaveFormat.WEBP,
       })
     );
     expect(result).toEqual({

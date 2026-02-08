@@ -21,6 +21,8 @@ jest.mock('expo-modules-core', () => ({
     return { addListener: jest.fn(), removeSubscription: jest.fn() };
   },
   requireNativeModule: () => ({}),
+  requireNativeViewManager: () => ({}),
+  requireOptionalNativeModule: () => ({}),
 }));
 
 // expo-crypto - used by sync queue and repos; avoid native module load
@@ -46,6 +48,25 @@ jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(() => Promise.resolve(null)),
   setItemAsync: jest.fn(() => Promise.resolve()),
   deleteItemAsync: jest.fn(() => Promise.resolve()),
+}));
+
+// expo-clipboard - used by share utils
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn(() => Promise.resolve()),
+}));
+
+// expo-file-system - used by image resize/cache helpers
+jest.mock('expo-file-system', () => ({
+  documentDirectory: 'file:///mock-documents/',
+  getInfoAsync: jest.fn(async () => ({ exists: false, uri: '', isDirectory: false })),
+  makeDirectoryAsync: jest.fn(async () => undefined),
+  readDirectoryAsync: jest.fn(async () => []),
+  downloadAsync: jest.fn(async (from, to) => ({ uri: to, status: 200 })),
+  deleteAsync: jest.fn(async () => undefined),
+}));
+
+jest.mock('expo-file-system/legacy', () => ({
+  getInfoAsync: jest.fn(async () => ({ exists: true, uri: '', size: 1024 })),
 }));
 
 // NativeEventEmitter - allow null argument so Keyboard (and others) load when native module is missing

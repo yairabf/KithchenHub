@@ -15,6 +15,15 @@ import {
   RecipeImageAllowedMimeType,
 } from '../../../common/constants';
 
+const INVALID_IMAGE_TYPE_MESSAGE =
+  'Invalid file type. Only JPG, PNG and WebP are allowed.';
+
+const isAllowedImageType = (mimeType?: string | null) =>
+  Boolean(mimeType) &&
+  RECIPE_IMAGE_ALLOWED_MIME_TYPES.includes(
+    mimeType as RecipeImageAllowedMimeType,
+  );
+
 type RecipeImageUploadRequest = {
   user: { householdId: string };
   file: () => Promise<{
@@ -67,20 +76,20 @@ export class RecipeImagesController {
     mimetype: string;
     toBuffer: () => Promise<Buffer>;
   }): Promise<Buffer> {
-    if (
-      !RECIPE_IMAGE_ALLOWED_MIME_TYPES.includes(
-        data.mimetype as RecipeImageAllowedMimeType,
-      )
-    ) {
-      throw new BadRequestException(
-        'Invalid file type. Only JPG, PNG and WebP are allowed.',
-      );
+    if (!isAllowedImageType(data.mimetype)) {
+      throw new BadRequestException(INVALID_IMAGE_TYPE_MESSAGE);
     }
 
     const buffer = await data.toBuffer();
 
     if (buffer.length > RECIPE_IMAGE_MAX_SIZE_BYTES) {
       throw new BadRequestException('File too large. Max 5MB allowed.');
+    }
+
+    const { fileTypeFromBuffer } = await import('file-type');
+    const detected = await fileTypeFromBuffer(buffer);
+    if (!detected || !isAllowedImageType(detected.mime)) {
+      throw new BadRequestException(INVALID_IMAGE_TYPE_MESSAGE);
     }
 
     return buffer;

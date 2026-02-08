@@ -71,6 +71,33 @@ jest.mock('../../components/ImportDataModal', () => ({
       return <View testID="import-data-modal" />;
     })() : null),
 }));
+jest.mock('../../../../common/components/CenteredModal', () => ({
+  CenteredModal: ({
+    visible,
+    title,
+    children,
+    onConfirm,
+    confirmText = 'Confirm',
+  }: {
+    visible: boolean;
+    title: string;
+    children?: React.ReactNode;
+    onConfirm?: () => void;
+    confirmText?: string;
+  }) => {
+    if (!visible) return null;
+    const { View, Text, TouchableOpacity } = require('react-native');
+    return (
+      <View>
+        <Text>{title}</Text>
+        {children}
+        <TouchableOpacity onPress={onConfirm}>
+          <Text>{confirmText}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  },
+}));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
