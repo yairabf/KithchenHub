@@ -13,6 +13,11 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.transparent.white50,
     position: 'relative',
   },
+  recipeImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
   editButton: {
     position: 'absolute',
     top: spacing.xs,

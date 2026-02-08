@@ -16,33 +16,33 @@ import { getIsOnline } from '../../../common/utils/networkStatus';
  * Backend RecipeDetailDto format (what POST /recipes returns)
  */
 type RecipeDetailDto = {
-  id: string;
-  title: string;
-  category?: string;
-  prepTime?: number;
-  cookTime?: number;
-  ingredients: Array<{
-    name: string;
-    quantityAmount?: number;
-    quantityUnit?: string;
-    quantityUnitType?: string;
-    quantityModifier?: string;
-    quantity?: number;
-    unit?: string;
-  }>;
-  instructions: Array<{ step: number; instruction: string }>;
-  imageUrl?: string;
+    id: string;
+    title: string;
+    category?: string;
+    prepTime?: number;
+    cookTime?: number;
+    ingredients: Array<{
+        name: string;
+        quantityAmount?: number;
+        quantityUnit?: string;
+        quantityUnitType?: string;
+        quantityModifier?: string;
+        quantity?: number;
+        unit?: string;
+    }>;
+    instructions: Array<{ step: number; instruction: string }>;
+    imageUrl?: string;
 };
 
 /**
  * Backend RecipeListItemDto format (what GET /recipes returns)
  */
 type RecipeListItemDto = {
-  id: string;
-  title: string;
-  category?: string;
-  cookTime?: number;
-  imageUrl?: string;
+    id: string;
+    title: string;
+    category?: string;
+    cookTime?: number;
+    imageUrl?: string;
 };
 
 /**
@@ -50,60 +50,60 @@ type RecipeListItemDto = {
  * Maps to frontend Recipe format
  */
 type RecipeApiResponse = {
-  id: string;
-  localId?: string;
-  title: string;
-  cookTime?: number;
-  category?: string;
-  ingredients?: any[];
-  instructions?: any[];
-  prepTime?: number;
-  imageUrl?: string;
-  description?: string;
-  calories?: number;
-  servings?: number;
-  created_at?: string;
-  updated_at?: string;
-  deleted_at?: string | null;
-  createdAt?: string | Date;
-  updatedAt?: string | Date;
-  deletedAt?: string | Date | null;
+    id: string;
+    localId?: string;
+    title: string;
+    cookTime?: number;
+    category?: string;
+    ingredients?: any[];
+    instructions?: any[];
+    prepTime?: number;
+    imageUrl?: string;
+    description?: string;
+    calories?: number;
+    servings?: number;
+    created_at?: string;
+    updated_at?: string;
+    deleted_at?: string | null;
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+    deletedAt?: string | Date | null;
 };
 
 /**
  * Maps backend RecipeDetailDto to frontend Recipe format
  */
 function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
-  // Map ingredients: backend RecipeIngredientDto[] -> frontend Ingredient[]
-  const ingredients = (dto.ingredients ?? []).map((ing) => ({
-    name: ing.name,
-    quantityAmount: ing.quantityAmount ?? ing.quantity,
-    quantityUnit: ing.quantityUnit ?? ing.unit,
-    quantityUnitType: ing.quantityUnitType,
-    quantityModifier: ing.quantityModifier,
-    quantity: ing.quantity,
-    unit: ing.unit,
-  }));
+    // Map ingredients: backend RecipeIngredientDto[] -> frontend Ingredient[]
+    const ingredients = (dto.ingredients ?? []).map((ing) => ({
+        name: ing.name,
+        quantityAmount: ing.quantityAmount ?? ing.quantity,
+        quantityUnit: ing.quantityUnit ?? ing.unit,
+        quantityUnitType: ing.quantityUnitType,
+        quantityModifier: ing.quantityModifier,
+        quantity: ing.quantity,
+        unit: ing.unit,
+    }));
 
-  // Map instructions: backend RecipeInstructionDto[] -> frontend Instruction[]
-  const instructions = (dto.instructions ?? []).map((inst) => ({
-    step: inst.step,
-    instruction: inst.instruction,
-  }));
+    // Map instructions: backend RecipeInstructionDto[] -> frontend Instruction[]
+    const instructions = (dto.instructions ?? []).map((inst) => ({
+        step: inst.step,
+        instruction: inst.instruction,
+    }));
 
-  return {
-    id: dto.id,
-    title: dto.title || 'Untitled Recipe',
-    prepTime: dto.prepTime,
-    cookTime: dto.cookTime,
-    category: dto.category,
-    ingredients: ingredients,
-    instructions: instructions,
-    imageUrl: dto.imageUrl,
-    createdAt: undefined,
-    updatedAt: undefined,
-    deletedAt: undefined,
-  };
+    return {
+        id: dto.id,
+        title: dto.title || 'Untitled Recipe',
+        prepTime: dto.prepTime,
+        cookTime: dto.cookTime,
+        category: dto.category,
+        ingredients: ingredients,
+        instructions: instructions,
+        imageUrl: dto.imageUrl,
+        createdAt: undefined,
+        updatedAt: undefined,
+        deletedAt: undefined,
+    };
 }
 
 export interface IRecipeService {
@@ -125,27 +125,27 @@ const RETRY_DELAY_MS = 10; // Brief delay to allow concurrent writes to complete
  * @returns A complete Recipe object with all required fields
  */
 function buildRecipeWithDefaults(recipe: Partial<Recipe>): Recipe {
-  const defaultTitle = 'New Recipe';
-  const defaultLocalId = `local-uuid-${Date.now()}`;
-  
-  // Extract and validate title (handle empty/whitespace strings)
-  const recipeTitle = (recipe.title && recipe.title.trim()) ? recipe.title : defaultTitle;
-  const recipeLocalId = recipe.localId || defaultLocalId;
-  
-  return {
-    id: `local-${Date.now()}`,
-    localId: recipeLocalId,
-    title: recipeTitle,
-    cookTime: recipe.cookTime,
-    category: recipe.category,
-    ingredients: recipe.ingredients || [],
-    instructions: recipe.instructions || [],
-    prepTime: recipe.prepTime,
-    imageUrl: recipe.imageUrl,
-    description: recipe.description,
-    calories: recipe.calories,
-    servings: recipe.servings,
-  } as Recipe;
+    const defaultTitle = 'New Recipe';
+    const defaultLocalId = `local-uuid-${Date.now()}`;
+
+    // Extract and validate title (handle empty/whitespace strings)
+    const recipeTitle = (recipe.title && recipe.title.trim()) ? recipe.title : defaultTitle;
+    const recipeLocalId = recipe.localId || defaultLocalId;
+
+    return {
+        id: `local-${Date.now()}`,
+        localId: recipeLocalId,
+        title: recipeTitle,
+        cookTime: recipe.cookTime,
+        category: recipe.category,
+        ingredients: recipe.ingredients || [],
+        instructions: recipe.instructions || [],
+        prepTime: recipe.prepTime,
+        imageUrl: recipe.imageUrl,
+        description: recipe.description,
+        calories: recipe.calories,
+        servings: recipe.servings,
+    } as Recipe;
 }
 
 export class LocalRecipeService implements IRecipeService {
@@ -174,13 +174,13 @@ export class LocalRecipeService implements IRecipeService {
         try {
             // Ensure all mock recipes have createdAt and updatedAt timestamps
             // withCreatedAtAndUpdatedAt() is safe - it won't overwrite existing timestamps
-            const seededRecipes = mockRecipes.map(recipe => 
+            const seededRecipes = mockRecipes.map(recipe =>
                 withCreatedAtAndUpdatedAt(recipe)
             );
-            
+
             // Save seeded recipes to storage
             await guestStorage.saveRecipes(seededRecipes);
-            
+
             return seededRecipes;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -238,7 +238,7 @@ export class LocalRecipeService implements IRecipeService {
                 await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
             }
         }
-        
+
         // This should never be reached, but TypeScript needs it
         throw new Error('Failed to create recipe: unexpected error');
     }
@@ -255,7 +255,7 @@ export class LocalRecipeService implements IRecipeService {
             try {
                 const existingRecipes = await guestStorage.getRecipes();
                 const recipeIndex = existingRecipes.findIndex(r => r.id === recipeId || r.localId === recipeId);
-                
+
                 if (recipeIndex === -1) {
                     throw new Error(`Recipe not found: ${recipeId}`);
                 }
@@ -283,7 +283,7 @@ export class LocalRecipeService implements IRecipeService {
                 if (error instanceof Error && (error.message.includes('not found') || error.message.includes('Invalid'))) {
                     throw error;
                 }
-                
+
                 retries--;
                 if (retries === 0) {
                     throw new Error(`Failed to update recipe after ${MAX_RETRIES} retries: ${error instanceof Error ? error.message : String(error)}`);
@@ -291,7 +291,7 @@ export class LocalRecipeService implements IRecipeService {
                 await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
             }
         }
-        
+
         // This should never be reached, but TypeScript needs it
         throw new Error('Failed to update recipe: unexpected error');
     }
@@ -303,7 +303,7 @@ export class LocalRecipeService implements IRecipeService {
             try {
                 const existingRecipes = await guestStorage.getRecipes();
                 const recipeIndex = existingRecipes.findIndex(r => r.id === recipeId || r.localId === recipeId);
-                
+
                 if (recipeIndex === -1) {
                     throw new Error(`Recipe not found: ${recipeId}`);
                 }
@@ -312,7 +312,7 @@ export class LocalRecipeService implements IRecipeService {
                 const deletedRecipe = markDeleted(existingRecipes[recipeIndex]);
                 // Also update updatedAt on delete
                 const withTimestamps = withUpdatedAt(deletedRecipe);
-                
+
                 const updatedRecipes = [...existingRecipes];
                 updatedRecipes[recipeIndex] = withTimestamps;
                 await guestStorage.saveRecipes(updatedRecipes);
@@ -322,7 +322,7 @@ export class LocalRecipeService implements IRecipeService {
                 if (error instanceof Error && (error.message.includes('not found') || error.message.includes('Invalid'))) {
                     throw error;
                 }
-                
+
                 retries--;
                 if (retries === 0) {
                     throw new Error(`Failed to delete recipe after ${MAX_RETRIES} retries: ${error instanceof Error ? error.message : String(error)}`);
@@ -330,7 +330,7 @@ export class LocalRecipeService implements IRecipeService {
                 await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
             }
         }
-        
+
         // This should never be reached, but TypeScript needs it
         throw new Error('Failed to delete recipe: unexpected error');
     }
@@ -356,68 +356,68 @@ export class RemoteRecipeService implements IRecipeService {
         const response = await api.get<RecipeListItemDto[]>('/recipes');
         console.log('[RemoteRecipeService] fetchRecipesFromApi - received', response.length, 'recipes');
         console.log('[RemoteRecipeService] fetchRecipesFromApi - response:', JSON.stringify(response, null, 2));
-        
+
         // Map list items to Recipe format (ingredients/instructions will be empty arrays)
         // Full details would require fetching each recipe individually via GET /recipes/:id
         const mapped = response.map((item) => {
-          const recipe = {
-            id: item.id,
-            title: item.title || 'Untitled Recipe',
-            imageUrl: item.imageUrl,
-            ingredients: [],
-            instructions: [],
-            cookTime: item.cookTime,
-            category: item.category,
-          };
-          console.log('[RemoteRecipeService] Mapped recipe item:', JSON.stringify({ id: recipe.id, title: recipe.title }, null, 2));
-          return recipe;
+            const recipe = {
+                id: item.id,
+                title: item.title || 'Untitled Recipe',
+                imageUrl: item.imageUrl,
+                ingredients: [],
+                instructions: [],
+                cookTime: item.cookTime,
+                category: item.category,
+            };
+            console.log('[RemoteRecipeService] Mapped recipe item:', JSON.stringify({ id: recipe.id, title: recipe.title }, null, 2));
+            return recipe;
         });
-        
+
         console.log('[RemoteRecipeService] fetchRecipesFromApi - mapped recipes:', JSON.stringify(mapped, null, 2));
-        
+
         // Normalize timestamps from API response (server is authority)
         // Ensure ingredients and instructions are always arrays
         return mapped.map((item) => {
-          const normalized = normalizeTimestampsFromApi<Recipe>(item as any);
-          console.log('[RemoteRecipeService] After normalization:', JSON.stringify({ id: normalized.id, title: normalized.title }, null, 2));
-          
-          // Preserve title field explicitly (it might be lost during normalization)
-          const recipeTitle = item.title || normalized.title || 'Untitled Recipe';
-          const finalRecipe = {
-            ...normalized,
-            title: recipeTitle, // Explicitly set title to ensure it's preserved
-            ingredients: normalized.ingredients || [],
-            instructions: normalized.instructions || [],
-            cookTime: normalized.cookTime ?? item.cookTime,
-            category: normalized.category ?? item.category,
-          };
-          console.log('[RemoteRecipeService] Final recipe:', JSON.stringify({ id: finalRecipe.id, title: finalRecipe.title }, null, 2));
-          return finalRecipe;
+            const normalized = normalizeTimestampsFromApi<Recipe>(item as any);
+            console.log('[RemoteRecipeService] After normalization:', JSON.stringify({ id: normalized.id, title: normalized.title }, null, 2));
+
+            // Preserve title field explicitly (it might be lost during normalization)
+            const recipeTitle = item.title || normalized.title || 'Untitled Recipe';
+            const finalRecipe = {
+                ...normalized,
+                title: recipeTitle, // Explicitly set title to ensure it's preserved
+                ingredients: normalized.ingredients || [],
+                instructions: normalized.instructions || [],
+                cookTime: normalized.cookTime ?? item.cookTime,
+                category: normalized.category ?? item.category,
+            };
+            console.log('[RemoteRecipeService] Final recipe:', JSON.stringify({ id: finalRecipe.id, title: finalRecipe.title }, null, 2));
+            return finalRecipe;
         });
     }
 
     async getRecipeById(recipeId: string): Promise<Recipe> {
         console.log('[RemoteRecipeService] getRecipeById() called with recipeId:', recipeId);
-        
+
         // First check cache using proper cache-aware read (handles versioned format)
         const cached = await readCachedEntitiesForUpdate<Recipe>('recipes');
         const cachedRecipe = cached.find(r => r.id === recipeId);
-        
+
         // If cached recipe has full details (ingredients/instructions), return it
         if (cachedRecipe && cachedRecipe.ingredients && cachedRecipe.ingredients.length > 0) {
             console.log('[RemoteRecipeService] Found recipe in cache with full details');
             return cachedRecipe;
         }
-        
+
         // Otherwise fetch from API
         console.log('[RemoteRecipeService] Fetching full recipe details from API...');
         const response = await api.get<RecipeDetailDto>(`/recipes/${recipeId}`);
         console.log('[RemoteRecipeService] API response:', JSON.stringify(response, null, 2));
-        
+
         // Map backend RecipeDetailDto to frontend Recipe format
         const mappedResponse = mapDetailDtoToRecipe(response);
         console.log('[RemoteRecipeService] Mapped response:', JSON.stringify(mappedResponse, null, 2));
-        
+
         // Normalize timestamps
         const normalized = normalizeTimestampsFromApi<Recipe>(mappedResponse);
         const recipeTitle = mappedResponse.title || normalized.title || 'Untitled Recipe';
@@ -429,7 +429,7 @@ export class RemoteRecipeService implements IRecipeService {
             cookTime: normalized.cookTime ?? mappedResponse.cookTime,
             category: normalized.category ?? mappedResponse.category,
         };
-        
+
         // Update cache with full details
         if (cachedRecipe) {
             // Replace the cached recipe with full details
@@ -439,7 +439,7 @@ export class RemoteRecipeService implements IRecipeService {
             // Add to cache if not found
             await setCached('recipes', [...cached, fullRecipe], (r) => r.id);
         }
-        
+
         console.log('[RemoteRecipeService] Recipe details fetched and cached');
         return fullRecipe;
     }
@@ -567,84 +567,139 @@ export class RemoteRecipeService implements IRecipeService {
         return dto;
     }
 
+    private async uploadRecipeImage(recipeId: string, imageUri: string): Promise<string> {
+        console.log('[RemoteRecipeService] Uploading image for recipe:', recipeId);
+
+        const formData = new FormData();
+        const filename = imageUri.split('/').pop() || 'image.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        // @ts-ignore - React Native FormData expects specific object structure
+        formData.append('file', { uri: imageUri, name: filename, type });
+
+        const response = await api.upload<RecipeDetailDto>(`/recipes/${recipeId}/image`, formData);
+        console.log('[RemoteRecipeService] Image upload successful');
+
+        return response.imageUrl || imageUri;
+    }
+
     async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
         console.log('[RemoteRecipeService] createRecipe() called with recipe:', JSON.stringify(recipe, null, 2));
-        
+
         // Map frontend Recipe format to backend CreateRecipeDto format
         const dto = this.mapRecipeToCreateDto(recipe);
+
+        // If image is local, don't send it in initial create (wait for upload)
+        const localImage = recipe.imageUrl?.startsWith('file://') ? recipe.imageUrl : undefined;
+        if (localImage) {
+            dto.imageUrl = undefined;
+        }
+
         console.log('[RemoteRecipeService] Mapped to CreateRecipeDto:', JSON.stringify(dto, null, 2));
-        
+
         console.log('[RemoteRecipeService] Making POST request to /recipes...');
         const response = await api.post<RecipeDetailDto>('/recipes', dto);
         console.log('[RemoteRecipeService] API response received:', JSON.stringify(response, null, 2));
-        
+
+        let finalRecipeDto = response;
+
+        // If we had a local image, upload it now
+        if (localImage) {
+            try {
+                const imageUrl = await this.uploadRecipeImage(response.id, localImage);
+                finalRecipeDto = { ...response, imageUrl };
+            } catch (error) {
+                console.error('[RemoteRecipeService] Failed to upload image:', error);
+                // Continue without image update, user can retry
+            }
+        }
+
         // Map backend RecipeDetailDto to frontend Recipe format
-        const mappedResponse = mapDetailDtoToRecipe(response);
+        const mappedResponse = mapDetailDtoToRecipe(finalRecipeDto);
         console.log('[RemoteRecipeService] Mapped response to Recipe format:', JSON.stringify(mappedResponse, null, 2));
-        
+
         // Server is authority: overwrite with server timestamps
         const normalized = normalizeTimestampsFromApi<Recipe>(mappedResponse);
         // Ensure ingredients and instructions are always arrays
         // Preserve title field explicitly (it might be lost during normalization)
         const recipeTitle = mappedResponse.title || normalized.title || 'Untitled Recipe';
         const created = {
-          ...normalized,
-          title: recipeTitle, // Explicitly set title to ensure it's preserved
-          ingredients: normalized.ingredients || [],
-          instructions: normalized.instructions || [],
-          cookTime: normalized.cookTime ?? mappedResponse.cookTime,
-          category: normalized.category ?? mappedResponse.category,
+            ...normalized,
+            title: recipeTitle, // Explicitly set title to ensure it's preserved
+            ingredients: normalized.ingredients || [],
+            instructions: normalized.instructions || [],
+            cookTime: normalized.cookTime ?? mappedResponse.cookTime,
+            category: normalized.category ?? mappedResponse.category,
         };
         console.log('[RemoteRecipeService] Normalized recipe:', JSON.stringify(created, null, 2));
-        
+
         // Note: Cache update is handled by CacheAwareRecipeRepository
         // This service should not update cache directly to avoid duplicates
         // The repository will replace the optimistic entity with the server response
         console.log('[RemoteRecipeService] Cache update will be handled by repository');
-        
+
         return created;
     }
 
     async updateRecipe(recipeId: string, updates: Partial<Recipe>): Promise<Recipe> {
         // Get existing recipe first (or merge with updates)
-        const existing = await this.getRecipes().then(recipes => 
+        const existing = await this.getRecipes().then(recipes =>
             recipes.find(r => r.id === recipeId)
         );
         if (!existing) {
             throw new Error(`Recipe not found: ${recipeId}`);
         }
-        
-        const payload = this.mapRecipeToUpdateDto(updates);
-        const response = await api.put<RecipeApiResponse>(`/recipes/${recipeId}`, payload);
-        // Server is authority: overwrite with server timestamps
-        const updatedRecipe = normalizeTimestampsFromApi<Recipe>(response);
-        
+
+        const dto = this.mapRecipeToUpdateDto(updates);
+
+        // Check for local image to upload
+        const localImage = updates.imageUrl?.startsWith('file://') ? updates.imageUrl : undefined;
+        if (localImage) {
+            // Don't send local path as URL
+            dto.imageUrl = undefined;
+        }
+
+        const response = await api.put<RecipeApiResponse>(`/recipes/${recipeId}`, dto);
+        let updatedRecipe = normalizeTimestampsFromApi<Recipe>(response);
+
+        if (localImage) {
+            try {
+                const imageUrl = await this.uploadRecipeImage(recipeId, localImage);
+                // The upload returns RecipeDetailDto, but here we just need to update the URL in our object
+                // We'd ideally re-fetch or use returned DTO, but for simplicity:
+                updatedRecipe = { ...updatedRecipe, imageUrl };
+            } catch (error) {
+                console.error('[RemoteRecipeService] Failed to upload image:', error);
+            }
+        }
+
         // Write-through cache update: read cache directly (no network fetch)
         // Note: Cache updates are best-effort; failures are logged but don't throw
         const current = await readCachedEntitiesForUpdate<Recipe>('recipes');
         const updatedCache = current.map(r => r.id === recipeId ? updatedRecipe : r);
         await setCached('recipes', updatedCache, (r) => r.id);
-        
+
         return updatedRecipe;
     }
 
     async deleteRecipe(recipeId: string): Promise<void> {
         // Get existing recipe
-        const existing = await this.getRecipes().then(recipes => 
+        const existing = await this.getRecipes().then(recipes =>
             recipes.find(r => r.id === recipeId)
         );
         if (!existing) {
             throw new Error(`Recipe not found: ${recipeId}`);
         }
-        
+
         // Apply timestamp for optimistic UI and offline queue
         const deleted = markDeleted(existing);
         const withTimestamps = withUpdatedAt(deleted);
         const payload = toSupabaseTimestamps(withTimestamps);
-        
+
         // Use PATCH instead of DELETE with body (more compatible)
         await api.patch(`/recipes/${recipeId}`, { deleted_at: payload.deleted_at });
-        
+
         // Write-through cache update: read cache directly (no network fetch)
         // Note: Cache updates are best-effort; failures are logged but don't throw
         const current = await readCachedEntitiesForUpdate<Recipe>('recipes');
@@ -666,14 +721,14 @@ export class RemoteRecipeService implements IRecipeService {
  * NOT inside Remote*Service methods. This keeps services focused on transport.
  */
 export const createRecipeService = (
-  mode: 'guest' | 'signed-in',
-  entityType: 'recipes' = 'recipes'
+    mode: 'guest' | 'signed-in',
+    entityType: 'recipes' = 'recipes'
 ): IRecipeService => {
-  // Validate service compatibility
-  const serviceType = mode === 'guest' ? 'local' : 'remote';
-  validateServiceCompatibility(serviceType, mode);
-  
-  return mode === 'guest' ? new LocalRecipeService() : new RemoteRecipeService();
+    // Validate service compatibility
+    const serviceType = mode === 'guest' ? 'local' : 'remote';
+    validateServiceCompatibility(serviceType, mode);
+
+    return mode === 'guest' ? new LocalRecipeService() : new RemoteRecipeService();
 };
 
 /**
@@ -681,6 +736,6 @@ export const createRecipeService = (
  * @deprecated Use createRecipeService with mode parameter instead
  */
 export const createRecipeServiceLegacy = (isMockEnabled: boolean): IRecipeService => {
-  const mode = isMockEnabled ? 'guest' : 'signed-in';
-  return createRecipeService(mode);
+    const mode = isMockEnabled ? 'guest' : 'signed-in';
+    return createRecipeService(mode);
 };

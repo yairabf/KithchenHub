@@ -21,7 +21,6 @@ import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
 import { recipeCategories, type Recipe } from '../../../mocks/recipes';
 import { useResponsive } from '../../../common/hooks';
 import { resizeAndValidateImage } from '../../../common/utils';
-import { uploadRecipeImage } from '../../../services/imageUploadService';
 import { config } from '../../../config';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
@@ -34,46 +33,8 @@ import { useCatalog } from '../../../common/hooks/useCatalog';
 const COLUMN_GAP = spacing.md;
 
 
-type UpdateRecipeFn = (recipeId: string, updates: Partial<Recipe>) => Promise<Recipe>;
+// Helpers removed - logic moved to RecipeService
 
-type UploadWithCleanupParams = {
-  recipeId: string;
-  imageUri: string;
-  householdId: string;
-  updateRecipe: UpdateRecipeFn;
-};
-
-const attachGuestImage = async (
-  recipeId: string,
-  imageUri: string,
-  updateRecipe: UpdateRecipeFn
-): Promise<void> => {
-  await updateRecipe(recipeId, { imageUrl: imageUri });
-};
-
-const uploadImageWithCleanup = async ({
-  recipeId,
-  imageUri,
-  householdId,
-  updateRecipe,
-}: UploadWithCleanupParams): Promise<void> => {
-  const uploaded = await uploadRecipeImage({
-    imageUri,
-    householdId,
-    recipeId,
-  });
-
-  try {
-    await updateRecipe(recipeId, { imageUrl: uploaded.imagePath });
-  } catch (updateError) {
-    console.error('Failed to update recipe with uploaded image URL. Image uploaded but not linked:', {
-      recipeId,
-      imagePath: uploaded.imagePath,
-      error: updateError,
-    });
-    throw updateError;
-  }
-};
 
 /**
  * Calculates the margin style for a recipe card based on its position in the grid.
@@ -124,9 +85,9 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     const filtered = recipes.filter(recipe => {
       const id = recipe?.id;
       if (!id) {
-        console.warn('[RecipesScreen] Recipe missing ID, filtering out:', JSON.stringify({ title: recipe?.title, hasId: !!recipe?.id }));
         return false;
       }
+      // TODO: Investigate useRecipes hook or API response to ensure unique IDs and remove this client-side filtering (See Review Issue #2)
       if (seen.has(id)) {
         console.warn('[RecipesScreen] Duplicate recipe ID found, filtering out:', id, JSON.stringify({ title: recipe?.title }));
         return false;
@@ -189,27 +150,13 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const handleSaveRecipe = async (data: NewRecipeData) => {
     try {
       setIsSavingRecipe(true);
-      const baseRecipe = createRecipe({ ...data, imageUrl: undefined });
-      const createdRecipe = await addRecipe({ ...baseRecipe, imageUrl: undefined });
+      // Create recipe with image encoded in data (RecipeService handles upload if local URI)
+      const baseRecipe = createRecipe({
+        ...data,
+        imageUrl: data.imageLocalUri
+      });
 
-      if (data.imageLocalUri) {
-        const resized = await resizeAndValidateImage(data.imageLocalUri);
-
-        if (!user || user.isGuest) {
-          await attachGuestImage(createdRecipe.id, resized.uri, updateRecipe);
-        } else {
-          if (!user.householdId) {
-            throw new Error('Household ID is missing for uploads.');
-          }
-
-          await uploadImageWithCleanup({
-            recipeId: createdRecipe.id,
-            imageUri: resized.uri,
-            householdId: user.householdId,
-            updateRecipe,
-          });
-        }
-      }
+      await addRecipe(baseRecipe);
 
       setShowAddRecipeModal(false);
     } catch (error) {
@@ -227,26 +174,10 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       const updates = mapFormDataToRecipeUpdates(data);
 
       if (data.removeImage) {
-        // Type cast to any to allow null if the backend supports it, or use undefined if that's what clears it.
-        // Assuming backend handles null/undefined for clearing.
-        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: undefined });
+        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: null as any });
       } else if (data.imageLocalUri) {
-        const resized = await resizeAndValidateImage(data.imageLocalUri);
-        if (!user || user.isGuest) {
-          await attachGuestImage(editingRecipe.id, resized.uri, updateRecipe);
-          await updateRecipe(editingRecipe.id, updates);
-        } else {
-          if (!user.householdId) {
-            throw new Error('Household ID is missing for uploads.');
-          }
-          await updateRecipe(editingRecipe.id, updates);
-          await uploadImageWithCleanup({
-            recipeId: editingRecipe.id,
-            imageUri: resized.uri,
-            householdId: user.householdId,
-            updateRecipe,
-          });
-        }
+        // Pass local URI, RecipeService will handle upload
+        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: data.imageLocalUri });
       } else {
         await updateRecipe(editingRecipe.id, updates);
       }

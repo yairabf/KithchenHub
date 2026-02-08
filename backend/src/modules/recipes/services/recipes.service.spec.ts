@@ -1,10 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Recipe } from '@prisma/client';
 import { RecipesService } from './recipes.service';
 import { RecipesRepository } from '../repositories/recipes.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { StorageService } from '../../storage/storage.service';
+import { RecipeImagesService } from './recipe-images.service';
 
 /**
  * Recipes Service Unit Tests
@@ -35,10 +34,12 @@ describe('RecipesService - Soft-Delete Behavior', () => {
           },
         },
         {
-          provide: StorageService,
+          provide: RecipeImagesService,
           useValue: {
-            uploadFile: jest.fn(),
-            createSignedUrl: jest.fn(),
+            getRecipeImageUrls: jest.fn().mockResolvedValue({
+              imageUrl: 'signed-url',
+              thumbUrl: 'thumb-url',
+            }),
           },
         },
         {
@@ -395,90 +396,5 @@ describe('RecipesService - Soft-Delete Behavior', () => {
     });
   });
 
-  describe('uploadImage', () => {
-    let storageService: StorageService;
-
-    beforeEach(() => {
-      storageService = module.get<StorageService>(StorageService);
-    });
-
-    it('should upload image, update recipe, and return image URL', async () => {
-      const mockRecipe: Pick<Recipe, 'id' | 'householdId' | 'title'> = {
-        id: mockRecipeId,
-        householdId: mockHouseholdId,
-        title: 'Test Recipe',
-      };
-      const validBuffer = Buffer.from('test-image');
-      const mimeType = 'image/jpeg';
-      const expectedPath = `households/${mockHouseholdId}/recipes/${mockRecipeId}/1234567890.jpg`;
-      const expectedUrl = 'https://storage.example.com/image.jpg';
-
-      jest
-        .spyOn(repository, 'findRecipeById')
-        .mockResolvedValue(mockRecipe as Recipe);
-      jest.spyOn(storageService, 'uploadFile').mockResolvedValue(expectedPath);
-      jest
-        .spyOn(storageService, 'createSignedUrl')
-        .mockResolvedValue(expectedUrl);
-      jest
-        .spyOn(repository, 'updateRecipe')
-        .mockResolvedValue(mockRecipe as Recipe);
-
-      const result = await service.uploadImage(
-        mockRecipeId,
-        mockHouseholdId,
-        validBuffer,
-        mimeType,
-      );
-
-      expect(repository.findRecipeById).toHaveBeenCalledWith(mockRecipeId);
-      expect(storageService.uploadFile).toHaveBeenCalledWith(
-        expect.stringContaining(
-          `households/${mockHouseholdId}/recipes/${mockRecipeId}/`,
-        ),
-        validBuffer,
-        mimeType,
-      );
-      expect(storageService.createSignedUrl).toHaveBeenCalledWith(expectedPath);
-      expect(repository.updateRecipe).toHaveBeenCalledWith(mockRecipeId, {
-        imageUrl: expectedPath,
-      });
-      expect(result).toEqual({
-        imageUrl: expectedUrl,
-        imagePath: expectedPath,
-      });
-    });
-
-    it('should throw NotFoundException if recipe not found', async () => {
-      jest.spyOn(repository, 'findRecipeById').mockResolvedValue(null);
-
-      await expect(
-        service.uploadImage(
-          mockRecipeId,
-          mockHouseholdId,
-          Buffer.from(''),
-          'image/jpeg',
-        ),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw ForbiddenException if household does not match', async () => {
-      const otherHouseholdRecipe: Pick<Recipe, 'id' | 'householdId'> = {
-        id: mockRecipeId,
-        householdId: 'other-household',
-      };
-      jest
-        .spyOn(repository, 'findRecipeById')
-        .mockResolvedValue(otherHouseholdRecipe as Recipe);
-
-      await expect(
-        service.uploadImage(
-          mockRecipeId,
-          mockHouseholdId,
-          Buffer.from(''),
-          'image/jpeg',
-        ),
-      ).rejects.toThrow(ForbiddenException);
-    });
-  });
+  // uploadImage tests removed as functionality moved to RecipeImagesService
 });

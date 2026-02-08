@@ -160,7 +160,10 @@ model Recipe {
   cookTime     Int?      @map("cook_time") // in minutes
   ingredients  Json      // JSONB array of ingredients
   instructions Json      // JSONB array of instruction steps
-  imageUrl     String?   @map("image_url")
+  imageUrl     String?   @map("image_url") // Legacy URL, kept for migration
+  imageVersion Int       @default(1) @map("image_version")
+  imageKey     String?   @map("image_key")
+  thumbKey     String?   @map("thumb_key")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")

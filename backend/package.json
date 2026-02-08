@@ -51,6 +51,7 @@
     "@prisma/client": "^5.0.0",
     "@sentry/node": "^8.0.0",
     "@supabase/supabase-js": "^2.91.0",
+    "@types/sharp": "^0.31.1",
     "axios": "^1.13.4",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -64,6 +65,7 @@
     "pino-http": "^10.0.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "sharp": "^0.34.5",
     "zod": "^3.22.0"
   },
   "devDependencies": {

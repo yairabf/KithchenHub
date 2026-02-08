@@ -9,11 +9,8 @@ import {
   Query,
   UseGuards,
   BadRequestException,
-  Req,
   Logger,
 } from '@nestjs/common';
-import { FastifyRequest } from 'fastify';
-import '@fastify/multipart'; // Required for type augmentation
 import { RecipesService } from '../services/recipes.service';
 import { CreateRecipeDto, UpdateRecipeDto, CookRecipeDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
@@ -110,30 +107,5 @@ export class RecipesController {
     }
     await this.recipesService.deleteRecipe(recipeId, user.householdId);
     return { success: true };
-  }
-
-  @Post(':id/image')
-  async uploadRecipeImage(
-    @CurrentUser() user: CurrentUserPayload,
-    @Param('id') recipeId: string,
-    @Req() req: FastifyRequest,
-  ) {
-    if (!user.householdId) {
-      this.logger.warn('uploadRecipeImage called without householdId');
-      throw new BadRequestException('User must belong to a household');
-    }
-
-    const data = await req.file();
-    if (!data) {
-      throw new BadRequestException('File is required');
-    }
-
-    const buffer = await data.toBuffer();
-    return this.recipesService.uploadImage(
-      recipeId,
-      user.householdId,
-      buffer,
-      data.mimetype,
-    );
   }
 }
