@@ -9,7 +9,7 @@ const DEFAULT_API_BASE_URL = Platform.select({
 
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 export const API_BASE_URL =
-  rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/, '') : DEFAULT_API_BASE_URL;
+    rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/, '') : DEFAULT_API_BASE_URL;
 
 const API_VERSION = process.env.EXPO_PUBLIC_API_VERSION || '1';
 
@@ -98,10 +98,11 @@ class ApiClient {
         // Use provided token or fall back to stored auth token
         const effectiveToken = token || this.authToken;
 
+        const isFormData = customConfig.body instanceof FormData;
         const config: RequestInit = {
             ...customConfig,
             headers: {
-                'Content-Type': 'application/json',
+                ...(!isFormData && { 'Content-Type': 'application/json' }),
                 ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
                 ...headers,
             },
@@ -116,7 +117,7 @@ class ApiClient {
             console.log(`[API] Making ${customConfig.method || 'GET'} request to: ${versionedUrl}`);
             // #region agent log
             if (versionedUrl.includes('shopping-items') && customConfig.method === 'DELETE') {
-                fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api.ts:116',message:'fetch DELETE request',data:{versionedUrl,method:customConfig.method,config},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'api.ts:116', message: 'fetch DELETE request', data: { versionedUrl, method: customConfig.method, config }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H' }) }).catch(() => { });
             }
             // #endregion
             const response = await fetch(versionedUrl, { ...config, signal });
@@ -170,7 +171,7 @@ class ApiClient {
     public patch<T, B = unknown>(endpoint: string, body: B, options?: ApiOptions): Promise<T> {
         // #region agent log
         if (endpoint.includes('shopping-items')) {
-            fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api.ts:164',message:'patch request body',data:{endpoint,body,bodyType:typeof body,bodyStringified:JSON.stringify(body),bodyKeys:body && typeof body === 'object' ? Object.keys(body) : []},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'api.ts:164', message: 'patch request body', data: { endpoint, body, bodyType: typeof body, bodyStringified: JSON.stringify(body), bodyKeys: body && typeof body === 'object' ? Object.keys(body) : [] }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
         }
         // #endregion
         return this.request<T>(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) });
@@ -179,10 +180,18 @@ class ApiClient {
     public delete<T>(endpoint: string, options?: ApiOptions): Promise<T> {
         // #region agent log
         if (endpoint.includes('shopping-items')) {
-            fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api.ts:168',message:'delete request',data:{endpoint,options},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'api.ts:168', message: 'delete request', data: { endpoint, options }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
         }
         // #endregion
         return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+    }
+
+    public upload<T>(endpoint: string, formData: FormData, options?: ApiOptions): Promise<T> {
+        return this.request<T>(endpoint, {
+            ...options,
+            method: 'POST',
+            body: formData,
+        });
     }
 
     private createRequestTimeout() {

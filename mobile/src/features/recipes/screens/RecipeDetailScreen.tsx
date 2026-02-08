@@ -38,8 +38,7 @@ import { config } from '../../../config';
 import type { ShoppingItem } from '../../../mocks/shopping';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
-import { resizeAndValidateImage } from '../../../common/utils';
-import { uploadRecipeImage } from '../../../services/imageUploadService';
+
 
 export function RecipeDetailScreen({
   recipe,
@@ -224,31 +223,15 @@ export function RecipeDetailScreen({
       const updates = mapFormDataToRecipeUpdates(data);
 
       if (data.removeImage) {
-        const updated = await updateRecipe(displayRecipe.id, { ...updates, imageUrl: null });
+        const updated = await updateRecipe(displayRecipe.id, { ...updates, imageUrl: null as any });
         setFullRecipe(updated);
       } else if (data.imageLocalUri) {
-        if (!user || user.isGuest) {
-          const updated = await updateRecipe(displayRecipe.id, {
-            ...updates,
-            imageUrl: data.imageLocalUri,
-          });
-          setFullRecipe(updated);
-        } else {
-          if (!user.householdId) {
-            throw new Error('Household ID is missing for uploads.');
-          }
-          const resized = await resizeAndValidateImage(data.imageLocalUri);
-          const uploaded = await uploadRecipeImage({
-            imageUri: resized.uri,
-            householdId: user.householdId,
-            recipeId: displayRecipe.id,
-          });
-          const updated = await updateRecipe(displayRecipe.id, {
-            ...updates,
-            imageUrl: uploaded.imagePath,
-          });
-          setFullRecipe(updated);
-        }
+        // Pass local URI, RecipeService will handle upload
+        const updated = await updateRecipe(displayRecipe.id, {
+          ...updates,
+          imageUrl: data.imageLocalUri
+        });
+        setFullRecipe(updated);
       } else {
         const updated = await updateRecipe(displayRecipe.id, updates);
         setFullRecipe(updated);
