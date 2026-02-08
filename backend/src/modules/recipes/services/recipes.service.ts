@@ -130,6 +130,7 @@ export class RecipesService {
       id: recipe.id,
       title: recipe.title,
       category: recipe.category ?? undefined,
+      prepTime: recipe.prepTime ?? undefined,
       cookTime: recipe.cookTime ?? undefined,
       imageUrl: recipe.imageUrl ?? undefined,
     }));

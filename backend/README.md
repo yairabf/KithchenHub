@@ -60,7 +60,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
   - **Main List**: Each household has a designated main shopping list created automatically (`isMain: true`)
   - **Default Main List**: Created with name "Weekly Shopping", green color (#4CAF50), and cart icon
   - **Main List Endpoint**: `GET /shopping-lists/main` retrieves the household's main shopping list
-- **Recipes**: Recipe CRUD with ingredients, instructions, and soft-delete (`DELETE /recipes/:id`)
+- **Recipes**: Recipe CRUD with ingredients, instructions, and soft-delete (`DELETE /recipes/:id`); canonical unit system for ingredient quantities with validation (constants, unit-converter utils, unit-type validators)
 - **Chores**: Task management with assignees, completion tracking, and soft-delete (`DELETE /chores/:id`)
 - **Dashboard**: Aggregated household activity summaries
 - **Import**: Data import with deduplication and fingerprinting
@@ -1006,11 +1006,14 @@ backend/
 │   │   │   ├── repositories/       # ShoppingRepository (manages lists, items, custom items)
 │   │   │   ├── dtos/               # Shopping DTOs (CreateListDto, AddItemsDto, UpdateItemDto, etc.)
 │   │   │   └── shopping.module.ts
-│   │   ├── recipes/                # Recipe management
+│   │   ├── recipes/                # Recipe management (canonical unit system for ingredients)
 │   │   │   ├── controllers/        # RecipesController
 │   │   │   ├── services/           # RecipesService
-│   │   │   ├── repositories/       # RecipesRepository
+│   │   │   ├── repositories/      # RecipesRepository
 │   │   │   ├── dtos/               # Recipe DTOs
+│   │   │   ├── constants/         # Unit constants (mass, volume, count, etc.)
+│   │   │   ├── utils/             # Unit converter and conversion helpers
+│   │   │   ├── validators/        # Unit-type validation (e.g. quantityUnit)
 │   │   │   └── recipes.module.ts
 │   │   ├── chores/                 # Chore management
 │   │   │   ├── controllers/        # ChoresController

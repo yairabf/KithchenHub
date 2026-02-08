@@ -35,7 +35,7 @@ export class ShoppingService {
   constructor(
     private shoppingRepository: ShoppingRepository,
     private prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Resolves a catalog item by ID and throws if not found.
@@ -127,6 +127,11 @@ export class ShoppingService {
    */
   async searchGroceries(query: string): Promise<GrocerySearchItemDto[]> {
     const searchTerm = query?.trim() ?? '';
+
+    if (!searchTerm) {
+      return [];
+    }
+
     const rows = await this.prisma.masterGroceryCatalog.findMany({
       where: {
         name: {
