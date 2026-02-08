@@ -2,15 +2,10 @@ import {
   Controller,
   Post,
   Param,
-  UseInterceptors,
-  UploadedFile,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
   UseGuards,
   Req,
+  BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { RecipeImagesService } from '../services/recipe-images.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
@@ -22,7 +17,6 @@ export class RecipeImagesController {
   constructor(private readonly recipeImagesService: RecipeImagesService) {}
 
   @Post(':id/image')
-  @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -37,22 +31,40 @@ export class RecipeImagesController {
   })
   async uploadImage(
     @Param('id') id: string,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), // 10MB
-          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
-        ],
-      }),
-    )
-    file: Express.Multer.File,
-    @Req() req: any,
+    @Req() req: any, // Using any for FastifyRequest with multipart support
   ) {
     const householdId = req.user.householdId;
+
+    const data = await req.file();
+    if (!data) {
+      throw new BadRequestException('File is required');
+    }
+
+    // Basic file type validation
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+    ];
+    if (!allowedMimeTypes.includes(data.mimetype)) {
+      throw new BadRequestException(
+        'Invalid file type. Only JPG, PNG and WebP are allowed.',
+      );
+    }
+
+    const buffer = await data.toBuffer();
+
+    // Size validation (multipart limit is 5MB in main.ts)
+    if (buffer.length > 5 * 1024 * 1024) {
+      // 5MB
+      throw new BadRequestException('File too large. Max 5MB allowed.');
+    }
+
     return this.recipeImagesService.uploadRecipeImage(
       id,
-      file.buffer,
-      file.mimetype,
+      buffer,
+      data.mimetype,
       householdId,
     );
   }

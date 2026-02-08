@@ -70,13 +70,11 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
-    "@nestjs/platform-express": "^10.4.22",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/jest": "^30.0.0",
     "@types/ms": "^2.1.0",
-    "@types/multer": "^2.0.0",
     "@types/node": "^20.19.33",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^2.0.16",
