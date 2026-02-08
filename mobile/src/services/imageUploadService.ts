@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { apiClient } from './api';
 
 export interface UploadRecipeImageParams {
@@ -11,11 +12,32 @@ export interface UploadedImageResult {
   imagePath: string;
 }
 
-/** React Native FormData file shape for multipart upload */
+/** React Native FormData file shape for multipart upload (native only) */
 interface RNFormDataFilePart {
   uri: string;
   type: string;
   name: string;
+}
+
+const RECIPE_IMAGE_FILENAME = 'recipe-image.jpg';
+
+/**
+ * Builds the file field for multipart upload. On web, FormData expects a Blob/File;
+ * on React Native, the { uri, type, name } shape is used.
+ */
+async function getFilePartForFormData(imageUri: string): Promise<Blob | RNFormDataFilePart> {
+  if (Platform.OS === 'web') {
+    const response = await fetch(imageUri);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image for upload: ${response.status}`);
+    }
+    return await response.blob();
+  }
+  return {
+    uri: imageUri,
+    type: 'image/jpeg',
+    name: RECIPE_IMAGE_FILENAME,
+  };
 }
 
 /**
@@ -27,13 +49,13 @@ export const uploadRecipeImage = async (
   if (!params.imageUri) throw new Error('Missing image URI');
   if (!params.recipeId) throw new Error('Missing recipe ID');
 
-  const filePart: RNFormDataFilePart = {
-    uri: params.imageUri,
-    type: 'image/jpeg',
-    name: 'recipe-image.jpg',
-  };
+  const filePart = await getFilePartForFormData(params.imageUri);
   const formData = new FormData();
-  formData.append('file', filePart as unknown as Blob);
+  if (filePart instanceof Blob) {
+    formData.append('file', filePart, RECIPE_IMAGE_FILENAME);
+  } else {
+    formData.append('file', filePart as unknown as Blob);
+  }
 
   const response = await apiClient.post(
     `/recipes/${params.recipeId}/image`,
