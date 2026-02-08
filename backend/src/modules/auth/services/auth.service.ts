@@ -339,10 +339,11 @@ export class AuthService {
     const listCount = syncData.lists?.length ?? 0;
     const recipeCount = syncData.recipes?.length ?? 0;
     const choreCount = syncData.chores?.length ?? 0;
-    const listItemCount = syncData.lists?.reduce(
-      (sum, list) => sum + (list.items?.length ?? 0),
-      0,
-    ) ?? 0;
+    const listItemCount =
+      syncData.lists?.reduce(
+        (sum, list) => sum + (list.items?.length ?? 0),
+        0,
+      ) ?? 0;
     this.logger.log(
       `sync: lists=${listCount} recipes=${recipeCount} chores=${choreCount} listItems=${listItemCount} requestId=${syncData.requestId ?? 'none'}`,
     );

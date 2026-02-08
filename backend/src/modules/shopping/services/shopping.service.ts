@@ -35,7 +35,7 @@ export class ShoppingService {
   constructor(
     private shoppingRepository: ShoppingRepository,
     private prisma: PrismaService,
-  ) { }
+  ) {}
 
   /**
    * Resolves a catalog item by ID and throws if not found.
