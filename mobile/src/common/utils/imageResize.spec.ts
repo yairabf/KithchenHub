@@ -39,8 +39,8 @@ describe('resizeAndValidateImage', () => {
     mockGetSize.mockImplementation((_uri, success) => success(2000, 1500));
     mockManipulateAsync.mockResolvedValue({
       uri: 'file://resized.jpg',
-      width: 1024,
-      height: 768,
+      width: 1600,
+      height: 1200,
     });
     mockGetInfoAsync.mockResolvedValue({ size: 500000 });
 
@@ -48,7 +48,7 @@ describe('resizeAndValidateImage', () => {
 
     expect(mockManipulateAsync).toHaveBeenCalledWith(
       'file://original.jpg',
-      [{ resize: { width: 1024, height: 768 } }],
+      [{ resize: { width: 1600, height: 1200 } }],
       expect.objectContaining({
         compress: IMAGE_CONSTRAINTS.jpegQuality,
         format: ImageManipulator.SaveFormat.JPEG,
@@ -56,8 +56,8 @@ describe('resizeAndValidateImage', () => {
     );
     expect(result).toEqual({
       uri: 'file://resized.jpg',
-      width: 1024,
-      height: 768,
+      width: 1600,
+      height: 1200,
       sizeBytes: 500000,
     });
   });
@@ -84,8 +84,8 @@ describe('resizeAndValidateImage', () => {
     mockGetSize.mockImplementation((_uri, success) => success(1600, 1200));
     mockManipulateAsync.mockResolvedValue({
       uri: 'file://resized.jpg',
-      width: 1024,
-      height: 768,
+      width: 1600,
+      height: 1200,
     });
     mockGetInfoAsync.mockResolvedValue({ size: IMAGE_CONSTRAINTS.maxBytes + 1 });
 

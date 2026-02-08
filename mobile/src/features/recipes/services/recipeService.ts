@@ -8,6 +8,7 @@ import { isDevMode } from '../../../common/utils/devMode';
 import { getCached, setCached, readCachedEntitiesForUpdate } from '../../../common/repositories/cacheAwareRepository';
 import { EntityTimestamps } from '../../../common/types/entityMetadata';
 import { getIsOnline } from '../../../common/utils/networkStatus';
+import { resizeAndValidateImage } from '../../../common/utils';
 
 /**
  * DTO types for API responses
@@ -32,6 +33,9 @@ type RecipeDetailDto = {
     }>;
     instructions: Array<{ step: number; instruction: string }>;
     imageUrl?: string;
+    thumbUrl?: string;
+    imageVersion?: number;
+    imageUpdatedAt?: string;
 };
 
 /**
@@ -43,6 +47,9 @@ type RecipeListItemDto = {
     category?: string;
     cookTime?: number;
     imageUrl?: string;
+    thumbUrl?: string;
+    imageVersion?: number;
+    imageUpdatedAt?: string;
 };
 
 /**
@@ -59,6 +66,9 @@ type RecipeApiResponse = {
     instructions?: any[];
     prepTime?: number;
     imageUrl?: string;
+    thumbUrl?: string;
+    imageVersion?: number;
+    imageUpdatedAt?: string;
     description?: string;
     calories?: number;
     servings?: number;
@@ -100,6 +110,9 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
         ingredients: ingredients,
         instructions: instructions,
         imageUrl: dto.imageUrl,
+        thumbUrl: dto.thumbUrl,
+        imageVersion: dto.imageVersion,
+        imageUpdatedAt: dto.imageUpdatedAt,
         createdAt: undefined,
         updatedAt: undefined,
         deletedAt: undefined,
@@ -364,6 +377,9 @@ export class RemoteRecipeService implements IRecipeService {
                 id: item.id,
                 title: item.title || 'Untitled Recipe',
                 imageUrl: item.imageUrl,
+                thumbUrl: item.thumbUrl,
+                imageVersion: item.imageVersion,
+                imageUpdatedAt: item.imageUpdatedAt,
                 ingredients: [],
                 instructions: [],
                 cookTime: item.cookTime,
@@ -567,21 +583,28 @@ export class RemoteRecipeService implements IRecipeService {
         return dto;
     }
 
-    private async uploadRecipeImage(recipeId: string, imageUri: string): Promise<string> {
+    private async uploadRecipeImage(
+        recipeId: string,
+        imageUri: string
+    ): Promise<RecipeDetailDto> {
         console.log('[RemoteRecipeService] Uploading image for recipe:', recipeId);
 
+        const resized = await resizeAndValidateImage(imageUri);
         const formData = new FormData();
-        const filename = imageUri.split('/').pop() || 'image.jpg';
+        const filename = resized.uri.split('/').pop() || 'image.jpg';
         const match = /\.(\w+)$/.exec(filename);
         const type = match ? `image/${match[1]}` : 'image/jpeg';
 
         // @ts-ignore - React Native FormData expects specific object structure
-        formData.append('file', { uri: imageUri, name: filename, type });
+        formData.append('file', { uri: resized.uri, name: filename, type });
 
-        const response = await api.upload<RecipeDetailDto>(`/recipes/${recipeId}/image`, formData);
+        const response = await api.upload<RecipeDetailDto>(
+            `/recipes/${recipeId}/image`,
+            formData
+        );
         console.log('[RemoteRecipeService] Image upload successful');
 
-        return response.imageUrl || imageUri;
+        return response;
     }
 
     async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
@@ -607,8 +630,8 @@ export class RemoteRecipeService implements IRecipeService {
         // If we had a local image, upload it now
         if (localImage) {
             try {
-                const imageUrl = await this.uploadRecipeImage(response.id, localImage);
-                finalRecipeDto = { ...response, imageUrl };
+                const uploaded = await this.uploadRecipeImage(response.id, localImage);
+                finalRecipeDto = { ...response, ...uploaded };
             } catch (error) {
                 console.error('[RemoteRecipeService] Failed to upload image:', error);
                 // Continue without image update, user can retry
@@ -665,10 +688,14 @@ export class RemoteRecipeService implements IRecipeService {
 
         if (localImage) {
             try {
-                const imageUrl = await this.uploadRecipeImage(recipeId, localImage);
-                // The upload returns RecipeDetailDto, but here we just need to update the URL in our object
-                // We'd ideally re-fetch or use returned DTO, but for simplicity:
-                updatedRecipe = { ...updatedRecipe, imageUrl };
+                const uploaded = await this.uploadRecipeImage(recipeId, localImage);
+                updatedRecipe = {
+                    ...updatedRecipe,
+                    imageUrl: uploaded.imageUrl ?? updatedRecipe.imageUrl,
+                    thumbUrl: uploaded.thumbUrl ?? updatedRecipe.thumbUrl,
+                    imageVersion: uploaded.imageVersion ?? updatedRecipe.imageVersion,
+                    imageUpdatedAt: uploaded.imageUpdatedAt ?? updatedRecipe.imageUpdatedAt,
+                };
             } catch (error) {
                 console.error('[RemoteRecipeService] Failed to upload image:', error);
             }
