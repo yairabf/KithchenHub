@@ -2,7 +2,7 @@
 
 **Exports** (from `mobile/src/features/settings/index.ts`): `SettingsScreen`, `ManageHouseholdModal`, `LanguageSelectorModal`.
 
-**Source**: `mobile/src/features/settings/` — 1 screen (SettingsScreen), 3 components (ManageHouseholdModal, ImportDataModal, LanguageSelectorModal).
+**Source**: `mobile/src/features/settings/` — 1 screen (SettingsScreen), 2 components (ManageHouseholdModal, LanguageSelectorModal).
 
 ## Overview
 
@@ -24,49 +24,22 @@ The Settings feature provides user account management, notification preferences,
 - **Purpose**: Comprehensive settings interface with multiple sections
 - **Key functionality**:
   - **Language Section**: Row showing current language (native name) and RTL-aware chevron (`getDirectionalIcon('chevron-forward')`); opens LanguageSelectorModal to change app language (persisted to AsyncStorage, applied app-wide via i18n; RTL languages may trigger app restart)
-  - **Account Section**: User profile card, sign-in prompt for guests, sign out button
-  - **Notifications Section**: Push notifications and daily summary email toggles
+  - **Account Section**: User profile card, sign out button
+  - **Notifications Section**: Push notifications toggle
   - **Household Section**: Button to manage household members
-  - **Guest Data Section**: Import or delete local guest data (visible when signed in and has guest data)
-  - **Data Section**: Cloud sync toggle, export data, delete account options
+  - **Data Section**: Export data, delete account options
   - **About Section**: Terms of Service, Privacy Policy, app version
 
 #### Code Snippet - State Management
 
 ```typescript
 const { t } = useTranslation('settings');
-const { user, signOut, signInWithGoogle, hasGuestData, importGuestData, clearGuestData } = useAuth();
+const { user, signOut } = useAuth();
 const [pushNotifications, setPushNotifications] = React.useState(true);
-const [dailySummary, setDailySummary] = React.useState(false);
-const [cloudSync, setCloudSync] = React.useState(true);
 const [showLanguageSelector, setShowLanguageSelector] = React.useState(false);
 const [showManageHousehold, setShowManageHousehold] = React.useState(false);
-const [showImportData, setShowImportData] = React.useState(false);
-const [showClearDataConfirm, setShowClearDataConfirm] = React.useState(false);
-const [toastMessage, setToastMessage] = React.useState<string | null>(null);
-const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
 const currentLanguageCode = normalizeLocale(i18n.language ?? '');
 const currentLanguageDisplayName = getNativeNameForCode(currentLanguageCode);
-```
-
-#### Code Snippet - Guest Data Management
-
-```typescript
-const handleImportGuestData = () => {
-  setShowImportData(true);
-};
-
-const handleClearGuestData = async () => {
-  try {
-    await clearGuestData();
-    setShowClearDataConfirm(false);
-    setToastType('success');
-    setToastMessage('Guest data deleted');
-  } catch (error) {
-    setToastType('error');
-    setToastMessage('Failed to delete guest data. Please try again.');
-  }
-};
 ```
 
 ## Components
@@ -92,33 +65,6 @@ interface ManageHouseholdModalProps {
   - Uses `HouseholdContext` for state management
   - Uses `HouseholdContext` for state management
   - Async operations for adding/removing members
-
-### ImportDataModal
-
-- **File**: `mobile/src/features/settings/components/ImportDataModal.tsx`
-- **Purpose**: Guest data import interface
-- **Props**:
-
-```typescript
-interface ImportDataModalProps {
-  visible: boolean;
-  onClose: () => void;
-}
-```
-
-- **Features**:
-  - Aggregates local guest data using `ImportService.gatherLocalData()`
-  - Always uses guest mode services (`createRecipeService('guest')`, `createShoppingService('guest')`) to read from AsyncStorage
-  - Validates that all entities are in guest mode before migration
-  - Reads from real guest storage (AsyncStorage), not mock data
-  - Returns empty arrays if no guest data exists
-  - Sends data to backend API (`/import` endpoint)
-  - Displays loading state with generic message
-  - Shows success state with:
-    - **Clear local data** option (destructive, requires confirmation)
-    - **Keep & Close** option (preserves local data)
-  - Shows error state with "Retry" capability
-  - Integration with `AuthContext` to clear guest data on user confirmation
 
 ### LanguageSelectorModal
 
@@ -152,31 +98,18 @@ interface LanguageSelectorModalProps {
 ### Account Section
 - **Profile Card**:
   - User avatar (Google photo or placeholder icon)
-  - User name (or "Guest")
+  - User name (or "User")
   - Email (if signed in)
-  - Provider info ("Guest Mode" or "Connected via Google")
-- **Sign In Prompt** (guests only): Google sign-in button
+  - Provider info ("Connected via Google")
 - **Sign Out Button**: Red-bordered button with logout icon
 
 ### Notifications Section
 - **Push notifications**: Toggle switch (default: on)
-- **Daily summary email**: Toggle switch (default: off)
 
 ### Household Section
 - **Manage household members**: Opens ManageHouseholdModal
 
-### Guest Data Section
-- **Visibility**: Only shown when user is signed in (not guest) AND `hasGuestData` is true
-- **Import local guest data**: Imports guest session data to authenticated account
-  - Shows success toast on success
-  - Shows error toast on failure
-- **Delete local guest data**: Permanently removes guest data
-  - Opens confirmation modal before deletion
-  - Shows success toast on success
-  - Shows error toast on failure
-
 ### Data Section
-- **Sync to cloud**: Toggle switch (disabled for guests)
 - **Export my data**: Navigation row
 - **Delete account**: Red text, navigation row
 
@@ -190,56 +123,26 @@ interface LanguageSelectorModalProps {
 - **AuthContext**: User data and auth functions via `useAuth()` hook
   - `user` - Current user object
   - `signOut()` - Sign out function
-  - `signInWithGoogle()` - Google sign-in function (used in guest sign-in prompt)
-  - `hasGuestData` - Boolean indicating if guest data exists
-  - `importGuestData()` - Function to import guest data
-  - `clearGuestData()` - Function to delete guest data
 - **HouseholdContext**: Household members state (used in modal)
 - **Local state**:
   - `pushNotifications` - Push notification toggle state
-  - `dailySummary` - Email summary toggle state
-  - `cloudSync` - Cloud sync toggle state
   - `showLanguageSelector` - Language selector modal visibility
   - `showManageHousehold` - Manage household modal visibility
-  - `showImportData` - Import data modal visibility
-  - `showClearDataConfirm` - Guest data deletion confirmation modal visibility
-  - `toastMessage` - Toast notification message (null when hidden)
-  - `toastType` - Toast type ('success' or 'error')
 - **Derived (i18n)**: `currentLanguageCode` = `normalizeLocale(i18n.language ?? '')`; `currentLanguageDisplayName` = `getNativeNameForCode(currentLanguageCode)` for the Language row
 
 ## Key Dependencies
 
 - `@expo/vector-icons` - Ionicons for all icons throughout the screen
 - `react-native` - Core React Native components (View, Text, ScrollView, TouchableOpacity, Switch, Image, SafeAreaView)
-- `AuthContext` - User authentication state and guest data management (`useAuth` hook)
+- `AuthContext` - User authentication state (`useAuth` hook)
 - `HouseholdContext` - Household member management (`useHousehold` hook)
-- `ImportService` - Logic for gathering and uploading local guest data
-  - Always uses guest mode services (`createRecipeService('guest')`, `createShoppingService('guest')`)
-  - Reads from AsyncStorage via `guestStorage` utilities, not mock data
-  - Validates entity modes before migration using `validateModeMigration()` and `isGuestEntity()`
-  - Returns empty arrays when no guest data exists
 - `ScreenHeader` - Shared header component for consistent navigation
-- `CenteredModal` - Shared modal component (used by ManageHouseholdModal, ImportDataModal, LanguageSelectorModal, and guest data deletion confirmation)
-- `Toast` - Shared toast component for user feedback (success/error messages)
+- `CenteredModal` - Shared modal component (used by ManageHouseholdModal, LanguageSelectorModal)
 - `react-i18next` - `useTranslation('settings')` for screen title, Language section labels, and `restartRequired` (LanguageSelectorModal badge)
 - `i18n` (mobile/src/i18n) - Current language and `setAppLanguage()`; `normalizeLocale()` and `getNativeNameForCode()` from localeNormalization and constants
 - `isRtlLanguage` (mobile/src/i18n/rtl) - RTL language detection (Hebrew, Arabic) for LanguageSelectorModal restart badge
 - `getDirectionalIcon` (mobile/src/common/utils/rtlIcons) - RTL-aware chevron/arrow icon names for Settings rows
 - Theme system (`colors`, `spacing`, `borderRadius`, `typography`, `shadows`) - Centralized design tokens
-
-## Conditional Rendering
-
-- **Guest users**:
-  - Show "Sign in to sync your data" prompt
-  - Cloud sync toggle is disabled
-  - Profile shows "Guest Mode"
-  - Guest Data section is hidden
-
-- **Authenticated users**:
-  - Show email in profile
-  - Cloud sync toggle is enabled
-  - Profile shows "Connected via Google"
-  - Guest Data section shown only if `hasGuestData` is true
 
 ## Household Members
 
@@ -252,11 +155,6 @@ Default members (cannot be removed):
 Users can add custom household members which can be deleted.
 
 ## User Feedback
-
-- **Toast Notifications**: Used for guest data operations
-  - Success toast: Green toast with checkmark icon
-  - Error toast: Red toast with error icon
-  - Auto-dismisses after 2.5 seconds
   - Shows at top of screen
 
 - **Confirmation Modal**: Used for destructive actions
