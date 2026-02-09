@@ -29,8 +29,8 @@ export function RootNavigator() {
     );
   }
 
-  // Show AuthStackNavigator if user needs to set household name, otherwise show MainNavigator
-  const shouldShowAuthStack = !user || showHouseholdNameScreen;
+  // Show AuthStackNavigator if user is not logged in, has no household, or needs to set household name
+  const shouldShowAuthStack = !user || !user.householdId || showHouseholdNameScreen;
 
   return (
     <NavigationContainer>

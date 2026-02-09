@@ -13,12 +13,12 @@ import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { boxShadow } from '../../../theme/shadows';
-import { GuestDataImportModal } from '../components/GuestDataImportModal';
 
 type AuthStackParamList = {
   Login: undefined;
   EnterInviteCode: undefined;
   HouseholdName: undefined;
+  HouseholdOnboarding: undefined;
 };
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -28,7 +28,7 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
-  const { signInWithGoogle, showGuestImportPrompt, resolveGuestImport, showHouseholdNameScreen } = useAuth();
+  const { signInWithGoogle, showHouseholdNameScreen } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   // Navigate to HouseholdName screen if flag is set (after OAuth callback with new household)
@@ -62,7 +62,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   const handleJoinHousehold = () => {
-    navigation.navigate('EnterInviteCode');
+    navigation.navigate('HouseholdOnboarding');
   };
 
   return (
@@ -102,12 +102,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           </Text>
         </View>
       </View>
-
-      <GuestDataImportModal
-        visible={showGuestImportPrompt}
-        onImport={() => resolveGuestImport(true)}
-        onSkip={() => resolveGuestImport(false)}
-      />
     </SafeAreaView>
   );
 }
@@ -135,7 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    ...boxShadow(4, 8, 'rgba(0, 0, 0, 0.15)'),
+    ...boxShadow(4, 8, 'rgba(0, 0, 0, 0.15)') as any,
     marginBottom: spacing.lg,
   },
   logoEmoji: {

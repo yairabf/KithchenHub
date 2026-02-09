@@ -91,7 +91,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
 
     setIsSigningIn(true);
     try {
-      await signInWithGoogle({ householdId: inviteData.householdId });
+      await signInWithGoogle({ inviteCode: code.trim() });
       // Navigation will be handled by AuthContext / RootNavigator
     } catch (error) {
       Alert.alert(
@@ -120,7 +120,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
               onPress={() => navigation.goBack()}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.title}>Join household</Text>
             <View style={styles.backButton} />
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h2,
-    color: colors.text,
+    color: colors.textPrimary,
   },
   mainContent: {
     flex: 1,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    color: colors.text,
+    color: colors.textPrimary,
     textAlign: 'center',
     fontSize: 18,
     letterSpacing: 2,
