@@ -662,24 +662,33 @@ export class AuthService {
         ? household.name.trim()
         : '';
 
+    const inviteCode = household.inviteCode?.trim();
+
     if (trimmedName.length > 0) {
       await this.householdsService.createHouseholdForNewUser(
         userId,
         trimmedName,
         household.id,
       );
+    } else if (inviteCode) {
+      // Validate invite code and get householdId
+      const { householdId } =
+        await this.householdsService.validateInviteCode(inviteCode);
+      await this.householdsService.addUserToHousehold(householdId, userId);
     } else if (
       household.id != null &&
       typeof household.id === 'string' &&
       household.id.trim().length > 0
     ) {
+      // Joining by ID directly (legacy/insecure if not validated, but keeping for backward compatibility/other flows)
+      // Ideally we should enforce inviteCode for all join flows
       await this.householdsService.addUserToHousehold(
         household.id.trim(),
         userId,
       );
     } else {
       throw new BadRequestException(
-        'Household must specify name (new household) or id (existing household).',
+        'Household must specify name (new household), inviteCode (join), or id (existing household).',
       );
     }
   }
@@ -1263,9 +1272,11 @@ export class AuthService {
   ): UserResponseDto {
     return {
       id: user.id,
-      email: user.email,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
+      email: user.email ?? undefined,
+      name: user.name ?? undefined,
+      avatarUrl: user.avatarUrl ?? undefined,
+      role: user.role,
+      isGuest: user.isGuest,
       householdId: user.householdId,
     };
   }

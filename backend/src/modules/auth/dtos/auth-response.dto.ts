@@ -3,6 +3,8 @@ export class UserResponseDto {
   email?: string;
   name?: string;
   avatarUrl?: string;
+  role: string;
+  isGuest: boolean;
   householdId?: string | null;
 }
 

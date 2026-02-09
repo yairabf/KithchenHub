@@ -57,6 +57,11 @@ export class UserCreationHouseholdDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(8, { message: 'Invite code must be at least 8 characters' })
+  inviteCode?: string;
+
+  @IsOptional()
+  @IsString()
   @MinLength(1, {
     message: 'Household name is required for new household',
   })

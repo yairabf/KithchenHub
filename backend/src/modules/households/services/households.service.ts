@@ -13,6 +13,7 @@ import {
   InviteMemberDto,
 } from '../dtos';
 import { DEFAULT_MAIN_SHOPPING_LIST } from '../../shopping/constants/defaults';
+import { HouseholdUtils } from '../../../common/utils/household.utils';
 
 /**
  * Household service managing household operations and member management.
@@ -251,6 +252,7 @@ export class HouseholdsService {
     userId: string,
     dto: InviteMemberDto,
   ): Promise<{ inviteToken: string }> {
+    void dto; // Invite is code-only; DTO kept for API compatibility
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -263,70 +265,102 @@ export class HouseholdsService {
       throw new ForbiddenException('Only admins can invite members');
     }
 
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const code = HouseholdUtils.generateInviteCode();
+
+    await this.prisma.householdInvite.create({
+      data: {
+        code,
+        householdId: user.householdId,
+        creatorId: userId,
+      },
     });
 
-    if (existingUser && existingUser.householdId === user.householdId) {
-      throw new ForbiddenException('User is already a member');
-    }
-
-    const inviteToken = `invite_${user.householdId}_${Date.now()}`;
-
-    return { inviteToken };
-  }
-
-  /**
-   * Parses an invite code into householdId and timestamp.
-   * Token format: invite_<householdId>_<timestamp>.
-   * Optional expiry can be added later by checking timestamp against current time
-   * and throwing with the same client-visible error shape (e.g. NotFoundException).
-   *
-   * @param code - Raw invite code string
-   * @returns Parsed { householdId, timestamp } or null if format is invalid
-   */
-  private parseInviteCode(
-    code: string,
-  ): { householdId: string; timestamp: number } | null {
-    const trimmed = code?.trim();
-    if (!trimmed) return null;
-    const parts = trimmed.split('_');
-    if (parts.length !== 3 || parts[0] !== 'invite' || !parts[1] || !parts[2])
-      return null;
-    const timestamp = Number(parts[2]);
-    if (!Number.isFinite(timestamp)) return null;
-    return { householdId: parts[1], timestamp };
+    return { inviteToken: code };
   }
 
   /**
    * Validates an invite code and returns household id and name for display.
    * Public endpoint so unauthenticated users can resolve the code before sign-in.
-   * Token format: invite_<householdId>_<timestamp>.
    *
-   * @param code - The invite code (inviteToken) shared by a household member
+   * @param code - The invite code shared by a household member
    * @returns householdId and householdName
-   * @throws BadRequestException if code format is invalid
-   * @throws NotFoundException if household does not exist
+   * @throws NotFoundException if invite code is invalid or expired
    */
   async validateInviteCode(
     code: string,
   ): Promise<{ householdId: string; householdName: string }> {
-    const parsed = this.parseInviteCode(code);
-    if (!parsed) {
-      throw new BadRequestException(
-        code?.trim() ? 'Invalid invite code format' : 'Invite code is required',
-      );
+    const trimmed = code?.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Invite code is required');
     }
-    const household = await this.householdsRepository.findHouseholdById(
-      parsed.householdId,
-    );
-    if (!household) {
+
+    const invite = await this.prisma.householdInvite.findUnique({
+      where: { code: trimmed },
+      include: { household: true },
+    });
+
+    if (!invite) {
       throw new NotFoundException('Invite code is invalid or expired');
     }
+
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      throw new NotFoundException('Invite code has expired');
+    }
+
     return {
-      householdId: household.id,
-      householdName: household.name,
+      householdId: invite.householdId,
+      householdName: invite.household.name,
     };
+  }
+
+  /**
+   * Joins a household using an invite code.
+   *
+   * @param userId - The user ID joining
+   * @param code - The invite code
+   * @returns Joined household details
+   */
+  async joinHousehold(
+    userId: string,
+    code: string,
+  ): Promise<HouseholdResponseDto> {
+    const trimmed = code?.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Invite code is required');
+    }
+
+    const invite = await this.prisma.householdInvite.findUnique({
+      where: { code: trimmed },
+    });
+
+    if (!invite) {
+      throw new NotFoundException('Invite code is invalid or expired');
+    }
+
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      throw new NotFoundException('Invite code has expired');
+    }
+
+    const householdId = invite.householdId;
+
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) throw new NotFoundException('User not found');
+      if (user.householdId) {
+        throw new ForbiddenException('User already belongs to a household');
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          householdId,
+          role: 'Member',
+          joinedViaInviteId: invite.id,
+        },
+      });
+    });
+
+    return this.getHousehold(userId);
   }
 
   /**
