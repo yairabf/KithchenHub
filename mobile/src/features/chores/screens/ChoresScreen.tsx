@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import * as Crypto from 'expo-crypto';
 import {
   View,
   Text,
@@ -11,17 +10,13 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, pastelColors, spacing, borderRadius } from '../../../theme';
+import { colors, borderRadius } from '../../../theme';
 import { ProgressRing } from '../components/ProgressRing';
 import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
 import { ListItemCardWrapper } from '../../../common/components/ListItemCardWrapper';
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
-import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatChoresText } from '../../../common/utils/shareUtils';
-import { useEntitySyncStatusWithEntity } from '../../../common/hooks/useSyncStatus';
-import { SyncStatusIndicator } from '../../../common/components/SyncStatusIndicator';
-import { determineIndicatorStatus } from '../../../common/utils/syncStatusUtils';
 import { type Chore } from '../../../mocks/chores';
 import { styles } from './styles';
 import type { ChoresScreenProps } from './types';
@@ -219,26 +214,14 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   const todayChores = chores.filter(c => c.section === 'today');
   const upcomingChores = chores.filter(c => c.section === 'thisWeek' || c.section === 'recurring');
+  const remainingToday = todayChores.filter(c => !c.isCompleted).length;
+  const completedToday = todayChores.filter(c => c.isCompleted).length;
 
   // Format chores for sharing using centralized formatter
   const shareText = useMemo(
     () => formatChoresText(todayChores, upcomingChores),
     [todayChores, upcomingChores]
   );
-
-  // Header actions configuration
-  const headerActions = useMemo(() => ({
-    share: {
-      onPress: () => setShowShareModal(true),
-      label: 'Share chores list'
-    },
-    ...(onOpenChoresModal && {
-      add: {
-        onPress: onOpenChoresModal,
-        label: 'Add new chore'
-      }
-    })
-  }), [onOpenChoresModal]);
 
   // Calculate progress (only for today's chores)
   const progress = useMemo(() => {
@@ -259,13 +242,9 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   /**
    * Chore Card Component
-   * Separate component to allow hook usage
+   * Renders a single chore item with swipe-to-delete and edit functionality
    */
-  const ChoreCard = React.memo(({ chore, index, bgColor }: { chore: Chore; index: number; bgColor: string }) => {
-    // Check sync status for signed-in users
-    const syncStatus = useEntitySyncStatusWithEntity('chores', chore);
-    const indicatorStatus = determineIndicatorStatus(syncStatus);
-
+  const ChoreCard = React.memo(({ chore, bgColor }: { chore: Chore; bgColor: string }) => {
     const handleEditPress = (e: GestureResponderEvent) => {
       e.stopPropagation();
       handleChorePress(chore);
@@ -292,12 +271,6 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
             </TouchableOpacity>
             <View style={styles.choreCardIcon}>
               <Text style={styles.choreCardIconText}>{chore.icon || '📋'}</Text>
-              {/* Sync status indicator in icon area */}
-              {(syncStatus.isPending || syncStatus.isFailed) && (
-                <View style={styles.syncStatusContainer}>
-                  <SyncStatusIndicator status={indicatorStatus} size="small" />
-                </View>
-              )}
             </View>
             <View style={styles.choreCardContent}>
               <Text
@@ -332,17 +305,43 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     );
   });
 
-  const renderChoreCard = (chore: Chore, index: number) => {
-    const bgColor = pastelColors[index % pastelColors.length];
-    return <ChoreCard key={chore.id} chore={chore} index={index} bgColor={bgColor} />;
-  };
+  const renderChoreCard = (chore: Chore) => (
+    <ChoreCard key={chore.id} chore={chore} bgColor={colors.surface} />
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScreenHeader
-        title="HOME CHORES"
-        rightActions={headerActions}
-      />
+      <View style={styles.header}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerSubtitle}>Household Hub</Text>
+          <Text style={styles.headerTitle}>Chores Dashboard</Text>
+          <View style={styles.headerMeta}>
+            <Ionicons name="clipboard-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.headerMetaText}>
+              {remainingToday} tasks remaining for today
+            </Text>
+          </View>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            accessibilityLabel="Share chores list"
+            style={styles.headerIconButton}
+            onPress={() => setShowShareModal(true)}
+          >
+            <Ionicons name="share-social-outline" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+          {onOpenChoresModal && (
+            <TouchableOpacity
+              accessibilityLabel="Assign chore"
+              style={styles.headerPrimaryButton}
+              onPress={onOpenChoresModal}
+            >
+              <Ionicons name="add" size={20} color={colors.textLight} />
+              <Text style={styles.headerPrimaryButtonText}>Assign Chore</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
 
       <ScrollView
         style={styles.content}
@@ -359,30 +358,55 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
             <View style={styles.leftColumn}>
               {/* Progress Card */}
               <View style={styles.progressCard}>
-                <ProgressRing progress={progress} size={160} />
+                <View style={styles.progressRow}>
+                  <View style={styles.progressRingWrap}>
+                    <ProgressRing progress={progress} size={160} showPercentage={false} showEmoji={false} />
+                    <View style={styles.progressRingText}>
+                      <Text style={styles.progressPercent}>{Math.round(progress)}%</Text>
+                      <Text style={styles.progressLabel}>Today</Text>
+                    </View>
+                  </View>
+                  <View style={styles.progressDetails}>
+                    <Text style={styles.progressTitle}>Daily Progress</Text>
+                    <Text style={styles.progressBody}>
+                      You've completed {completedToday} out of {todayChores.length} chores today. Keep it up to reach your weekly goals!
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.searchContainer}>
+                <Text style={styles.searchPlaceholder}>Quick find tasks...</Text>
+                <Ionicons name="search" size={20} color={colors.primary} />
               </View>
 
               {/* Today's Chores */}
-              {todayChores.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>TODAY'S CHORES</Text>
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIndicator} />
+                  <Text style={styles.sectionTitle}>Today's Chores</Text>
+                </View>
+                {todayChores.length > 0 && (
                   <View style={styles.choreList}>
                     {todayChores.map(renderChoreCard)}
                   </View>
-                </View>
-              )}
+                )}
+              </View>
             </View>
 
             {/* Right column: Upcoming */}
             <View style={styles.rightColumn}>
-              {upcomingChores.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>UPCOMING CHORES</Text>
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIndicator, styles.sectionIndicatorAlt]} />
+                  <Text style={styles.sectionTitle}>Upcoming Chores</Text>
+                </View>
+                {upcomingChores.length > 0 && (
                   <View style={styles.choreList}>
                     {upcomingChores.map(renderChoreCard)}
                   </View>
-                </View>
-              )}
+                )}
+              </View>
             </View>
           </View>
         ) : (
@@ -390,28 +414,53 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           <View style={styles.narrowLayout}>
             {/* Progress Card */}
             <View style={styles.progressCard}>
-              <ProgressRing progress={progress} size={140} />
+              <View style={[styles.progressRow, styles.progressRowPhone]}>
+                <View style={styles.progressRingWrap}>
+                  <ProgressRing progress={progress} size={140} showPercentage={false} showEmoji={false} />
+                  <View style={styles.progressRingText}>
+                    <Text style={styles.progressPercent}>{Math.round(progress)}%</Text>
+                    <Text style={styles.progressLabel}>Today</Text>
+                  </View>
+                </View>
+                <View style={[styles.progressDetails, styles.progressDetailsPhone]}>
+                  <Text style={styles.progressTitle}>Daily Progress</Text>
+                  <Text style={[styles.progressBody, styles.progressBodyPhone]}>
+                    You've completed {completedToday} out of {todayChores.length} chores today. Keep it up to reach your weekly goals!
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.searchContainer}>
+              <Text style={styles.searchPlaceholder}>Quick find tasks...</Text>
+              <Ionicons name="search" size={20} color={colors.primary} />
             </View>
 
             {/* Today's Chores */}
-            {todayChores.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>TODAY'S CHORES</Text>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIndicator} />
+                <Text style={styles.sectionTitle}>Today's Chores</Text>
+              </View>
+              {todayChores.length > 0 && (
                 <View style={styles.choreList}>
                   {todayChores.map(renderChoreCard)}
                 </View>
-              </View>
-            )}
+              )}
+            </View>
 
             {/* Upcoming Chores */}
-            {upcomingChores.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>UPCOMING CHORES</Text>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIndicator, styles.sectionIndicatorAlt]} />
+                <Text style={styles.sectionTitle}>Upcoming Chores</Text>
+              </View>
+              {upcomingChores.length > 0 && (
                 <View style={styles.choreList}>
                   {upcomingChores.map(renderChoreCard)}
                 </View>
-              </View>
-            )}
+              )}
+            </View>
           </View>
         )}
       </ScrollView>
