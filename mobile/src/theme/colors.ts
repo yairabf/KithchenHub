@@ -1,42 +1,42 @@
 export const colors = {
-  // Primary colors - Earthy/Natural palette
-  primary: '#606c38',        // Olive green - main brand color
-  primaryLight: '#dda15e',   // Golden/honey - lighter accents
-  primaryDark: '#283618',    // Dark forest green - pressed/active states
-  secondary: '#bc6c25',      // Warm brown - accents, links
+  // Primary colors - Vibrant Teal palette from Stitch
+  primary: '#14B8A6',        // Vibrant Teal - main brand color
+  primaryLight: '#E6FFFA',   // Very light teal accent
+  primaryDark: '#0D9488',    // Darker teal for pressed states
+  secondary: '#F59E0B',      // Amber - highlights/accents
 
   // Background colors
-  background: '#F5F5F0',     // Warm cream - main app background
+  background: '#F8FAFC',     // Light slate - main app background
   surface: '#FFFFFF',        // White - cards, modals
-  surfaceGlass: 'rgba(255, 255, 255, 0.4)', // Glassmorphism surfaces
+  surfaceGlass: 'rgba(255, 255, 255, 0.8)', // Glassmorphism surfaces
 
   // Section accent colors
-  shopping: '#606c38',       // Olive green
-  recipes: '#bc6c25',        // Warm brown
-  chores: '#283618',         // Dark forest green
+  shopping: '#14B8A6',       // Teal
+  recipes: '#3B82F6',        // Blue
+  chores: '#F59E0B',         // Amber
 
   // Text colors
-  textPrimary: '#2D3139',    // Warmer dark - main text
-  textSecondary: '#6B7280',  // Gray-500 - subtitles, hints
-  textMuted: '#9CA3AF',      // Gray-400 - muted text
+  textPrimary: '#1E293B',    // Dark slate - main text
+  textSecondary: '#64748B',  // Slate-500 - subtitles, hints
+  textMuted: '#94A3B8',      // Slate-400 - muted text
   textLight: '#FFFFFF',      // Text on dark backgrounds
 
   // State colors
-  success: '#606c38',        // Olive green
+  success: '#10B981',        // Emerald-500
   warning: '#F59E0B',        // Amber-500
   error: '#EF4444',          // Red-500
 
   // Border & divider
-  border: '#E5E7EB',         // Gray-200 border
+  border: '#E2E8F0',         // Slate-200 border
   borderDashed: '#CBD5E1',   // Slate-300 for dashed borders
-  divider: '#F0F0F0',
+  divider: '#F1F5F9',        // Slate-100
 
   // UI elements
-  backdrop: 'rgba(30, 41, 59, 0.4)', // Slate-800/40 for modals
-  widgetBackground: '#D1D5DB',       // Gray-300 for widgets
-  buttonInactive: '#9CA3AF',         // Gray-400
-  quantityBg: '#F3F4F6',             // Gray-100 - quantity controls
-  addButton: '#dda15e',              // Golden/honey - add button
+  backdrop: 'rgba(15, 23, 42, 0.4)', // Slate-900/40 for modals
+  widgetBackground: '#F1F5F9',       // Slate-100 for widgets
+  buttonInactive: '#CBD5E1',         // Slate-300
+  quantityBg: '#F8FAFC',             // Slate-50 - quantity controls
+  addButton: '#14B8A6',              // Teal - add button
 
   // Google button
   google: '#4285F4',
@@ -44,14 +44,23 @@ export const colors = {
   // Avatar fallback
   avatarBackground: '#F5F5F0',       // Warm cream
 
-  // Pastel palette for cards/decorative elements (earth tones)
+  // Icon background colors (Stitch style)
+  iconBg: {
+    teal: '#F0FDFA',
+    orange: '#FFF7ED',
+    blue: '#EFF6FF',
+    purple: '#FAF5FF',
+    amber: '#FFFBEB',
+  },
+
+  // Pastel palette for cards/decorative elements (Slate/Teal compatible)
   pastel: {
-    cyan: '#E8E4D9',       // Warm gray
-    green: '#D4DBC4',      // Sage
-    peach: '#F5E6C8',      // Soft wheat
-    coral: '#E8D4B8',      // Tan
-    lavender: '#D6CFC4',   // Taupe
-    yellow: '#F0E5D0',     // Light cream
+    cyan: '#F1F5F9',       // Slate-100
+    green: '#DCFCE7',      // Green-100
+    peach: '#FFEDD5',      // Orange-100
+    coral: '#FEE2E2',      // Red-100
+    lavender: '#F3E8FF',   // Purple-100
+    yellow: '#FEF9C3',     // Yellow-100
   },
 
   // Transparent variants
