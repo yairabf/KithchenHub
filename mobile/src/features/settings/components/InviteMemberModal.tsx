@@ -21,6 +21,7 @@ interface InviteMemberModalProps {
 export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) {
     const [inviteToken, setInviteToken] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     const handleGenerateInvite = async () => {
         try {
@@ -37,7 +38,8 @@ export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) 
     const copyToClipboard = async () => {
         if (inviteToken) {
             await Clipboard.setStringAsync(inviteToken);
-            // In a real app, we'd show a toast here
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
         }
     };
 
@@ -75,9 +77,18 @@ export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) 
                         <View style={styles.codeContainer}>
                             <Text style={styles.codeText}>{inviteToken}</Text>
                         </View>
-                        <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
-                            <Ionicons name="copy-outline" size={24} color="#fff" />
-                            <Text style={styles.copyButtonText}>Copy Code</Text>
+                        <TouchableOpacity
+                            style={[styles.copyButton, copied && styles.copiedButton]}
+                            onPress={copyToClipboard}
+                        >
+                            <Ionicons
+                                name={copied ? "checkmark-circle" : "copy-outline"}
+                                size={22}
+                                color="#fff"
+                            />
+                            <Text style={styles.copyButtonText}>
+                                {copied ? "Copied to clipboard!" : "Copy Code"}
+                            </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
@@ -197,5 +208,9 @@ const styles = StyleSheet.create({
     shareButtonText: {
         ...typography.button,
         color: colors.primary,
+        fontWeight: '600',
+    },
+    copiedButton: {
+        backgroundColor: colors.success,
     },
 });
