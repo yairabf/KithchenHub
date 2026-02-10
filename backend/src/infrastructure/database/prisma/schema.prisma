@@ -29,6 +29,7 @@ model Household {
   recipes       Recipe[]
   chores        Chore[]
   customItems   CustomItem[]
+  invites       HouseholdInvite[]
 
   @@map("households")
 }
@@ -56,9 +57,28 @@ model User {
   importBatches        ImportBatch[]
   importMappings      ImportMapping[]
   syncIdempotencyKeys SyncIdempotencyKey[]
+  createdInvites      HouseholdInvite[]    @relation("CreatedInvites")
+  joinedViaInviteId   String?              @map("joined_via_invite_id")
+  joinedViaInvite     HouseholdInvite?     @relation("UsedInvite", fields: [joinedViaInviteId], references: [id], onDelete: SetNull)
 
   @@index([householdId])
   @@map("users")
+}
+
+model HouseholdInvite {
+  id          String    @id @default(cuid())
+  householdId String    @map("household_id")
+  code        String    @unique
+  creatorId   String    @map("creator_id") @db.Uuid
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  creator   User      @relation("CreatedInvites", fields: [creatorId], references: [id])
+  usedBy    User[]    @relation("UsedInvite")
+
+  @@index([code])
+  @@map("household_invites")
 }
 
 model RefreshToken {

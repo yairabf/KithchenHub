@@ -25,6 +25,8 @@ export interface OAuthResult {
 export interface OAuthSignInOptions {
   /** Optional household ID to join during sign-in */
   householdId?: string;
+  /** Optional invite code to join existing household during sign-in */
+  inviteCode?: string;
 }
 
 /**
@@ -77,10 +79,13 @@ export function useOAuthSignIn() {
         const startUrl = new URL(
           `${config.api.baseUrl}/api/v${config.api.version}/auth/google/start`
         );
-        
-        // Add householdId query param if provided
+
+        // Add householdId or inviteCode query param if provided
         if (options?.householdId) {
           startUrl.searchParams.set('householdId', options.householdId);
+        }
+        if (options?.inviteCode) {
+          startUrl.searchParams.set('inviteCode', options.inviteCode);
         }
 
         // For web platform, use window.location redirect with web callback URL
@@ -88,10 +93,10 @@ export function useOAuthSignIn() {
           const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
           const webCallbackUrl = `${currentOrigin}/auth/callback`;
           startUrl.searchParams.set('redirect_uri', webCallbackUrl);
-          
+
           // Redirect to OAuth start - the backend will redirect back to webCallbackUrl
           window.location.href = startUrl.toString();
-          
+
           // This will redirect away, so we return a pending state
           // The actual result will be handled by checking window.location.search after redirect
           return {

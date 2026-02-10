@@ -102,9 +102,7 @@
     "typescript": "^5.1.3"
   },
   "jest": {
-    "moduleNameMapper": {
-      "^file-type$": "<rootDir>/../__mocks__/file-type.js"
-    },
+    "moduleNameMapper": {},
     "moduleFileExtensions": [
       "js",
       "json",

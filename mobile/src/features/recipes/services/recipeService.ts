@@ -359,6 +359,14 @@ export class LocalRecipeService implements IRecipeService {
  * Guest users cannot provide valid JWT tokens, so API calls will fail at the backend.
  */
 export class RemoteRecipeService implements IRecipeService {
+    private isLocalImageUri(imageUrl?: string | null): boolean {
+        if (!imageUrl) return false;
+        return (
+            imageUrl.startsWith('file://') ||
+            imageUrl.startsWith('blob:') ||
+            imageUrl.startsWith('data:')
+        );
+    }
     /**
      * Fetches recipes from API (used by cache layer)
      * 
@@ -608,7 +616,7 @@ export class RemoteRecipeService implements IRecipeService {
         const dto = this.mapRecipeToCreateDto(recipe);
 
         // If image is local, don't send it in initial create (wait for upload)
-        const localImage = recipe.imageUrl?.startsWith('file://') ? recipe.imageUrl : undefined;
+        const localImage = this.isLocalImageUri(recipe.imageUrl) ? recipe.imageUrl : undefined;
         if (localImage) {
             dto.imageUrl = undefined;
         }
@@ -671,7 +679,7 @@ export class RemoteRecipeService implements IRecipeService {
         const dto = this.mapRecipeToUpdateDto(updates);
 
         // Check for local image to upload
-        const localImage = updates.imageUrl?.startsWith('file://') ? updates.imageUrl : undefined;
+        const localImage = this.isLocalImageUri(updates.imageUrl) ? updates.imageUrl : undefined;
         if (localImage) {
             // Don't send local path as URL
             dto.imageUrl = undefined;

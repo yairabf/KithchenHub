@@ -29,6 +29,10 @@ describe('HouseholdsService', () => {
       update: jest.fn(),
     };
     const householdMock = { create: jest.fn() };
+    const householdInviteMock = {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    };
     const shoppingListMock = {
       create: jest.fn().mockResolvedValue(undefined),
     };
@@ -38,6 +42,7 @@ describe('HouseholdsService', () => {
         const tx = {
           user: userMock,
           household: householdMock,
+          householdInvite: householdInviteMock,
           shoppingList: shoppingListMock,
         };
         return fn(tx);
@@ -60,6 +65,7 @@ describe('HouseholdsService', () => {
           useValue: {
             user: userMock,
             household: householdMock,
+            householdInvite: householdInviteMock,
             shoppingList: shoppingListMock,
             $transaction: transactionMock,
           },
@@ -389,22 +395,26 @@ describe('HouseholdsService', () => {
 
   describe('validateInviteCode', () => {
     it('should return householdId and householdName for valid invite code', async () => {
-      const code = `invite_${mockHouseholdId}_${Date.now()}`;
-      const mockHousehold = {
-        id: mockHouseholdId,
-        name: mockHouseholdName,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      const code = 'ABC12XYZ';
+      const mockInvite = {
+        id: 'invite-1',
+        code,
+        householdId: mockHouseholdId,
+        household: {
+          id: mockHouseholdId,
+          name: mockHouseholdName,
+        },
       };
       jest
-        .spyOn(repository, 'findHouseholdById')
-        .mockResolvedValue(mockHousehold as any);
+        .spyOn(prisma.householdInvite, 'findUnique')
+        .mockResolvedValue(mockInvite as any);
 
       const result = await service.validateInviteCode(code);
 
-      expect(repository.findHouseholdById).toHaveBeenCalledWith(
-        mockHouseholdId,
-      );
+      expect(prisma.householdInvite.findUnique).toHaveBeenCalledWith({
+        where: { code },
+        include: { household: true },
+      });
       expect(result).toEqual({
         householdId: mockHouseholdId,
         householdName: mockHouseholdName,
@@ -420,32 +430,20 @@ describe('HouseholdsService', () => {
         await expect(service.validateInviteCode(code)).rejects.toThrow(
           BadRequestException,
         );
-        expect(repository.findHouseholdById).not.toHaveBeenCalled();
+        expect(prisma.householdInvite.findUnique).not.toHaveBeenCalled();
       },
     );
 
-    it.each([
-      ['invalid_format', 'invalid_format'],
-      ['invite_ only', 'invite_'],
-      ['wrong prefix', 'wrong_prefix_abc_123'],
-    ])(
-      'should throw BadRequestException for invalid format: %s',
-      async (_description, code) => {
-        await expect(service.validateInviteCode(code)).rejects.toThrow(
-          BadRequestException,
-        );
-        expect(repository.findHouseholdById).not.toHaveBeenCalled();
-      },
-    );
+    it('should throw NotFoundException when invite code is invalid or expired', async () => {
+      jest.spyOn(prisma.householdInvite, 'findUnique').mockResolvedValue(null);
 
-    it('should throw NotFoundException when household does not exist', async () => {
-      const code = `invite_nonexistent_${Date.now()}`;
-      jest.spyOn(repository, 'findHouseholdById').mockResolvedValue(null);
-
-      await expect(service.validateInviteCode(code)).rejects.toThrow(
+      await expect(service.validateInviteCode('UNKNOWN1')).rejects.toThrow(
         NotFoundException,
       );
-      expect(repository.findHouseholdById).toHaveBeenCalledWith('nonexistent');
+      expect(prisma.householdInvite.findUnique).toHaveBeenCalledWith({
+        where: { code: 'UNKNOWN1' },
+        include: { household: true },
+      });
     });
   });
 });

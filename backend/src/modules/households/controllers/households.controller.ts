@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { HouseholdsService } from '../services/households.service';
 import { CreateHouseholdDto } from '../dtos/create-household.dto';
-import { InviteMemberDto, UpdateHouseholdDto } from '../dtos';
+import { InviteMemberDto, UpdateHouseholdDto, JoinHouseholdDto } from '../dtos';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 
@@ -84,5 +84,18 @@ export class HouseholdsController {
   ) {
     await this.householdsService.removeMember(user.userId, memberId);
     return { success: true };
+  }
+
+  /**
+   * Joins a household using an invite code.
+   * Requires authentication but NOT household membership.
+   */
+  @Post('join')
+  @UseGuards(JwtAuthGuard)
+  async joinHousehold(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: JoinHouseholdDto,
+  ) {
+    return this.householdsService.joinHousehold(user.userId, dto.inviteCode);
   }
 }

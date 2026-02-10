@@ -82,6 +82,7 @@ export function mapUserResponseToUser(userResponse: UserResponse): User {
     avatarUrl: userResponse.avatarUrl,
     householdId: userResponse.householdId || undefined,
     isGuest: userResponse.isGuest,
+    role: userResponse.role,
   };
 }
 

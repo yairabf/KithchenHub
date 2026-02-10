@@ -12,50 +12,34 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../contexts/AuthContext';
-import { colors, spacing, borderRadius, typography, shadows } from '../../../theme';
+import { colors, spacing, borderRadius, typography, shadows, boxShadow } from '../../../theme';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ManageHouseholdModal } from '../components/ManageHouseholdModal';
+import { InviteMemberModal } from '../components/InviteMemberModal';
 import { LanguageSelectorModal } from '../components/LanguageSelectorModal';
-import { CenteredModal } from '../../../common/components/CenteredModal';
-import { ImportDataModal } from '../components/ImportDataModal';
-import { Toast } from '../../../common/components/Toast';
 import { i18n } from '../../../i18n';
 import { normalizeLocale } from '../../../i18n/localeNormalization';
 import { getNativeNameForCode } from '../../../i18n/constants';
 import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
 
+/** Set to true when push notifications are implemented. */
+const SHOW_PUSH_NOTIFICATIONS_SETTING = false;
+
+/** Set to true when export data is implemented. */
+const SHOW_EXPORT_DATA_SETTING = false;
+
 export function SettingsScreen() {
   const { t } = useTranslation('settings');
-  const { user, signOut, signInWithGoogle, hasGuestData, importGuestData, clearGuestData } = useAuth();
+  const { user, signOut } = useAuth();
   const [pushNotifications, setPushNotifications] = React.useState(true);
-  const [dailySummary, setDailySummary] = React.useState(false);
-  const [cloudSync, setCloudSync] = React.useState(true);
   const [showLanguageSelector, setShowLanguageSelector] = React.useState(false);
   const [showManageHousehold, setShowManageHousehold] = React.useState(false);
-  const [showImportData, setShowImportData] = React.useState(false);
-  const [showClearDataConfirm, setShowClearDataConfirm] = React.useState(false);
-  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
-  const [toastType, setToastType] = React.useState<'success' | 'error'>('success');
+  const [showInviteModal, setShowInviteModal] = React.useState(false);
+
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   const currentLanguageCode = normalizeLocale(i18n.language ?? '');
   const currentLanguageDisplayName = getNativeNameForCode(currentLanguageCode);
-
-  const handleImportGuestData = () => {
-    setShowImportData(true);
-  };
-
-  const handleClearGuestData = async () => {
-    setShowClearDataConfirm(false);
-    try {
-      await clearGuestData();
-      setToastType('success');
-      setToastMessage('Guest data deleted');
-    } catch (error) {
-      setToastType('error');
-      setToastMessage('Failed to delete guest data. Please try again.');
-    }
-  };
-
 
   const handleSignOut = async () => {
     await signOut();
@@ -74,7 +58,9 @@ export function SettingsScreen() {
             onPress={() => setShowLanguageSelector(true)}
           >
             <View style={styles.settingInfo}>
-              <Ionicons name="language-outline" size={22} color={colors.textPrimary} />
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.yellow }]}>
+                <Ionicons name="language-outline" size={20} color={colors.secondary} />
+              </View>
               <Text style={styles.settingLabel}>{t('language')}</Text>
             </View>
             <Text style={styles.settingValue}>{currentLanguageDisplayName}</Text>
@@ -90,29 +76,23 @@ export function SettingsScreen() {
               {user?.avatarUrl ? (
                 <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
               ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={32} color={colors.textSecondary} />
+                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.pastel.green }]}>
+                  <Ionicons name="person" size={28} color={colors.primary} />
                 </View>
               )}
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name || 'Guest'}</Text>
+              <Text style={styles.profileName}>{user?.name ?? 'User'}</Text>
+              {user?.id ? (
+                <View style={styles.roleBadge}>
+                  <Text style={styles.roleText}>{user?.role ?? 'Member'}</Text>
+                </View>
+              ) : null}
               {user?.email ? (
                 <Text style={styles.profileEmail}>{user.email}</Text>
               ) : null}
-              <Text style={styles.profileProvider}>
-                {user?.isGuest ? 'Guest Mode' : 'Connected via Google'}
-              </Text>
             </View>
           </View>
-
-          {user?.isGuest && (
-            <TouchableOpacity style={styles.signInPrompt} onPress={signInWithGoogle}>
-              <Ionicons name="logo-google" size={20} color={colors.google} />
-              <Text style={styles.signInPromptText}>Sign in to sync your data</Text>
-              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          )}
 
           <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={20} color={colors.error} />
@@ -120,34 +100,24 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Notifications Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>Push notifications</Text>
+        {/* Notifications Section - hidden until push notifications are implemented */}
+        {SHOW_PUSH_NOTIFICATIONS_SETTING && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notifications</Text>
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
+                <Text style={styles.settingLabel}>Push notifications</Text>
+              </View>
+              <Switch
+                value={pushNotifications}
+                onValueChange={setPushNotifications}
+                trackColor={{ false: colors.border, true: colors.chores }}
+                thumbColor={colors.surface}
+              />
             </View>
-            <Switch
-              value={pushNotifications}
-              onValueChange={setPushNotifications}
-              trackColor={{ false: colors.border, true: colors.chores }}
-              thumbColor={colors.surface}
-            />
           </View>
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Ionicons name="mail-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>Daily summary email</Text>
-            </View>
-            <Switch
-              value={dailySummary}
-              onValueChange={setDailySummary}
-              trackColor={{ false: colors.border, true: colors.chores }}
-              thumbColor={colors.surface}
-            />
-          </View>
-        </View>
+        )}
 
         {/* Household Section */}
         <View style={styles.section}>
@@ -157,64 +127,47 @@ export function SettingsScreen() {
             onPress={() => setShowManageHousehold(true)}
           >
             <View style={styles.settingInfo}>
-              <Ionicons name="people-outline" size={22} color={colors.textPrimary} />
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.cyan }]}>
+                <Ionicons name="people-outline" size={20} color={colors.primary} />
+              </View>
               <Text style={styles.settingLabel}>Manage household members</Text>
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-        </View>
 
-        {/* Guest Data Section - Only visible if hasGuestData AND Signed In */}
-        {!user?.isGuest && hasGuestData && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Guest Data</Text>
-            <TouchableOpacity style={styles.settingRow} onPress={handleImportGuestData}>
-              <View style={styles.settingInfo}>
-                <Ionicons name="cloud-upload-outline" size={22} color={colors.primary} />
-                <Text style={styles.settingLabel}>Import local guest data</Text>
-              </View>
-              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-
+          {isAdmin && (
             <TouchableOpacity
               style={styles.settingRow}
-              onPress={() => setShowClearDataConfirm(true)}
+              onPress={() => setShowInviteModal(true)}
             >
               <View style={styles.settingInfo}>
-                <Ionicons name="trash-outline" size={22} color={colors.error} />
-                <Text style={[styles.settingLabel, { color: colors.error }]}>Delete local guest data</Text>
+                <View style={[styles.iconContainer, { backgroundColor: colors.pastel.peach }]}>
+                  <Ionicons name="person-add-outline" size={20} color={colors.secondary} />
+                </View>
+                <Text style={styles.settingLabel}>Invite member to household</Text>
               </View>
               <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Data Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data</Text>
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Ionicons name="cloud-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>Sync to cloud</Text>
-            </View>
-            <Switch
-              value={cloudSync}
-              onValueChange={setCloudSync}
-              trackColor={{ false: colors.border, true: colors.chores }}
-              thumbColor={colors.surface}
-              disabled={user?.isGuest}
-            />
-          </View>
+          {SHOW_EXPORT_DATA_SETTING && (
+            <TouchableOpacity style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
+                <Text style={styles.settingLabel}>Export my data</Text>
+              </View>
+              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>Export my data</Text>
-            </View>
-            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Ionicons name="trash-outline" size={22} color={colors.error} />
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
+                <Ionicons name="trash-outline" size={20} color={colors.error} />
+              </View>
               <Text style={[styles.settingLabel, { color: colors.error }]}>Delete account</Text>
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
@@ -253,40 +206,17 @@ export function SettingsScreen() {
         onClose={() => setShowManageHousehold(false)}
       />
 
-      <ImportDataModal
-        visible={showImportData}
-        onClose={() => setShowImportData(false)}
-      />
-
       <LanguageSelectorModal
         visible={showLanguageSelector}
         onClose={() => setShowLanguageSelector(false)}
         currentLanguageCode={currentLanguageCode}
       />
 
-      <CenteredModal
-        visible={showClearDataConfirm}
-        onClose={() => setShowClearDataConfirm(false)}
-        title="Delete guest data?"
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={handleClearGuestData}
-        confirmColor={colors.error}
-        showActions={true}
-      >
-        <Text style={styles.confirmText}>
-          This will permanently remove all data created while you were in Guest mode. This action cannot be undone.
-        </Text>
-      </CenteredModal>
+      <InviteMemberModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+      />
 
-      {toastMessage && (
-        <Toast
-          visible={!!toastMessage}
-          message={toastMessage}
-          onHide={() => setToastMessage(null)}
-          type={toastType}
-        />
-      )}
     </SafeAreaView >
   );
 }
@@ -351,19 +281,6 @@ const styles = StyleSheet.create({
     ...typography.tinyMuted,
     marginTop: spacing.xs,
   },
-  signInPrompt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  signInPromptText: {
-    ...typography.body,
-    flex: 1,
-    marginStart: spacing.md,
-  },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -385,8 +302,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.xs,
+    ...boxShadow(1, 4, 'rgba(0, 0, 0, 0.05)'),
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   settingInfo: {
     flexDirection: 'row',
@@ -396,21 +322,31 @@ const styles = StyleSheet.create({
   settingLabel: {
     ...typography.body,
     marginStart: spacing.md,
+    fontWeight: '500',
   },
   settingValue: {
     ...typography.body,
     color: colors.textSecondary,
     marginEnd: spacing.xs,
+    fontSize: 14,
   },
   versionText: {
     ...typography.body,
     color: colors.textSecondary,
+    fontSize: 14,
   },
-
-  confirmText: {
-    ...typography.body,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
+  roleBadge: {
+    backgroundColor: 'rgba(96, 108, 56, 0.1)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.xs,
+  },
+  roleText: {
+    ...typography.tiny,
+    color: colors.primary,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
 });

@@ -36,6 +36,7 @@ export function useRecipes() {
 
     // Track if we've already triggered the initial fetch for the current user mode
     const lastFetchedModeRef = useRef<string | null>(null);
+    const lastAutoRefreshModeRef = useRef<string | null>(null);
 
     // For signed-in users, trigger initial fetch ONLY on first login (when cache is missing)
     // This ensures getCached() is called, which will fetch from API ONLY if cache is missing
@@ -57,6 +58,34 @@ export function useRecipes() {
                 });
         }
     }, [isSignedIn, repository, isAuthLoading, userMode]);
+
+    // Signed URLs for recipe images can become invalid after backend restarts.
+    // If we already have cached recipes, refresh once per user session to re-hydrate image URLs.
+    useEffect(() => {
+        const modeKey = `${userMode}-${isSignedIn}`;
+        if (!isSignedIn || !repository || isAuthLoading || isCacheLoading) {
+            return;
+        }
+        if (lastAutoRefreshModeRef.current === modeKey) {
+            return;
+        }
+        lastAutoRefreshModeRef.current = modeKey;
+
+        if (cachedRecipes.length === 0) {
+            return;
+        }
+
+        const refreshSignedUrls = async () => {
+            try {
+                const refreshed = await repository.refresh();
+                await pruneStaleImages(refreshed);
+            } catch (error) {
+                console.error('[useRecipes] Auto refresh failed:', error);
+            }
+        };
+
+        void refreshSignedUrls();
+    }, [isSignedIn, repository, isAuthLoading, isCacheLoading, cachedRecipes.length, userMode]);
 
     // For guest mode, use service directly (no cache)
     const [guestRecipes, setGuestRecipes] = useState<Recipe[]>([]);

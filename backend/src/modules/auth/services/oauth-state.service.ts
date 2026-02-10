@@ -7,6 +7,7 @@ import { loadConfiguration } from '../../../config/configuration';
  */
 export interface OAuthStateMetadata {
   householdId?: string;
+  inviteCode?: string;
   redirectUri?: string; // Web redirect URI for web platform
 }
 

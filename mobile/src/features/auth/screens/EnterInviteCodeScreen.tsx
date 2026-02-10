@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -16,8 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { inviteApi, InviteValidationResponse } from '../../households/services/inviteApi';
 import { useOnboarding } from '../contexts/OnboardingContext';
-import { useAuth } from '../../../contexts/AuthContext';
-import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -48,10 +45,8 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteData, setInviteData] = useState<InviteValidationResponse | null>(null);
-  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const { setMode, setInviteContext } = useOnboarding();
-  const { signInWithGoogle } = useAuth();
 
   /**
    * Validates the invite code with the backend
@@ -75,34 +70,12 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
         householdId: data.householdId,
         householdName: data.householdName,
       });
+      navigation.navigate('Login');
     } catch (err) {
       setError('Invalid or expired invite code');
       setInviteData(null);
     } finally {
       setIsValidating(false);
-    }
-  };
-
-  /**
-   * Signs in with Google and joins the validated household
-   */
-  const handleContinueWithGoogle = async () => {
-    if (!inviteData) return;
-
-    setIsSigningIn(true);
-    try {
-      await signInWithGoogle({ householdId: inviteData.householdId });
-      // Navigation will be handled by AuthContext / RootNavigator
-    } catch (error) {
-      Alert.alert(
-        'Sign In Failed',
-        error instanceof Error
-          ? error.message
-          : 'Unable to sign in with Google. Please try again.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsSigningIn(false);
     }
   };
 
@@ -120,7 +93,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
               onPress={() => navigation.goBack()}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.title}>Join household</Text>
             <View style={styles.backButton} />
@@ -183,10 +156,13 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                   <Text style={styles.householdName}>{inviteData.householdName}</Text>
                 </View>
 
-                <GoogleSignInButton
-                  onPress={handleContinueWithGoogle}
-                  isLoading={isSigningIn}
-                />
+                <TouchableOpacity
+                  style={[styles.button, styles.primaryButton]}
+                  onPress={() => navigation.navigate('Login')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.primaryButtonText}>Continue to sign in</Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.changeCodeButton}
@@ -233,7 +209,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h2,
-    color: colors.text,
+    color: colors.textPrimary,
   },
   mainContent: {
     flex: 1,
@@ -264,7 +240,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    color: colors.text,
+    color: colors.textPrimary,
     textAlign: 'center',
     fontSize: 18,
     letterSpacing: 2,

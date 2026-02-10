@@ -9,6 +9,7 @@ export interface UserResponse {
   name?: string;
   avatarUrl?: string;
   isGuest: boolean;
+  role: string;
   householdId?: string | null;
   household?: {
     id: string;

@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../theme';
@@ -12,11 +14,15 @@ import { useHousehold } from '../../../../contexts/HouseholdContext';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { styles } from './styles';
 import { ManageHouseholdModalProps } from './types';
+import { useAuth } from '../../../../contexts/AuthContext';
 
 export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalProps) {
   const { members, addMember, removeMember } = useHousehold();
+  const { user } = useAuth();
   const [newMemberName, setNewMemberName] = useState('');
   const inputRef = useRef<TextInput>(null);
+
+  const isAdmin = user?.role === 'Admin';
 
   const handleAddMember = async () => {
     if (!newMemberName.trim()) return;
@@ -88,6 +94,7 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
             Default members cannot be removed
           </Text>
         </View>
+
       </View>
     </CenteredModal>
   );

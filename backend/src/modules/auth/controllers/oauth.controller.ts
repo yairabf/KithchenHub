@@ -86,6 +86,7 @@ export class OAuthController {
   })
   async startGoogleAuth(
     @Query('householdId') householdId: string | undefined,
+    @Query('inviteCode') inviteCode: string | undefined,
     @Query('redirect_uri') redirectUri: string | undefined,
     @Res() reply: FastifyReply,
   ): Promise<void> {
@@ -96,7 +97,9 @@ export class OAuthController {
 
     // Generate state token with optional metadata
     const state = this.oauthStateService.generateState(
-      householdId || redirectUri ? { householdId, redirectUri } : undefined,
+      householdId || inviteCode || redirectUri
+        ? { householdId, inviteCode, redirectUri }
+        : undefined,
     );
 
     // Build Google authorization URL
