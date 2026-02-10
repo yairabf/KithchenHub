@@ -22,6 +22,12 @@ import { normalizeLocale } from '../../../i18n/localeNormalization';
 import { getNativeNameForCode } from '../../../i18n/constants';
 import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
 
+/** Set to true when push notifications are implemented. */
+const SHOW_PUSH_NOTIFICATIONS_SETTING = false;
+
+/** Set to true when export data is implemented. */
+const SHOW_EXPORT_DATA_SETTING = false;
+
 export function SettingsScreen() {
   const { t } = useTranslation('settings');
   const { user, signOut } = useAuth();
@@ -88,22 +94,24 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Notifications Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>Push notifications</Text>
+        {/* Notifications Section - hidden until push notifications are implemented */}
+        {SHOW_PUSH_NOTIFICATIONS_SETTING && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notifications</Text>
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
+                <Text style={styles.settingLabel}>Push notifications</Text>
+              </View>
+              <Switch
+                value={pushNotifications}
+                onValueChange={setPushNotifications}
+                trackColor={{ false: colors.border, true: colors.chores }}
+                thumbColor={colors.surface}
+              />
             </View>
-            <Switch
-              value={pushNotifications}
-              onValueChange={setPushNotifications}
-              trackColor={{ false: colors.border, true: colors.chores }}
-              thumbColor={colors.surface}
-            />
           </View>
-        </View>
+        )}
 
         {/* Household Section */}
         <View style={styles.section}>
@@ -136,13 +144,15 @@ export function SettingsScreen() {
         {/* Data Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data</Text>
-          <TouchableOpacity style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>Export my data</Text>
-            </View>
-            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+          {SHOW_EXPORT_DATA_SETTING && (
+            <TouchableOpacity style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
+                <Text style={styles.settingLabel}>Export my data</Text>
+              </View>
+              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <Ionicons name="trash-outline" size={22} color={colors.error} />
