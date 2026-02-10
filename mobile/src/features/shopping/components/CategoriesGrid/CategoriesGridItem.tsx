@@ -1,39 +1,27 @@
 import React from 'react';
-import { View, Text, ImageBackground, TouchableOpacity } from 'react-native';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { isValidImageUrl } from '../../../../common/utils/imageUtils';
 import { styles } from './styles';
 import { Category } from './types';
 
+/**
+ * Props for CategoriesGridItem component.
+ * Displays a single category tile with an icon/image positioned top-right
+ * and the category name at the bottom-left.
+ */
 interface CategoriesGridItemProps {
+    /** Category data including id, name, itemCount, and optional remote image URL */
     category: Category;
+    
+    /** Callback fired when user taps the category tile */
     onPress: () => void;
-    // Passing these helpers as props or imports would be better, but importing them here:
-    // We need getCategoryIcon logic. For now, assuming it's imported or passed.
-    // Actually, getCategoryIcon is a helper in CategoriesGrid.tsx, I should move it to a util or duplicate logic?
-    // User plan says to create this component.
-    // I will assume I can access getCategoryIcon or just inline a simple version or move it to a shared file.
-    // For now, I will accept getCategoryIcon functionality or simplified version.
+    
+    /** 
+     * Local category icon from assets. Null if category has no local icon.
+     * Takes precedence over category.image if both are present.
+     * @example require('../../../../../assets/categories/fruits.png')
+     */
     categoryIcon: ReturnType<typeof require> | null;
-}
-
-function CategoryOverlay({
-    backgroundColor,
-    itemCount,
-    name
-}: {
-    backgroundColor: string;
-    itemCount: number;
-    name: string;
-}) {
-    return (
-        <View style={styles.categoryOverlay}>
-            <View style={[styles.categoryOverlayBg, { backgroundColor }]} />
-            <View style={styles.categoryOverlayContent}>
-                <Text style={styles.categoryCount}>{itemCount}</Text>
-                <Text style={styles.categoryName}>{name}</Text>
-            </View>
-        </View>
-    );
 }
 
 export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
@@ -50,46 +38,32 @@ export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
             style={styles.categoryTile}
             activeOpacity={0.8}
         >
-            {hasIcon ? (
-                <ImageBackground
-                    testID={`category-icon-background-${category.id}`}
-                    source={categoryIcon}
-                    style={styles.categoryBg}
-                    imageStyle={styles.categoryBgImage}
-                    resizeMode="cover"
-                >
-                    <CategoryOverlay
-                        backgroundColor={category.backgroundColor}
-                        itemCount={category.itemCount}
-                        name={category.name}
-                    />
-                </ImageBackground>
-            ) : hasImage ? (
-                <ImageBackground
-                    testID={`category-image-background-${category.id}`}
-                    source={{ uri: category.image }}
-                    style={styles.categoryBg}
-                    imageStyle={styles.categoryBgImage}
-                    resizeMode="cover"
-                >
-                    <CategoryOverlay
-                        backgroundColor={category.backgroundColor}
-                        itemCount={category.itemCount}
-                        name={category.name}
-                    />
-                </ImageBackground>
-            ) : (
-                <View
-                    testID={`category-no-image-${category.id}`}
-                    style={[styles.categoryBg, { backgroundColor: category.backgroundColor }]}
-                >
-                    <CategoryOverlay
-                        backgroundColor={category.backgroundColor}
-                        itemCount={category.itemCount}
-                        name={category.name}
-                    />
+            <View
+                testID={`category-tile-${category.id}`}
+                style={[styles.categoryBg]}
+            >
+                {/* Category Name - Bottom Left */}
+                <View style={styles.categoryNameContainer}>
+                    <Text style={styles.categoryName}>{category.name}</Text>
                 </View>
-            )}
+
+                {/* Category Icon/Image - Top Right */}
+                {hasIcon ? (
+                    <Image
+                        testID={`category-icon-${category.id}`}
+                        source={categoryIcon}
+                        style={styles.categoryIcon}
+                        resizeMode="contain"
+                    />
+                ) : hasImage ? (
+                    <Image
+                        testID={`category-image-${category.id}`}
+                        source={{ uri: category.image }}
+                        style={styles.categoryIcon}
+                        resizeMode="contain"
+                    />
+                ) : null}
+            </View>
         </TouchableOpacity>
     );
 };
