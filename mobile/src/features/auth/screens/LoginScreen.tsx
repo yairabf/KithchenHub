@@ -11,6 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useOnboarding } from '../contexts/OnboardingContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { boxShadow } from '../../../theme/shadows';
 
@@ -29,6 +30,7 @@ interface LoginScreenProps {
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const { signInWithGoogle, showHouseholdNameScreen } = useAuth();
+  const { mode, inviteContext, setMode, setInviteContext } = useOnboarding();
   const [isLoading, setIsLoading] = useState(false);
 
   // Navigate to HouseholdName screen if flag is set (after OAuth callback with new household)
@@ -45,7 +47,26 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await signInWithGoogle();
+      if (mode === 'join_by_invite') {
+        if (!inviteContext?.householdId || !inviteContext.code) {
+          Alert.alert(
+            'Invite Missing',
+            'Please enter a valid invite code to join a household.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        await signInWithGoogle({
+          householdId: inviteContext.householdId,
+          inviteCode: inviteContext.code,
+        });
+      } else {
+        await signInWithGoogle();
+      }
+      if (mode === 'join_by_invite') {
+        setMode('login_or_signup');
+        setInviteContext(undefined);
+      }
       // Navigation to HouseholdName screen is handled by useEffect watching showHouseholdNameScreen
       // RootNavigator will automatically show MainNavigator if user is set and flag is not set
     } catch (error) {
@@ -62,7 +83,13 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   const handleJoinHousehold = () => {
-    navigation.navigate('HouseholdOnboarding');
+    navigation.navigate('EnterInviteCode');
+  };
+
+  const handleChangeInvite = () => {
+    setMode('login_or_signup');
+    setInviteContext(undefined);
+    navigation.navigate('EnterInviteCode');
   };
 
   return (
@@ -75,21 +102,38 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           </View>
           <Text style={styles.appName}>Kitchen Hub</Text>
           <Text style={styles.tagline}>Your family's kitchen assistant</Text>
+          {mode === 'join_by_invite' && inviteContext?.householdName ? (
+            <Text style={styles.joiningText}>
+              Joining {inviteContext.householdName}
+            </Text>
+          ) : null}
         </View>
 
         {/* Sign In Buttons */}
         <View style={styles.buttonContainer}>
           <GoogleSignInButton onPress={handleGoogleSignIn} isLoading={isLoading} />
 
-          <TouchableOpacity
-            style={styles.joinButton}
-            onPress={handleJoinHousehold}
-            activeOpacity={0.7}
-            disabled={isLoading}
-          >
-            <Ionicons name="people-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
-            <Text style={styles.joinButtonText}>Join household</Text>
-          </TouchableOpacity>
+          {mode === 'join_by_invite' ? (
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={handleChangeInvite}
+              activeOpacity={0.7}
+              disabled={isLoading}
+            >
+              <Ionicons name="refresh-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
+              <Text style={styles.joinButtonText}>Change invite code</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={handleJoinHousehold}
+              activeOpacity={0.7}
+              disabled={isLoading}
+            >
+              <Ionicons name="people-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
+              <Text style={styles.joinButtonText}>Join household</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Footer */}
@@ -129,7 +173,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    ...boxShadow(4, 8, 'rgba(0, 0, 0, 0.15)') as any,
+    ...boxShadow(4, 8, 'rgba(0, 0, 0, 0.15)'),
     marginBottom: spacing.lg,
   },
   logoEmoji: {
@@ -143,6 +187,11 @@ const styles = StyleSheet.create({
   tagline: {
     ...typography.body,
     color: colors.textSecondary,
+  },
+  joiningText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
   },
   buttonContainer: {
     width: '100%',

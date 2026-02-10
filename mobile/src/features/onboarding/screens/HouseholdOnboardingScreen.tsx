@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surface,
         borderRadius: 16,
         padding: 24,
-        ...boxShadow(2, 8, 'rgba(0, 0, 0, 0.1)') as any,
+        ...boxShadow(2, 8, 'rgba(0, 0, 0, 0.1)'),
     },
     label: {
         fontSize: 14,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 16,
         alignItems: 'center',
-        ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)') as any,
+        ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
     },
     buttonDisabled: {
         backgroundColor: colors.border,

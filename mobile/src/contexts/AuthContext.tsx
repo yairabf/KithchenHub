@@ -260,11 +260,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Handles Google sign-in flow for native platforms.
    * Verifies user exists, checks household creation timestamp, and sets up user state.
    * 
-   * @param options - Optional parameters including householdId for joining existing household
+   * @param options - Optional parameters including householdId or inviteCode for joining existing household
    * @returns Object with isNewHousehold flag
    * @throws Error if sign-in fails or user verification fails
    */
-  const handleSignInWithGoogle = async (options?: { householdId?: string }): Promise<{ isNewHousehold: boolean }> => {
+  const handleSignInWithGoogle = async (
+    options?: { householdId?: string; inviteCode?: string },
+  ): Promise<{ isNewHousehold: boolean }> => {
     try {
       setIsLoading(true);
 
