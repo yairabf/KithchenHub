@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../contexts/AuthContext';
-import { colors, spacing, borderRadius, typography, shadows } from '../../../theme';
+import { colors, spacing, borderRadius, typography, shadows, boxShadow } from '../../../theme';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ManageHouseholdModal } from '../components/ManageHouseholdModal';
 import { InviteMemberModal } from '../components/InviteMemberModal';
@@ -58,7 +58,9 @@ export function SettingsScreen() {
             onPress={() => setShowLanguageSelector(true)}
           >
             <View style={styles.settingInfo}>
-              <Ionicons name="language-outline" size={22} color={colors.textPrimary} />
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.yellow }]}>
+                <Ionicons name="language-outline" size={20} color={colors.secondary} />
+              </View>
               <Text style={styles.settingLabel}>{t('language')}</Text>
             </View>
             <Text style={styles.settingValue}>{currentLanguageDisplayName}</Text>
@@ -74,17 +76,21 @@ export function SettingsScreen() {
               {user?.avatarUrl ? (
                 <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
               ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={32} color={colors.textSecondary} />
+                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.pastel.green }]}>
+                  <Ionicons name="person" size={28} color={colors.primary} />
                 </View>
               )}
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{user?.name ?? 'User'}</Text>
+              {user?.id ? (
+                <View style={styles.roleBadge}>
+                  <Text style={styles.roleText}>{user?.role ?? 'Member'}</Text>
+                </View>
+              ) : null}
               {user?.email ? (
                 <Text style={styles.profileEmail}>{user.email}</Text>
               ) : null}
-              <Text style={styles.profileProvider}>Connected via Google</Text>
             </View>
           </View>
 
@@ -121,7 +127,9 @@ export function SettingsScreen() {
             onPress={() => setShowManageHousehold(true)}
           >
             <View style={styles.settingInfo}>
-              <Ionicons name="people-outline" size={22} color={colors.textPrimary} />
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.cyan }]}>
+                <Ionicons name="people-outline" size={20} color={colors.primary} />
+              </View>
               <Text style={styles.settingLabel}>Manage household members</Text>
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
@@ -133,7 +141,9 @@ export function SettingsScreen() {
               onPress={() => setShowInviteModal(true)}
             >
               <View style={styles.settingInfo}>
-                <Ionicons name="person-add-outline" size={22} color={colors.textPrimary} />
+                <View style={[styles.iconContainer, { backgroundColor: colors.pastel.peach }]}>
+                  <Ionicons name="person-add-outline" size={20} color={colors.secondary} />
+                </View>
                 <Text style={styles.settingLabel}>Invite member to household</Text>
               </View>
               <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
@@ -155,7 +165,9 @@ export function SettingsScreen() {
           )}
           <TouchableOpacity style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Ionicons name="trash-outline" size={22} color={colors.error} />
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
+                <Ionicons name="trash-outline" size={20} color={colors.error} />
+              </View>
               <Text style={[styles.settingLabel, { color: colors.error }]}>Delete account</Text>
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
@@ -290,8 +302,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.xs,
+    ...boxShadow(1, 4, 'rgba(0, 0, 0, 0.05)'),
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   settingInfo: {
     flexDirection: 'row',
@@ -301,14 +322,31 @@ const styles = StyleSheet.create({
   settingLabel: {
     ...typography.body,
     marginStart: spacing.md,
+    fontWeight: '500',
   },
   settingValue: {
     ...typography.body,
     color: colors.textSecondary,
     marginEnd: spacing.xs,
+    fontSize: 14,
   },
   versionText: {
     ...typography.body,
     color: colors.textSecondary,
+    fontSize: 14,
+  },
+  roleBadge: {
+    backgroundColor: 'rgba(96, 108, 56, 0.1)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.xs,
+  },
+  roleText: {
+    ...typography.tiny,
+    color: colors.primary,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
 });
