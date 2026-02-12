@@ -505,9 +505,6 @@ export class CatalogService {
    * ```
    */
   async getShoppingCategories(): Promise<string[]> {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'catalogService.ts:402', message: 'getShoppingCategories called', data: { mockDataEnabled: config?.mockData?.enabled }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
     // If mock data is enabled, use static categories
     if (config?.mockData?.enabled) {
       this.logCatalogEvent('log', 'Mock data enabled, using static categories', {

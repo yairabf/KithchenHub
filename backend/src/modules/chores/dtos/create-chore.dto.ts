@@ -12,6 +12,10 @@ export class CreateChoreDto {
 
   @IsString()
   @IsOptional()
+  icon?: string;
+
+  @IsString()
+  @IsOptional()
   assigneeId?: string;
 
   @IsDateString()

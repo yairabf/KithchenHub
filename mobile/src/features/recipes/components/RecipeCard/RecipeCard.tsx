@@ -72,7 +72,7 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
         )}
       </View>
       <View style={styles.recipeInfo}>
-        <Text style={styles.recipeName} numberOfLines={1}>
+        <Text style={styles.recipeName} numberOfLines={1} ellipsizeMode="tail">
           {recipe.title || 'Untitled Recipe'}
         </Text>
         <View style={styles.recipeMetaRow}>

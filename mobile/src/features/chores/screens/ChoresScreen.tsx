@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   useWindowDimensions,
   GestureResponderEvent,
   RefreshControl,
@@ -18,6 +19,8 @@ import { ListItemCardWrapper } from '../../../common/components/ListItemCardWrap
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
+import { EmptyState } from '../../../common/components/EmptyState';
+import { ListItemSkeleton } from '../../../common/components/ListItemSkeleton';
 import { formatChoresText } from '../../../common/utils/shareUtils';
 import { useEntitySyncStatusWithEntity } from '../../../common/hooks/useSyncStatus';
 import { SyncStatusIndicator } from '../../../common/components/SyncStatusIndicator';
@@ -65,6 +68,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   // For guest mode, use service directly
   const [guestChores, setGuestChores] = useState<Chore[]>([]);
+  const [isLoadingChores, setIsLoadingChores] = useState(true);
 
   const chores = (isSignedIn ? cachedChores : guestChores)
     .filter(c => !c.deletedAt);
@@ -78,10 +82,14 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       repository.findAll()
         .then((chores) => {
           console.log('[ChoresScreen] Cache check completed, chores:', chores.length);
+          setIsLoadingChores(false);
         })
         .catch((error) => {
           console.error('[ChoresScreen] Failed to check cache:', error);
+          setIsLoadingChores(false);
         });
+    } else if (!isSignedIn) {
+      setIsLoadingChores(false);
     }
   }, [isSignedIn, repository]);
 
@@ -101,15 +109,18 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   useEffect(() => {
     if (!isSignedIn) {
       let isMounted = true;
+      setIsLoadingChores(true);
       const loadChores = async () => {
         try {
           const data = await choresService.getChores();
           if (isMounted) {
             setGuestChores(data);
+            setIsLoadingChores(false);
           }
         } catch (error) {
           if (isMounted) {
             console.error('Failed to load chores:', error);
+            setIsLoadingChores(false);
           }
         }
       };
@@ -245,15 +256,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     const total = todayChores.length;
     const completedCount = todayChores.filter(c => c.isCompleted).length;
     const progressValue = total > 0 ? (completedCount / total) * 100 : 0;
-    
-    // #region agent log
-    console.log('[ChoresScreen] Progress calculated:', {
-      total,
-      completed: completedCount,
-      progressValue,
-      todayChores: todayChores.map(c => ({ title: c.title, isCompleted: c.isCompleted }))
-    });
-    // #endregion
+
     return progressValue;
   }, [todayChores]);
 
@@ -266,11 +269,6 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     const syncStatus = useEntitySyncStatusWithEntity('chores', chore);
     const indicatorStatus = determineIndicatorStatus(syncStatus);
 
-    const handleEditPress = (e: GestureResponderEvent) => {
-      e.stopPropagation();
-      handleChorePress(chore);
-    };
-
     return (
       <SwipeableWrapper
         key={chore.id}
@@ -279,17 +277,30 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       >
         <ListItemCardWrapper
           backgroundColor={bgColor}
-          onPress={() => toggleChore(chore.id)}
           testID={`chore-card-${chore.id}`}
         >
-          <View style={styles.choreCard}>
-            <TouchableOpacity
+          <Pressable
+            style={styles.choreCard}
+            onPress={() => toggleChore(chore.id)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`${chore.title}, ${chore.isCompleted ? 'completed' : 'not completed'}, due ${chore.dueDate}${chore.assignee ? `, assigned to ${chore.assignee}` : ''}`}
+            accessibilityHint={`Tap to toggle ${chore.isCompleted ? 'incomplete' : 'complete'}`}
+          >
+            <Pressable
               style={styles.choreCardEditButton}
-              onPress={handleEditPress}
-              activeOpacity={0.6}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleChorePress(chore);
+              }}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit ${chore.title}`}
+              accessibilityHint="Opens chore details to edit"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </Pressable>
             <View style={styles.choreCardIcon}>
               <Text style={styles.choreCardIconText}>{chore.icon || '📋'}</Text>
               {/* Sync status indicator in icon area */}
@@ -326,7 +337,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
                 <View style={styles.uncheckmark} />
               )}
             </View>
-          </View>
+          </Pressable>
         </ListItemCardWrapper>
       </SwipeableWrapper>
     );
@@ -340,7 +351,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="HOME CHORES"
+        title="Home Chores"
         rightActions={headerActions}
       />
 
@@ -352,7 +363,24 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
       >
-        {isWideScreen ? (
+        {isLoadingChores ? (
+          // Loading skeletons
+          <View style={styles.narrowLayout}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <ListItemSkeleton key={index} />
+            ))}
+          </View>
+        ) : chores.length === 0 ? (
+          // Empty state
+          <EmptyState
+            icon="checkmark-done-outline"
+            title="No chores yet"
+            description="Create your first chore to start tracking household tasks"
+            actionLabel="Create first chore"
+            onActionPress={onOpenChoresModal}
+            actionColor={colors.chores}
+          />
+        ) : isWideScreen ? (
           // Two-column layout for tablets/landscape
           <View style={styles.wideLayout}>
             {/* Left column: Progress + Today */}

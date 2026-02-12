@@ -614,9 +614,6 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
    * Accepts ShoppingItemWithCatalog to support catalogItemId/masterItemId for API requests.
    */
   async createItem(item: Partial<ShoppingItem> & { catalogItemId?: string; masterItemId?: string }): Promise<ShoppingItem> {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:565',message:'createItem ENTRY',data:{itemName:item.name,listId:item.listId,catalogItemId:item.catalogItemId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     if (!item.listId) {
       throw new Error('Shopping item must have a listId');
     }
@@ -647,10 +644,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       // Step 1: Create optimistic entity
       const optimisticEntity = this.createOptimisticItem(item);
       const optimisticLocalId = optimisticEntity.localId;
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:572',message:'optimistic entity created',data:{optimisticId:optimisticEntity.id,optimisticLocalId:optimisticLocalId,itemName:item.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
+
       // Step 2: Update cache immediately (write-through) - ALWAYS FIRST
       await addEntityToCache(
         'shoppingItems',
@@ -667,9 +661,6 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
     if (isOnline) {
       try {
         const created = await this.service.createItem(item);
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:589',message:'API response received',data:{serverId:created.id,itemName:created.name,optimisticLocalId:optimisticLocalId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         // Replace optimistic entity with real entity from server
         // Match by localId to find and replace the optimistic entity
         // Use server ID as primary ID, preserve localId for tracking
@@ -677,10 +668,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
         
         // Read current cache to find and remove optimistic entity
         const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:596',message:'cache read BEFORE update',data:{cacheSize:current.length,items:current.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId})),serverId:created.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
+
         // First, remove ALL items with the server ID (defensive - handle race conditions)
         const withoutServerId = current.filter((i) => i.id !== created.id);
         
@@ -733,11 +721,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
           );
           await setCached('shoppingItems', deduplicated, (i) => this.getItemId(i));
         }
-        // #region agent log
-        const afterUpdate = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:663',message:'cache read AFTER update',data:{cacheSize:afterUpdate.length,items:afterUpdate.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId})),serverId:created.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        
+
         // Update list item count ONLY after successful API call (recalculates from fresh cache)
         await this.updateListItemCount(item.listId);
         cacheEvents.emitCacheChange('shoppingItems');
@@ -1083,30 +1067,18 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
     groceryItems: GroceryItem[]
   ): Promise<void> {
     if (payload == null) return;
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:934',message:'applyRealtimeItemChange ENTRY',data:{eventType:payload.eventType,itemId:payload.new?.id,itemName:payload.new?.name,listId:payload.new?.list_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     try {
       // Read current cache
       const current = await readCachedEntitiesForUpdate<ShoppingItem>('shoppingItems');
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:947',message:'realtime cache read BEFORE',data:{cacheSize:current.length,items:current.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId})),incomingId:payload.new?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
+
       // Apply change using existing utility
       const updated = applyShoppingItemChange(current, payload, groceryItems);
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:951',message:'realtime after applyShoppingItemChange',data:{beforeSize:current.length,afterSize:updated.length,items:updated.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
-      
+
       // Deduplicate by ID before writing (defensive - prevent duplicates from race conditions)
       const deduplicated = Array.from(
         new Map(updated.map((item) => [this.getItemId(item), item])).values()
       );
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'cacheAwareShoppingRepository.ts:956',message:'realtime after deduplication',data:{beforeSize:updated.length,afterSize:deduplicated.length,items:deduplicated.map(i=>({id:i.id,localId:i.localId,name:i.name,listId:i.listId}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-      
+
       // Write back to cache
       await setCached('shoppingItems', deduplicated, (i) => this.getItemId(i));
       

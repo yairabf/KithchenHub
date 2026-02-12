@@ -77,7 +77,9 @@ const formatTimeLabel = (date: Date | null): string | undefined => {
 const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
   const dueDate = parseDate(dto.dueDate);
   const isRecurring = Boolean(dto.repeat);
-  const resolvedSection: Chore['section'] = isRecurring ? 'recurring' : section;
+  // CRITICAL FIX: If the chore is in the 'today' bucket from the backend, keep it there.
+  // Only use 'recurring' section if it's NOT today.
+  const resolvedSection: Chore['section'] = section === 'today' ? 'today' : (isRecurring ? 'recurring' : section);
 
   return {
     id: dto.id,
@@ -127,13 +129,13 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
     return withCreatedAt({
       id: localId,
       localId: localId,
-      name: data.name ?? '',
+      title: data.title ?? '',
       assignee: data.assignee,
       dueDate: data.dueDate,
       dueTime: data.dueTime,
       reminder: data.reminder,
       isRecurring: data.isRecurring ?? false,
-      completed: data.completed ?? false,
+      isCompleted: data.isCompleted ?? false,
       section: data.section ?? 'today',
       icon: data.icon ?? DEFAULT_CHORE_ICON,
       createdAt: now,

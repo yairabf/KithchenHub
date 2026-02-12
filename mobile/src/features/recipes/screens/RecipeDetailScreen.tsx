@@ -485,7 +485,7 @@ export function RecipeDetailScreen({
     <SafeAreaView style={styles.container}>
       <View onLayout={handleScreenHeaderLayout}>
         <ScreenHeader
-          title="KITCHEN HUB"
+          title="Kitchen Hub"
           leftIcon="back"
           onLeftPress={onBack}
           rightActions={{

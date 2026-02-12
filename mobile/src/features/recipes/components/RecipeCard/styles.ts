@@ -41,12 +41,15 @@ export const styles = StyleSheet.create({
   },
   recipeInfo: {
     padding: spacing.sm,
+    flex: 1,
+    minWidth: 0,
   },
   recipeName: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.xs,
+    flexShrink: 1,
   },
   recipeMetaRow: {
     flexDirection: 'row',

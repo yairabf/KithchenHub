@@ -51,6 +51,7 @@ export class ChoresRepository {
     householdId: string,
     data: {
       title: string;
+      icon?: string;
       assigneeId?: string;
       dueDate?: Date;
       repeat?: string;
@@ -60,6 +61,7 @@ export class ChoresRepository {
       data: {
         householdId,
         title: data.title,
+        icon: data.icon,
         assigneeId: data.assigneeId,
         dueDate: data.dueDate,
         repeat: data.repeat,
@@ -71,6 +73,7 @@ export class ChoresRepository {
     id: string,
     data: {
       title?: string;
+      icon?: string;
       assigneeId?: string;
       dueDate?: Date;
     },

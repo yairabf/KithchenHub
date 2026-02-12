@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     StyleSheet,
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     TouchableWithoutFeedback,
@@ -14,11 +13,13 @@ import {
     SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme';
+import { colors, spacing, borderRadius } from '../../../theme';
+import { typography } from '../../../theme/typography';
 import { boxShadow } from '../../../theme/shadows';
 import { householdService } from '../../../services/householdService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { Toast } from '../../../common/components/Toast';
 
 export function HouseholdOnboardingScreen() {
     const { user, refreshUser } = useAuth(); // Assuming refreshUser exists, or we need to implement it
@@ -26,10 +27,19 @@ export function HouseholdOnboardingScreen() {
     const [name, setName] = useState('');
     const [inviteCode, setInviteCode] = useState('');
     const [loading, setLoading] = useState(false);
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+    const [toastType, setToastType] = useState<'error' | 'success' | 'info'>('error');
+
+    const showToast = (message: string, type: 'error' | 'success' | 'info' = 'error') => {
+        setToastMessage(message);
+        setToastType(type);
+        setToastVisible(true);
+    };
 
     const handleCreate = async () => {
         if (!name.trim()) {
-            Alert.alert('Error', 'Please enter a household name');
+            showToast('Please enter a household name');
             return;
         }
 
@@ -42,7 +52,7 @@ export function HouseholdOnboardingScreen() {
             }
         } catch (error: any) {
             console.error('Create household error:', error);
-            Alert.alert('Error', error.message || 'Failed to create household');
+            showToast(error.message || 'Failed to create household');
         } finally {
             setLoading(false);
         }
@@ -50,7 +60,7 @@ export function HouseholdOnboardingScreen() {
 
     const handleJoin = async () => {
         if (!inviteCode.trim()) {
-            Alert.alert('Error', 'Please enter an invite code');
+            showToast('Please enter an invite code');
             return;
         }
 
@@ -63,7 +73,7 @@ export function HouseholdOnboardingScreen() {
             }
         } catch (error: any) {
             console.error('Join household error:', error);
-            Alert.alert('Error', error.message || 'Failed to join household');
+            showToast(error.message || 'Failed to join household');
         } finally {
             setLoading(false);
         }
@@ -88,6 +98,9 @@ export function HouseholdOnboardingScreen() {
                             <TouchableOpacity
                                 style={[styles.tab, mode === 'create' && styles.activeTab]}
                                 onPress={() => setMode('create')}
+                                accessibilityLabel="Create new household"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: mode === 'create' }}
                             >
                                 <Text style={[styles.tabText, mode === 'create' && styles.activeTabText]}>
                                     Create New
@@ -96,6 +109,9 @@ export function HouseholdOnboardingScreen() {
                             <TouchableOpacity
                                 style={[styles.tab, mode === 'join' && styles.activeTab]}
                                 onPress={() => setMode('join')}
+                                accessibilityLabel="Join existing household"
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: mode === 'join' }}
                             >
                                 <Text style={[styles.tabText, mode === 'join' && styles.activeTabText]}>
                                     Join Existing
@@ -114,6 +130,8 @@ export function HouseholdOnboardingScreen() {
                                         value={name}
                                         onChangeText={setName}
                                         autoCapitalize="words"
+                                        accessibilityLabel="Household name"
+                                        accessibilityHint="Enter a name for your new household"
                                     />
                                     <Text style={styles.helperText}>
                                         Give your shared space a name. You can change this later.
@@ -122,6 +140,9 @@ export function HouseholdOnboardingScreen() {
                                         style={[styles.button, !name.trim() && styles.buttonDisabled]}
                                         onPress={handleCreate}
                                         disabled={loading || !name.trim()}
+                                        accessibilityLabel="Create household"
+                                        accessibilityRole="button"
+                                        accessibilityHint="Creates a new household with the entered name"
                                     >
                                         {loading ? (
                                             <ActivityIndicator color="#fff" />
@@ -141,6 +162,8 @@ export function HouseholdOnboardingScreen() {
                                         onChangeText={setInviteCode}
                                         autoCapitalize="none"
                                         autoCorrect={false}
+                                        accessibilityLabel="Invite code"
+                                        accessibilityHint="Enter the invite code shared by a household member"
                                     />
                                     <Text style={styles.helperText}>
                                         Ask a household member to share their invite code with you.
@@ -149,6 +172,9 @@ export function HouseholdOnboardingScreen() {
                                         style={[styles.button, !inviteCode.trim() && styles.buttonDisabled]}
                                         onPress={handleJoin}
                                         disabled={loading || !inviteCode.trim()}
+                                        accessibilityLabel="Join household"
+                                        accessibilityRole="button"
+                                        accessibilityHint="Joins the household using the entered invite code"
                                     >
                                         {loading ? (
                                             <ActivityIndicator color="#fff" />
@@ -162,6 +188,12 @@ export function HouseholdOnboardingScreen() {
                     </View>
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
+            <Toast
+                visible={toastVisible}
+                message={toastMessage}
+                type={toastType}
+                onHide={() => setToastVisible(false)}
+            />
         </SafeAreaView>
     );
 }
@@ -176,84 +208,77 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        padding: 24,
+        padding: spacing.lg,
         justifyContent: 'center',
     },
     header: {
-        marginBottom: 32,
+        marginBottom: spacing.xxl,
         alignItems: 'center',
     },
     title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: colors.textPrimary,
-        marginBottom: 12,
+        ...typography.h2,
+        marginBottom: spacing.sm,
         textAlign: 'center',
     },
     subtitle: {
-        fontSize: 16,
+        ...typography.body,
         color: colors.textMuted,
         textAlign: 'center',
-        lineHeight: 24,
     },
     tabContainer: {
         flexDirection: 'row',
-        marginBottom: 24,
+        marginBottom: spacing.lg,
         backgroundColor: colors.surface,
-        borderRadius: 12,
+        borderRadius: borderRadius.lg,
         padding: 4,
     },
     tab: {
         flex: 1,
-        paddingVertical: 12,
+        paddingVertical: spacing.sm,
         alignItems: 'center',
-        borderRadius: 8,
+        borderRadius: borderRadius.md,
     },
     activeTab: {
         backgroundColor: colors.primary,
     },
     tabText: {
-        fontSize: 16,
-        fontWeight: '600',
+        ...typography.button,
         color: colors.textMuted,
     },
     activeTabText: {
-        color: '#fff',
+        color: colors.textLight,
     },
     formContainer: {
         backgroundColor: colors.surface,
-        borderRadius: 16,
-        padding: 24,
+        borderRadius: borderRadius.xl,
+        padding: spacing.lg,
         ...boxShadow(2, 8, 'rgba(0, 0, 0, 0.1)'),
     },
     label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: colors.textPrimary,
-        marginBottom: 8,
+        ...typography.label,
+        marginBottom: spacing.xs,
         marginLeft: 4,
     },
     input: {
         backgroundColor: colors.background,
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        fontSize: 16,
-        color: colors.textPrimary,
+        borderRadius: borderRadius.lg,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        ...typography.body,
         borderWidth: 1,
         borderColor: colors.border,
-        marginBottom: 8,
+        marginBottom: spacing.xs,
     },
     helperText: {
-        fontSize: 13,
+        ...typography.caption,
         color: colors.textMuted,
-        marginBottom: 24,
+        marginBottom: spacing.lg,
         marginLeft: 4,
     },
     button: {
         backgroundColor: colors.primary,
-        borderRadius: 12,
-        paddingVertical: 16,
+        borderRadius: borderRadius.lg,
+        paddingVertical: spacing.md,
         alignItems: 'center',
         ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
     },
@@ -261,8 +286,8 @@ const styles = StyleSheet.create({
         backgroundColor: colors.border,
     },
     buttonText: {
-        fontSize: 16,
+        ...typography.button,
         fontWeight: 'bold',
-        color: '#fff',
+        color: colors.textLight,
     },
 });

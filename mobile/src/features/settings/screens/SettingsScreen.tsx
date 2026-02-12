@@ -163,7 +163,12 @@ export function SettingsScreen() {
               <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            accessibilityLabel="Delete account - This action cannot be undone"
+            accessibilityRole="button"
+            accessibilityHint="Permanently delete your account and all data"
+          >
             <View style={styles.settingInfo}>
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
                 <Ionicons name="trash-outline" size={20} color={colors.error} />

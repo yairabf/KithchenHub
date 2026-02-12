@@ -94,6 +94,7 @@ export class ChoresService {
   ): Promise<{ id: string }> {
     const chore = await this.choresRepository.createChore(householdId, {
       title: dto.title,
+      icon: dto.icon,
       assigneeId: dto.assigneeId,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
       repeat: dto.repeat,
@@ -129,6 +130,7 @@ export class ChoresService {
 
     const updatedChore = await this.choresRepository.updateChore(choreId, {
       title: dto.title,
+      icon: dto.icon,
       assigneeId: dto.assigneeId,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
     });
@@ -219,6 +221,31 @@ export class ChoresService {
   }
 
   /**
+   * Restores a soft-deleted chore.
+   *
+   * @param choreId - The chore ID
+   * @param householdId - The household ID for authorization
+   * @throws NotFoundException if chore doesn't exist
+   * @throws ForbiddenException if user doesn't have access
+   */
+  async restoreChore(choreId: string, householdId: string): Promise<void> {
+    // Note: findChoreById doesn't filter by deletedAt, so it can find deleted chores
+    const chore = await this.prisma.chore.findUnique({
+      where: { id: choreId },
+    });
+
+    if (!chore) {
+      throw new NotFoundException('Chore not found');
+    }
+
+    if (chore.householdId !== householdId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.choresRepository.restoreChore(choreId);
+  }
+
+  /**
    * Maps chore entity to DTO.
    * Accepts chore with or without assignee (e.g. from updateChore vs findChoresByHousehold).
    */
@@ -228,6 +255,7 @@ export class ChoresService {
     return {
       id: chore.id,
       title: chore.title,
+      icon: chore.icon,
       assigneeId: chore.assigneeId,
       assigneeName: chore.assignee?.name,
       dueDate: chore.dueDate,

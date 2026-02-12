@@ -10,6 +10,7 @@ import Animated, {
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { ProgressRingProps } from './types';
+import { useReducedMotion } from '../../../../common/hooks/useReducedMotion';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -22,6 +23,7 @@ export function ProgressRing({
   showPercentage = true,
   showEmoji = true,
 }: ProgressRingProps) {
+  const reduceMotion = useReducedMotion();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
@@ -68,45 +70,44 @@ export function ProgressRing({
   const colorAnimValue = useRef(new RNAnimated.Value(0)).current;
   const prevProgress = useRef(progress);
 
-  // #region agent log
-  console.log('[ProgressRing] Render', { progress, currentColor });
-  // #endregion
-
   useEffect(() => {
-    // #region agent log
-    console.log('[ProgressRing] useEffect - animating to:', progress);
-    // #endregion
+    if (reduceMotion) {
+      // Skip animation - instantly set values
+      animatedProgress.value = progress;
+      setCurrentColor(getColorForProgress(progress));
+      prevProgress.current = progress;
+    } else {
+      // Animate the arc
+      animatedProgress.value = withTiming(progress, {
+        duration: 1000,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+      });
 
-    // Animate the arc
-    animatedProgress.value = withTiming(progress, {
-      duration: 1000,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-    });
+      // Animate color transition
+      const startColor = getColorForProgress(prevProgress.current);
+      const endColor = getColorForProgress(progress);
 
-    // Animate color transition
-    const startColor = getColorForProgress(prevProgress.current);
-    const endColor = getColorForProgress(progress);
+      colorAnimValue.setValue(0);
+      RNAnimated.timing(colorAnimValue, {
+        toValue: 1,
+        duration: 1000,
+        easing: RNEasing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: false,
+      }).start();
 
-    colorAnimValue.setValue(0);
-    RNAnimated.timing(colorAnimValue, {
-      toValue: 1,
-      duration: 1000,
-      easing: RNEasing.bezier(0.4, 0, 0.2, 1),
-      useNativeDriver: false,
-    }).start();
+      // Interpolate colors during animation
+      const listener = colorAnimValue.addListener(({ value }) => {
+        const interpolated = interpolateColorManual(startColor, endColor, value);
+        setCurrentColor(interpolated);
+      });
 
-    // Interpolate colors during animation
-    const listener = colorAnimValue.addListener(({ value }) => {
-      const interpolated = interpolateColorManual(startColor, endColor, value);
-      setCurrentColor(interpolated);
-    });
+      prevProgress.current = progress;
 
-    prevProgress.current = progress;
-
-    return () => {
-      colorAnimValue.removeListener(listener);
-    };
-  }, [progress]);
+      return () => {
+        colorAnimValue.removeListener(listener);
+      };
+    }
+  }, [progress, reduceMotion]);
 
   const animatedProps = useAnimatedProps(() => {
     'worklet';

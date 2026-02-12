@@ -94,4 +94,16 @@ export class ChoresController {
     await this.choresService.deleteChore(choreId, user.householdId);
     return { success: true };
   }
+
+  @Post(':id/restore')
+  async restoreChore(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') choreId: string,
+  ) {
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+    await this.choresService.restoreChore(choreId, user.householdId);
+    return { success: true };
+  }
 }

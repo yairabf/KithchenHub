@@ -17,6 +17,7 @@ import { useCatalog } from '../../../common/hooks/useCatalog';
 import { colors } from '../../../theme';
 import { SafeImage } from '../../../common/components/SafeImage';
 import { Toast } from '../../../common/components/Toast';
+import { ListItemSkeleton } from '../../../common/components/ListItemSkeleton';
 import { GrocerySearchBar } from '../../shopping/components/GrocerySearchBar';
 import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
 import type { ShoppingItem } from '../../../mocks/shopping';
@@ -382,7 +383,12 @@ export function DashboardScreen({
             <Text style={styles.timeText}>{formattedTime}</Text>
             {isTablet && <Text style={styles.dateText}>{formattedDate}</Text>}
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            accessibilityLabel="Notifications - View recent activity and updates"
+            accessibilityRole="button"
+            accessibilityHint="Tap to open notifications"
+          >
             <Ionicons name="notifications-outline" size={22} color={colors.textSecondary} />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
@@ -451,7 +457,12 @@ export function DashboardScreen({
                       containerStyle={styles.grocerySearchBarContainer}
                     />
                   </View>
-                  <TouchableOpacity style={styles.micButton}>
+                  <TouchableOpacity
+                    style={styles.micButton}
+                    accessibilityLabel="Voice input"
+                    accessibilityRole="button"
+                    accessibilityHint="Add items using voice"
+                  >
                     <Ionicons name="mic-outline" size={22} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
@@ -465,6 +476,9 @@ export function DashboardScreen({
                         style={styles.suggestionChip}
                         onPress={() => handleSuggestionPress(item)}
                         activeOpacity={0.7}
+                        accessibilityLabel={`Add ${item.name}`}
+                        accessibilityRole="button"
+                        accessibilityHint={`Adds ${item.name} to shopping list`}
                       >
                         <Ionicons name="add" size={14} color={colors.textSecondary} />
                         <Text style={styles.suggestionChipText}>{item.name}</Text>
@@ -482,6 +496,9 @@ export function DashboardScreen({
                     style={styles.quickStatCard}
                     onPress={() => handleStatPress(stat.route)}
                     activeOpacity={0.7}
+                    accessibilityLabel={`${stat.label}: ${stat.value}`}
+                    accessibilityRole="button"
+                    accessibilityHint={`Navigate to ${stat.label}`}
                   >
                     <View
                       style={[
@@ -524,13 +541,23 @@ export function DashboardScreen({
                 <TouchableOpacity
                   onPress={() => onNavigateToTab('Chores')}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="View all chores"
+                  accessibilityRole="button"
+                  accessibilityHint="Navigate to chores screen"
                 >
                   <Text style={styles.viewAllLink}>View All</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.choreList}>
-                {!choresLoading &&
+                {choresLoading ? (
+                  // Show skeleton loaders while loading
+                  <>
+                    <ListItemSkeleton />
+                    <ListItemSkeleton />
+                    <ListItemSkeleton />
+                  </>
+                ) : (
                   todayChores.map((chore) => (
                     <TouchableOpacity
                       key={chore.id}
@@ -541,6 +568,9 @@ export function DashboardScreen({
                       ]}
                       onPress={() => toggleChore(chore.id)}
                       activeOpacity={0.8}
+                      accessibilityLabel={`${chore.title}, ${chore.isCompleted ? 'completed' : 'pending'}, assigned to ${chore.assignee ?? 'unassigned'}`}
+                      accessibilityRole="button"
+                      accessibilityHint={`Tap to mark ${chore.isCompleted ? 'incomplete' : 'complete'}`}
                     >
                       <View style={styles.choreAvatarContainer}>
                         <SafeImage
@@ -548,14 +578,16 @@ export function DashboardScreen({
                           style={styles.choreAvatar}
                         />
                       </View>
-                      <View style={styles.choreContent}>
-                        <View style={styles.choreTitleRow}>
+                      <View style={[styles.choreContent, { flex: 1 }]}>
+                        <View style={[styles.choreTitleRow, { flexDirection: 'row', alignItems: 'center' }]}>
                           <Text
                             style={[
                               styles.choreTitle,
                               chore.isCompleted && styles.choreTitleDone,
+                              { flexShrink: 1 },
                             ]}
                             numberOfLines={1}
+                            ellipsizeMode="tail"
                           >
                             {chore.title}
                           </Text>
@@ -589,13 +621,17 @@ export function DashboardScreen({
                         </View>
                       </View>
                     </TouchableOpacity>
-                  ))}
+                  ))
+                )}
               </View>
 
               <TouchableOpacity
                 style={styles.addHouseholdTaskButton}
                 onPress={onOpenChoresModal}
                 activeOpacity={0.7}
+                accessibilityLabel="Add household task"
+                accessibilityRole="button"
+                accessibilityHint="Opens form to create a new chore"
               >
                 <Ionicons name="add" size={16} color={colors.textMuted} />
                 <Text style={styles.addHouseholdTaskText}>Add Household Task</Text>

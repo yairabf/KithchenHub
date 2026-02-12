@@ -62,6 +62,10 @@ export function NavButton({
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      accessibilityLabel={label}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isActive }}
+      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
     >
       <Ionicons
         name={isActive ? iconActive : icon}

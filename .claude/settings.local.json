@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "permissions": {
     "allow": [
       "mcp__playwright__browser_type",
@@ -13,7 +16,19 @@
       "mcp__playwright__browser_press_key",
       "mcp__playwright__browser_close",
       "Bash(export LANG=en_US.UTF-8)",
-      "Bash(pod install)"
+      "Bash(pod install)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npm test:*)",
+      "Bash(npm run prisma:generate:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run prisma:migrate:dev:*)",
+      "Bash(npm run:*)",
+      "Bash(grep:*)"
     ]
-  }
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  },
+  "teammateMode": "in-process"
 }

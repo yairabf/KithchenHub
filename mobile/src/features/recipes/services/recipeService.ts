@@ -375,8 +375,6 @@ export class RemoteRecipeService implements IRecipeService {
     private async fetchRecipesFromApi(): Promise<Recipe[]> {
         // Backend returns RecipeListItemDto[] for GET /recipes (only id, title, imageUrl)
         const response = await api.get<RecipeListItemDto[]>('/recipes');
-        console.log('[RemoteRecipeService] fetchRecipesFromApi - received', response.length, 'recipes');
-        console.log('[RemoteRecipeService] fetchRecipesFromApi - response:', JSON.stringify(response, null, 2));
 
         // Map list items to Recipe format (ingredients/instructions will be empty arrays)
         // Full details would require fetching each recipe individually via GET /recipes/:id
@@ -393,17 +391,13 @@ export class RemoteRecipeService implements IRecipeService {
                 cookTime: item.cookTime,
                 category: item.category,
             };
-            console.log('[RemoteRecipeService] Mapped recipe item:', JSON.stringify({ id: recipe.id, title: recipe.title }, null, 2));
             return recipe;
         });
-
-        console.log('[RemoteRecipeService] fetchRecipesFromApi - mapped recipes:', JSON.stringify(mapped, null, 2));
 
         // Normalize timestamps from API response (server is authority)
         // Ensure ingredients and instructions are always arrays
         return mapped.map((item) => {
             const normalized = normalizeTimestampsFromApi<Recipe>(item as any);
-            console.log('[RemoteRecipeService] After normalization:', JSON.stringify({ id: normalized.id, title: normalized.title }, null, 2));
 
             // Preserve title field explicitly (it might be lost during normalization)
             const recipeTitle = item.title || normalized.title || 'Untitled Recipe';
@@ -415,7 +409,6 @@ export class RemoteRecipeService implements IRecipeService {
                 cookTime: normalized.cookTime ?? item.cookTime,
                 category: normalized.category ?? item.category,
             };
-            console.log('[RemoteRecipeService] Final recipe:', JSON.stringify({ id: finalRecipe.id, title: finalRecipe.title }, null, 2));
             return finalRecipe;
         });
     }
@@ -429,18 +422,14 @@ export class RemoteRecipeService implements IRecipeService {
 
         // If cached recipe has full details (ingredients/instructions), return it
         if (cachedRecipe && cachedRecipe.ingredients && cachedRecipe.ingredients.length > 0) {
-            console.log('[RemoteRecipeService] Found recipe in cache with full details');
             return cachedRecipe;
         }
 
         // Otherwise fetch from API
-        console.log('[RemoteRecipeService] Fetching full recipe details from API...');
         const response = await api.get<RecipeDetailDto>(`/recipes/${recipeId}`);
-        console.log('[RemoteRecipeService] API response:', JSON.stringify(response, null, 2));
 
         // Map backend RecipeDetailDto to frontend Recipe format
         const mappedResponse = mapDetailDtoToRecipe(response);
-        console.log('[RemoteRecipeService] Mapped response:', JSON.stringify(mappedResponse, null, 2));
 
         // Normalize timestamps
         const normalized = normalizeTimestampsFromApi<Recipe>(mappedResponse);
@@ -464,7 +453,6 @@ export class RemoteRecipeService implements IRecipeService {
             await setCached('recipes', [...cached, fullRecipe], (r) => r.id);
         }
 
-        console.log('[RemoteRecipeService] Recipe details fetched and cached');
         return fullRecipe;
     }
 

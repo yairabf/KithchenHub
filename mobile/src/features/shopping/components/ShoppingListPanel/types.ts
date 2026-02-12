@@ -27,6 +27,8 @@ export interface ShoppingListPanelProps {
   searchQuery?: string;
   onSearchChange?: (text: string) => void;
   searchMode?: 'local' | 'remote';
+  // Loading state
+  isLoading?: boolean;
 }
 
 export type { ShoppingItem, ShoppingList, GroceryItem };

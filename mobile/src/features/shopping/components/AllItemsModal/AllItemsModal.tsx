@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   TouchableWithoutFeedback,
   Animated,
   TextInput,
+  AccessibilityInfo,
+  findNodeHandle,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../theme';
@@ -26,6 +29,8 @@ export function AllItemsModal({
 }: AllItemsModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const titleRef = useRef<Text>(null);
+
   const { results: searchResults, isSearching } = useDebouncedRemoteSearch<GroceryItem>({
     query: searchQuery,
     searchFn: searchGroceries,
@@ -34,6 +39,19 @@ export function AllItemsModal({
       console.error('All items search failed:', error);
     },
   });
+
+  // Set initial focus when modal opens
+  useEffect(() => {
+    if (visible && titleRef.current) {
+      const timer = setTimeout(() => {
+        const reactTag = findNodeHandle(titleRef.current);
+        if (reactTag && Platform.OS !== 'web') {
+          AccessibilityInfo.setAccessibilityFocus(reactTag);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
 
   console.log('AllItemsModal render - visible:', visible, 'items count:', items.length);
 
@@ -102,14 +120,30 @@ export function AllItemsModal({
         </TouchableWithoutFeedback>
 
         {/* Side Panel */}
-        <Animated.View style={styles.sidePanel}>
+        <Animated.View
+          style={styles.sidePanel}
+          accessibilityViewIsModal={true}
+          importantForAccessibility="yes"
+        >
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>All Items</Text>
+              <Text
+                ref={titleRef}
+                style={styles.headerTitle}
+                accessibilityRole="header"
+                accessible={true}
+              >
+                All Items
+              </Text>
               <Text style={styles.headerSubtitle}>{filteredItems.length} items</Text>
             </View>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={handleClose}
+              style={styles.closeButton}
+              accessibilityLabel="Close all items modal"
+              accessibilityRole="button"
+            >
               <Ionicons name="close" size={28} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>

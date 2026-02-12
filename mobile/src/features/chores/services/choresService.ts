@@ -254,6 +254,7 @@ export class RemoteChoresService implements IChoresService {
     // Map to backend DTO format
     const dto = {
       title: payload.title || chore.title,
+      icon: chore.icon || DEFAULT_CHORE_ICON,
       assigneeId: undefined, // Would need to map assignee name to ID
       dueDate: parseDueDateString(chore.dueDate || 'Today', chore.dueTime), // CRITICAL FIX: Parse due date
       repeat: undefined,
@@ -292,19 +293,28 @@ export class RemoteChoresService implements IChoresService {
       title?: string;
       assigneeId?: string;
       dueDate?: string;
-      repeat?: string;
+      repeat?: string | null;
+      icon?: string;
     } = {};
 
     if (updates.title !== undefined) {
       dto.title = updates.title;
     }
+    if ((updates as any).assigneeId !== undefined) {
+      dto.assigneeId = (updates as any).assigneeId;
+    }
+    if ((updates as any).icon !== undefined) {
+      dto.icon = (updates as any).icon;
+    }
     if (updates.dueDate !== undefined || updates.dueTime !== undefined) {
       dto.dueDate = parseDueDateString(updates.dueDate ?? updated.dueDate, updates.dueTime ?? updated.dueTime);
     }
-    if (updates.isRecurring !== undefined) {
+    // Prefer explicit repeat field if provided, otherwise map from isRecurring
+    if ((updates as any).repeat !== undefined) {
+      dto.repeat = (updates as any).repeat;
+    } else if (updates.isRecurring !== undefined) {
       dto.repeat = mapIsRecurringToRepeat(updates.isRecurring);
     }
-    // Note: assigneeId mapping requires user lookup - left as undefined for now
     await api.patch(`/chores/${choreId}`, dto);
     // Server is authority: fetch the updated chore to get server timestamps
     const updatedChore = await this.getChores().then(chores => chores.find(c => c.id === choreId));

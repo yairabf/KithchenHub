@@ -6,6 +6,7 @@ import { useOAuthSignIn } from '../features/auth/hooks/useOAuthSignIn';
 import { api, setOnUnauthorizedHandler } from '../services/api';
 import { tokenStorage } from '../features/auth/services/tokenStorage';
 import { authApi } from '../features/auth/services/authApi';
+import { logger } from '../common/utils/logger';
 import {
   verifyHouseholdIsNewlyCreated,
   mapUserResponseToUser,
@@ -29,6 +30,9 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   signInWithGoogle: (options?: { householdId?: string; inviteCode?: string }) => Promise<{ isNewHousehold: boolean }>;
+  signInWithDemo: () => Promise<void>;
+  signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   showHouseholdNameScreen: boolean;
   setShowHouseholdNameScreen: (show: boolean) => void;
@@ -62,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: response.role,
       };
     } catch (error) {
-      console.error('Error fetching current user:', error);
+      logger.error('Error fetching current user:', error);
       throw new Error('Failed to fetch user information');
     }
   }, []);
@@ -80,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.removeItem(STORAGE_KEY);
       }
     } catch (error) {
-      console.error('Error saving user:', error);
+      logger.error('Error saving user:', error);
     }
   }, []);
 
@@ -109,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           api.setAuthToken(storedToken);
         } catch (error) {
           // Token is invalid, clear it
-          console.warn('Stored token is invalid, clearing session', error);
+          logger.warn('Stored token is invalid, clearing session', error);
           await tokenStorage.clearTokens();
           api.setAuthToken(null);
         }
@@ -120,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         api.setAuthToken(null);
       }
     } catch (error) {
-      console.error('Error loading user:', error);
+      logger.error('Error loading user:', error);
     } finally {
       setIsLoading(false);
     }
@@ -136,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleOAuthCallback = useCallback(async (token: string, isNewHousehold: boolean) => {
     // Prevent race conditions from duplicate callbacks
     if (isProcessingOAuthRef.current) {
-      console.warn('OAuth callback already in progress, ignoring duplicate');
+      logger.warn('OAuth callback already in progress, ignoring duplicate');
       return;
     }
 
@@ -154,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Verify token was saved (for debugging)
       const verifyToken = await tokenStorage.getAccessToken();
       if (!verifyToken || verifyToken !== token) {
-        console.error('Token was not saved correctly to storage');
+        logger.error('Token was not saved correctly to storage');
       }
 
       // Fetch full user data from backend to verify user exists and get household info
@@ -190,10 +194,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem(IS_NEW_HOUSEHOLD_KEY, 'true');
       } else if (isNewHousehold) {
         // Log warning if backend says new household but verification failed
-        console.warn('Backend reported new household but verification failed - household may already exist');
+        logger.warn('Backend reported new household but verification failed - household may already exist');
       }
     } catch (error) {
-      console.error('Error handling OAuth callback:', error);
+      logger.error('Error handling OAuth callback:', error);
       // Clear tokens on error to force re-authentication
       await tokenStorage.clearTokens();
       api.setAuthToken(null);
@@ -218,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.history.replaceState({}, document.title, window.location.pathname);
       } else if (error) {
         // Handle OAuth error callback
-        console.error('OAuth error:', error, urlParams.get('message'));
+        logger.error('OAuth error:', error, urlParams.get('message'));
         // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname);
       } else {
@@ -239,10 +243,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token) {
           // Double-check token is set (defensive)
           api.setAuthToken(token);
-          console.log('[AuthContext] Token verified for authenticated user:', user.email);
+          logger.debug('[AuthContext] Token verified for authenticated user:', user.email);
         } else {
           // Non-guest user but no token - this shouldn't happen, clear user
-          console.error('[AuthContext] Non-guest user found but no token available - clearing user state');
+          logger.error('[AuthContext] Non-guest user found but no token available - clearing user state');
           setUser(null);
           await AsyncStorage.removeItem(STORAGE_KEY);
           api.setAuthToken(null);
@@ -315,14 +319,140 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setShowHouseholdNameScreen(true);
       } else if (result.isNewHousehold) {
         // Log warning if backend says new household but verification failed
-        console.warn('Backend reported new household but verification failed - household may already exist');
+        logger.warn('Backend reported new household but verification failed - household may already exist');
       }
 
       // Return isNewHousehold flag for navigation decisions
       return { isNewHousehold: result.isNewHousehold || false };
     } catch (error) {
-      console.error('Error signing in with Google:', error);
+      logger.error('Error signing in with Google:', error);
       // Clear tokens on error to force re-authentication
+      await tokenStorage.clearTokens();
+      api.setAuthToken(null);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Demo sign-in for development/testing without Supabase.
+   * Creates a mock user with a test household.
+   */
+  const handleSignInWithDemo = async () => {
+    try {
+      setIsLoading(true);
+
+      logger.debug('[AuthContext] Starting demo sign-in...');
+
+      // Create a demo user with a demo household
+      const demoUser: User = {
+        id: 'demo-user-id',
+        email: 'demo@kitchenhub.app',
+        name: 'Demo User',
+        avatarUrl: undefined,
+        householdId: 'demo-household-id',
+        isGuest: false,
+        role: 'owner',
+      };
+
+      logger.debug('[AuthContext] Demo user created:', demoUser);
+
+      // Save demo user to state and storage
+      setUser(demoUser);
+      await saveUser(demoUser);
+
+      // Trigger new household creation flow to simulate onboarding
+      setShowHouseholdNameScreen(true);
+
+      logger.debug('[AuthContext] Demo user signed in - showing household name screen');
+    } catch (error) {
+      logger.error('[AuthContext] Error signing in with demo:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Registers a new user with email and password
+   */
+  const handleSignUpWithEmail = async (email: string, password: string, name: string) => {
+    try {
+      setIsLoading(true);
+
+      const response = await authApi.register({ email, password, name });
+
+      if (!response.success) {
+        throw new Error(response.message || 'Registration failed');
+      }
+
+      logger.debug('[AuthContext] User registered successfully');
+    } catch (error) {
+      logger.error('[AuthContext] Error registering user:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Signs in a user with email and password
+   */
+  const handleSignInWithEmail = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+
+      const response = await authApi.login({ email, password });
+
+      // Backend returns tokens directly in response (not wrapped in data)
+      if (!response.accessToken) {
+        throw new Error('Login failed - no access token received');
+      }
+
+      // Store token first (critical operation)
+      try {
+        await tokenStorage.saveAccessToken(response.accessToken);
+      } catch (storageError) {
+        logger.error('[AuthContext] Failed to save token:', storageError);
+        throw new Error('Failed to save authentication data. Please try again.');
+      }
+
+      // Only set on API client after successful storage
+      api.setAuthToken(response.accessToken);
+
+      // Map user data
+      const userData: User = {
+        id: response.user.id,
+        email: response.user.email || '',
+        name: response.user.name || 'Kitchen User',
+        avatarUrl: response.user.avatarUrl,
+        householdId: response.user.householdId || undefined,
+        isGuest: response.user.isGuest,
+        role: response.user.role,
+      };
+
+      // Save user data
+      try {
+        await saveUser(userData);
+        setUser(userData);
+      } catch (userSaveError) {
+        // Rollback token on user save failure
+        await tokenStorage.clearTokens();
+        api.setAuthToken(null);
+        logger.error('[AuthContext] Failed to save user data:', userSaveError);
+        throw new Error('Failed to save user information. Please try again.');
+      }
+
+      // If user has no household, show household creation flow
+      if (!userData.householdId) {
+        setShowHouseholdNameScreen(true);
+      }
+
+      logger.debug('[AuthContext] User signed in successfully');
+    } catch (error) {
+      logger.error('[AuthContext] Error signing in:', error);
+      // Ensure clean state on any error
       await tokenStorage.clearTokens();
       api.setAuthToken(null);
       throw error;
@@ -350,7 +480,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Set up handler for 401 errors to automatically sign out
   useEffect(() => {
     const handleUnauthorized = async () => {
-      console.warn('[AuthContext] 401 error detected - clearing session');
+      logger.warn('[AuthContext] 401 error detected - clearing session');
       // Clear stored user
       await saveUser(null);
       // Clear tokens from secure storage
@@ -375,6 +505,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         signInWithGoogle: handleSignInWithGoogle,
+        signInWithDemo: handleSignInWithDemo,
+        signUpWithEmail: handleSignUpWithEmail,
+        signInWithEmail: handleSignInWithEmail,
         signOut: handleSignOut,
         showHouseholdNameScreen,
         setShowHouseholdNameScreen,

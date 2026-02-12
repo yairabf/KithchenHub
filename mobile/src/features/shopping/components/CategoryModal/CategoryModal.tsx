@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   Image,
   TouchableWithoutFeedback,
   Animated,
+  AccessibilityInfo,
+  findNodeHandle,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../theme';
@@ -21,6 +24,21 @@ export function CategoryModal({
   onClose,
   onSelectItem,
 }: CategoryModalProps) {
+  const titleRef = useRef<Text>(null);
+
+  // Set initial focus when modal opens
+  useEffect(() => {
+    if (visible && titleRef.current) {
+      const timer = setTimeout(() => {
+        const reactTag = findNodeHandle(titleRef.current);
+        if (reactTag && Platform.OS !== 'web') {
+          AccessibilityInfo.setAccessibilityFocus(reactTag);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
+
   return (
     <Modal
       visible={visible}
@@ -35,14 +53,30 @@ export function CategoryModal({
         </TouchableWithoutFeedback>
 
         {/* Side Panel */}
-        <Animated.View style={styles.sidePanel}>
+        <Animated.View
+          style={styles.sidePanel}
+          accessibilityViewIsModal={true}
+          importantForAccessibility="yes"
+        >
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>{categoryName}</Text>
+              <Text
+                ref={titleRef}
+                style={styles.headerTitle}
+                accessibilityRole="header"
+                accessible={true}
+              >
+                {categoryName}
+              </Text>
               <Text style={styles.headerSubtitle}>{items.length} items</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityLabel="Close category modal"
+              accessibilityRole="button"
+            >
               <Ionicons name="close" size={28} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
