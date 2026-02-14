@@ -13,7 +13,7 @@ By creating an account, signing in, or using the Service, you confirm that you h
 
 ## 2. Description of the Service
 
-Kitchen Hub is a household management app that lets you manage shopping lists, recipes, and chores, optionally with other household members. The Service may be used in guest mode (local data only) or with an account (synced data). We may update, suspend, or discontinue features with reasonable notice where practicable.
+Kitchen Hub is a household management app that lets you manage shopping lists, recipes, and chores, optionally with other household members. Use of the Service requires an account (sign-in). We may update, suspend, or discontinue features with reasonable notice where practicable.
 
 ## 3. Account and Household Rules
 
