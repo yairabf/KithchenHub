@@ -5,7 +5,7 @@ import { colors, shadows, spacing, borderRadius, typography } from '../../../../
  * Category icon dimensions and positioning constants.
  * These values control the size and placement of category icons/images in the tile layout.
  */
-const CATEGORY_ICON_SIZE = 48; // Width and height for category icons in pixels
+const CATEGORY_ICON_SIZE = 80; // Width and height for category icons in pixels
 const ICON_CORNER_OFFSET = 8;  // Distance from top-right corner for icon positioning
 
 export const styles = StyleSheet.create({

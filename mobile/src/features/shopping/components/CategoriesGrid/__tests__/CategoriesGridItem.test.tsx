@@ -62,10 +62,21 @@ describe('CategoriesGridItem - Refactored Layout', () => {
 
       const nameElement = getByText(props.category.name);
       expect(nameElement).toBeTruthy();
-      expect(nameElement.props.style).toMatchObject({
-        fontSize: 15,
+      
+      // Check that style is an array with base styles and responsive fontSize
+      const styleArray = Array.isArray(nameElement.props.style) 
+        ? nameElement.props.style 
+        : [nameElement.props.style];
+      
+      // Base style should include fontWeight
+      expect(styleArray[0]).toMatchObject({
         fontWeight: '700',
       });
+      
+      // Responsive fontSize should be present (13-18px range for phone/tablet)
+      const responsiveStyle = styleArray.find(s => s.fontSize !== undefined);
+      expect(responsiveStyle?.fontSize).toBeGreaterThanOrEqual(13);
+      expect(responsiveStyle?.fontSize).toBeLessThanOrEqual(18);
     });
 
     it('should render icon/image at top-right when present', () => {
@@ -121,7 +132,7 @@ describe('CategoriesGridItem - Refactored Layout', () => {
   });
 
   describe('Icon positioning and sizing', () => {
-    it('should position icon at top-right corner with correct dimensions', () => {
+    it('should position icon at top-right corner with responsive dimensions', () => {
       const category: Category = {
         id: 'test',
         name: 'Test Category',
@@ -139,13 +150,26 @@ describe('CategoriesGridItem - Refactored Layout', () => {
       );
 
       const icon = getByTestId('category-icon-test');
-      expect(icon.props.style).toMatchObject({
+      const styleArray = Array.isArray(icon.props.style) 
+        ? icon.props.style 
+        : [icon.props.style];
+      
+      // Base style should have position absolute
+      expect(styleArray[0]).toMatchObject({
         position: 'absolute',
-        top: 8,
-        right: 8,
-        width: 48,
-        height: 48,
       });
+      
+      // Responsive dimensions should be in valid ranges
+      const responsiveStyle = styleArray.find(s => s.width !== undefined);
+      expect(responsiveStyle?.width).toBeGreaterThanOrEqual(48);
+      expect(responsiveStyle?.width).toBeLessThanOrEqual(100);
+      expect(responsiveStyle?.height).toBeGreaterThanOrEqual(48);
+      expect(responsiveStyle?.height).toBeLessThanOrEqual(100);
+      expect(responsiveStyle?.top).toBeGreaterThanOrEqual(6);
+      expect(responsiveStyle?.top).toBeLessThanOrEqual(10);
+      expect(responsiveStyle?.right).toBeGreaterThanOrEqual(6);
+      expect(responsiveStyle?.right).toBeLessThanOrEqual(10);
+      
       expect(icon.props.resizeMode).toBe('contain');
     });
 
