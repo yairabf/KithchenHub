@@ -6,14 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   useWindowDimensions,
-  GestureResponderEvent,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, borderRadius } from '../../../theme';
-import { ProgressRing } from '../components/ProgressRing';
-import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
-import { ListItemCardWrapper } from '../../../common/components/ListItemCardWrapper';
+import { colors } from '../../../theme';
+import { ChoreCard } from '../components/ChoreCard';
+import { ChoresProgressCard } from '../components/ChoresProgressCard';
+import { ChoresSection } from '../components/ChoresSection';
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatChoresText } from '../../../common/utils/shareUtils';
@@ -240,78 +240,32 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     return progressValue;
   }, [todayChores]);
 
-  /**
-   * Chore Card Component
-   * Renders a single chore item with swipe-to-delete and edit functionality
-   */
-  const ChoreCard = React.memo(({ chore, bgColor }: { chore: Chore; bgColor: string }) => {
-    const handleEditPress = (e: GestureResponderEvent) => {
-      e.stopPropagation();
-      handleChorePress(chore);
-    };
-
-    return (
-      <SwipeableWrapper
-        key={chore.id}
-        onSwipeDelete={() => handleDeleteChore(chore.id)}
-        borderRadius={borderRadius.xxl}
-      >
-        <ListItemCardWrapper
-          backgroundColor={bgColor}
-          onPress={() => toggleChore(chore.id)}
-          testID={`chore-card-${chore.id}`}
-        >
-          <View style={styles.choreCard}>
-            <TouchableOpacity
-              style={styles.choreCardEditButton}
-              onPress={handleEditPress}
-              activeOpacity={0.6}
-            >
-              <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-            <View style={styles.choreCardIcon}>
-              <Text style={styles.choreCardIconText}>{chore.icon || '📋'}</Text>
-            </View>
-            <View style={styles.choreCardContent}>
-              <Text
-                style={[styles.choreCardName, chore.isCompleted && styles.choreCompleted]}
-                numberOfLines={1}
-              >
-                {chore.title}
-              </Text>
-              <Text style={styles.choreCardTime} numberOfLines={1}>
-                {chore.dueDate} {chore.dueTime}
-              </Text>
-            </View>
-            {chore.assignee && (
-              <View style={styles.choreCardAssignee}>
-                <Text style={styles.choreCardAssigneeText} numberOfLines={1}>
-                  {chore.assignee}
-                </Text>
-              </View>
-            )}
-            <View style={styles.choreCardCheck}>
-              {chore.isCompleted ? (
-                <View style={styles.checkmark}>
-                  <Ionicons name="checkmark" size={18} color={colors.success} />
-                </View>
-              ) : (
-                <View style={styles.uncheckmark} />
-              )}
-            </View>
-          </View>
-        </ListItemCardWrapper>
-      </SwipeableWrapper>
-    );
-  });
-
   const renderChoreCard = (chore: Chore) => (
-    <ChoreCard key={chore.id} chore={chore} bgColor={colors.surface} />
+    <ChoreCard
+      key={chore.id}
+      chore={chore}
+      bgColor={colors.surface}
+      onToggle={toggleChore}
+      onEdit={handleChorePress}
+      onDelete={handleDeleteChore}
+    />
   );
 
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChoresScreen.tsx:312',message:'ChoresScreen platform info',data:{platform:Platform.OS,isWideScreen:isWideScreen,platformVersion:Platform.Version},timestamp:Date.now(),hypothesisId:'H'})}).catch(()=>{});
+  }, []);
+  // #endregion
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container}
+      onLayout={(e) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChoresScreen.tsx:313',message:'ChoresScreen SafeAreaView layout',data:{layout:e.nativeEvent.layout},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+      }}
+    >
+      <View style={styles.header} >
         <View style={styles.headerInfo}>
           <Text style={styles.headerSubtitle}>Household Hub</Text>
           <Text style={styles.headerTitle}>Chores Dashboard</Text>
@@ -347,120 +301,71 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        contentInset={Platform.OS === 'ios' ? {top: 0, bottom: 0, left: 0, right: 0} : undefined}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
       >
         {isWideScreen ? (
-          // Two-column layout for tablets/landscape
           <View style={styles.wideLayout}>
-            {/* Left column: Progress + Today */}
             <View style={styles.leftColumn}>
-              {/* Progress Card */}
-              <View style={styles.progressCard}>
-                <View style={styles.progressRow}>
-                  <View style={styles.progressRingWrap}>
-                    <ProgressRing progress={progress} size={160} showPercentage={false} showEmoji={false} />
-                    <View style={styles.progressRingText}>
-                      <Text style={styles.progressPercent}>{Math.round(progress)}%</Text>
-                      <Text style={styles.progressLabel}>Today</Text>
-                    </View>
-                  </View>
-                  <View style={styles.progressDetails}>
-                    <Text style={styles.progressTitle}>Daily Progress</Text>
-                    <Text style={styles.progressBody}>
-                      You've completed {completedToday} out of {todayChores.length} chores today. Keep it up to reach your weekly goals!
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
+              <ChoresProgressCard
+                progress={progress}
+                completedCount={completedToday}
+                totalCount={todayChores.length}
+                isWideScreen={true}
+              />
               <View style={styles.searchContainer}>
                 <Text style={styles.searchPlaceholder}>Quick find tasks...</Text>
                 <Ionicons name="search" size={20} color={colors.primary} />
               </View>
-
-              {/* Today's Chores */}
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionIndicator} />
-                  <Text style={styles.sectionTitle}>Today's Chores</Text>
-                </View>
-                {todayChores.length > 0 && (
-                  <View style={styles.choreList}>
-                    {todayChores.map(renderChoreCard)}
-                  </View>
-                )}
-              </View>
+              <ChoresSection
+                title="Today's Chores"
+                chores={todayChores}
+                indicatorColor="primary"
+                renderChoreCard={renderChoreCard}
+              />
             </View>
-
-            {/* Right column: Upcoming */}
             <View style={styles.rightColumn}>
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <View style={[styles.sectionIndicator, styles.sectionIndicatorAlt]} />
-                  <Text style={styles.sectionTitle}>Upcoming Chores</Text>
-                </View>
-                {upcomingChores.length > 0 && (
-                  <View style={styles.choreList}>
-                    {upcomingChores.map(renderChoreCard)}
-                  </View>
-                )}
-              </View>
+              <ChoresSection
+                title="Upcoming Chores"
+                chores={upcomingChores}
+                indicatorColor="secondary"
+                renderChoreCard={renderChoreCard}
+                onLayout={(e) => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChoresScreen.tsx:400',message:'Upcoming sectionHeader layout (wide)',data:{layout:e.nativeEvent.layout},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+                  // #endregion
+                }}
+              />
             </View>
           </View>
         ) : (
-          // Single-column layout for phones
           <View style={styles.narrowLayout}>
-            {/* Progress Card */}
-            <View style={styles.progressCard}>
-              <View style={[styles.progressRow, styles.progressRowPhone]}>
-                <View style={styles.progressRingWrap}>
-                  <ProgressRing progress={progress} size={140} showPercentage={false} showEmoji={false} />
-                  <View style={styles.progressRingText}>
-                    <Text style={styles.progressPercent}>{Math.round(progress)}%</Text>
-                    <Text style={styles.progressLabel}>Today</Text>
-                  </View>
-                </View>
-                <View style={[styles.progressDetails, styles.progressDetailsPhone]}>
-                  <Text style={styles.progressTitle}>Daily Progress</Text>
-                  <Text style={[styles.progressBody, styles.progressBodyPhone]}>
-                    You've completed {completedToday} out of {todayChores.length} chores today. Keep it up to reach your weekly goals!
-                  </Text>
-                </View>
-              </View>
-            </View>
-
+            <ChoresProgressCard
+              progress={progress}
+              completedCount={completedToday}
+              totalCount={todayChores.length}
+              isWideScreen={false}
+            />
             <View style={styles.searchContainer}>
               <Text style={styles.searchPlaceholder}>Quick find tasks...</Text>
               <Ionicons name="search" size={20} color={colors.primary} />
             </View>
-
-            {/* Today's Chores */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionIndicator} />
-                <Text style={styles.sectionTitle}>Today's Chores</Text>
-              </View>
-              {todayChores.length > 0 && (
-                <View style={styles.choreList}>
-                  {todayChores.map(renderChoreCard)}
-                </View>
-              )}
-            </View>
-
-            {/* Upcoming Chores */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionIndicator, styles.sectionIndicatorAlt]} />
-                <Text style={styles.sectionTitle}>Upcoming Chores</Text>
-              </View>
-              {upcomingChores.length > 0 && (
-                <View style={styles.choreList}>
-                  {upcomingChores.map(renderChoreCard)}
-                </View>
-              )}
-            </View>
+            <ChoresSection
+              title="Today's Chores"
+              chores={todayChores}
+              indicatorColor="primary"
+              renderChoreCard={renderChoreCard}
+            />
+            <ChoresSection
+              title="Upcoming Chores"
+              chores={upcomingChores}
+              indicatorColor="secondary"
+              renderChoreCard={renderChoreCard}
+            />
           </View>
         )}
       </ScrollView>
