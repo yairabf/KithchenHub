@@ -60,25 +60,27 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
 
         {/* Sync status indicator */}
         {(syncStatus.isPending || syncStatus.isFailed) && (
-          <View style={{ position: 'absolute', bottom: 8, left: 8 }}>
+          <View style={styles.syncStatusContainer}>
             <SyncStatusIndicator status={indicatorStatus} size="small" />
           </View>
         )}
       </View>
 
       <View style={styles.recipeInfo}>
-        <Text style={styles.recipeName} numberOfLines={1}>
-          {recipe.title || 'Untitled Recipe'}
-        </Text>
-
-        <View style={styles.recipeMetaRow}>
-          <View style={styles.recipeMetaItems}>
-            <View style={styles.recipeMetaItem}>
-              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.recipeMetaText}>{formatMinutes(timeLabel)}</Text>
-            </View>
+        <View style={styles.recipeNameTimeRow}>
+          <Text style={styles.recipeName} numberOfLines={1}>
+            {recipe.title || 'Untitled Recipe'}
+          </Text>
+          <View style={styles.recipeMetaItem}>
+            <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.recipeMetaText}>{formatMinutes(timeLabel)}</Text>
           </View>
         </View>
+        {recipe.description?.trim() ? (
+          <Text style={styles.recipeDescription} numberOfLines={2}>
+            {recipe.description}
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );

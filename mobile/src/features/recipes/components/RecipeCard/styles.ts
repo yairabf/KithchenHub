@@ -39,29 +39,38 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  syncStatusContainer: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+  },
   recipeInfo: {
     padding: 16,
   },
-  recipeName: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  recipeMetaRow: {
+  recipeNameTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: 4,
   },
-  recipeMetaItems: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  recipeName: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  recipeDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
   },
   recipeMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   recipeMetaText: {
     fontSize: 12,

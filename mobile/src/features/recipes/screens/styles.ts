@@ -49,9 +49,14 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
-  filterContainer: {
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     maxHeight: FILTER_MAX_HEIGHT,
     marginBottom: FILTER_BOTTOM_MARGIN,
+  },
+  filterContainer: {
+    flex: 1,
     paddingTop: Platform.OS === 'ios' ? FILTER_VERTICAL_PADDING + 5 : FILTER_VERTICAL_PADDING,  // Extra padding on iOS
     overflow: 'visible',  // Prevent clipping on iOS
   },
@@ -90,6 +95,33 @@ export const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: colors.textPrimary,
+  },
+  filterHideButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginRight: spacing.md,
+  },
+  filterHideButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  filterShowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: FILTER_BOTTOM_MARGIN,
+    marginHorizontal: 24,
+  },
+  filterShowButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textMuted,
   },
   content: {
     flex: 1,
