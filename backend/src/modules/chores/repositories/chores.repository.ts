@@ -125,7 +125,12 @@ export class ChoresRepository {
    * @param id - Chore ID to soft-delete
    */
   async deleteChore(id: string): Promise<void> {
-    this.logger.log(`Soft-deleting chore: ${id}`);
+    this.logger.log('Soft-deleting chore', {
+      action: 'SOFT_DELETE_CHORE',
+      entityType: 'CHORE',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.chore.update({
       where: { id },
       data: { deletedAt: new Date() },
@@ -138,7 +143,12 @@ export class ChoresRepository {
    * @param id - Chore ID to restore
    */
   async restoreChore(id: string): Promise<void> {
-    this.logger.log(`Restoring chore: ${id}`);
+    this.logger.log('Restoring chore', {
+      action: 'RESTORE_CHORE',
+      entityType: 'CHORE',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.chore.update({
       where: { id },
       data: { deletedAt: null },

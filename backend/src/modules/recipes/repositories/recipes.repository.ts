@@ -125,7 +125,12 @@ export class RecipesRepository {
    * @param id - Recipe ID to soft-delete
    */
   async deleteRecipe(id: string): Promise<void> {
-    this.logger.log(`Soft-deleting recipe: ${id}`);
+    this.logger.log('Soft-deleting recipe', {
+      action: 'SOFT_DELETE_RECIPE',
+      entityType: 'RECIPE',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.recipe.update({
       where: { id },
       data: { deletedAt: new Date() },
@@ -138,7 +143,12 @@ export class RecipesRepository {
    * @param id - Recipe ID to restore
    */
   async restoreRecipe(id: string): Promise<void> {
-    this.logger.log(`Restoring recipe: ${id}`);
+    this.logger.log('Restoring recipe', {
+      action: 'RESTORE_RECIPE',
+      entityType: 'RECIPE',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.recipe.update({
       where: { id },
       data: { deletedAt: null },
