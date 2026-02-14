@@ -182,20 +182,20 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerSubtitle}>KITCHEN COLLECTIONS</Text>
-        <Text style={styles.headerTitle}>House Recipes</Text>
+      <ScreenHeader
+        title="House Recipes"
+        subtitle="KITCHEN COLLECTIONS"
+        rightActions={{
+          add: { onPress: handleAddRecipe, label: 'Add new recipe' },
+        }}
+      >
         <View style={styles.headerStats}>
           <View style={styles.statItem}>
             <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
             <Text style={styles.statText}>{recipes.length} Recipes</Text>
           </View>
-          <View style={styles.statItem}>
-            <Ionicons name="time-outline" size={16} color={colors.secondary} />
-            <Text style={styles.statText}>25m Avg</Text>
-          </View>
         </View>
-      </View>
+      </ScreenHeader>
 
       {isLoading && recipes.length === 0 ? (
         <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -207,7 +207,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             <Ionicons name="search" size={20} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name or ingredient..."
+              placeholder="Search by name..."
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
