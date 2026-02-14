@@ -3,5 +3,8 @@
   "language": "Language",
   "household": "Household",
   "account": "Account",
-  "restartRequired": "נדרש אתחול"
+  "restartRequired": "נדרש אתחול",
+  "privacyPolicy": "מדיניות פרטיות",
+  "termsOfService": "תנאי שירות",
+  "opensExternalLink": "(נפתח בקישור חיצוני)"
 }

@@ -20,6 +20,7 @@ import enShopping from './locales/en/shopping.json';
 import enRecipes from './locales/en/recipes.json';
 import enChores from './locales/en/chores.json';
 import enSettings from './locales/en/settings.json';
+import enLegal from './locales/en/legal.json';
 import enCategories from './locales/en/categories.json';
 import enErrors from './locales/en/errors.json';
 import enValidation from './locales/en/validation.json';
@@ -31,6 +32,7 @@ import heShopping from './locales/he/shopping.json';
 import heRecipes from './locales/he/recipes.json';
 import heChores from './locales/he/chores.json';
 import heSettings from './locales/he/settings.json';
+import heLegal from './locales/he/legal.json';
 import heCategories from './locales/he/categories.json';
 import heErrors from './locales/he/errors.json';
 import heValidation from './locales/he/validation.json';
@@ -42,6 +44,7 @@ import arShopping from './locales/ar/shopping.json';
 import arRecipes from './locales/ar/recipes.json';
 import arChores from './locales/ar/chores.json';
 import arSettings from './locales/ar/settings.json';
+import arLegal from './locales/ar/legal.json';
 import arCategories from './locales/ar/categories.json';
 import arErrors from './locales/ar/errors.json';
 import arValidation from './locales/ar/validation.json';
@@ -58,6 +61,7 @@ const resources = {
     recipes: enRecipes as NamespaceResource,
     chores: enChores as NamespaceResource,
     settings: enSettings as NamespaceResource,
+    legal: enLegal as NamespaceResource,
     categories: enCategories as NamespaceResource,
     errors: enErrors as NamespaceResource,
     validation: enValidation as NamespaceResource,
@@ -70,6 +74,7 @@ const resources = {
     recipes: heRecipes as NamespaceResource,
     chores: heChores as NamespaceResource,
     settings: heSettings as NamespaceResource,
+    legal: heLegal as NamespaceResource,
     categories: heCategories as NamespaceResource,
     errors: heErrors as NamespaceResource,
     validation: heValidation as NamespaceResource,
@@ -82,6 +87,7 @@ const resources = {
     recipes: arRecipes as NamespaceResource,
     chores: arChores as NamespaceResource,
     settings: arSettings as NamespaceResource,
+    legal: arLegal as NamespaceResource,
     categories: arCategories as NamespaceResource,
     errors: arErrors as NamespaceResource,
     validation: arValidation as NamespaceResource,
@@ -105,6 +111,7 @@ i18n
       'recipes',
       'chores',
       'settings',
+      'legal',
       'categories',
       'errors',
       'validation',

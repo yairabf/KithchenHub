@@ -21,6 +21,8 @@ import { i18n } from '../../../i18n';
 import { normalizeLocale } from '../../../i18n/localeNormalization';
 import { getNativeNameForCode } from '../../../i18n/constants';
 import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
+import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../../../common/constants/legal';
+import { openLegalUrl } from '../../../common/utils/legalLinks';
 
 /** Set to true when push notifications are implemented. */
 const SHOW_PUSH_NOTIFICATIONS_SETTING = false;
@@ -177,17 +179,31 @@ export function SettingsScreen() {
         {/* About Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => openLegalUrl(PRIVACY_POLICY_URL)}
+            accessibilityRole="link"
+            accessibilityLabel={`${t('privacyPolicy')} ${t('opensExternalLink')}`}
+          >
             <View style={styles.settingInfo}>
-              <Ionicons name="document-text-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>Terms of Service</Text>
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
+                <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={styles.settingLabel}>{t('privacyPolicy')}</Text>
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => openLegalUrl(TERMS_OF_SERVICE_URL)}
+            accessibilityRole="link"
+            accessibilityLabel={`${t('termsOfService')} ${t('opensExternalLink')}`}
+          >
             <View style={styles.settingInfo}>
-              <Ionicons name="shield-checkmark-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>Privacy Policy</Text>
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
+                <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={styles.settingLabel}>{t('termsOfService')}</Text>
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
