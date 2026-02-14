@@ -27,9 +27,9 @@ import { RecipeImagesService } from './recipe-images.service';
 type RecipeEntityShape = {
   id: string;
   title: string;
+  description?: string | null;
   category?: string | null;
   prepTime?: number | null;
-  cookTime?: number | null;
   ingredients?: unknown;
   instructions?: unknown;
   imageUrl?: string | null;
@@ -73,9 +73,9 @@ function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
   return {
     id: recipe.id,
     title: recipe.title,
+    description: recipe.description ?? undefined,
     category: recipe.category ?? undefined,
     prepTime: recipe.prepTime ?? undefined,
-    cookTime: recipe.cookTime ?? undefined,
     ingredients,
     instructions: Array.isArray(recipe.instructions)
       ? (recipe.instructions as unknown as RecipeInstructionDto[])
@@ -145,9 +145,9 @@ export class RecipesService {
         return {
           id: recipe.id,
           title: recipe.title,
+          description: recipe.description ?? undefined,
           category: recipe.category ?? undefined,
           prepTime: recipe.prepTime ?? undefined,
-          cookTime: recipe.cookTime ?? undefined,
           hasImage: Boolean(recipe.imageKey || recipe.imageUrl),
           imageUrl: finalImageUrl ?? undefined,
           thumbUrl: thumbUrl ?? undefined,
@@ -229,9 +229,9 @@ export class RecipesService {
 
     const recipe = await this.recipesRepository.createRecipe(householdId, {
       title: dto.title,
+      description: dto.description,
       category: dto.category,
       prepTime: dto.prepTime,
-      cookTime: dto.cookTime,
       ingredients: dto.ingredients,
       instructions: dto.instructions,
       imageUrl: dto.imageUrl, // Legacy support
@@ -271,9 +271,9 @@ export class RecipesService {
 
     const updatedRecipe = await this.recipesRepository.updateRecipe(recipeId, {
       title: dto.title,
+      description: dto.description,
       category: dto.category,
       prepTime: dto.prepTime,
-      cookTime: dto.cookTime,
       ingredients: dto.ingredients,
       instructions: dto.instructions,
       imageUrl: dto.imageUrl,

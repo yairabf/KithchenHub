@@ -16,15 +16,15 @@ export class UpdateRecipeDto {
 
   @IsString()
   @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
   category?: string;
 
   @IsNumber()
   @IsOptional()
   prepTime?: number;
-
-  @IsNumber()
-  @IsOptional()
-  cookTime?: number;
 
   @IsArray()
   @IsOptional()

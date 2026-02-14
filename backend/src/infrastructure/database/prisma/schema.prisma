@@ -175,6 +175,7 @@ model Recipe {
   id           String    @id @default(cuid())
   householdId  String    @map("household_id")
   title        String
+  description  String?    @map("description")
   category     String?
   prepTime     Int?      @map("prep_time") // in minutes
   cookTime     Int?      @map("cook_time") // in minutes
