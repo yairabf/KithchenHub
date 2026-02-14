@@ -1,6 +1,6 @@
 # i18n (Internationalization)
 
-i18next and react-i18next are configured for the React Native app (iOS/Android only). No browser-based language detection is used.
+i18next and react-i18next are configured for the React Native app (iOS/Android and web). Uses expo-localization for cross-platform locale detection.
 
 ## Init order
 
@@ -9,7 +9,7 @@ i18n is initialized by importing `./src/i18n` at the **earliest executed entrypo
 ## Detection order
 
 1. **AsyncStorage** – Read stored language from `@kitchen_hub_language`. The value is **normalized** and **validated against `supportedLngs`**. If missing or invalid, it is ignored and the next step runs.
-2. **react-native-localize** – Device preferred locale from `getLocales()[0]`. Normalized and mapped to a supported language code.
+2. **expo-localization** – Device preferred locale from `getLocales()[0]`. On web, uses browser's navigator.language. Normalized and mapped to a supported language code.
 3. **fallbackLng** – Default `en` when nothing else matches.
 
 ## AsyncStorage key

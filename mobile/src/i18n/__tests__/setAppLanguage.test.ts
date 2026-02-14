@@ -10,7 +10,7 @@ jest.mock('../storage', () => ({
   LANGUAGE_STORAGE_KEY: '@kitchen_hub_language',
 }));
 
-jest.mock('react-native-localize', () => ({
+jest.mock('../localize', () => ({
   getLocales: jest.fn().mockReturnValue([]),
 }));
 

@@ -1,20 +1,20 @@
 /**
- * Tests for i18n language detector (AsyncStorage + react-native-localize, supportedLngs validation).
+ * Tests for i18n language detector (AsyncStorage + expo-localization, supportedLngs validation).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as RNLocalize from 'react-native-localize';
+import * as Localize from '../localize';
 import { createLanguageDetector } from '../languageDetector';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
-jest.mock('react-native-localize', () => ({
+jest.mock('../localize', () => ({
   getLocales: jest.fn(),
 }));
 
-const mockGetLocales = RNLocalize.getLocales as jest.MockedFunction<
-  typeof RNLocalize.getLocales
+const mockGetLocales = Localize.getLocales as jest.MockedFunction<
+  typeof Localize.getLocales
 >;
 
 function detectAsPromise(

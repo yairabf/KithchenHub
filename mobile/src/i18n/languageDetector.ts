@@ -1,12 +1,11 @@
 /**
  * i18next language detector for React Native.
  * Detection order: (1) AsyncStorage (normalize + validate against supportedLngs),
- * (2) react-native-localize device locale (native) / browser language (web), (3) fallbackLng.
+ * (2) device locale (expo-localization on native, navigator on web), (3) fallbackLng.
  */
-import { Platform } from 'react-native';
-import * as RNLocalize from './localize';
 import { getStoredLanguage, setStoredLanguage } from './storage';
 import { normalizeLocale } from './localeNormalization';
+import { getLocales } from './localize';
 
 type I18nextOptions = {
   supportedLngs?: string[] | false;
@@ -112,19 +111,22 @@ export function createLanguageDetector(): LanguageDetectorModule {
 
 /**
  * Returns the first device locale that normalizes to a language code.
- * Uses react-native-localize on native, browser language on web (via platform-specific module).
+ * Uses getLocales() which handles platform differences internally.
  */
 function getDeviceLocale(): Promise<string | null> {
   try {
-    const locales = RNLocalize.getLocales();
+    const locales = getLocales();
+    
     if (!Array.isArray(locales) || locales.length === 0) {
       return Promise.resolve(null);
     }
+    
     const first = locales[0];
     const tag = first?.languageTag ?? (first as { languageCode?: string })?.languageCode ?? '';
     if (typeof tag !== 'string' || tag === '') {
       return Promise.resolve(null);
     }
+    
     const normalized = normalizeLocale(tag);
     return Promise.resolve(normalized === '' ? null : normalized);
   } catch (error) {
