@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, pastelColors } from '../../../theme';
+import { spacing } from '../../../theme';
 import { colors } from '../../../theme/colors';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { RecipeCard } from '../components/RecipeCard';
@@ -36,18 +36,6 @@ const COLUMN_GAP = spacing.md;
 // Helpers removed - logic moved to RecipeService
 
 
-/**
- * Calculates the margin style for a recipe card based on its position in the grid.
- * Cards in even positions (0, 2, 4...) get right margin to create column gap.
- * 
- * @param index - Zero-based index of the card in the filtered recipes array
- * @returns ViewStyle object with marginRight property
- */
-const calculateCardMargin = (index: number): ViewStyle => {
-  return {
-    marginRight: index % 2 === 0 ? COLUMN_GAP : 0,
-  };
-};
 
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { width, isTablet } = useResponsive();
@@ -195,11 +183,19 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Recipes"
+        title="House Recipes"
+        subtitle="KITCHEN COLLECTIONS"
         rightActions={{
           add: { onPress: handleAddRecipe, label: 'Add new recipe' },
         }}
-      />
+      >
+        <View style={styles.headerStats}>
+          <View style={styles.statItem}>
+            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            <Text style={styles.statText}>{recipes.length} Recipes</Text>
+          </View>
+        </View>
+      </ScreenHeader>
 
       {isLoading && recipes.length === 0 ? (
         <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -211,7 +207,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             <Ionicons name="search" size={20} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search recipes..."
+              placeholder="Search by name..."
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -224,25 +220,37 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             style={styles.filterContainer}
             contentContainerStyle={styles.filterContent}
           >
-            {recipeCategories.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.filterChip,
-                  selectedCategory === category && styles.filterChipActive,
-                ]}
-                onPress={() => setSelectedCategory(category)}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    selectedCategory === category && styles.filterChipTextActive,
-                  ]}
+            {recipeCategories.map((category) => {
+              const icons: { [key: string]: any } = {
+                All: 'apps-outline',
+                Breakfast: 'cafe-outline',
+                Lunch: 'fast-food-outline',
+                Dinner: 'pizza-outline',
+                Snacks: 'ice-cream-outline',
+                Dessert: 'car-outline' // Fallback or mapping
+              };
+              const iconName = icons[category] || 'restaurant-outline';
+              const isActive = selectedCategory === category;
+
+              return (
+                <TouchableOpacity
+                  key={category}
+                  style={styles.filterChip}
+                  onPress={() => setSelectedCategory(category)}
                 >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <View style={[styles.filterCircle, isActive && styles.filterCircleActive]}>
+                    <Ionicons
+                      name={iconName}
+                      size={24}
+                      color={isActive ? colors.primary : colors.textSecondary}
+                    />
+                  </View>
+                  <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                    {category}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           <ScrollView
@@ -257,11 +265,10 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                 <RecipeCard
                   key={recipe.id}
                   recipe={recipe}
-                  backgroundColor={pastelColors[index % pastelColors.length]}
+                  backgroundColor={colors.surface}
                   onPress={() => onSelectRecipe?.(recipe)}
                   onEdit={() => handleEditRecipe(recipe)}
                   width={cardWidth}
-                  style={calculateCardMargin(index)}
                 />
               ))}
             </View>

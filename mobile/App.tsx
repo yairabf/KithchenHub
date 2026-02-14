@@ -8,7 +8,7 @@ import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-rean
 // Reduce "Reading from value during component render" warnings (e.g. from third-party or complex animations)
 configureReanimatedLogger({ level: ReanimatedLogLevel.warn, strict: false });
 import { Provider as PaperProvider } from 'react-native-paper';
-import { getLocales } from 'react-native-localize';
+import { getLocales } from './src/i18n/localize';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { HouseholdProvider } from './src/contexts/HouseholdContext';
 import { OnboardingProvider } from './src/features/auth/contexts/OnboardingContext';

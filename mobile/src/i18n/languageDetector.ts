@@ -1,12 +1,11 @@
 /**
  * i18next language detector for React Native.
  * Detection order: (1) AsyncStorage (normalize + validate against supportedLngs),
- * (2) react-native-localize device locale, (3) fallbackLng.
- * No browser APIs (no navigator.language).
+ * (2) device locale (expo-localization on native, navigator on web), (3) fallbackLng.
  */
-import * as RNLocalize from 'react-native-localize';
 import { getStoredLanguage, setStoredLanguage } from './storage';
 import { normalizeLocale } from './localeNormalization';
+import { getLocales } from './localize';
 
 type I18nextOptions = {
   supportedLngs?: string[] | false;
@@ -112,18 +111,29 @@ export function createLanguageDetector(): LanguageDetectorModule {
 
 /**
  * Returns the first device locale that normalizes to a language code.
- * Uses react-native-localize (no browser APIs).
+ * Uses getLocales() which handles platform differences internally.
  */
 function getDeviceLocale(): Promise<string | null> {
-  const locales = RNLocalize.getLocales();
-  if (!Array.isArray(locales) || locales.length === 0) {
+  try {
+    const locales = getLocales();
+    
+    if (!Array.isArray(locales) || locales.length === 0) {
+      return Promise.resolve(null);
+    }
+    
+    const first = locales[0];
+    const tag = first?.languageTag ?? (first as { languageCode?: string })?.languageCode ?? '';
+    if (typeof tag !== 'string' || tag === '') {
+      return Promise.resolve(null);
+    }
+    
+    const normalized = normalizeLocale(tag);
+    return Promise.resolve(normalized === '' ? null : normalized);
+  } catch (error) {
+    // Fallback if locale detection fails
+    if (__DEV__) {
+      console.warn('[i18n] Failed to get device locale:', error);
+    }
     return Promise.resolve(null);
   }
-  const first = locales[0];
-  const tag = first?.languageTag ?? (first as { languageCode?: string })?.languageCode ?? '';
-  if (typeof tag !== 'string' || tag === '') {
-    return Promise.resolve(null);
-  }
-  const normalized = normalizeLocale(tag);
-  return Promise.resolve(normalized === '' ? null : normalized);
 }

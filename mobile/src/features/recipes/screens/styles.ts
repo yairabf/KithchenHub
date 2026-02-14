@@ -1,70 +1,107 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, spacing, borderRadius, shadows } from '../../../theme';
+
+/**
+ * Spacing constants for recipe screen layout.
+ * These values optimize the vertical rhythm and ensure proper visual hierarchy.
+ */
+const FILTER_MAX_HEIGHT = 110;       // Increased from 90 to accommodate filter chips + extra padding (prevents iOS clipping)
+const FILTER_VERTICAL_PADDING = 20;  // Increased from 15 to create more breathing room and prevent top clipping on iOS
+const STATS_TOP_MARGIN = 12;         // Space between subtitle/title and stats row in header
+const SEARCH_BOTTOM_MARGIN = 5;     // Reduced from 24px to tighten layout and reduce scrolling
+const FILTER_BOTTOM_MARGIN = 5;     // Minimal space before recipe grid starts
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
+  headerStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: STATS_TOP_MARGIN,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    margin: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderRadius: 12,
-    ...shadows.sm,
+    marginHorizontal: 24,
+    // marginBottom: SEARCH_BOTTOM_MARGIN,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 32,
+    ...shadows.md,
   },
   searchInput: {
     flex: 1,
-    marginLeft: spacing.sm,
+    marginLeft: 12,
     fontSize: 16,
     color: colors.textPrimary,
   },
   filterContainer: {
-    maxHeight: 50,
+    maxHeight: FILTER_MAX_HEIGHT,
+    marginBottom: FILTER_BOTTOM_MARGIN,
+    paddingTop: Platform.OS === 'ios' ? FILTER_VERTICAL_PADDING + 5 : FILTER_VERTICAL_PADDING,  // Extra padding on iOS
+    overflow: 'visible',  // Prevent clipping on iOS
   },
   filterContent: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    // paddingTop: Platform.OS === 'ios' ? 20 : 12,  // Extra padding on iOS to prevent negative y position clipping
+    alignItems: 'flex-start',  // Changed from 'center' to prevent negative y positioning that clips content
+    gap: 20,
   },
   filterChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'flex-start',  // Changed from 'center' to prevent negative y positioning
+    gap: 8,
+  },
+  filterCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: colors.surface,
-    marginRight: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 36,
+    borderWidth: 2,
+    borderColor: 'transparent',
     ...shadows.sm,
   },
-  filterChipActive: {
-    backgroundColor: colors.recipes,
-    borderColor: colors.recipes,
+  filterCircleActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.iconBg.teal,
   },
   filterChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textAlign: 'center',
-    includeFontPadding: false,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
   },
   filterChipTextActive: {
-    color: colors.textLight,
+    color: colors.textPrimary,
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 24,
-    paddingBottom: 120, // Space for bottom pill nav
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 120,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    gap: 16,
   },
 });

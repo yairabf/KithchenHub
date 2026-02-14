@@ -10,5 +10,4 @@ export interface Category {
 export interface CategoriesGridProps {
   categories: Category[];
   onCategoryPress: (categoryName: string) => void;
-  onSeeAllPress: () => void;
 }

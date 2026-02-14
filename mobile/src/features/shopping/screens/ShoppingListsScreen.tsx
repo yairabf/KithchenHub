@@ -14,12 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { CategoryModal } from '../components/CategoryModal';
-import { AllItemsModal } from '../components/AllItemsModal';
 import { ShoppingListPanel } from '../components/ShoppingListPanel';
 import { CategoriesGrid } from '../components/CategoriesGrid';
 import { FrequentlyAddedGrid } from '../components/FrequentlyAddedGrid';
 import { CenteredModal } from '../../../common/components/CenteredModal';
-import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
 import { formatShoppingListText } from '../../../common/utils/shareUtils';
 import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
@@ -118,7 +116,6 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [newListColor, setNewListColor] = useState('#10B981');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [showAllItemsModal, setShowAllItemsModal] = useState(false);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -632,24 +629,6 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     return groceryItems.filter(item => item.category === categoryName);
   };
 
-  const handleOpenAllItemsModal = () => {
-    setShowAllItemsModal(true);
-  };
-
-  const handleCloseAllItemsModal = () => {
-    setShowAllItemsModal(false);
-  };
-
-  const handleSelectItemFromAllItems = (groceryItem: GroceryItem) => {
-    setShowAllItemsModal(false);
-    handleSelectGroceryItem(groceryItem);
-  };
-
-  const handleQuickAddItemFromAllItems = (groceryItem: GroceryItem) => {
-    // Don't close modal - keep it open for rapid adding
-    handleQuickAddItem(groceryItem);
-  };
-
   const totalItems = filteredItems.reduce((sum, item) => sum + item.quantity, 0);
 
   // Format shopping list for sharing
@@ -660,14 +639,33 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScreenHeader
-        title={activeList.name}
-        subtitle={`${totalItems} items total`}
-        rightActions={{
-          share: { onPress: () => setShowShareModal(true), label: 'Share shopping list' },
-          add: { onPress: () => setShowQuickAddModal(true), label: 'Add item to list' },
-        }}
-      />
+      <View style={styles.header}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerSubtitle}>Household Hub</Text>
+          <Text style={styles.headerTitle}>Shopping List</Text>
+          <View style={styles.headerMeta}>
+            <Ionicons name="basket-outline" size={18} color={colors.textMuted} />
+            <Text style={styles.headerMetaText}>{totalItems} items remaining</Text>
+          </View>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            accessibilityLabel="Share shopping list"
+            style={styles.headerIconButton}
+            onPress={() => setShowShareModal(true)}
+          >
+            <Ionicons name="share-social-outline" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityLabel="Add item to list"
+            style={styles.headerPrimaryButton}
+            onPress={() => setShowQuickAddModal(true)}
+          >
+            <Ionicons name="add-circle-outline" size={20} color={colors.textLight} />
+            <Text style={styles.headerPrimaryButtonText}>Add Item</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <ScrollView
         style={styles.content}
@@ -704,7 +702,6 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             <CategoriesGrid
               categories={categories}
               onCategoryPress={handleCategoryClick}
-              onSeeAllPress={handleOpenAllItemsModal}
             />
           </View>
         </View>
@@ -849,16 +846,6 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         items={getCategoryItems(selectedCategory)}
         onClose={handleCloseCategoryModal}
         onSelectItem={handleSelectItemFromCategory}
-      />
-
-      {/* All Items Modal */}
-      <AllItemsModal
-        visible={showAllItemsModal}
-        items={groceryItems}
-        onClose={() => setShowAllItemsModal(false)}
-        onSelectItem={handleSelectItemFromCategory}
-        onQuickAddItem={handleQuickAddItem}
-        searchGroceries={searchGroceries}
       />
 
       {/* Quick Add Modal */}

@@ -1,7 +1,7 @@
 /**
  * i18n configuration for React Native.
- * Uses custom language detector (AsyncStorage + react-native-localize).
- * No browser-based language detection. Rely on detector + fallbackLng; do not hardcode lng.
+ * Uses custom language detector (AsyncStorage + expo-localization).
+ * Supports native (iOS/Android) and web platforms. Rely on detector + fallbackLng; do not hardcode lng.
  */
 import { Alert, I18nManager } from 'react-native';
 import * as Updates from 'expo-updates';
