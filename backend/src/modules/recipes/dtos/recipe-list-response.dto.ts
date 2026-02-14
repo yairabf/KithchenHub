@@ -1,9 +1,9 @@
 export class RecipeListItemDto {
   id: string;
   title: string;
+  description?: string;
   category?: string;
   prepTime?: number;
-  cookTime?: number;
   hasImage: boolean;
   imageUrl?: string;
   thumbUrl?: string | null;

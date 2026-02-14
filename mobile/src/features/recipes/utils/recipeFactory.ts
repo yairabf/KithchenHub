@@ -1,8 +1,16 @@
 import * as Crypto from 'expo-crypto';
-import type { Recipe } from '../../../mocks/recipes';
+import type { Recipe, Ingredient, Instruction } from '../../../mocks/recipes';
 import type { NewRecipeData } from '../components/AddRecipeModal';
 import { withCreatedAtAndUpdatedAt } from '../../../common/utils/timestamps';
 import { UNITS_BY_TYPE } from '../constants';
+
+/** Unit codes are string arrays in UNITS_BY_TYPE; used for type-safe find. */
+const findQuantityUnitType = (quantityUnit: string | undefined): string | undefined =>
+    quantityUnit == null || quantityUnit === ''
+        ? undefined
+        : Object.entries(UNITS_BY_TYPE).find(([, codes]: [string, readonly string[]]) =>
+              codes.includes(quantityUnit)
+          )?.[0];
 
 const parseNumber = (value: unknown): number | undefined => {
     if (typeof value === 'number') {
@@ -19,9 +27,7 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
     const cookTime = parseNumber((data as { cookTime?: unknown }).cookTime);
     const ingredients = (data.ingredients || []).map((ing) => {
         const quantityAmount = parseNumber(ing.quantityAmount);
-        const quantityUnitType = Object.entries(UNITS_BY_TYPE).find(([, codes]) =>
-            codes.includes(ing.quantityUnit as any)
-        )?.[0];
+        const quantityUnitType = findQuantityUnitType(ing.quantityUnit);
         return {
             name: ing.name,
             quantityAmount: quantityAmount ?? 1,
@@ -41,7 +47,7 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
         cookTime,
         prepTime,
         category: data.category,
-        description: data.description,
+        description: data.description?.trim() || undefined,
         ingredients,
         instructions,
         imageUrl: data.imageUrl,
@@ -51,7 +57,7 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
 };
 
 export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
-    const ingredients = (recipe.ingredients || []).map((ing: any) => ({
+    const ingredients = (recipe.ingredients || []).map((ing: Ingredient) => ({
         id: generateId(),
         quantityAmount: ing.quantityAmount != null ? String(ing.quantityAmount) : ing.quantity != null ? String(ing.quantity) : '',
         quantityUnit: ing.quantityUnit ?? ing.unit ?? '',
@@ -59,7 +65,7 @@ export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
         quantityModifier: ing.quantityModifier,
         name: ing.name ?? '',
     }));
-    const instructions = (recipe.instructions || []).map((inst: any) => ({
+    const instructions = (recipe.instructions || []).map((inst: Instruction) => ({
         id: generateId(),
         instruction: inst.instruction ?? '',
     }));
@@ -80,9 +86,7 @@ export const mapFormDataToRecipeUpdates = (data: NewRecipeData): Partial<Recipe>
     const cookTime = parseNumber((data as { cookTime?: unknown }).cookTime);
     const ingredients = (data.ingredients || []).map((ing) => {
         const quantityAmount = parseNumber(ing.quantityAmount);
-        const quantityUnitType = Object.entries(UNITS_BY_TYPE).find(([, codes]) =>
-            codes.includes(ing.quantityUnit as any)
-        )?.[0];
+        const quantityUnitType = findQuantityUnitType(ing.quantityUnit);
         return {
             name: ing.name,
             quantityAmount: quantityAmount ?? 1,
@@ -101,6 +105,7 @@ export const mapFormDataToRecipeUpdates = (data: NewRecipeData): Partial<Recipe>
         category: data.category || undefined,
         prepTime,
         cookTime,
+        description: data.description?.trim() || undefined,
         ingredients,
         instructions,
     };
