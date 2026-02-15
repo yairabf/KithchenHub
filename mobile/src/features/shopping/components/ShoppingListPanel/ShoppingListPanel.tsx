@@ -74,6 +74,7 @@ export function ShoppingListPanel({
   onSearchChange,
   searchMode = 'local',
   isLoading = false,
+  onEmptyStateAction,
 }: ShoppingListPanelProps) {
   // Memoize the render function to prevent unnecessary re-renders
   const renderShoppingItem = useCallback((item: typeof filteredItems[0], index: number) => {
@@ -176,16 +177,12 @@ export function ShoppingListPanel({
             ))}
           </>
         ) : filteredItems.length === 0 ? (
-          // Empty state
           <EmptyState
             icon="cart-outline"
             title="No items in this list"
             description="Start adding items to your shopping list"
-            actionLabel="Add first item"
-            onActionPress={() => {
-              // Focus search bar or open quick add modal
-              // This could be enhanced by passing a callback from parent
-            }}
+            actionLabel={onEmptyStateAction ? 'Add first item' : undefined}
+            onActionPress={onEmptyStateAction}
             actionColor={colors.shopping}
           />
         ) : (

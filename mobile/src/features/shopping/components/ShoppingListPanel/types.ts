@@ -73,6 +73,9 @@ export interface ShoppingListPanelProps {
   
   /** Whether to hide the panel header (for embedded views) */
   hideHeader?: boolean;
+
+  /** Optional callback when user taps empty state action (e.g. focus search or open quick-add) */
+  onEmptyStateAction?: () => void;
 }
 
 export type { ShoppingItem, ShoppingList, GroceryItem };
