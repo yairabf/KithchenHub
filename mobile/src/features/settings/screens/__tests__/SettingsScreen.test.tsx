@@ -40,9 +40,21 @@ jest.mock(manageHouseholdModalPath, () => ({
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => ({ title: 'Settings', language: 'Language' }[key] ?? key),
+    t: (key: string) =>
+      ({
+        title: 'Settings',
+        language: 'Language',
+        privacyPolicy: 'Privacy Policy',
+        termsOfService: 'Terms of Service',
+        opensExternalLink: '(opens external link)',
+      }[key] ?? key),
     i18n: { language: 'en' },
   }),
+}));
+
+const mockOpenLegalUrl = jest.fn().mockResolvedValue(undefined);
+jest.mock('../../../../common/utils/legalLinks', () => ({
+  openLegalUrl: (url: string) => mockOpenLegalUrl(url),
 }));
 
 const mockSetAppLanguage = jest.fn().mockResolvedValue(undefined);
@@ -139,4 +151,19 @@ describe('SettingsScreen', () => {
     });
   });
 
+  describe('Legal links', () => {
+    it('calls openLegalUrl with privacy URL when Privacy Policy row is pressed', () => {
+      const { PRIVACY_POLICY_URL } = require('../../../../common/constants/legal');
+      const { getByText } = render(<SettingsScreen />);
+      fireEvent.press(getByText('Privacy Policy'));
+      expect(mockOpenLegalUrl).toHaveBeenCalledWith(PRIVACY_POLICY_URL);
+    });
+
+    it('calls openLegalUrl with terms URL when Terms of Service row is pressed', () => {
+      const { TERMS_OF_SERVICE_URL } = require('../../../../common/constants/legal');
+      const { getByText } = render(<SettingsScreen />);
+      fireEvent.press(getByText('Terms of Service'));
+      expect(mockOpenLegalUrl).toHaveBeenCalledWith(TERMS_OF_SERVICE_URL);
+    });
+  });
 });
