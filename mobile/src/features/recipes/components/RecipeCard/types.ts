@@ -1,14 +1,12 @@
 import { ViewStyle } from 'react-native';
 
-export interface Recipe {
+import { Recipe as CoreRecipe } from '../../../../mocks/recipes';
+
+// Using local interface for card props to allow partial recipes or simplified models if needed,
+// but extending the core definition for stability.
+export interface Recipe extends Partial<CoreRecipe> {
   id: string;
-  localId?: string; // Optional for backward compatibility
-  name?: string; // Optional for backward compatibility with title field
-  title?: string; // Optional for backward compatibility with name field
-  cookTime?: number | string;
-  prepTime?: number | string;
-  category?: string;
-  imageUrl?: string;
+  title: string;
 }
 
 export interface RecipeCardProps {

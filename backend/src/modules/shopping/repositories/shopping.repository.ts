@@ -86,7 +86,12 @@ export class ShoppingRepository {
    * @param id - Shopping list ID to soft-delete
    */
   async deleteList(id: string): Promise<void> {
-    this.logger.log(`Soft-deleting shopping list: ${id}`);
+    this.logger.log('Soft-deleting shopping list', {
+      action: 'SOFT_DELETE_LIST',
+      entityType: 'SHOPPING_LIST',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.shoppingList.update({
       where: { id },
       data: { deletedAt: new Date() },
@@ -99,7 +104,12 @@ export class ShoppingRepository {
    * @param id - Shopping list ID to restore
    */
   async restoreList(id: string): Promise<void> {
-    this.logger.log(`Restoring shopping list: ${id}`);
+    this.logger.log('Restoring shopping list', {
+      action: 'RESTORE_LIST',
+      entityType: 'SHOPPING_LIST',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.shoppingList.update({
       where: { id },
       data: { deletedAt: null },
@@ -196,7 +206,12 @@ export class ShoppingRepository {
    * @param id - Shopping item ID to soft-delete
    */
   async deleteItem(id: string): Promise<void> {
-    this.logger.log(`Soft-deleting shopping item: ${id}`);
+    this.logger.log('Soft-deleting shopping item', {
+      action: 'SOFT_DELETE_ITEM',
+      entityType: 'SHOPPING_ITEM',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.shoppingItem.update({
       where: { id },
       data: { deletedAt: new Date() },
@@ -209,7 +224,12 @@ export class ShoppingRepository {
    * @param id - Shopping item ID to restore
    */
   async restoreItem(id: string): Promise<void> {
-    this.logger.log(`Restoring shopping item: ${id}`);
+    this.logger.log('Restoring shopping item', {
+      action: 'RESTORE_ITEM',
+      entityType: 'SHOPPING_ITEM',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.shoppingItem.update({
       where: { id },
       data: { deletedAt: null },

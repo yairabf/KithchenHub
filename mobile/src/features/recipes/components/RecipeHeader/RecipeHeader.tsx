@@ -57,14 +57,14 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
                 )}
               </View>
 
-              {/* Title and Description at bottom */}
+              {/* Title and Description at bottom (inside image) */}
               <View style={styles.textOverlay}>
                 <Text style={styles.title}>{recipe.title}</Text>
-                {recipe.description && (
-                  <Text style={styles.description} numberOfLines={2}>
+                {recipe.description?.trim() ? (
+                  <Text style={styles.description} numberOfLines={4}>
                     {recipe.description}
                   </Text>
-                )}
+                ) : null}
               </View>
             </View>
           </ImageBackground>
@@ -89,14 +89,14 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
                   </View>
                 )}
               </View>
-              {/* Title and Description */}
+              {/* Title and Description (inside image area) */}
               <View style={styles.textOverlay}>
                 <Text style={styles.titlePlaceholder}>{recipe.title}</Text>
-                {recipe.description && (
-                  <Text style={styles.descriptionPlaceholder} numberOfLines={2}>
+                {recipe.description?.trim() ? (
+                  <Text style={styles.descriptionPlaceholder} numberOfLines={4}>
                     {recipe.description}
                   </Text>
-                )}
+                ) : null}
               </View>
             </View>
           </View>

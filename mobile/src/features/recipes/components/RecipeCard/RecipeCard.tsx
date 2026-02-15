@@ -38,13 +38,12 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
 
   return (
     <TouchableOpacity
-      style={[styles.recipeCard, { backgroundColor, width }, style]}
+      style={[styles.recipeCard, { width }, style]}
       onPress={onPress}
       activeOpacity={0.8}
     >
       <View style={styles.recipeImageContainer}>
         {cachedImageUri ? (
-          // @ts-ignore - Image source type mismatch with string
           <Image
             source={{ uri: cachedImageUri }}
             style={styles.recipeImage}
@@ -54,31 +53,34 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
             <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
           </View>
         )}
-        {typeof onEdit === 'function' && (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={onEdit}
-            accessibilityRole="button"
-            accessibilityLabel="Edit recipe"
-          >
-            <Ionicons name="create-outline" size={14} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
-        {/* Sync status indicator in top-right corner of image */}
+
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryBadgeText}>{recipe.category || 'HEALTHY'}</Text>
+        </View>
+
+        {/* Sync status indicator */}
         {(syncStatus.isPending || syncStatus.isFailed) && (
           <View style={styles.syncStatusContainer}>
             <SyncStatusIndicator status={indicatorStatus} size="small" />
           </View>
         )}
       </View>
+
       <View style={styles.recipeInfo}>
-        <Text style={styles.recipeName} numberOfLines={1} ellipsizeMode="tail">
-          {recipe.title || 'Untitled Recipe'}
-        </Text>
-        <View style={styles.recipeMetaRow}>
-          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-          <Text style={styles.recipeMeta}>{formatMinutes(timeLabel)}</Text>
+        <View style={styles.recipeNameTimeRow}>
+          <Text style={styles.recipeName} numberOfLines={1} ellipsizeMode="tail">
+            {recipe.title || 'Untitled Recipe'}
+          </Text>
+          <View style={styles.recipeMetaItem}>
+            <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.recipeMetaText}>{formatMinutes(timeLabel)}</Text>
+          </View>
         </View>
+        {recipe.description?.trim() ? (
+          <Text style={styles.recipeDescription} numberOfLines={2}>
+            {recipe.description}
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );

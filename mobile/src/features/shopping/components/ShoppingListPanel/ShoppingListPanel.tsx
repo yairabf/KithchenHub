@@ -12,7 +12,7 @@ import { GroceryCardContent, QuantityControls } from '../../../../common/compone
 import { GrocerySearchBar } from '../GrocerySearchBar';
 import { EmptyState } from '../../../../common/components/EmptyState';
 import { ListItemSkeleton } from '../../../../common/components/ListItemSkeleton';
-import { colors, borderRadius, pastelColors } from '../../../../theme';
+import { colors, borderRadius } from '../../../../theme';
 import { styles } from './styles';
 import { ShoppingListPanelProps, ShoppingItemCardProps } from './types';
 
@@ -23,7 +23,6 @@ import { ShoppingListPanelProps, ShoppingItemCardProps } from './types';
 function ShoppingItemCard({
   item,
   index,
-  bgColor,
   onDeleteItem,
   onQuantityChange,
   onToggleItemChecked,
@@ -37,7 +36,6 @@ function ShoppingItemCard({
       borderRadius={borderRadius.xxl}
     >
       <ListItemCardWrapper
-        backgroundColor={bgColor}
         style={[styles.shoppingItemCard, isChecked ? styles.checkedCard : undefined]}
       >
         <GroceryCardContent
@@ -79,14 +77,11 @@ export function ShoppingListPanel({
 }: ShoppingListPanelProps) {
   // Memoize the render function to prevent unnecessary re-renders
   const renderShoppingItem = useCallback((item: typeof filteredItems[0], index: number) => {
-    const bgColor = pastelColors[index % pastelColors.length];
-
     return (
       <ShoppingItemCard
         key={item.id}
         item={item}
         index={index}
-        bgColor={bgColor}
         onDeleteItem={onDeleteItem}
         onQuantityChange={onQuantityChange}
         onToggleItemChecked={onToggleItemChecked}
@@ -97,8 +92,9 @@ export function ShoppingListPanel({
   return (
     <View style={styles.leftColumn}>
       {/* List Header with Shopping Lists Drawer */}
-      <View style={styles.listHeader}>
-        <Text style={styles.listLabel}>My Lists</Text>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionIndicator} />
+        <Text style={styles.sectionTitle}>My Active Lists</Text>
         <TouchableOpacity
           style={styles.listHeaderButton}
           onPress={onCreateList}
@@ -123,6 +119,7 @@ export function ShoppingListPanel({
               ]}
               onPress={() => onSelectList(list)}
             >
+              {selectedList.id === list.id && <View style={styles.listCardDot} />}
               <View style={[styles.listIconContainer, { backgroundColor: list.color + '20' }]}>
                 <Ionicons name={list.icon} size={20} color={list.color} />
               </View>
@@ -150,7 +147,7 @@ export function ShoppingListPanel({
           ))}
           <TouchableOpacity style={styles.addListCard} onPress={onCreateList}>
             <Ionicons name="add-circle-outline" size={24} color={colors.textMuted} />
-            <Text style={styles.addListText}>New List</Text>
+            <Text style={styles.addListText}>Create New</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

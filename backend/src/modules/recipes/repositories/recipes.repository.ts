@@ -63,9 +63,9 @@ export class RecipesRepository {
     householdId: string,
     data: {
       title: string;
+      description?: string;
       category?: string;
       prepTime?: number;
-      cookTime?: number;
       ingredients: any;
       instructions: any;
       imageUrl?: string;
@@ -79,9 +79,9 @@ export class RecipesRepository {
         data: {
           householdId,
           title: data.title,
+          description: data.description,
           category: data.category,
           prepTime: data.prepTime,
-          cookTime: data.cookTime,
           ingredients: data.ingredients,
           instructions: data.instructions,
           imageUrl: data.imageUrl,
@@ -106,9 +106,9 @@ export class RecipesRepository {
     id: string,
     data: {
       title?: string;
+      description?: string | null;
       category?: string;
       prepTime?: number;
-      cookTime?: number;
       /** JSON-serializable; cast to Prisma input at boundary */
       ingredients?: unknown;
       /** JSON-serializable; cast to Prisma input at boundary */
@@ -128,7 +128,12 @@ export class RecipesRepository {
    * @param id - Recipe ID to soft-delete
    */
   async deleteRecipe(id: string): Promise<void> {
-    this.logger.log(`Soft-deleting recipe: ${id}`);
+    this.logger.log('Soft-deleting recipe', {
+      action: 'SOFT_DELETE_RECIPE',
+      entityType: 'RECIPE',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.recipe.update({
       where: { id },
       data: { deletedAt: new Date() },
@@ -141,7 +146,12 @@ export class RecipesRepository {
    * @param id - Recipe ID to restore
    */
   async restoreRecipe(id: string): Promise<void> {
-    this.logger.log(`Restoring recipe: ${id}`);
+    this.logger.log('Restoring recipe', {
+      action: 'RESTORE_RECIPE',
+      entityType: 'RECIPE',
+      entityId: id,
+      timestamp: new Date().toISOString(),
+    });
     await this.prisma.recipe.update({
       where: { id },
       data: { deletedAt: null },

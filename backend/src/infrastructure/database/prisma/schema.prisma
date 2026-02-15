@@ -177,6 +177,7 @@ model Recipe {
   id           String    @id @default(cuid())
   householdId  String    @map("household_id")
   title        String
+  description  String?    @map("description")
   category     String?
   prepTime     Int?      @map("prep_time") // in minutes
   cookTime     Int?      @map("cook_time") // in minutes
@@ -279,4 +280,21 @@ model SyncIdempotencyKey {
   @@index([userId, entityType, entityId])
   @@index([processedAt]) // For retention cleanup
   @@map("sync_idempotency_keys")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id") @db.Uuid
+  householdId String?  @map("household_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  metadata    Json?    @db.JsonB
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([householdId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

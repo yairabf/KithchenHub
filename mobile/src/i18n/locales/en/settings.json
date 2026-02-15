@@ -3,5 +3,8 @@
   "language": "Language",
   "household": "Household",
   "account": "Account",
-  "restartRequired": "(Restart required)"
+  "restartRequired": "(Restart required)",
+  "privacyPolicy": "Privacy Policy",
+  "termsOfService": "Terms of Service",
+  "opensExternalLink": "(opens external link)"
 }

@@ -3,14 +3,15 @@ import { colors, spacing, shadows } from '../../../../theme';
 
 export const styles = StyleSheet.create({
   recipeCard: {
-    borderRadius: 16,
+    borderRadius: 24,
     marginBottom: spacing.lg,
     overflow: 'hidden',
-    ...shadows.deep,
+    backgroundColor: colors.surface,
+    ...shadows.lg,
   },
   recipeImageContainer: {
-    height: 100,
-    backgroundColor: colors.transparent.white50,
+    height: 140,
+    backgroundColor: colors.iconBg.teal,
     position: 'relative',
   },
   recipeImage: {
@@ -18,13 +19,20 @@ export const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
-  editButton: {
+  categoryBadge: {
     position: 'absolute',
-    top: spacing.xs,
-    left: spacing.xs,
-    backgroundColor: colors.transparent.white80,
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(20, 184, 166, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 12,
-    padding: spacing.xs,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textLight,
+    textTransform: 'uppercase',
   },
   recipeImagePlaceholder: {
     flex: 1,
@@ -33,32 +41,40 @@ export const styles = StyleSheet.create({
   },
   syncStatusContainer: {
     position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-    backgroundColor: colors.transparent.white80,
-    borderRadius: 12,
-    padding: spacing.xs,
+    bottom: 8,
+    left: 8,
   },
   recipeInfo: {
-    padding: spacing.sm,
-    flex: 1,
-    minWidth: 0,
+    padding: spacing.md,
   },
-  recipeName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-    flexShrink: 1,
-  },
-  recipeMetaRow: {
+  recipeNameTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: 4,
   },
-  recipeMeta: {
-    fontSize: 11,
+  recipeName: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  recipeDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+  recipeMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+  },
+  recipeMetaText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textMuted,
-    marginLeft: spacing.xs,
   },
 });

@@ -7,19 +7,36 @@ const SHOPPING_ITEM_CARD_MIN_HEIGHT = 82;
 /** 12px - used for list header margin, drawer gap, list card padding/gap, search bar margin */
 const SPACING_12 = spacing.sm + spacing.xs;
 
+/**
+ * Spacing constants for list drawer shadow clearance and scroll padding.
+ * These values ensure shadows are not clipped by overflow containers.
+ */
+const DRAWER_SHADOW_CLEARANCE = 28; // Vertical space for shadows.lg (offsetY 10 + blurRadius 40, rounded up)
+const HORIZONTAL_SCROLL_PADDING = 20; // Horizontal padding to prevent shadow clipping on left/right edges
+
 export const styles = StyleSheet.create({
   leftColumn: {
     flex: 1,
   },
-  listHeader: {
+  panelContainer: {
+    flex: 1,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     marginBottom: SPACING_12,
   },
-  listLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+  sectionIndicator: {
+    width: 4,
+    height: 20,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+  },
+  sectionTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
     color: colors.textPrimary,
   },
   listHeaderButton: {
@@ -31,27 +48,40 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listsDrawer: {
-    marginBottom: 16,
+    marginBottom: DRAWER_SHADOW_CLEARANCE,
+    overflow: 'visible' as const,
   },
   listsDrawerContent: {
     gap: SPACING_12,
-    paddingVertical: spacing.xs,
+    paddingTop: spacing.xs,
+    paddingBottom: DRAWER_SHADOW_CLEARANCE,
+    paddingLeft: HORIZONTAL_SCROLL_PADDING,
+    paddingRight: HORIZONTAL_SCROLL_PADDING,
   },
   listCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: SPACING_12,
+    borderRadius: 24,
     padding: SPACING_12,
     gap: SPACING_12,
     minWidth: 180,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.border,
     ...shadows.lg,
   },
   listCardActive: {
-    borderColor: colors.chores,
-    backgroundColor: '#FAFAFA',
+    borderColor: colors.primary + '40',
+    backgroundColor: colors.primaryLight,
+  },
+  listCardDot: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
   },
   listIconContainer: {
     width: 40,
@@ -69,7 +99,7 @@ export const styles = StyleSheet.create({
     gap: 6,
   },
   listCardName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.textPrimary,
   },
@@ -88,7 +118,7 @@ export const styles = StyleSheet.create({
     color: colors.recipes,
   },
   listCardNameActive: {
-    color: colors.chores,
+    color: colors.primary,
   },
   listCardCount: {
     fontSize: 11,
@@ -101,6 +131,7 @@ export const styles = StyleSheet.create({
     borderRadius: 2,
     position: 'absolute',
     right: 0,
+    opacity: 0.7,
   },
   addListCard: {
     flexDirection: 'row',
@@ -112,7 +143,7 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
     minWidth: 140,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: colors.borderDashed,
     borderStyle: 'dashed',
   },
   addListText: {

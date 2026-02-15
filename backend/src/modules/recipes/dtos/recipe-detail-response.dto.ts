@@ -18,9 +18,9 @@ export class RecipeInstructionDto {
 export class RecipeDetailDto {
   id: string;
   title: string;
+  description?: string;
   category?: string;
   prepTime?: number;
-  cookTime?: number;
   ingredients: RecipeIngredientDto[];
   instructions: RecipeInstructionDto[];
   hasImage: boolean;

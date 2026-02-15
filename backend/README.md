@@ -29,6 +29,10 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
   - Repository-level restore methods for data recovery
   - Audit logging for all soft-delete and restore operations
   - No automatic cascade (allows selective restoration)
+- **Account Deletion & Data Export (GDPR)**: `DELETE /users/me` and `GET /users/me/export`
+  - Account deletion: soft-delete/hard-delete user, revoke refresh tokens, clear idempotency keys; sole household admin triggers household (and data) deletion; admin with other members promotes next member
+  - Data export: JSON export of user profile, household, recipes, shopping lists, assigned chores, and activity summary
+  - Audit logs: database-persisted audit trail for account deletion, household deletion, data export, member removal, and restore operations
 - **Automatic Timestamps**: All entities include `created_at` and `updated_at` timestamps
   - `updated_at` automatically maintained by Prisma
 - **Master Grocery Catalog**: Centralized grocery database with categories and search
@@ -755,6 +759,13 @@ To verify that Row Level Security is correctly isolating data between households
 | `POST` | `/auth/refresh` | Public | Refresh access token using refresh token |
 | `GET` | `/auth/me` | Protected | Get current authenticated user information with household data |
 | `POST` | `/auth/sync` | Protected | Synchronize offline data to cloud |
+
+### User Account Endpoints (GDPR & Privacy)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `DELETE` | `/users/me` | Protected | Permanently delete the current user account and associated data. If sole household admin, deletes the household and all its data. Revokes all refresh tokens. Optional query/body `reason` for audit. Returns 204 No Content. |
+| `GET` | `/users/me/export` | Protected | Export all user data (profile, household, recipes, shopping lists, assigned chores, activity summary) as JSON for data portability (GDPR). |
 
 **Sync Endpoint Details:**
 - Accepts offline data (shopping lists, recipes, chores)

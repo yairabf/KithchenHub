@@ -2,10 +2,11 @@ import { StyleSheet } from 'react-native';
 import { colors, shadows, spacing, borderRadius, typography } from '../../../../theme';
 
 /**
- * Opacity value for category overlay background.
- * Provides semi-transparent overlay to show icon/image behind text while maintaining readability.
+ * Category icon dimensions and positioning constants.
+ * These values control the size and placement of category icons/images in the tile layout.
  */
-const CATEGORY_OVERLAY_OPACITY = 0.6;
+const CATEGORY_ICON_SIZE = 80; // Width and height for category icons in pixels
+const ICON_CORNER_OFFSET = 8;  // Distance from top-right corner for icon positioning
 
 export const styles = StyleSheet.create({
   categoriesSection: {
@@ -22,10 +23,6 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
-  },
-  seeAll: {
-    fontSize: 13,
-    color: colors.textMuted,
   },
   categoriesGrid: {
     flexDirection: 'row',
@@ -44,35 +41,25 @@ export const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     justifyContent: 'flex-end',
+    position: 'relative',
   },
-  categoryBgImage: {
-    borderRadius: 16,
-    width: '100%',
-    height: '100%',
-  },
-  categoryOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    padding: 10,
-    borderRadius: 16,
-  },
-  categoryOverlayBg: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: CATEGORY_OVERLAY_OPACITY,
-    borderRadius: 16,
-  },
-  categoryOverlayContent: {
+  categoryNameContainer: {
+    padding: 12,
     zIndex: 1,
   },
-  categoryCount: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
   categoryName: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.textPrimary,
+    letterSpacing: 0.2,
+  },
+  categoryIcon: {
+    position: 'absolute',
+    top: ICON_CORNER_OFFSET,
+    right: ICON_CORNER_OFFSET,
+    width: CATEGORY_ICON_SIZE,
+    height: CATEGORY_ICON_SIZE,
+    opacity: 0.9,
   },
   showMoreButton: {
     flexDirection: 'row',

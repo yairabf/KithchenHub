@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { HouseholdsRepository } from '../repositories/households.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
+import { AuditService } from '../../audit/services/audit.service';
 import {
   HouseholdResponseDto,
   UpdateHouseholdDto,
@@ -31,6 +32,7 @@ export class HouseholdsService {
   constructor(
     private householdsRepository: HouseholdsRepository,
     private prisma: PrismaService,
+    private auditService: AuditService,
   ) {}
 
   /**
@@ -397,6 +399,7 @@ export class HouseholdsService {
       throw new NotFoundException('Member not found in household');
     }
 
+    await this.auditService.logRemoveMember(userId, user.householdId, memberId);
     await this.householdsRepository.removeUserFromHousehold(memberId);
   }
 }

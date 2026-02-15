@@ -10,6 +10,8 @@ import { ChoresModule } from './modules/chores/chores.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ImportModule } from './modules/import/import.module';
 import { HealthModule } from './modules/health/health.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { UsersModule } from './modules/users/users.module';
 import { TransformInterceptor } from './common/interceptors';
 import { RequestContextInterceptor } from './common/interceptors';
 import { LoggingInterceptor } from './common/interceptors';
@@ -34,7 +36,8 @@ import { StorageModule } from './infrastructure/storage/storage.module';
     DashboardModule,
     ImportModule,
     HealthModule,
-    HealthModule,
+    AuditModule,
+    UsersModule,
     SupabaseModule,
     StorageModule,
   ],

@@ -1,4 +1,4 @@
-import { Recipe, mockRecipes } from '../../../mocks/recipes';
+import { Recipe, mockRecipes, type Ingredient, type Instruction } from '../../../mocks/recipes';
 import { api } from '../../../services/api';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import type { DataMode } from '../../../common/types/dataModes';
@@ -19,6 +19,7 @@ import { resizeAndValidateImage, buildImageFormData } from '../../../common/util
 type RecipeDetailDto = {
     id: string;
     title: string;
+    description?: string;
     category?: string;
     prepTime?: number;
     cookTime?: number;
@@ -44,6 +45,7 @@ type RecipeDetailDto = {
 type RecipeListItemDto = {
     id: string;
     title: string;
+    description?: string;
     category?: string;
     cookTime?: number;
     imageUrl?: string;
@@ -104,6 +106,7 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
     return {
         id: dto.id,
         title: dto.title || 'Untitled Recipe',
+        description: dto.description,
         prepTime: dto.prepTime,
         cookTime: dto.cookTime,
         category: dto.category,
@@ -382,6 +385,7 @@ export class RemoteRecipeService implements IRecipeService {
             const recipe = {
                 id: item.id,
                 title: item.title || 'Untitled Recipe',
+                description: item.description,
                 imageUrl: item.imageUrl,
                 thumbUrl: item.thumbUrl,
                 imageVersion: item.imageVersion,
@@ -404,6 +408,7 @@ export class RemoteRecipeService implements IRecipeService {
             const finalRecipe = {
                 ...normalized,
                 title: recipeTitle, // Explicitly set title to ensure it's preserved
+                description: normalized.description ?? item.description,
                 ingredients: normalized.ingredients || [],
                 instructions: normalized.instructions || [],
                 cookTime: normalized.cookTime ?? item.cookTime,
@@ -510,6 +515,7 @@ export class RemoteRecipeService implements IRecipeService {
 
         return {
             title: recipe.title || 'Untitled Recipe',
+            description: recipe.description?.trim() || undefined,
             prepTime,
             ingredients,
             instructions,
@@ -522,6 +528,7 @@ export class RemoteRecipeService implements IRecipeService {
      */
     private mapRecipeToUpdateDto(recipe: Partial<Recipe>): {
         title?: string;
+        description?: string;
         category?: string;
         prepTime?: number;
         cookTime?: number;
@@ -535,10 +542,28 @@ export class RemoteRecipeService implements IRecipeService {
         instructions?: Array<{ step: number; instruction: string }>;
         imageUrl?: string | null;
     } {
-        const dto: any = {};
+        const dto: {
+            title?: string;
+            description?: string;
+            category?: string;
+            prepTime?: number;
+            cookTime?: number;
+            ingredients?: Array<{
+                name: string;
+                quantityAmount?: number;
+                quantityUnit?: string;
+                quantityUnitType?: string;
+                quantityModifier?: string;
+            }>;
+            instructions?: Array<{ step: number; instruction: string }>;
+            imageUrl?: string | null;
+        } = {};
 
         if (recipe.title !== undefined) {
             dto.title = recipe.title || 'Untitled Recipe';
+        }
+        if (recipe.description !== undefined) {
+            dto.description = recipe.description?.trim() || undefined;
         }
         if (recipe.category !== undefined) {
             dto.category = recipe.category;
@@ -550,7 +575,7 @@ export class RemoteRecipeService implements IRecipeService {
             dto.cookTime = recipe.cookTime;
         }
         if (recipe.ingredients !== undefined) {
-            dto.ingredients = (recipe.ingredients || []).map((ing: any) => {
+            dto.ingredients = (recipe.ingredients || []).map((ing: Ingredient) => {
                 const normalizedQuantity =
                     typeof ing.quantityAmount === 'number'
                         ? ing.quantityAmount
@@ -567,7 +592,7 @@ export class RemoteRecipeService implements IRecipeService {
             });
         }
         if (recipe.instructions !== undefined) {
-            dto.instructions = (recipe.instructions || []).map((inst: any, index: number) => ({
+            dto.instructions = (recipe.instructions || []).map((inst: Instruction, index: number) => ({
                 step: inst.step ?? index + 1,
                 instruction: inst.instruction,
             }));

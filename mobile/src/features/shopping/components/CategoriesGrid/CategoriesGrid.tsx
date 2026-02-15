@@ -82,7 +82,6 @@ function getCategoryIcon(categoryId: string): ReturnType<typeof require> | null 
 export function CategoriesGrid({
   categories,
   onCategoryPress,
-  onSeeAllPress,
 }: CategoriesGridProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -113,9 +112,6 @@ export function CategoriesGrid({
     <View style={styles.categoriesSection}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Categories</Text>
-        <TouchableOpacity onPress={onSeeAllPress}>
-          <Text style={styles.seeAll}>See all →</Text>
-        </TouchableOpacity>
       </View>
       <View style={styles.categoriesGrid}>
         {displayedCategories.map((category) => (

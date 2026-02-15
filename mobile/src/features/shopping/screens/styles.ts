@@ -1,10 +1,110 @@
 import { StyleSheet } from 'react-native';
-import { colors, spacing, borderRadius } from '../../../theme';
+import { colors, spacing, borderRadius, shadows } from '../../../theme';
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 20,
+    backgroundColor: colors.background,
+  },
+  headerInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: colors.primary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  headerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    gap: 6,
+  },
+  headerMetaText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginLeft: 16,
+  },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.lg,
+  },
+  headerPrimaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    ...shadows.lg,
+  },
+  headerPrimaryButtonText: {
+    color: colors.textLight,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  listSelectionContainer: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  listTab: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    ...shadows.sm,
+  },
+  listTabActive: {
+    backgroundColor: colors.iconBg.teal,
+    borderColor: colors.primary,
+  },
+  listTabText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  listTabTextActive: {
+    color: colors.primary,
   },
   content: {
     flex: 1,
@@ -17,8 +117,29 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 24,
   },
+  leftColumn: {
+    flex: 2,
+    paddingRight: 12,
+  },
   rightColumn: {
     flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  sectionTitleIndicator: {
+    width: 4,
+    height: 16,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+  },
+  sectionTitleText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
   },
   // Modal Styles
   modalItemDisplay: {

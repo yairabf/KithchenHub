@@ -56,6 +56,7 @@ export function ScreenHeader({
   onLeftPress,
   rightActions,
   variant = 'default',
+  children,
 }: ScreenHeaderProps) {
   const renderLeftIcon = () => {
     // Don't render icon if it's 'none' or if there's no press handler
@@ -89,6 +90,7 @@ export function ScreenHeader({
       <View style={styles.titleContainer}>
         <Text style={styles.title}>{title}</Text>
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        {children}
       </View>
     );
   };

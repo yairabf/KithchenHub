@@ -8,6 +8,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { DEFAULT_MAIN_SHOPPING_LIST } from '../../shopping/constants/defaults';
+import { AuditService } from '../../audit/services/audit.service';
 
 /**
  * Households Service Unit Tests
@@ -58,6 +59,7 @@ describe('HouseholdsService', () => {
             findHouseholdWithMembers: jest.fn(),
             updateHousehold: jest.fn(),
             createHousehold: jest.fn(),
+            removeUserFromHousehold: jest.fn(),
           },
         },
         {
@@ -69,6 +71,10 @@ describe('HouseholdsService', () => {
             shoppingList: shoppingListMock,
             $transaction: transactionMock,
           },
+        },
+        {
+          provide: AuditService,
+          useValue: { logRemoveMember: jest.fn().mockResolvedValue(undefined) },
         },
       ],
     }).compile();

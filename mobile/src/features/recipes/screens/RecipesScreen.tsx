@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, pastelColors } from '../../../theme';
+import { spacing } from '../../../theme';
 import { colors } from '../../../theme/colors';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { EmptyState } from '../../../common/components/EmptyState';
@@ -30,26 +32,18 @@ import { useRecipes } from '../hooks/useRecipes';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { Toast } from '../../../common/components/Toast';
+import { logger } from '../../../common/utils/logger';
+
+const RECIPES_SHOW_CATEGORY_FILTER_KEY = '@kitchen_hub_recipes_show_category_filter';
 
 // Column gap constant - same for all screen sizes
 const COLUMN_GAP = spacing.md;
 
+function calculateCardMargin(_index: number): ViewStyle {
+  return { marginBottom: spacing.lg };
+}
 
-// Helpers removed - logic moved to RecipeService
 
-
-/**
- * Calculates the margin style for a recipe card based on its position in the grid.
- * Cards in even positions (0, 2, 4...) get right margin to create column gap.
- * 
- * @param index - Zero-based index of the card in the filtered recipes array
- * @returns ViewStyle object with marginRight property
- */
-const calculateCardMargin = (index: number): ViewStyle => {
-  return {
-    marginRight: index % 2 === 0 ? COLUMN_GAP : 0,
-  };
-};
 
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { width, isTablet } = useResponsive();
@@ -74,6 +68,32 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     setToastType(type);
     setToastVisible(true);
   };
+
+  const [showCategoryFilter, setShowCategoryFilter] = useState(true);
+
+  useEffect(() => {
+    AsyncStorage.getItem(RECIPES_SHOW_CATEGORY_FILTER_KEY)
+      .then((value) => {
+        if (value !== null && value === 'false') {
+          setShowCategoryFilter(false);
+        }
+      })
+      .catch((e) => {
+        logger.warn('[RecipesScreen] Failed to load category filter preference', e);
+      });
+  }, []);
+
+  const handleToggleCategoryFilter = useCallback(() => {
+    setShowCategoryFilter((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(RECIPES_SHOW_CATEGORY_FILTER_KEY, String(next)).catch((e) => {
+        logger.warn('[RecipesScreen] Failed to persist category filter preference', e);
+      });
+      return next;
+    });
+  }, []);
+
+  const effectiveCategory = showCategoryFilter ? selectedCategory : 'All';
 
   // Calculate card width dynamically based on screen size
   // Account for container padding and gap between columns
@@ -100,7 +120,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       }
       // TODO: Investigate useRecipes hook or API response to ensure unique IDs and remove this client-side filtering (See Review Issue #2)
       if (seen.has(id)) {
-        console.warn('[RecipesScreen] Duplicate recipe ID found, filtering out:', id, JSON.stringify({ title: recipe?.title }));
+        logger.warn('[RecipesScreen] Duplicate recipe ID found, filtering out:', id, JSON.stringify({ title: recipe?.title }));
         return false;
       }
       seen.add(id);
@@ -108,7 +128,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     });
 
     if (filtered.length !== recipes.length) {
-      console.warn(`[RecipesScreen] Filtered ${recipes.length - filtered.length} recipes (missing IDs or duplicates). Original: ${recipes.length}, Filtered: ${filtered.length}`);
+      logger.warn(`[RecipesScreen] Filtered ${recipes.length - filtered.length} recipes (missing IDs or duplicates). Original: ${recipes.length}, Filtered: ${filtered.length}`);
     }
 
     return filtered;
@@ -119,7 +139,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     const recipeName = recipe?.title || '';
     const recipeCategory = recipe?.category || 'Dinner';
 
-    const matchesCategory = selectedCategory === 'All' || recipeCategory === selectedCategory;
+    const matchesCategory = effectiveCategory === 'All' || recipeCategory === effectiveCategory;
     const matchesSearch = recipeName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
@@ -140,7 +160,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       setEditingRecipe(full);
       setShowEditRecipeModal(true);
     } catch (error) {
-      console.error('Failed to load recipe details for edit:', error);
+      logger.error('Failed to load recipe details for edit:', error);
       showToast('Failed to load recipe details.');
     } finally {
       setIsLoadingEdit(false);
@@ -152,7 +172,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     try {
       await refresh();
     } catch (error) {
-      console.error('Failed to refresh recipes:', error);
+      logger.error('Failed to refresh recipes:', error);
     } finally {
       setIsRefreshing(false);
     }
@@ -206,11 +226,19 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Recipes"
+        title="House Recipes"
+        subtitle="KITCHEN COLLECTIONS"
         rightActions={{
           add: { onPress: handleAddRecipe, label: 'Add new recipe' },
         }}
-      />
+      >
+        <View style={styles.headerStats}>
+          <View style={styles.statItem}>
+            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            <Text style={styles.statText}>{recipes.length} Recipes</Text>
+          </View>
+        </View>
+      </ScreenHeader>
 
       {isLoading && recipes.length === 0 ? (
         <ScrollView
@@ -242,39 +270,72 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             <Ionicons name="search" size={20} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search recipes..."
+              placeholder="Search by name..."
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterContainer}
-            contentContainerStyle={styles.filterContent}
-          >
-            {recipeCategories.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[
-                  styles.filterChip,
-                  selectedCategory === category && styles.filterChipActive,
-                ]}
-                onPress={() => setSelectedCategory(category)}
+          {showCategoryFilter ? (
+            <View style={styles.filterRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filterContainer}
+                contentContainerStyle={styles.filterContent}
               >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    selectedCategory === category && styles.filterChipTextActive,
-                  ]}
-                >
-                  {category}
-                </Text>
+                {recipeCategories.map((category) => {
+                  const categoryIcons: Record<string, string> = {
+                    All: 'apps-outline',
+                    Breakfast: 'cafe-outline',
+                    Lunch: 'fast-food-outline',
+                    Dinner: 'pizza-outline',
+                    Snacks: 'ice-cream-outline',
+                    Dessert: 'car-outline',
+                  };
+                  const iconName = categoryIcons[category] ?? 'restaurant-outline';
+                  const isActive = selectedCategory === category;
+
+                  return (
+                    <TouchableOpacity
+                      key={category}
+                      style={styles.filterChip}
+                      onPress={() => setSelectedCategory(category)}
+                    >
+                      <View style={[styles.filterCircle, isActive && styles.filterCircleActive]}>
+                        <Ionicons
+                          name={iconName as React.ComponentProps<typeof Ionicons>['name']}
+                          size={24}
+                          color={isActive ? colors.primary : colors.textSecondary}
+                        />
+                      </View>
+                      <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.filterHideButton}
+                onPress={handleToggleCategoryFilter}
+                accessibilityLabel="Hide category filter"
+              >
+                <Ionicons name="eye-off-outline" size={20} color={colors.textMuted} />
+                <Text style={styles.filterHideButtonText}>Hide</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.filterShowButton}
+              onPress={handleToggleCategoryFilter}
+              accessibilityLabel="Show category filter"
+            >
+              <Ionicons name="filter-outline" size={20} color={colors.textMuted} />
+              <Text style={styles.filterShowButtonText}>Show category filter</Text>
+            </TouchableOpacity>
+          )}
 
           <ScrollView
             style={styles.content}
@@ -284,15 +345,14 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             }
           >
             <View style={styles.grid}>
-              {filteredRecipes.map((recipe, index) => (
+              {filteredRecipes.map((recipe) => (
                 <RecipeCard
                   key={recipe.id}
                   recipe={recipe}
-                  backgroundColor={pastelColors[index % pastelColors.length]}
+                  backgroundColor={colors.surface}
                   onPress={() => onSelectRecipe?.(recipe)}
                   onEdit={() => handleEditRecipe(recipe)}
                   width={cardWidth}
-                  style={calculateCardMargin(index)}
                 />
               ))}
             </View>
@@ -325,6 +385,13 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         mode="edit"
         initialRecipe={editingRecipe ? mapRecipeToFormData(editingRecipe) : undefined}
         searchGroceries={searchGroceries}
+      />
+
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setToastVisible(false)}
       />
     </SafeAreaView>
   );
