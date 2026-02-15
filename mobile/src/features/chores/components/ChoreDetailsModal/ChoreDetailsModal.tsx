@@ -47,7 +47,7 @@ export function ChoreDetailsModal({
       // ... existing code ...
 
       // Build updates object
-      const updates: Partial<Chore> & { assigneeId?: string; repeat?: string | null } = {};
+      const updates: Partial<Chore> & { assigneeId?: string } = {};
 
       if (choreName !== chore.title) {
         updates.title = choreName;
@@ -62,7 +62,6 @@ export function ChoreDetailsModal({
       const newIsRecurring = recurrencePattern !== null;
       if (currentIsRecurring !== newIsRecurring || recurrencePattern !== null) {
         updates.isRecurring = newIsRecurring;
-        updates.repeat = recurrencePattern; // Send repeat pattern to backend
       }
 
       // Handle assignee update - send assigneeId instead of name

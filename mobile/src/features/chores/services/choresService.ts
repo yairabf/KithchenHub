@@ -108,16 +108,6 @@ const parseDueDateString = (dueDate?: string, dueTime?: string): string | undefi
   }
 };
 
-/**
- * Maps frontend isRecurring boolean to backend repeat string.
- * Returns undefined if not recurring.
- */
-const mapIsRecurringToRepeat = (isRecurring?: boolean): string | undefined => {
-  // For now, we use a simple mapping. In the future, this could be more sophisticated
-  // (e.g., daily, weekly, monthly based on chore configuration)
-  return isRecurring ? 'daily' : undefined;
-};
-
 const formatDateLabel = (date: Date | null, section: Chore['section']): string => {
   if (!date) {
     return section === 'today' ? 'Today' : 'Upcoming';
@@ -293,7 +283,6 @@ export class RemoteChoresService implements IChoresService {
       title?: string;
       assigneeId?: string;
       dueDate?: string;
-      repeat?: string | null;
       icon?: string;
     } = {};
 
@@ -309,12 +298,11 @@ export class RemoteChoresService implements IChoresService {
     if (updates.dueDate !== undefined || updates.dueTime !== undefined) {
       dto.dueDate = parseDueDateString(updates.dueDate ?? updated.dueDate, updates.dueTime ?? updated.dueTime);
     }
-    // Prefer explicit repeat field if provided, otherwise map from isRecurring
-    if ((updates as any).repeat !== undefined) {
-      dto.repeat = (updates as any).repeat;
-    } else if (updates.isRecurring !== undefined) {
-      dto.repeat = mapIsRecurringToRepeat(updates.isRecurring);
+
+    if (Object.keys(dto).length === 0) {
+      return existing;
     }
+
     await api.patch(`/chores/${choreId}`, dto);
     // Server is authority: fetch the updated chore to get server timestamps
     const updatedChore = await this.getChores().then(chores => chores.find(c => c.id === choreId));
