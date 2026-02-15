@@ -13,7 +13,7 @@ The data controller responsible for your personal data in connection with Kitche
 We collect information necessary to provide and improve the Kitchen Hub service:
 
 - **Account data:** Email address, name (if provided), and authentication identifiers (e.g. linked to Google sign-in) when you create or use an account.
-- **Household and app data:** Household name, membership, and content you create in the app (shopping lists, list items, recipes, chores, dashboard data).
+- **Household and app data:** Household name, membership, and content you create in the app (shopping lists, list items, recipes, chores, dashboard data). We may also collect photos you add in the app (e.g. recipe images) to provide that functionality.
 - **Device and technical data:** Device type, operating system, and app version may be collected for support and stability (e.g. crash reports if enabled). We do not use this data for advertising.
 - **Usage data:** General usage of the app to operate and improve the service (e.g. API requests, sync events). Data is not used for advertising or marketing purposes.
 
@@ -52,7 +52,7 @@ Depending on your location, you may have the right to:
 
 - **Access** — request a copy of the personal data we hold about you.
 - **Correction** — request correction of inaccurate data.
-- **Deletion** — request deletion of your data and account.
+- **Deletion** — request deletion of your data and account. You can delete your account and associated data from the app, or request deletion by contacting us at **support@kitchenhub.com**.
 - **Portability** — request a copy of your data in a portable format.
 - **Object or restrict** — object to or request restriction of certain processing.
 - **Withdraw consent** — where processing is based on consent.
