@@ -352,7 +352,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: 'Demo User',
         avatarUrl: undefined,
         householdId: 'demo-household-id',
-        isGuest: false,
+        isGuest: true,
         role: 'owner',
       };
 
@@ -382,12 +382,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
 
       const response = await authApi.register({ email, password, name });
-
-      if (!response.success) {
-        throw new Error(response.message || 'Registration failed');
-      }
-
-      logger.debug('[AuthContext] User registered successfully');
+      logger.debug('[AuthContext] User registered successfully:', response.message);
     } catch (error) {
       logger.error('[AuthContext] Error registering user:', error);
       throw error;

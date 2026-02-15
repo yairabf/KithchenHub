@@ -52,6 +52,13 @@ export interface LoginRequest {
 }
 
 /**
+ * Registration response from the backend
+ */
+export interface RegisterResponse {
+  message: string;
+}
+
+/**
  * Authentication response (direct format from backend)
  */
 export interface AuthResponse {
@@ -83,8 +90,8 @@ export const authApi = {
   /**
    * Registers a new user with email and password
    */
-  register: (data: RegisterRequest): Promise<{ success: boolean; message?: string }> => {
-    return api.post<{ success: boolean; message?: string }>('/auth/register', data);
+  register: (data: RegisterRequest): Promise<RegisterResponse> => {
+    return api.post<RegisterResponse>('/auth/register', data);
   },
 
   /**
