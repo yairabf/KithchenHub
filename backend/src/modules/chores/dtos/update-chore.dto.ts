@@ -11,5 +11,9 @@ export class UpdateChoreDto {
 
   @IsString()
   @IsOptional()
+  icon?: string;
+
+  @IsString()
+  @IsOptional()
   dueDate?: string;
 }

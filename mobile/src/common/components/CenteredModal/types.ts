@@ -10,4 +10,6 @@ export interface CenteredModalProps {
   showActions?: boolean;
   confirmDisabled?: boolean;
   confirmLoading?: boolean;
+  /** Optional ref to the trigger element - focus will return here when modal closes */
+  triggerRef?: React.RefObject<any>;
 }

@@ -155,6 +155,7 @@ export class ShoppingRepository {
           equals: name,
           mode: 'insensitive',
         },
+        ...ACTIVE_RECORDS_FILTER,
       },
     });
   }
@@ -175,7 +176,10 @@ export class ShoppingRepository {
 
   async findCustomItems(householdId: string): Promise<CustomItem[]> {
     return this.prisma.customItem.findMany({
-      where: { householdId },
+      where: {
+        householdId,
+        ...ACTIVE_RECORDS_FILTER,
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -282,6 +286,32 @@ export class ShoppingRepository {
     return this.prisma.shoppingList.update({
       where: { id },
       data,
+    });
+  }
+
+  /**
+   * Soft-deletes a custom item by setting deletedAt timestamp.
+   *
+   * @param id - Custom item ID to soft-delete
+   */
+  async deleteCustomItem(id: string): Promise<void> {
+    this.logger.log(`Soft-deleting custom item: ${id}`);
+    await this.prisma.customItem.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  /**
+   * Restores a soft-deleted custom item.
+   *
+   * @param id - Custom item ID to restore
+   */
+  async restoreCustomItem(id: string): Promise<void> {
+    this.logger.log(`Restoring custom item: ${id}`);
+    await this.prisma.customItem.update({
+      where: { id },
+      data: { deletedAt: null },
     });
   }
 }

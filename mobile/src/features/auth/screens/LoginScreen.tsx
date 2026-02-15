@@ -8,6 +8,7 @@ import {
   Alert,
   Animated,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,9 +17,11 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { boxShadow } from '../../../theme/shadows';
+import { useReducedMotion } from '../../../common/hooks/useReducedMotion';
 
 type AuthStackParamList = {
   Login: undefined;
+  Register: undefined;
   EnterInviteCode: undefined;
   HouseholdName: undefined;
   HouseholdOnboarding: undefined;
@@ -31,63 +34,71 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
-  const { signInWithGoogle, showHouseholdNameScreen } = useAuth();
+  const { signInWithGoogle, signInWithDemo, signInWithEmail, showHouseholdNameScreen } = useAuth();
   const { mode, inviteContext, setMode, setInviteContext } = useOnboarding();
   const [isLoading, setIsLoading] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   // Animation values
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(20)).current;
+  const fadeAnim = React.useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const slideAnim = React.useRef(new Animated.Value(reduceMotion ? 0 : 20)).current;
   const orbAnim1 = React.useRef(new Animated.Value(0)).current;
   const orbAnim2 = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Initial entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 20,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Loop floating animations for background orbs
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(orbAnim1, {
+    // Only animate if motion is not reduced
+    if (!reduceMotion) {
+      // Initial entrance animations
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 4000,
+          duration: 1000,
           useNativeDriver: true,
         }),
-        Animated.timing(orbAnim1, {
+        Animated.spring(slideAnim, {
           toValue: 0,
-          duration: 4000,
+          tension: 20,
+          friction: 7,
           useNativeDriver: true,
         }),
-      ])
-    ).start();
+      ]).start();
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(orbAnim2, {
-          toValue: 1,
-          duration: 5000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(orbAnim2, {
-          toValue: 0,
-          duration: 5000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
+      // Loop floating animations for background orbs
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(orbAnim1, {
+            toValue: 1,
+            duration: 4000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(orbAnim1, {
+            toValue: 0,
+            duration: 4000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(orbAnim2, {
+            toValue: 1,
+            duration: 5000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(orbAnim2, {
+            toValue: 0,
+            duration: 5000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [reduceMotion]);
 
   // Navigate to HouseholdName screen if flag is set (after OAuth callback with new household)
   useEffect(() => {
@@ -148,6 +159,47 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     navigation.navigate('EnterInviteCode');
   };
 
+  const handleEmailLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Validation Error', 'Please enter both email and password', [{ text: 'OK' }]);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signInWithEmail(email, password);
+      // Navigation handled by RootNavigator based on user state
+    } catch (error) {
+      Alert.alert(
+        'Sign In Failed',
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in. Please check your credentials.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithDemo();
+      // Navigation handled by RootNavigator based on user state
+    } catch (error) {
+      Alert.alert(
+        'Demo Login Failed',
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in with demo account. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Decorative Background Orbs */}
@@ -204,12 +256,122 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           <View style={styles.buttonContainer}>
             <GoogleSignInButton onPress={handleGoogleSignIn} isLoading={isLoading} />
 
+            {/* Email/Password Login Section */}
+            {!showEmailLogin ? (
+              <TouchableOpacity
+                style={styles.emailLoginToggle}
+                onPress={() => setShowEmailLogin(true)}
+                activeOpacity={0.7}
+                disabled={isLoading}
+                accessibilityLabel="Sign in with email"
+                accessibilityRole="button"
+              >
+                <Ionicons name="mail-outline" size={20} color={colors.primary} style={styles.emailLoginToggleIcon} />
+                <Text style={styles.emailLoginToggleText}>Sign in with Email</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.emailLoginForm}>
+                <TextInput
+                  style={styles.emailInput}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Email"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                  accessibilityLabel="Email"
+                />
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Password"
+                    placeholderTextColor={colors.textSecondary}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    accessibilityLabel="Password"
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={[styles.emailLoginButton, isLoading && styles.buttonDisabled]}
+                  onPress={handleEmailLogin}
+                  disabled={isLoading}
+                  accessibilityLabel="Sign in"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.emailLoginButtonText}>
+                    {isLoading ? 'Signing In...' : 'Sign In'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelEmailLogin}
+                  onPress={() => {
+                    setShowEmailLogin(false);
+                    setEmail('');
+                    setPassword('');
+                  }}
+                  disabled={isLoading}
+                  accessibilityLabel="Cancel"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.cancelEmailLoginText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Create Account Button */}
+            <TouchableOpacity
+              style={styles.createAccountButton}
+              onPress={() => navigation.navigate('Register')}
+              activeOpacity={0.7}
+              disabled={isLoading}
+              accessibilityLabel="Create account"
+              accessibilityRole="button"
+              accessibilityHint="Sign up with email and password"
+            >
+              <Ionicons name="person-add-outline" size={20} color={colors.surface} style={styles.createAccountButtonIcon} />
+              <Text style={styles.createAccountButtonText}>Create Account</Text>
+            </TouchableOpacity>
+
+            {/* Demo Login Button */}
+            <TouchableOpacity
+              style={styles.demoButton}
+              onPress={handleDemoLogin}
+              activeOpacity={0.7}
+              disabled={isLoading}
+              accessibilityLabel="Demo login"
+              accessibilityRole="button"
+              accessibilityHint="Sign in with a demo test account"
+            >
+              <Ionicons name="flask-outline" size={20} color={colors.primary} style={styles.demoButtonIcon} />
+              <Text style={styles.demoButtonText}>Demo Login (Test Mode)</Text>
+            </TouchableOpacity>
+
             {mode === 'join_by_invite' ? (
               <TouchableOpacity
                 style={styles.joinButton}
                 onPress={handleChangeInvite}
                 activeOpacity={0.7}
                 disabled={isLoading}
+                accessibilityLabel="Change invite code"
+                accessibilityRole="button"
+                accessibilityHint="Opens screen to enter a different invite code"
               >
                 <Ionicons name="refresh-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
                 <Text style={styles.joinButtonText}>Change invite code</Text>
@@ -220,6 +382,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 onPress={handleJoinHousehold}
                 activeOpacity={0.7}
                 disabled={isLoading}
+                accessibilityLabel="Join household"
+                accessibilityRole="button"
+                accessibilityHint="Opens screen to enter household invite code"
               >
                 <Ionicons name="people-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
                 <Text style={styles.joinButtonText}>Join household</Text>
@@ -331,6 +496,83 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     alignSelf: 'center',
   },
+  emailLoginToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 108, 56, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+  },
+  emailLoginToggleIcon: {
+    marginRight: spacing.sm,
+  },
+  emailLoginToggleText: {
+    ...typography.button,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  emailLoginForm: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  emailInput: {
+    ...typography.body,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: 'rgba(96, 108, 56, 0.2)',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    color: colors.text,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: 'rgba(96, 108, 56, 0.2)',
+    borderRadius: borderRadius.md,
+  },
+  passwordInput: {
+    ...typography.body,
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    color: colors.text,
+  },
+  eyeButton: {
+    paddingHorizontal: spacing.md,
+  },
+  emailLoginButton: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.xs,
+    ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
+  },
+  emailLoginButtonText: {
+    ...typography.button,
+    color: colors.surface,
+    fontWeight: '700',
+  },
+  cancelEmailLogin: {
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  cancelEmailLoginText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
   joinButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -350,6 +592,47 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: colors.primary,
     fontWeight: '600',
+  },
+  createAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.secondary,
+    ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
+  },
+  createAccountButtonIcon: {
+    marginRight: spacing.sm,
+  },
+  createAccountButtonText: {
+    ...typography.button,
+    color: colors.surface,
+    fontWeight: '700',
+  },
+  demoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderStyle: 'dashed',
+  },
+  demoButtonIcon: {
+    marginRight: spacing.sm,
+  },
+  demoButtonText: {
+    ...typography.button,
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
   },
   footer: {
     alignItems: 'center',

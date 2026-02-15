@@ -362,9 +362,6 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   async updateItem(itemId: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem> {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:360',message:'updateItem called',data:{itemId,updates,updatesKeys:Object.keys(updates),isCheckedType:typeof updates.isChecked,quantityType:typeof updates.quantity},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     // Get existing item first
     const allItems = await this.getShoppingItems(
       await this.getShoppingLists(),
@@ -383,10 +380,7 @@ export class RemoteShoppingService implements IShoppingService {
     if ('quantity' in updates && updates.quantity !== undefined) {
       payload.quantity = updates.quantity;
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:377',message:'payload constructed',data:{payload,payloadKeys:Object.keys(payload),payloadStringified:JSON.stringify(payload),isCheckedValue:payload.isChecked,isCheckedType:typeof payload.isChecked,quantityValue:payload.quantity,quantityType:typeof payload.quantity},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-    
+
     const response = await api.patch<{ updatedItem: ShoppingListDetailDto['items'][0] }>(`/shopping-items/${itemId}`, payload);
     // Extract the updatedItem from the response
     const updatedItemResponse = response.updatedItem || response;
@@ -408,9 +402,6 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   async deleteItem(itemId: string): Promise<void> {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:406',message:'deleteItem called',data:{itemId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     // Get existing item first
     const allItems = await this.getShoppingItems(
       await this.getShoppingLists(),
@@ -420,16 +411,10 @@ export class RemoteShoppingService implements IShoppingService {
     if (!existing) {
       throw new Error(`Shopping item not found: ${itemId}`);
     }
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:417',message:'calling api.delete',data:{itemId,endpoint:`/shopping-items/${itemId}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
+
     // Use DELETE endpoint (backend has @Delete(':id') endpoint)
     await api.delete(`/shopping-items/${itemId}`);
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'RemoteShoppingService.ts:423',message:'api.delete completed',data:{itemId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
-    
+
     // Apply timestamp for optimistic UI and offline queue
     const deleted = markDeleted(existing);
     const withTimestamps = withUpdatedAt(deleted);

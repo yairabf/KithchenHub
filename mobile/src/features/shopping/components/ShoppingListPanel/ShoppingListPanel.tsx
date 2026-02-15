@@ -10,6 +10,8 @@ import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper
 import { ListItemCardWrapper } from '../../../../common/components/ListItemCardWrapper';
 import { GroceryCardContent, QuantityControls } from '../../../../common/components/GroceryCard';
 import { GrocerySearchBar } from '../GrocerySearchBar';
+import { EmptyState } from '../../../../common/components/EmptyState';
+import { ListItemSkeleton } from '../../../../common/components/ListItemSkeleton';
 import { colors, borderRadius } from '../../../../theme';
 import { styles } from './styles';
 import { ShoppingListPanelProps, ShoppingItemCardProps } from './types';
@@ -71,6 +73,8 @@ export function ShoppingListPanel({
   searchQuery,
   onSearchChange,
   searchMode = 'local',
+  isLoading = false,
+  onEmptyStateAction,
 }: ShoppingListPanelProps) {
   // Memoize the render function to prevent unnecessary re-renders
   const renderShoppingItem = useCallback((item: typeof filteredItems[0], index: number) => {
@@ -165,7 +169,26 @@ export function ShoppingListPanel({
 
       {/* Shopping Items */}
       <View style={styles.itemsList}>
-        {filteredItems.map(renderShoppingItem)}
+        {isLoading ? (
+          // Loading skeletons
+          <>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <ListItemSkeleton key={index} />
+            ))}
+          </>
+        ) : filteredItems.length === 0 ? (
+          <EmptyState
+            icon="cart-outline"
+            title="No items in this list"
+            description="Start adding items to your shopping list"
+            actionLabel={onEmptyStateAction ? 'Add first item' : undefined}
+            onActionPress={onEmptyStateAction}
+            actionColor={colors.shopping}
+          />
+        ) : (
+          // Render items
+          filteredItems.map(renderShoppingItem)
+        )}
       </View>
     </View>
   );

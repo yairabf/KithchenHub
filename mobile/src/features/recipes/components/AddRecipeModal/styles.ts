@@ -31,6 +31,15 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
   },
+  inputError: {
+    borderColor: colors.error,
+    borderWidth: 2,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: spacing.xs,
+  },
   textArea: {
     minHeight: 70,
     textAlignVertical: 'top',

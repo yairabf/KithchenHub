@@ -16,6 +16,7 @@ import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { householdApi } from '../../households/services/householdApi';
 import { authApi } from '../../auth/services/authApi';
 import { useAuth } from '../../../contexts/AuthContext';
+import { logger } from '../../../common/utils/logger';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -49,6 +50,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
   const [originalName, setOriginalName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     // Fetch current household name from backend
@@ -60,7 +62,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
           setName(householdName);
           setOriginalName(householdName);
         } catch (error) {
-          console.error('Error fetching household name:', error);
+          logger.error('Error fetching household name:', error);
           // Fallback to default
           const defaultName = 'My family';
           setName(defaultName);
@@ -73,18 +75,42 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
   }, [user]);
 
   /**
+   * Validates the household name
+   */
+  const validateName = (value: string): string | null => {
+    const trimmedName = value.trim();
+
+    if (trimmedName.length === 0) {
+      return null; // Don't show error for empty field unless touched
+    }
+    if (trimmedName.length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    if (trimmedName.length > 40) {
+      return 'Name must be less than 40 characters';
+    }
+
+    return null;
+  };
+
+  /**
+   * Handles blur event for real-time validation
+   */
+  const handleBlur = () => {
+    setTouched(true);
+    const validationError = validateName(name);
+    setError(validationError);
+  };
+
+  /**
    * Validates and saves the household name
    */
   const handleSave = async () => {
-    const trimmedName = name.trim();
+    setTouched(true);
+    const validationError = validateName(name);
 
-    // Validation
-    if (trimmedName.length < 2) {
-      setError('Name must be at least 2 characters');
-      return;
-    }
-    if (trimmedName.length > 40) {
-      setError('Name must be less than 40 characters');
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -92,7 +118,20 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
     setError(null);
 
     try {
-      await householdApi.updateHousehold(trimmedName);
+      const trimmedName = name.trim();
+
+      // Check if we're in demo mode (demo user)
+      const isDemoMode = user?.id === 'demo-user-id';
+
+      if (isDemoMode) {
+        // For demo mode, just simulate the save without calling the API
+        logger.debug('[HouseholdNameScreen] Demo mode - skipping API call, household name:', trimmedName);
+        // In a real app, this would be persisted, but for demo we just log it
+      } else {
+        // Real user - call the API
+        await householdApi.updateHousehold(trimmedName);
+      }
+
       // Clear the flag to allow RootNavigator to switch to MainNavigator
       setShowHouseholdNameScreen(false);
       // RootNavigator will automatically show MainNavigator since user is set and flag is cleared
@@ -138,17 +177,27 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
 
             <View style={styles.inputContainer}>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  error && touched && styles.inputError
+                ]}
                 value={name}
                 onChangeText={(text) => {
                   setName(text);
-                  setError(null);
+                  // Only validate while typing if field has been touched
+                  if (touched) {
+                    const validationError = validateName(text);
+                    setError(validationError);
+                  }
                 }}
+                onBlur={handleBlur}
                 placeholder="My family"
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
                 editable={!isSaving}
                 maxLength={40}
+                accessibilityLabel="Household name"
+                accessibilityHint="Enter a name for your household, 2 to 40 characters"
               />
               {error && <Text style={styles.errorText}>{error}</Text>}
               <Text style={styles.characterCount}>
@@ -161,6 +210,9 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
               onPress={handleSave}
               activeOpacity={0.7}
               disabled={isSaving || !name.trim()}
+              accessibilityLabel="Save household name"
+              accessibilityRole="button"
+              accessibilityHint="Saves the household name and continues to the app"
             >
               {isSaving ? (
                 <ActivityIndicator color={colors.surface} />
@@ -174,6 +226,9 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
                 style={styles.skipButton}
                 onPress={handleSkip}
                 activeOpacity={0.7}
+                accessibilityLabel="Skip naming"
+                accessibilityRole="button"
+                accessibilityHint="Continues to the app without changing the household name"
               >
                 <Text style={styles.skipButtonText}>Skip</Text>
               </TouchableOpacity>
@@ -244,6 +299,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     color: colors.text,
     textAlign: 'center',
+  },
+  inputError: {
+    borderColor: colors.error,
   },
   errorText: {
     ...typography.caption,

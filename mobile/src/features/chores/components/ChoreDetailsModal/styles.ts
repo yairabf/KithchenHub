@@ -107,4 +107,33 @@ export const styles = StyleSheet.create({
   iconOptionTextSelected: {
     // Add if needed
   },
+  recurrenceSection: {
+    marginBottom: spacing.md,
+  },
+  recurrenceOptions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  recurrenceOption: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.background,
+    borderWidth: 2,
+    borderColor: colors.divider,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recurrenceOptionSelected: {
+    backgroundColor: colors.chores,
+    borderColor: colors.chores,
+  },
+  recurrenceOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  recurrenceOptionTextSelected: {
+    color: colors.textLight,
+  },
 });

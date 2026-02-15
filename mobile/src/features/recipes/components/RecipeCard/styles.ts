@@ -45,7 +45,7 @@ export const styles = StyleSheet.create({
     left: 8,
   },
   recipeInfo: {
-    padding: 16,
+    padding: spacing.md,
   },
   recipeNameTimeRow: {
     flexDirection: 'row',

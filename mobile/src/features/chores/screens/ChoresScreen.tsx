@@ -5,6 +5,7 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   useWindowDimensions,
   RefreshControl,
   Platform,
@@ -15,11 +16,14 @@ import { ChoreCard } from '../components/ChoreCard';
 import { ChoresProgressCard } from '../components/ChoresProgressCard';
 import { ChoresSection } from '../components/ChoresSection';
 import { ChoreDetailsModal } from '../components/ChoreDetailsModal';
+import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ShareModal } from '../../../common/components/ShareModal';
+import { EmptyState } from '../../../common/components/EmptyState';
+import { ListItemSkeleton } from '../../../common/components/ListItemSkeleton';
 import { formatChoresText } from '../../../common/utils/shareUtils';
 import { type Chore } from '../../../mocks/chores';
 import { styles } from './styles';
-import type { ChoresScreenProps } from './types';
+import type { ChoresScreenProps, AddChoreHandler } from './types';
 import { createChore } from '../utils/choreFactory';
 import { createChoresService } from '../services/choresService';
 import { config } from '../../../config';
@@ -27,6 +31,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { determineUserDataMode } from '../../../common/types/dataModes';
 import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareChoreRepository } from '../../../common/repositories/cacheAwareChoreRepository';
+import { logger } from '../../../common/utils/logger';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
@@ -60,6 +65,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   // For guest mode, use service directly
   const [guestChores, setGuestChores] = useState<Chore[]>([]);
+  const [isLoadingChores, setIsLoadingChores] = useState(true);
 
   const chores = (isSignedIn ? cachedChores : guestChores)
     .filter(c => !c.deletedAt);
@@ -72,11 +78,15 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       // Check cache - only fetches from API if cache is missing
       repository.findAll()
         .then((chores) => {
-          console.log('[ChoresScreen] Cache check completed, chores:', chores.length);
+          logger.debug('[ChoresScreen] Cache check completed, chores:', chores.length);
+          setIsLoadingChores(false);
         })
         .catch((error) => {
-          console.error('[ChoresScreen] Failed to check cache:', error);
+          logger.error('[ChoresScreen] Failed to check cache:', error instanceof Error ? error : String(error));
+          setIsLoadingChores(false);
         });
+    } else if (!isSignedIn) {
+      setIsLoadingChores(false);
     }
   }, [isSignedIn, repository]);
 
@@ -86,7 +96,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     try {
       await repository.refresh();
     } catch (error) {
-      console.error('Failed to refresh chores:', error);
+      logger.error('Failed to refresh chores:', error instanceof Error ? error : String(error));
     } finally {
       setIsRefreshing(false);
     }
@@ -96,15 +106,18 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   useEffect(() => {
     if (!isSignedIn) {
       let isMounted = true;
+      setIsLoadingChores(true);
       const loadChores = async () => {
         try {
           const data = await choresService.getChores();
           if (isMounted) {
             setGuestChores(data);
+            setIsLoadingChores(false);
           }
         } catch (error) {
           if (isMounted) {
-            console.error('Failed to load chores:', error);
+            logger.error('Failed to load chores:', error instanceof Error ? error : String(error));
+            setIsLoadingChores(false);
           }
         }
       };
@@ -122,7 +135,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.toggle(id);
       } catch (error) {
-        console.error('Failed to toggle chore:', error);
+        logger.error('Failed to toggle chore:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
@@ -143,7 +156,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.update(choreId, { assignee });
       } catch (error) {
-        console.error('Failed to update chore assignee:', error);
+        logger.error('Failed to update chore assignee:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
@@ -159,7 +172,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.update(choreId, updates);
       } catch (error) {
-        console.error('Failed to update chore:', error);
+        logger.error('Failed to update chore:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
@@ -175,7 +188,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.delete(choreId);
       } catch (error) {
-        console.error('Failed to delete chore:', error);
+        logger.error('Failed to delete chore:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
@@ -183,24 +196,16 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     }
   };
 
-  const handleAddChore = async (newChore: {
-    title: string;
-    icon: string;
-    assignee?: string;
-    dueDate: string;
-    dueTime?: string;
-    section: 'today' | 'thisWeek';
-  }) => {
+  const handleAddChore: AddChoreHandler = async (newChore) => {
+    const chorePayload = { ...newChore, title: newChore.name };
     if (repository) {
-      // Signed-in: use repository
       try {
-        await repository.create(newChore);
+        await repository.create(chorePayload);
       } catch (error) {
-        console.error('Failed to create chore:', error);
+        logger.error('Failed to create chore:', error instanceof Error ? error : String(error));
       }
     } else {
-      // Guest: update local state
-      const chore = createChore(newChore);
+      const chore = createChore(chorePayload);
       setGuestChores(prevChores => [...prevChores, chore]);
     }
   };
@@ -228,15 +233,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     const total = todayChores.length;
     const completedCount = todayChores.filter(c => c.isCompleted).length;
     const progressValue = total > 0 ? (completedCount / total) * 100 : 0;
-    
-    // #region agent log
-    console.log('[ChoresScreen] Progress calculated:', {
-      total,
-      completed: completedCount,
-      progressValue,
-      todayChores: todayChores.map(c => ({ title: c.title, isCompleted: c.isCompleted }))
-    });
-    // #endregion
+
     return progressValue;
   }, [todayChores]);
 
@@ -251,51 +248,17 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     />
   );
 
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChoresScreen.tsx:312',message:'ChoresScreen platform info',data:{platform:Platform.OS,isWideScreen:isWideScreen,platformVersion:Platform.Version},timestamp:Date.now(),hypothesisId:'H'})}).catch(()=>{});
-  }, []);
-  // #endregion
+  const headerActions = {
+    share: { onPress: () => setShowShareModal(true), label: 'Share chores list' },
+    ...(onOpenChoresModal && { add: { onPress: onOpenChoresModal, label: 'Assign Chore' } as const }),
+  };
 
   return (
-    <SafeAreaView style={styles.container}
-      onLayout={(e) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChoresScreen.tsx:313',message:'ChoresScreen SafeAreaView layout',data:{layout:e.nativeEvent.layout},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-      }}
-    >
-      <View style={styles.header} >
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerSubtitle}>Household Hub</Text>
-          <Text style={styles.headerTitle}>Chores Dashboard</Text>
-          <View style={styles.headerMeta}>
-            <Ionicons name="clipboard-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.headerMetaText}>
-              {remainingToday} tasks remaining for today
-            </Text>
-          </View>
-        </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            accessibilityLabel="Share chores list"
-            style={styles.headerIconButton}
-            onPress={() => setShowShareModal(true)}
-          >
-            <Ionicons name="share-social-outline" size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
-          {onOpenChoresModal && (
-            <TouchableOpacity
-              accessibilityLabel="Assign chore"
-              style={styles.headerPrimaryButton}
-              onPress={onOpenChoresModal}
-            >
-              <Ionicons name="add" size={20} color={colors.textLight} />
-              <Text style={styles.headerPrimaryButtonText}>Assign Chore</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <ScreenHeader
+        title="Home Chores"
+        rightActions={headerActions}
+      />
 
       <ScrollView
         style={styles.content}
@@ -308,7 +271,22 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
       >
-        {isWideScreen ? (
+        {isLoadingChores ? (
+          <View style={styles.narrowLayout}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <ListItemSkeleton key={index} />
+            ))}
+          </View>
+        ) : chores.length === 0 ? (
+          <EmptyState
+            icon="checkmark-done-outline"
+            title="No chores yet"
+            description="Create your first chore to start tracking household tasks"
+            actionLabel="Create first chore"
+            onActionPress={onOpenChoresModal}
+            actionColor={colors.chores}
+          />
+        ) : isWideScreen ? (
           <View style={styles.wideLayout}>
             <View style={styles.leftColumn}>
               <ChoresProgressCard
@@ -334,11 +312,6 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
                 chores={upcomingChores}
                 indicatorColor="secondary"
                 renderChoreCard={renderChoreCard}
-                onLayout={(e) => {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChoresScreen.tsx:400',message:'Upcoming sectionHeader layout (wide)',data:{layout:e.nativeEvent.layout},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
-                  // #endregion
-                }}
               />
             </View>
           </View>

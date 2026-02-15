@@ -77,9 +77,9 @@ describe('ShoppingListPanel', () => {
     jest.clearAllMocks();
   });
 
-  it('should render list header with My Lists label', () => {
+  it('should render list header with My Active Lists label', () => {
     const { getByText } = render(<ShoppingListPanel {...defaultProps} />);
-    expect(getByText('My Lists')).toBeTruthy();
+    expect(getByText('My Active Lists')).toBeTruthy();
   });
 
   it('should render selected list name in drawer', () => {
@@ -105,9 +105,9 @@ describe('ShoppingListPanel', () => {
     expect(queryByText('Failed')).toBeNull();
   });
 
-  it('should render New List button', () => {
+  it('should render Create New button', () => {
     const { getByText } = render(<ShoppingListPanel {...defaultProps} />);
-    expect(getByText('New List')).toBeTruthy();
+    expect(getByText('Create New')).toBeTruthy();
   });
 
   describe.each([
@@ -119,7 +119,7 @@ describe('ShoppingListPanel', () => {
       const { getByText } = render(
         <ShoppingListPanel {...defaultProps} filteredItems={filteredItems} />
       );
-      expect(getByText('My Lists')).toBeTruthy();
+      expect(getByText('My Active Lists')).toBeTruthy();
     });
   });
 });

@@ -28,6 +28,7 @@ export function ChoreDetailsModal({
   const [choreName, setChoreName] = useState<string>(chore?.title || '');
   const [selectedIcon, setSelectedIcon] = useState<string>(chore?.icon || '📋');
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
+  const [recurrencePattern, setRecurrencePattern] = useState<string | null>(null);
 
   // ... existing code ...
 
@@ -36,6 +37,7 @@ export function ChoreDetailsModal({
       setSelectedAssignee(chore.assignee);
       setChoreName(chore.title);
       setSelectedIcon(chore.icon || '📋');
+      setRecurrencePattern(chore.isRecurring ? 'daily' : null); // Default to daily if recurring
       // ... date logic
     }
   }, [visible, chore]);
@@ -45,7 +47,7 @@ export function ChoreDetailsModal({
       // ... existing code ...
 
       // Build updates object
-      const updates: Partial<Chore> = {};
+      const updates: Partial<Chore> & { assigneeId?: string } = {};
 
       if (choreName !== chore.title) {
         updates.title = choreName;
@@ -53,6 +55,21 @@ export function ChoreDetailsModal({
 
       if (selectedIcon !== chore.icon) {
         updates.icon = selectedIcon;
+      }
+
+      // Handle recurrence pattern update
+      const currentIsRecurring = chore.isRecurring || false;
+      const newIsRecurring = recurrencePattern !== null;
+      if (currentIsRecurring !== newIsRecurring || recurrencePattern !== null) {
+        updates.isRecurring = newIsRecurring;
+      }
+
+      // Handle assignee update - send assigneeId instead of name
+      if (selectedAssignee !== chore.assignee) {
+        // Lookup member by name to get userId
+        const member = members.find(m => m.name === selectedAssignee);
+        updates.assigneeId = member?.id || undefined;
+        updates.assignee = selectedAssignee; // Also update local name for display
       }
 
       // ... existing date logic ...
@@ -119,6 +136,68 @@ export function ChoreDetailsModal({
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </View>
+
+      <View style={styles.recurrenceSection}>
+        <Text style={styles.sectionLabel}>REPEAT:</Text>
+        <View style={styles.recurrenceOptions}>
+          <TouchableOpacity
+            style={[
+              styles.recurrenceOption,
+              recurrencePattern === null && styles.recurrenceOptionSelected
+            ]}
+            onPress={() => setRecurrencePattern(null)}
+          >
+            <Text style={[
+              styles.recurrenceOptionText,
+              recurrencePattern === null && styles.recurrenceOptionTextSelected
+            ]}>
+              None
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.recurrenceOption,
+              recurrencePattern === 'daily' && styles.recurrenceOptionSelected
+            ]}
+            onPress={() => setRecurrencePattern('daily')}
+          >
+            <Text style={[
+              styles.recurrenceOptionText,
+              recurrencePattern === 'daily' && styles.recurrenceOptionTextSelected
+            ]}>
+              Daily
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.recurrenceOption,
+              recurrencePattern === 'weekly' && styles.recurrenceOptionSelected
+            ]}
+            onPress={() => setRecurrencePattern('weekly')}
+          >
+            <Text style={[
+              styles.recurrenceOptionText,
+              recurrencePattern === 'weekly' && styles.recurrenceOptionTextSelected
+            ]}>
+              Weekly
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.recurrenceOption,
+              recurrencePattern === 'monthly' && styles.recurrenceOptionSelected
+            ]}
+            onPress={() => setRecurrencePattern('monthly')}
+          >
+            <Text style={[
+              styles.recurrenceOptionText,
+              recurrencePattern === 'monthly' && styles.recurrenceOptionTextSelected
+            ]}>
+              Monthly
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.dateTimeSection}>

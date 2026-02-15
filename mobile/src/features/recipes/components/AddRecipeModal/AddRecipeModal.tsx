@@ -61,6 +61,10 @@ export function AddRecipeModal({
   /** Ingredient ids whose name field has been "committed" (blurred or added from search); names are then read-only. */
   const [committedIngredientIds, setCommittedIngredientIds] = useState<Set<string>>(() => new Set());
 
+  // Real-time validation states
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [titleTouched, setTitleTouched] = useState(false);
+
   // Reset form when modal opens
   useEffect(() => {
     if (visible) {
@@ -81,8 +85,28 @@ export function AddRecipeModal({
       }
       setSearchQuery('');
       setUnitPickerIngredientId(null);
+      setTitleError(null);
+      setTitleTouched(false);
     }
   }, [visible, mode, initialRecipe]);
+
+  // Validation functions
+  const validateTitle = (value: string): string | null => {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return 'Recipe title is required';
+    }
+    if (trimmed.length < 2) {
+      return 'Title must be at least 2 characters';
+    }
+    return null;
+  };
+
+  const handleTitleBlur = () => {
+    setTitleTouched(true);
+    const error = validateTitle(recipe.title);
+    setTitleError(error);
+  };
 
   // Validation - ensure arrays exist
   const ingredients = recipe.ingredients || [];
@@ -207,7 +231,7 @@ export function AddRecipeModal({
       visible={visible}
       onClose={onClose}
       title={mode === 'edit' ? 'Edit Recipe' : 'New Recipe'}
-      confirmText={isSaving ? 'Saving...' : mode === 'edit' ? 'Save Changes' : 'Save Recipe'}
+      confirmText={isSaving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Save Recipe'}
       cancelText="Cancel"
       onConfirm={handleSave}
       confirmColor={colors.recipes}
@@ -223,12 +247,26 @@ export function AddRecipeModal({
         <View style={styles.section}>
           <Text style={styles.label}>Recipe Title</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              titleError && titleTouched && styles.inputError
+            ]}
             placeholder="e.g. Thai Green Curry"
             placeholderTextColor={colors.textMuted}
             value={recipe.title}
-            onChangeText={(text) => setRecipe({ ...recipe, title: text })}
+            onChangeText={(text) => {
+              setRecipe({ ...recipe, title: text });
+              // Validate while typing if field has been touched
+              if (titleTouched) {
+                const error = validateTitle(text);
+                setTitleError(error);
+              }
+            }}
+            onBlur={handleTitleBlur}
           />
+          {titleError && titleTouched && (
+            <Text style={styles.errorText}>{titleError}</Text>
+          )}
         </View>
 
         {/* Category Selection */}

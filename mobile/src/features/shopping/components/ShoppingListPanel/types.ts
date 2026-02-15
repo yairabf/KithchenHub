@@ -68,9 +68,14 @@ export interface ShoppingListPanelProps {
   
   /** Search mode: 'local' for client-side filtering, 'remote' for server-side search */
   searchMode?: 'local' | 'remote';
+  /** Whether the panel is in a loading state (shows skeletons) */
+  isLoading?: boolean;
   
   /** Whether to hide the panel header (for embedded views) */
   hideHeader?: boolean;
+
+  /** Optional callback when user taps empty state action (e.g. focus search or open quick-add) */
+  onEmptyStateAction?: () => void;
 }
 
 export type { ShoppingItem, ShoppingList, GroceryItem };

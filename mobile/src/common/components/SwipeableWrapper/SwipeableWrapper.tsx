@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, Dimensions, Platform } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -16,7 +16,20 @@ import { styles, DELETE_THRESHOLD } from './styles';
 import { SwipeableWrapperProps } from './types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const DELETE_VELOCITY_THRESHOLD = 1000; // Increased for more deliberate swipes
+
+// Platform-specific gesture configuration
+const GESTURE_CONFIG = {
+  web: {
+    activeOffsetX: [-3, 3] as [number, number],
+    failOffsetY: [-20, 20] as [number, number],
+    deleteVelocityThreshold: 500,
+  },
+  native: {
+    activeOffsetX: [-5, 5] as [number, number],
+    failOffsetY: [-15, 15] as [number, number],
+    deleteVelocityThreshold: 1000,
+  },
+} as const;
 
 /**
  * Generic swipe-to-delete wrapper component
@@ -39,15 +52,26 @@ export function SwipeableWrapper({
     }
   };
 
+  // Select platform-specific configuration
+  const config = GESTURE_CONFIG[Platform.OS === 'web' ? 'web' : 'native'];
+
   const panGesture = Gesture.Pan()
     .enabled(!disabled)
-    .activeOffsetX([-10, 10])
-    .failOffsetY([-10, 10])
+    .minPointers(1)
+    .maxPointers(1)
+    .activeOffsetX(config.activeOffsetX)
+    .failOffsetY(config.failOffsetY)
+    // Block other gestures while we're active
+    .shouldCancelWhenOutside(false)
+    // Enable mouse events on web
+    .enableTrackpadTwoFingerGesture(false)
     .onStart(() => {
+      'worklet';
       // Reset direction at start of new gesture
       swipeDirection.value = 0;
     })
     .onUpdate((event) => {
+      'worklet';
       // Lock direction on first significant movement
       if (swipeDirection.value === 0 && Math.abs(event.translationX) > 5) {
         swipeDirection.value = event.translationX > 0 ? 1 : -1;
@@ -73,13 +97,14 @@ export function SwipeableWrapper({
       }
     })
     .onEnd((event) => {
+      'worklet';
       const absTranslateX = Math.abs(translateX.value);
       const absVelocityX = Math.abs(event.velocityX);
 
       // Check if crossed 30% threshold or very fast swipe
       if (
         absTranslateX > DELETE_THRESHOLD ||
-        absVelocityX > DELETE_VELOCITY_THRESHOLD
+        absVelocityX > config.deleteVelocityThreshold
       ) {
         // Automatically continue sliding off screen and delete
         const direction = translateX.value > 0 ? 1 : -1;

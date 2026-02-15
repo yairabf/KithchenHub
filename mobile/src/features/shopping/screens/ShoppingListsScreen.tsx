@@ -89,14 +89,8 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   // Load categories for custom item selection
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ShoppingListsScreen.tsx:65', message: 'Calling getShoppingCategories', data: { methodExists: typeof catalogService.getShoppingCategories === 'function' }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
     catalogService.getShoppingCategories()
       .then((cats) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ShoppingListsScreen.tsx:67', message: 'getShoppingCategories resolved', data: { categoryCount: cats?.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-        // #endregion
         setAvailableCategories(cats);
         // Set default category if not in list
         if (cats.length > 0 && !cats.includes(selectedItemCategory)) {
@@ -104,9 +98,6 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         }
       })
       .catch((error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ShoppingListsScreen.tsx:catch', message: 'getShoppingCategories error', data: { errorMessage: error?.message, errorName: error?.name, errorType: typeof error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-        // #endregion
         console.error('Failed to load categories:', error);
       });
   }, []);
@@ -691,6 +682,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchMode="remote"
+            isLoading={isItemsLoading}
           />
 
           {/* Right Column - Discovery */}
@@ -747,6 +739,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
                 <TouchableOpacity
                   style={styles.modalQuantityBtn}
                   onPress={() => handleQuantityInputChange(-1)}
+                  accessibilityLabel="Decrease quantity"
+                  accessibilityRole="button"
+                  accessibilityHint="Reduces item quantity by one"
                 >
                   <Ionicons name="remove" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
@@ -756,10 +751,15 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
                   onChangeText={setQuantityInput}
                   keyboardType="number-pad"
                   selectTextOnFocus
+                  accessibilityLabel="Quantity"
+                  accessibilityHint="Enter item quantity"
                 />
                 <TouchableOpacity
                   style={styles.modalQuantityBtn}
                   onPress={() => handleQuantityInputChange(1)}
+                  accessibilityLabel="Increase quantity"
+                  accessibilityRole="button"
+                  accessibilityHint="Increases item quantity by one"
                 >
                   <Ionicons name="add" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
@@ -788,6 +788,8 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             value={newListName}
             onChangeText={setNewListName}
             autoFocus
+            accessibilityLabel="List name"
+            accessibilityHint="Enter a name for the new shopping list"
           />
         </View>
 
@@ -806,6 +808,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
                   newListIcon === icon && styles.iconOptionActive
                 ]}
                 onPress={() => setNewListIcon(icon)}
+                accessibilityLabel={`Select ${icon} icon`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: newListIcon === icon }}
               >
                 <Ionicons name={icon} size={24} color={newListIcon === icon ? colors.chores : colors.textSecondary} />
               </TouchableOpacity>
@@ -829,6 +834,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
                   newListColor === color && styles.colorOptionActive
                 ]}
                 onPress={() => setNewListColor(color)}
+                accessibilityLabel={`Select color ${color}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: newListColor === color }}
               >
                 {newListColor === color && (
                   <Ionicons name="checkmark" size={20} color="#FFFFFF" />
@@ -871,6 +879,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
                   activeList.id === list.id && { backgroundColor: list.color },
                 ]}
                 onPress={() => setSelectedList(list)}
+                accessibilityLabel={`Switch to ${list.name}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: activeList.id === list.id }}
               >
                 <Text
                   style={[

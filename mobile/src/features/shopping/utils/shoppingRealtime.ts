@@ -225,11 +225,6 @@ export const applyShoppingItemChange = (
     : null;
 
   const existing = existingById ?? existingByContent ?? undefined;
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'shoppingRealtime.ts:227',message:'applyShoppingItemChange matching',data:{incomingId:updatedRow.id,incomingName:updatedRow.name,existingById:existingById?.id,existingByContent:existingByContent?.id,itemsCount:items.length,items:items.map(i=>({id:i.id,localId:i.localId,name:i.name}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  }
-  // #endregion
   const nextItem = mapItemRowToItem(updatedRow, groceryItems, existing);
 
   if (!existing) {
@@ -240,21 +235,11 @@ export const applyShoppingItemChange = (
     // This handles race conditions where cache was updated between reads
     const duplicateCheck = items.find((item) => item.id === updatedRow.id);
     if (duplicateCheck) {
-      // #region agent log
-      if (typeof window !== 'undefined') {
-        fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'shoppingRealtime.ts:234',message:'duplicate found in double-check',data:{incomingId:updatedRow.id,duplicateId:duplicateCheck.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      }
-      // #endregion
       // Item already exists - update it instead of adding
-      return items.map((item) => 
+      return items.map((item) =>
         item.id === updatedRow.id ? nextItem : item
       );
     }
-    // #region agent log
-    if (typeof window !== 'undefined') {
-      fetch('http://127.0.0.1:7244/ingest/201a0481-4764-485f-8715-b7ec2ac6f4fc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'shoppingRealtime.ts:242',message:'ADDING new item (no existing found)',data:{incomingId:updatedRow.id,incomingName:updatedRow.name,beforeCount:items.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    }
-    // #endregion
     return [...items, nextItem];
   }
 

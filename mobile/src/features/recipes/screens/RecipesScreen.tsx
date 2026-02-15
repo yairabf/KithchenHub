@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
@@ -16,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { spacing } from '../../../theme';
 import { colors } from '../../../theme/colors';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
+import { EmptyState } from '../../../common/components/EmptyState';
+import { CardSkeleton } from '../../../common/components/CardSkeleton';
 import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
@@ -29,14 +30,15 @@ import { createRecipe, mapFormDataToRecipeUpdates, mapRecipeToFormData } from '.
 import { useRecipes } from '../hooks/useRecipes';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useCatalog } from '../../../common/hooks/useCatalog';
+import { Toast } from '../../../common/components/Toast';
+import { logger } from '../../../common/utils/logger';
 
 const RECIPES_SHOW_CATEGORY_FILTER_KEY = '@kitchen_hub_recipes_show_category_filter';
 
 // Column gap constant - same for all screen sizes
 const COLUMN_GAP = spacing.md;
 
-
-// Helpers removed - logic moved to RecipeService
+const CARD_SKELETON_STYLE: ViewStyle = { marginBottom: spacing.lg };
 
 
 
@@ -54,9 +56,18 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const [showEditRecipeModal, setShowEditRecipeModal] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'error' | 'success' | 'info'>('error');
+
+  const showToast = (message: string, type: 'error' | 'success' | 'info' = 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
   const [showCategoryFilter, setShowCategoryFilter] = useState(true);
 
-  // Load category filter visibility preference
   useEffect(() => {
     AsyncStorage.getItem(RECIPES_SHOW_CATEGORY_FILTER_KEY)
       .then((value) => {
@@ -65,7 +76,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         }
       })
       .catch((e) => {
-        console.warn('[RecipesScreen] Failed to load category filter preference', e);
+        logger.warn('[RecipesScreen] Failed to load category filter preference', e);
       });
   }, []);
 
@@ -73,13 +84,12 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     setShowCategoryFilter((prev) => {
       const next = !prev;
       AsyncStorage.setItem(RECIPES_SHOW_CATEGORY_FILTER_KEY, String(next)).catch((e) => {
-        console.warn('[RecipesScreen] Failed to persist category filter preference', e);
+        logger.warn('[RecipesScreen] Failed to persist category filter preference', e);
       });
       return next;
     });
   }, []);
 
-  // When filter bar is hidden, show all recipes (ignore selected category)
   const effectiveCategory = showCategoryFilter ? selectedCategory : 'All';
 
   // Calculate card width dynamically based on screen size
@@ -107,7 +117,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       }
       // TODO: Investigate useRecipes hook or API response to ensure unique IDs and remove this client-side filtering (See Review Issue #2)
       if (seen.has(id)) {
-        console.warn('[RecipesScreen] Duplicate recipe ID found, filtering out:', id, JSON.stringify({ title: recipe?.title }));
+        logger.warn('[RecipesScreen] Duplicate recipe ID found, filtering out:', id, JSON.stringify({ title: recipe?.title }));
         return false;
       }
       seen.add(id);
@@ -115,7 +125,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     });
 
     if (filtered.length !== recipes.length) {
-      console.warn(`[RecipesScreen] Filtered ${recipes.length - filtered.length} recipes (missing IDs or duplicates). Original: ${recipes.length}, Filtered: ${filtered.length}`);
+      logger.warn(`[RecipesScreen] Filtered ${recipes.length - filtered.length} recipes (missing IDs or duplicates). Original: ${recipes.length}, Filtered: ${filtered.length}`);
     }
 
     return filtered;
@@ -141,14 +151,14 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       const full = await getRecipeById(recipe.id);
       const hasDetails = !!full?.ingredients?.length && !!full?.instructions?.length;
       if (!hasDetails) {
-        Alert.alert('Unable to edit recipe', 'Recipe details are still loading. Please try again.');
+        showToast('Recipe details are still loading. Please try again.');
         return;
       }
       setEditingRecipe(full);
       setShowEditRecipeModal(true);
     } catch (error) {
-      console.error('Failed to load recipe details for edit:', error);
-      Alert.alert('Unable to edit recipe', 'Failed to load recipe details.');
+      logger.error('Failed to load recipe details for edit:', error instanceof Error ? error : String(error));
+      showToast('Failed to load recipe details.');
     } finally {
       setIsLoadingEdit(false);
     }
@@ -159,7 +169,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     try {
       await refresh();
     } catch (error) {
-      console.error('Failed to refresh recipes:', error);
+      logger.error('Failed to refresh recipes:', error instanceof Error ? error : String(error));
     } finally {
       setIsRefreshing(false);
     }
@@ -179,7 +189,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       setShowAddRecipeModal(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
-      Alert.alert('Unable to save recipe', message);
+      showToast(message);
     } finally {
       setIsSavingRecipe(false);
     }
@@ -192,7 +202,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       const updates = mapFormDataToRecipeUpdates(data);
 
       if (data.removeImage) {
-        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: null as any });
+        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: null });
       } else if (data.imageLocalUri) {
         // Pass local URI, RecipeService will handle upload
         await updateRecipe(editingRecipe.id, { ...updates, imageUrl: data.imageLocalUri });
@@ -204,7 +214,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       setEditingRecipe(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
-      Alert.alert('Unable to update recipe', message);
+      showToast(message, 'error');
     } finally {
       setIsSavingEdit(false);
     }
@@ -228,9 +238,29 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       </ScreenHeader>
 
       {isLoading && recipes.length === 0 ? (
-        <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+        >
+          <View style={styles.grid}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <CardSkeleton
+                key={index}
+                width={cardWidth}
+                style={CARD_SKELETON_STYLE}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      ) : filteredRecipes.length === 0 && !isLoading ? (
+        <EmptyState
+          icon="book-outline"
+          title="No recipes yet"
+          description="Start building your collection by adding your favorite recipes"
+          actionLabel="Add your first recipe"
+          onActionPress={handleAddRecipe}
+          actionColor={colors.recipes}
+        />
       ) : (
         <>
           <View style={styles.searchContainer}>
@@ -352,6 +382,13 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         mode="edit"
         initialRecipe={editingRecipe ? mapRecipeToFormData(editingRecipe) : undefined}
         searchGroceries={searchGroceries}
+      />
+
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setToastVisible(false)}
       />
     </SafeAreaView>
   );

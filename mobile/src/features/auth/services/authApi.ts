@@ -35,6 +35,45 @@ export interface GoogleAuthResponse {
 }
 
 /**
+ * Registration request payload
+ */
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
+/**
+ * Login request payload
+ */
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+/**
+ * Registration response from the backend
+ */
+export interface RegisterResponse {
+  message: string;
+}
+
+/**
+ * Authentication response (direct format from backend)
+ */
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken?: string;
+  user: UserResponse; // Contains householdId
+  isNewUser?: boolean;
+  isNewHousehold?: boolean;
+  household?: {
+    id: string;
+    name: string;
+  };
+}
+
+/**
  * Authentication API service.
  * 
  * Provides typed wrappers around authentication endpoints.
@@ -49,12 +88,26 @@ export interface GoogleAuthResponse {
  */
 export const authApi = {
   /**
+   * Registers a new user with email and password
+   */
+  register: (data: RegisterRequest): Promise<RegisterResponse> => {
+    return api.post<RegisterResponse>('/auth/register', data);
+  },
+
+  /**
+   * Logs in a user with email and password
+   */
+  login: (data: LoginRequest): Promise<AuthResponse> => {
+    return api.post<AuthResponse>('/auth/login', data);
+  },
+
+  /**
    * Fetches the current authenticated user's information.
    * Requires a valid JWT token to be set on the API client.
-   * 
+   *
    * @returns Promise resolving to the user data
    * @throws ApiError if the request fails or user is not authenticated
-   * 
+   *
    * @example
    * ```typescript
    * try {

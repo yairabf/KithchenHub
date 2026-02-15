@@ -51,8 +51,11 @@ export class RecipesRepository {
   }
 
   async findRecipeById(id: string): Promise<Recipe | null> {
-    return this.prisma.recipe.findUnique({
-      where: { id },
+    return this.prisma.recipe.findFirst({
+      where: {
+        id,
+        ...ACTIVE_RECORDS_FILTER,
+      },
     });
   }
 

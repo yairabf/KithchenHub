@@ -36,7 +36,7 @@ export interface Recipe extends BaseEntity {
   cookTime?: number; // in minutes
   prepTime?: number; // in minutes
   category?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   thumbUrl?: string;
   imageVersion?: number;
   imageUpdatedAt?: string;

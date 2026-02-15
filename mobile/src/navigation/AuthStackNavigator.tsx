@@ -2,12 +2,14 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
+import { RegisterScreen } from '../features/auth/screens/RegisterScreen';
 import { EnterInviteCodeScreen } from '../features/auth/screens/EnterInviteCodeScreen';
 import { HouseholdNameScreen } from '../features/auth/screens/HouseholdNameScreen';
 import { HouseholdOnboardingScreen } from '../features/onboarding/screens/HouseholdOnboardingScreen';
 
 export type AuthStackParamList = {
   Login: undefined;
+  Register: undefined;
   EnterInviteCode: undefined;
   HouseholdName: undefined;
   HouseholdOnboarding: undefined;
@@ -36,6 +38,7 @@ export function AuthStackNavigator() {
       }}
     >
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="EnterInviteCode" component={EnterInviteCodeScreen} />
       <Stack.Screen name="HouseholdName" component={HouseholdNameScreen} />
       <Stack.Screen name="HouseholdOnboarding" component={HouseholdOnboardingScreen} />
