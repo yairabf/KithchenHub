@@ -223,7 +223,7 @@ export function RecipeDetailScreen({
       const updates = mapFormDataToRecipeUpdates(data);
 
       if (data.removeImage) {
-        const updated = await updateRecipe(displayRecipe.id, { ...updates, imageUrl: null as any });
+        const updated = await updateRecipe(displayRecipe.id, { ...updates, imageUrl: null });
         setFullRecipe(updated);
       } else if (data.imageLocalUri) {
         // Pass local URI, RecipeService will handle upload

@@ -31,6 +31,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { determineUserDataMode } from '../../../common/types/dataModes';
 import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareChoreRepository } from '../../../common/repositories/cacheAwareChoreRepository';
+import { logger } from '../../../common/utils/logger';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
@@ -77,11 +78,11 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       // Check cache - only fetches from API if cache is missing
       repository.findAll()
         .then((chores) => {
-          console.log('[ChoresScreen] Cache check completed, chores:', chores.length);
+          logger.debug('[ChoresScreen] Cache check completed, chores:', chores.length);
           setIsLoadingChores(false);
         })
         .catch((error) => {
-          console.error('[ChoresScreen] Failed to check cache:', error);
+          logger.error('[ChoresScreen] Failed to check cache:', error instanceof Error ? error : String(error));
           setIsLoadingChores(false);
         });
     } else if (!isSignedIn) {
@@ -95,7 +96,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     try {
       await repository.refresh();
     } catch (error) {
-      console.error('Failed to refresh chores:', error);
+      logger.error('Failed to refresh chores:', error instanceof Error ? error : String(error));
     } finally {
       setIsRefreshing(false);
     }
@@ -115,7 +116,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
           }
         } catch (error) {
           if (isMounted) {
-            console.error('Failed to load chores:', error);
+            logger.error('Failed to load chores:', error instanceof Error ? error : String(error));
             setIsLoadingChores(false);
           }
         }
@@ -134,7 +135,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.toggle(id);
       } catch (error) {
-        console.error('Failed to toggle chore:', error);
+        logger.error('Failed to toggle chore:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
@@ -155,7 +156,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.update(choreId, { assignee });
       } catch (error) {
-        console.error('Failed to update chore assignee:', error);
+        logger.error('Failed to update chore assignee:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
@@ -171,7 +172,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.update(choreId, updates);
       } catch (error) {
-        console.error('Failed to update chore:', error);
+        logger.error('Failed to update chore:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
@@ -187,7 +188,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.delete(choreId);
       } catch (error) {
-        console.error('Failed to delete chore:', error);
+        logger.error('Failed to delete chore:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
@@ -201,7 +202,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       try {
         await repository.create(chorePayload);
       } catch (error) {
-        console.error('Failed to create chore:', error);
+        logger.error('Failed to create chore:', error instanceof Error ? error : String(error));
       }
     } else {
       const chore = createChore(chorePayload);

@@ -8,7 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,9 +38,7 @@ const RECIPES_SHOW_CATEGORY_FILTER_KEY = '@kitchen_hub_recipes_show_category_fil
 // Column gap constant - same for all screen sizes
 const COLUMN_GAP = spacing.md;
 
-function calculateCardMargin(_index: number): ViewStyle {
-  return { marginBottom: spacing.lg };
-}
+const CARD_SKELETON_STYLE: ViewStyle = { marginBottom: spacing.lg };
 
 
 
@@ -160,7 +157,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       setEditingRecipe(full);
       setShowEditRecipeModal(true);
     } catch (error) {
-      logger.error('Failed to load recipe details for edit:', error);
+      logger.error('Failed to load recipe details for edit:', error instanceof Error ? error : String(error));
       showToast('Failed to load recipe details.');
     } finally {
       setIsLoadingEdit(false);
@@ -172,7 +169,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     try {
       await refresh();
     } catch (error) {
-      logger.error('Failed to refresh recipes:', error);
+      logger.error('Failed to refresh recipes:', error instanceof Error ? error : String(error));
     } finally {
       setIsRefreshing(false);
     }
@@ -205,7 +202,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       const updates = mapFormDataToRecipeUpdates(data);
 
       if (data.removeImage) {
-        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: null as any });
+        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: null });
       } else if (data.imageLocalUri) {
         // Pass local URI, RecipeService will handle upload
         await updateRecipe(editingRecipe.id, { ...updates, imageUrl: data.imageLocalUri });
@@ -217,7 +214,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       setEditingRecipe(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unknown error occurred';
-      Alert.alert('Unable to update recipe', message);
+      showToast(message, 'error');
     } finally {
       setIsSavingEdit(false);
     }
@@ -250,7 +247,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
               <CardSkeleton
                 key={index}
                 width={cardWidth}
-                style={calculateCardMargin(index)}
+                style={CARD_SKELETON_STYLE}
               />
             ))}
           </View>

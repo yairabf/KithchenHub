@@ -18,12 +18,15 @@
 // Check if running in development mode
 const isDev = __DEV__;
 
+/** Values that can be passed to logger methods (primitives, Error, plain objects). */
+export type Loggable = string | number | boolean | null | undefined | Error | object;
+
 export const logger = {
   /**
    * Debug-level logging - only in development
    * Use for detailed diagnostic information
    */
-  debug: (...args: any[]) => {
+  debug: (...args: Loggable[]) => {
     if (isDev) {
       console.log('[DEBUG]', ...args);
     }
@@ -33,7 +36,7 @@ export const logger = {
    * Info-level logging - only in development
    * Use for general informational messages
    */
-  info: (...args: any[]) => {
+  info: (...args: Loggable[]) => {
     if (isDev) {
       console.log('[INFO]', ...args);
     }
@@ -43,7 +46,7 @@ export const logger = {
    * Warning-level logging - both dev and production
    * Use for potentially harmful situations
    */
-  warn: (...args: any[]) => {
+  warn: (...args: Loggable[]) => {
     console.warn('[WARN]', ...args);
   },
 
@@ -51,7 +54,7 @@ export const logger = {
    * Error-level logging - both dev and production
    * Use for error events that might still allow the application to continue
    */
-  error: (...args: any[]) => {
+  error: (...args: Loggable[]) => {
     console.error('[ERROR]', ...args);
   },
 };
