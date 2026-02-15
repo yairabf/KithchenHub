@@ -34,7 +34,7 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
-  const { signInWithGoogle, signInWithDemo, signInWithEmail, showHouseholdNameScreen } = useAuth();
+  const { signInWithGoogle, signInWithEmail, showHouseholdNameScreen } = useAuth();
   const { mode, inviteContext, setMode, setInviteContext } = useOnboarding();
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
@@ -182,23 +182,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setIsLoading(true);
-    try {
-      await signInWithDemo();
-      // Navigation handled by RootNavigator based on user state
-    } catch (error) {
-      Alert.alert(
-        'Demo Login Failed',
-        error instanceof Error
-          ? error.message
-          : 'Unable to sign in with demo account. Please try again.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -347,20 +330,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             >
               <Ionicons name="person-add-outline" size={20} color={colors.surface} style={styles.createAccountButtonIcon} />
               <Text style={styles.createAccountButtonText}>Create Account</Text>
-            </TouchableOpacity>
-
-            {/* Demo Login Button */}
-            <TouchableOpacity
-              style={styles.demoButton}
-              onPress={handleDemoLogin}
-              activeOpacity={0.7}
-              disabled={isLoading}
-              accessibilityLabel="Demo login"
-              accessibilityRole="button"
-              accessibilityHint="Sign in with a demo test account"
-            >
-              <Ionicons name="flask-outline" size={20} color={colors.primary} style={styles.demoButtonIcon} />
-              <Text style={styles.demoButtonText}>Demo Login (Test Mode)</Text>
             </TouchableOpacity>
 
             {mode === 'join_by_invite' ? (
@@ -611,28 +580,6 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: colors.surface,
     fontWeight: '700',
-  },
-  demoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderStyle: 'dashed',
-  },
-  demoButtonIcon: {
-    marginRight: spacing.sm,
-  },
-  demoButtonText: {
-    ...typography.button,
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 14,
   },
   footer: {
     alignItems: 'center',

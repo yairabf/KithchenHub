@@ -120,17 +120,8 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
     try {
       const trimmedName = name.trim();
 
-      // Check if we're in demo mode (demo user)
-      const isDemoMode = user?.id === 'demo-user-id';
-
-      if (isDemoMode) {
-        // For demo mode, just simulate the save without calling the API
-        logger.debug('[HouseholdNameScreen] Demo mode - skipping API call, household name:', trimmedName);
-        // In a real app, this would be persisted, but for demo we just log it
-      } else {
-        // Real user - call the API
-        await householdApi.updateHousehold(trimmedName);
-      }
+      // Call the API to update household name
+      await householdApi.updateHousehold(trimmedName);
 
       // Clear the flag to allow RootNavigator to switch to MainNavigator
       setShowHouseholdNameScreen(false);
