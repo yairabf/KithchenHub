@@ -1299,11 +1299,17 @@ export class AuthService {
     // Hash password
     const passwordHash = await this.hashPassword(dto.password);
 
-    // Generate email verification token
-    const verificationToken = this.generateEmailVerificationToken();
-    const tokenExpiry = new Date();
-    const expiryHours = this.config.email?.verificationTokenExpiryHours ?? 24;
-    tokenExpiry.setHours(tokenExpiry.getHours() + expiryHours);
+    const shouldSkipEmailVerification = this.config.auth.skipEmailVerification;
+
+    let verificationToken: string | undefined;
+    let tokenExpiry: Date | undefined;
+
+    if (!shouldSkipEmailVerification) {
+      verificationToken = this.generateEmailVerificationToken();
+      tokenExpiry = new Date();
+      const expiryHours = this.config.email?.verificationTokenExpiryHours ?? 24;
+      tokenExpiry.setHours(tokenExpiry.getHours() + expiryHours);
+    }
 
     // Create user
     const userId = this.uuidService.generate();
@@ -1311,18 +1317,19 @@ export class AuthService {
       id: userId,
       email: dto.email,
       passwordHash,
-      emailVerified: false,
+      emailVerified: shouldSkipEmailVerification,
       emailVerificationToken: verificationToken,
       emailVerificationTokenExpiry: tokenExpiry,
       name: dto.name,
     });
 
-    // Send verification email
-    await this.emailService.sendVerificationEmail(
-      dto.email,
-      verificationToken,
-      dto.name,
-    );
+    if (!shouldSkipEmailVerification && verificationToken) {
+      await this.emailService.sendVerificationEmail(
+        dto.email,
+        verificationToken,
+        dto.name,
+      );
+    }
 
     // Handle household creation if provided
     if (dto.household) {
@@ -1334,8 +1341,9 @@ export class AuthService {
     }
 
     return {
-      message:
-        'Registration successful. Please check your email to verify your account.',
+      message: shouldSkipEmailVerification
+        ? 'Registration successful. You can now sign in. (Email verification skipped for development)'
+        : 'Registration successful. Please check your email to verify your account.',
     };
   }
 

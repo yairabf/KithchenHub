@@ -20,6 +20,7 @@ export interface AppConfig {
     backendBaseUrl: string;
     appScheme: string;
     stateSecret: string;
+    skipEmailVerification: boolean;
   };
   logging: {
     level: string;
@@ -76,6 +77,7 @@ export const loadConfiguration = (): AppConfig => {
       backendBaseUrl: env.AUTH_BACKEND_BASE_URL,
       appScheme: env.AUTH_APP_SCHEME,
       stateSecret: env.AUTH_STATE_SECRET,
+      skipEmailVerification: env.AUTH_SKIP_EMAIL_VERIFICATION,
     },
     logging: {
       level: env.LOG_LEVEL,

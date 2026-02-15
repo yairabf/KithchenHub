@@ -50,4 +50,21 @@ describe('validateEnv', () => {
       'postgresql://user:pass@localhost:5432/db?schema=public',
     );
   });
+
+  it('parses AUTH_SKIP_EMAIL_VERIFICATION when enabled', () => {
+    process.env = buildBaseEnv({
+      AUTH_SKIP_EMAIL_VERIFICATION: 'true',
+    }) as Record<string, string>;
+
+    expect(validateEnv().AUTH_SKIP_EMAIL_VERIFICATION).toBe(true);
+  });
+
+  it('rejects AUTH_SKIP_EMAIL_VERIFICATION in production', () => {
+    process.env = buildBaseEnv({
+      NODE_ENV: 'production',
+      AUTH_SKIP_EMAIL_VERIFICATION: 'true',
+    }) as Record<string, string>;
+
+    expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
 });
