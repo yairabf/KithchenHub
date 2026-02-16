@@ -11,11 +11,20 @@ import {
 export const styles = StyleSheet.create({
   choreCard: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  choreCardLeft: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  choreCardIconRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   choreCardIcon: {
     marginRight: spacing.sm,
-    position: 'relative',
   },
   choreCardIconText: {
     fontSize: 26,
@@ -27,25 +36,31 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.transparent.white70,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.sm,
     ...shadows.sm,
   },
   choreCardContent: {
     flex: 1,
-    marginRight: spacing.sm,
   },
   choreCardName: {
     ...typography.labelBold,
-    marginBottom: spacing.xxs,
+    marginBottom: spacing.xs,
+  },
+  choreCardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   choreCardTime: {
     ...typography.tinyMuted,
+    flexShrink: 1,
   },
   choreCardCheck: {
     width: componentSize.checkbox + spacing.xxs,
     height: componentSize.checkbox + spacing.xxs,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: spacing.xxs,
   },
   checkmark: {
     width: componentSize.checkbox,
@@ -73,17 +88,17 @@ export const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    marginRight: spacing.sm,
-    maxWidth: 80,
-    minWidth: 60,
     borderWidth: 1,
     borderColor: colors.border,
     flexShrink: 0,
+    // Removed maxWidth/minWidth constraints to allow natural sizing based on content
+    // Text will wrap to next line if needed via choreCardMeta flexWrap
   },
   choreCardAssigneeText: {
     ...typography.tiny,
     color: colors.textPrimary,
-    textAlign: 'center',
     fontWeight: '600',
+    // Removed textAlign: 'center' as assignee badge now aligns left with meta row
+    // This provides better visual consistency with the date/time text
   },
 });

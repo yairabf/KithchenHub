@@ -22,6 +22,7 @@ import {
   formatDateForDisplay,
 } from "../../../common/utils/dateTimeUtils";
 import { getDirectionalIcon } from "../../../common/utils/rtlIcons";
+import { formatChoreDueDateTime } from "../../../common/utils/choreDisplayUtils";
 import { useDebouncedRemoteSearch, useResponsive } from "../../../common/hooks";
 import { useCatalog } from "../../../common/hooks/useCatalog";
 import { colors } from "../../../theme";
@@ -667,57 +668,34 @@ export function DashboardScreen({
                       accessibilityRole="button"
                       accessibilityHint={`Tap to mark ${chore.isCompleted ? "incomplete" : "complete"}`}
                     >
-                      <View style={styles.choreAvatarContainer}>
-                        <SafeImage
-                          uri={getAvatarUri(chore.assignee)}
-                          style={styles.choreAvatar}
-                        />
-                      </View>
-                      <View style={[styles.choreContent, { flex: 1 }]}>
-                        <View
-                          style={[
-                            styles.choreTitleRow,
-                            { flexDirection: "row", alignItems: "center" },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.choreTitle,
-                              chore.isCompleted && styles.choreTitleDone,
-                              { flexShrink: 1 },
-                            ]}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                          >
-                            {chore.title}
-                          </Text>
-                          <View
-                            style={[
-                              styles.choreStatusBadge,
-                              chore.isCompleted
-                                ? styles.choreStatusDone
-                                : styles.choreStatusPending,
-                            ]}
-                          >
+                      <View style={styles.choreLeftSection}>
+                        <View style={styles.choreTopRow}>
+                          <View style={styles.choreAvatarContainer}>
+                            <SafeImage
+                              uri={getAvatarUri(chore.assignee)}
+                              style={styles.choreAvatar}
+                            />
+                          </View>
+                          <View style={styles.choreContent}>
                             <Text
                               style={[
-                                styles.choreStatusBadgeText,
-                                chore.isCompleted &&
-                                  styles.choreStatusBadgeTextDone,
+                                styles.choreTitle,
+                                chore.isCompleted && styles.choreTitleDone,
                               ]}
+                              numberOfLines={2}
+                              ellipsizeMode="tail"
                             >
-                              {chore.isCompleted ? "Done" : "Pending"}
+                              {chore.title}
                             </Text>
                           </View>
                         </View>
                         <View style={styles.choreMetaRow}>
-                          <Text style={styles.choreMetaText}>
+                          <Text style={styles.choreMetaText} numberOfLines={1}>
                             {chore.assignee ?? "Unassigned"}
                           </Text>
                           <View style={styles.choreMetaDot} />
-                          <Text style={styles.choreMetaText}>
-                            {chore.dueDate}
-                            {chore.dueTime ? ` · ${chore.dueTime}` : ""}
+                          <Text style={styles.choreMetaText} numberOfLines={1}>
+                            {formatChoreDueDateTime(chore.dueDate, chore.dueTime)}
                           </Text>
                         </View>
                       </View>

@@ -318,13 +318,25 @@ export const styles = StyleSheet.create({
   },
   choreRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     padding: spacing.md,
     borderRadius: borderRadius.xxl,
     gap: spacing.md,
   },
   choreRowDone: {
     opacity: 0.7,
+  },
+  choreLeftSection: {
+    flex: 1,
+    flexDirection: "column",
+    gap: spacing.sm,
+    minWidth: 0,
+  },
+  choreTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
   },
   choreAvatarContainer: {
     width: 48,
@@ -334,6 +346,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.avatarBackground,
     borderWidth: 2,
     borderColor: colors.surface,
+    flexShrink: 0,
   },
   choreAvatar: {
     width: "100%",
@@ -352,7 +365,6 @@ export const styles = StyleSheet.create({
   choreTitle: {
     ...typography.body,
     fontWeight: "700",
-    flex: 1,
   },
   choreTitleDone: {
     textDecorationLine: "line-through",
@@ -360,11 +372,10 @@ export const styles = StyleSheet.create({
   },
   choreStatusBadge: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: borderRadius.sm,
-    ...typography.tiny,
-    textTransform: "uppercase",
-    overflow: "hidden",
+    alignSelf: "flex-start",
+    flexShrink: 0,
   },
   choreStatusPending: {
     backgroundColor: colors.quantityBg,
@@ -376,6 +387,7 @@ export const styles = StyleSheet.create({
     ...typography.tiny,
     color: colors.textSecondary,
     textTransform: "uppercase",
+    fontWeight: "600",
   },
   choreStatusBadgeTextDone: {
     color: colors.textLight,
@@ -385,16 +397,19 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     marginTop: spacing.xs,
+    flexWrap: "wrap",
   },
   choreMetaText: {
     ...typography.tiny,
     color: colors.textSecondary,
+    flexShrink: 1,
   },
   choreMetaDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.textMuted,
+    flexShrink: 0,
   },
   addHouseholdTaskButton: {
     flexDirection: "row",
