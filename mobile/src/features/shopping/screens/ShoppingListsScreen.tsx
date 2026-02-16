@@ -5,13 +5,9 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Image,
-  TextInput,
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import type { ComponentProps } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { CategoryModal } from '../components/CategoryModal';
 import { ShoppingListPanel } from '../components/ShoppingListPanel';
@@ -22,7 +18,8 @@ import { ShareModal } from '../../../common/components/ShareModal';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { formatShoppingListText } from '../../../common/utils/shareUtils';
 import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
-import { CategoryPicker } from '../components/CategoryPicker';
+import { CreateCustomItemModal } from '../components/CreateCustomItemModal';
+import { CreateListModal, type ListIconName } from '../components/CreateListModal';
 import { catalogService } from '../../../common/services/catalogService';
 import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../constants/categories';
 import { colors } from '../../../theme';
@@ -44,10 +41,6 @@ import {
   updateShoppingListItemCounts,
 } from '../utils/shoppingRealtime';
 import { useShoppingRealtime } from '../hooks/useShoppingRealtime';
-
-type IoniconsName = ComponentProps<typeof Ionicons>['name'];
-
-
 
 interface ShoppingListsScreenProps {
   isActive?: boolean;
@@ -104,7 +97,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, []);
   const [showCreateListModal, setShowCreateListModal] = useState(false);
   const [newListName, setNewListName] = useState('');
-  const [newListIcon, setNewListIcon] = useState<IoniconsName>('cart-outline');
+  const [newListIcon, setNewListIcon] = useState<ListIconName>('cart-outline');
   const [newListColor, setNewListColor] = useState('#10B981');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -679,153 +672,34 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         </View>
       </ScrollView>
 
-      {/* Quantity Modal */}
-      <CenteredModal
+      <CreateCustomItemModal
         visible={showQuantityModal}
         onClose={handleCancelQuantityModal}
-        title={`Add to ${activeList.name}`}
-        confirmText="Add to List"
         onConfirm={handleAddToList}
+        listName={activeList.name}
         confirmColor={activeList.color}
-      >
-        {selectedGroceryItem && (
-          <>
-            <View style={styles.modalItemDisplay}>
-              <Image
-                source={{ uri: selectedGroceryItem.image }}
-                style={styles.modalItemImage}
-              />
-              <View style={styles.modalItemInfo}>
-                <Text style={styles.modalItemName}>{selectedGroceryItem.name}</Text>
-                <Text style={styles.modalItemCategory}>{selectedGroceryItem.category}</Text>
-              </View>
-            </View>
+        selectedGroceryItem={selectedGroceryItem}
+        selectedItemCategory={selectedItemCategory}
+        onSelectCategory={setSelectedItemCategory}
+        availableCategories={availableCategories}
+        quantityInput={quantityInput}
+        onChangeQuantity={setQuantityInput}
+        onDecreaseQuantity={() => handleQuantityInputChange(-1)}
+        onIncreaseQuantity={() => handleQuantityInputChange(1)}
+      />
 
-            {/* Category Picker (only for custom items) */}
-            {selectedGroceryItem.id.startsWith('custom-') && availableCategories.length > 0 && (
-              <View style={styles.modalCategorySection}>
-                <Text style={styles.modalQuantityLabel}>Category</Text>
-                <CategoryPicker
-                  selectedCategory={selectedItemCategory}
-                  onSelectCategory={setSelectedItemCategory}
-                  categories={availableCategories}
-                />
-              </View>
-            )}
-
-            <View style={styles.modalQuantitySection}>
-              <Text style={styles.modalQuantityLabel}>Quantity</Text>
-              <View style={styles.modalQuantityControls}>
-                <TouchableOpacity
-                  style={styles.modalQuantityBtn}
-                  onPress={() => handleQuantityInputChange(-1)}
-                  accessibilityLabel="Decrease quantity"
-                  accessibilityRole="button"
-                  accessibilityHint="Reduces item quantity by one"
-                >
-                  <Ionicons name="remove" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-                <TextInput
-                  style={styles.modalQuantityInput}
-                  value={quantityInput}
-                  onChangeText={setQuantityInput}
-                  keyboardType="number-pad"
-                  selectTextOnFocus
-                  accessibilityLabel="Quantity"
-                  accessibilityHint="Enter item quantity"
-                />
-                <TouchableOpacity
-                  style={styles.modalQuantityBtn}
-                  onPress={() => handleQuantityInputChange(1)}
-                  accessibilityLabel="Increase quantity"
-                  accessibilityRole="button"
-                  accessibilityHint="Increases item quantity by one"
-                >
-                  <Ionicons name="add" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </>
-        )}
-      </CenteredModal>
-
-      {/* Create List Modal */}
-      <CenteredModal
+      <CreateListModal
         visible={showCreateListModal}
         onClose={handleCancelCreateListModal}
-        title="Create New List"
-        confirmText="Create"
         onConfirm={handleCreateList}
-        confirmColor={colors.chores}
         confirmDisabled={!newListName.trim()}
-      >
-        <View style={styles.createListInputSection}>
-          <Text style={styles.createListLabel}>List Name</Text>
-          <TextInput
-            style={styles.createListInput}
-            placeholder="Enter list name..."
-            placeholderTextColor={colors.textMuted}
-            value={newListName}
-            onChangeText={setNewListName}
-            autoFocus
-            accessibilityLabel="List name"
-            accessibilityHint="Enter a name for the new shopping list"
-          />
-        </View>
-
-        <View style={styles.createListIconSection}>
-          <Text style={styles.createListLabel}>Icon</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.iconPickerContent}
-          >
-            {(['cart-outline', 'gift-outline', 'restaurant-outline', 'cube-outline', 'nutrition-outline', 'heart-outline', 'home-outline', 'star-outline'] as const).map((icon) => (
-              <TouchableOpacity
-                key={icon}
-                style={[
-                  styles.iconOption,
-                  newListIcon === icon && styles.iconOptionActive
-                ]}
-                onPress={() => setNewListIcon(icon)}
-                accessibilityLabel={`Select ${icon} icon`}
-                accessibilityRole="button"
-                accessibilityState={{ selected: newListIcon === icon }}
-              >
-                <Ionicons name={icon} size={24} color={newListIcon === icon ? colors.chores : colors.textSecondary} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.createListColorSection}>
-          <Text style={styles.createListLabel}>Color</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.colorPickerContent}
-          >
-            {['#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4', '#EC4899', '#F97316', '#14B8A6'].map((color) => (
-              <TouchableOpacity
-                key={color}
-                style={[
-                  styles.colorOption,
-                  { backgroundColor: color },
-                  newListColor === color && styles.colorOptionActive
-                ]}
-                onPress={() => setNewListColor(color)}
-                accessibilityLabel={`Select color ${color}`}
-                accessibilityRole="button"
-                accessibilityState={{ selected: newListColor === color }}
-              >
-                {newListColor === color && (
-                  <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </CenteredModal>
+        listName={newListName}
+        onChangeListName={setNewListName}
+        selectedIcon={newListIcon}
+        onSelectIcon={setNewListIcon}
+        selectedColor={newListColor}
+        onSelectColor={setNewListColor}
+      />
 
       {/* Category Modal */}
       <CategoryModal
