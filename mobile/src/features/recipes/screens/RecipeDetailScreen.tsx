@@ -486,6 +486,7 @@ export function RecipeDetailScreen({
       <View onLayout={handleScreenHeaderLayout}>
         <ScreenHeader
           title="Kitchen Hub"
+          titleIcon="restaurant-outline"
           leftIcon="back"
           onLeftPress={onBack}
           rightActions={{

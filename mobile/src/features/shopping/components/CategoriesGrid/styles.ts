@@ -8,6 +8,12 @@ import { colors, shadows, spacing, borderRadius, typography } from '../../../../
 const CATEGORY_ICON_SIZE = 80; // Width and height for category icons in pixels
 const ICON_CORNER_OFFSET = 8;  // Distance from top-right corner for icon positioning
 
+/**
+ * Reserved height for the category name at the bottom of the tile.
+ * Image is constrained to stay above this zone so it never overlaps the name.
+ */
+export const NAME_ZONE_MIN_HEIGHT = 35;
+
 export const styles = StyleSheet.create({
   categoriesSection: {
     flex: 1,
@@ -44,7 +50,14 @@ export const styles = StyleSheet.create({
     position: 'relative',
   },
   categoryNameContainer: {
-    padding: 12,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    minHeight: NAME_ZONE_MIN_HEIGHT,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    justifyContent: 'flex-end',
     zIndex: 1,
   },
   categoryName: {
@@ -52,6 +65,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     letterSpacing: 0.2,
+    /** Single line only; overflow hidden via numberOfLines + ellipsizeMode in component */
   },
   categoryIcon: {
     position: 'absolute',

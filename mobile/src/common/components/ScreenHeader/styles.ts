@@ -24,9 +24,19 @@ export const styles = StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
+    minWidth: 0,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  titleIcon: {
+    marginEnd: spacing.xs,
   },
   title: {
     ...typography.h3,
+    flexShrink: 1,
   },
   subtitle: {
     fontSize: 14,
@@ -37,5 +47,6 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    marginStart: spacing.md,
   },
 });

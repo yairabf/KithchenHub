@@ -10,6 +10,7 @@ describe('guestNoSyncGuardrails', () => {
     email: 'test@example.com',
     name: 'Test User',
     isGuest: false,
+    role: 'member',
   };
   
   const guestUser: User = {
@@ -17,6 +18,7 @@ describe('guestNoSyncGuardrails', () => {
     email: '',
     name: 'Guest',
     isGuest: true,
+    role: 'guest',
   };
   
   describe('assertSignedInMode', () => {

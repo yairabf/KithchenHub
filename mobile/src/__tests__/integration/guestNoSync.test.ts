@@ -62,8 +62,8 @@ jest.mock('../../services/api', () => {
 
 type ServiceConfig = {
   serviceName: string;
-  createService: (mode: 'guest' | 'signed-in') => { getShoppingData?: () => Promise<unknown>; getRecipes?: () => Promise<unknown>; getChores?: () => Promise<unknown> };
-  callMethod: (service: ReturnType<typeof createShoppingService | typeof createRecipeService | typeof createChoresService>) => Promise<unknown>;
+  createService: (mode: 'guest' | 'signed-in') => any;
+  callMethod: (service: any) => Promise<unknown>;
   mockApiResponse: () => void;
 };
 
@@ -118,10 +118,12 @@ describe('Guest Mode No-Sync Integration', () => {
       // Attempt operations that would trigger API calls
       await callMethod(service);
 
-      // Assert api.request was never called
-      expect(api.request).not.toHaveBeenCalled();
+      // Assert API methods were never called
       expect(api.get).not.toHaveBeenCalled();
       expect(api.post).not.toHaveBeenCalled();
+      expect(api.put).not.toHaveBeenCalled();
+      expect(api.patch).not.toHaveBeenCalled();
+      expect(api.delete).not.toHaveBeenCalled();
     });
 
     it('should call api.request when user is signed-in', async () => {

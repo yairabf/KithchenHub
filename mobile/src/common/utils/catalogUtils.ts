@@ -76,12 +76,17 @@ export function buildCategoriesFromGroceries(items: GroceryItem[]): Category[] {
     // Generate deterministic UUID based on normalized category name (stable across calls)
     const localId = uuidv5(categoryNameLower, CATEGORY_NAMESPACE);
 
+    // Use first item's image as category image (for custom categories without local icons)
+    // CategoriesGrid will prioritize local icon assets, then fall back to this image URL
+    const firstItemWithImage = categoryItems.find(item => item.image && item.image.trim() !== '');
+    const categoryImage = firstItemWithImage?.image || '';
+
     return {
       id: categoryId,
       localId,
       name: displayName,
       itemCount: categoryItems.length,
-      image: '', // Empty - CategoriesGrid will use icon assets based on categoryId
+      image: categoryImage,
       backgroundColor: pastelColors[index % pastelColors.length],
     };
   });

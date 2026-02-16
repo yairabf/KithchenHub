@@ -49,7 +49,7 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScreenHeader title={t('title')} />
+      <ScreenHeader title={t('title')} titleIcon="settings-outline" />
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Language Section */}

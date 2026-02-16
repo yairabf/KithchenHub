@@ -5,6 +5,7 @@ import { colors } from '../../../../theme';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
 import { ListItemCardWrapper } from '../../../../common/components/ListItemCardWrapper';
 import { borderRadius } from '../../../../theme';
+import { formatChoreDueDateTime } from '../../../../common/utils/choreDisplayUtils';
 import { styles } from './styles';
 import type { ChoreCardProps } from './types';
 
@@ -58,34 +59,43 @@ export const ChoreCard = React.memo(function ChoreCard({
         testID={`chore-card-${chore.id}`}
       >
         <View style={styles.choreCard}>
-          <TouchableOpacity
-            style={styles.choreCardEditButton}
-            onPress={handleEditPress}
-            activeOpacity={0.6}
-          >
-            <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <View style={styles.choreCardIcon}>
-            <Text style={styles.choreCardIconText}>{chore.icon ?? '📋'}</Text>
-          </View>
-          <View style={styles.choreCardContent}>
-            <Text
-              style={[styles.choreCardName, chore.isCompleted && styles.choreCompleted]}
-              numberOfLines={1}
-            >
-              {chore.title}
-            </Text>
-            <Text style={styles.choreCardTime} numberOfLines={1}>
-              {chore.dueDate} {chore.dueTime}
-            </Text>
-          </View>
-          {chore.assignee ? (
-            <View style={styles.choreCardAssignee}>
-              <Text style={styles.choreCardAssigneeText} numberOfLines={1}>
-                {chore.assignee}
-              </Text>
+          {/* Left side: Icon and content */}
+          <View style={styles.choreCardLeft}>
+            <View style={styles.choreCardIconRow}>
+              <View style={styles.choreCardIcon}>
+                <Text style={styles.choreCardIconText}>{chore.icon ?? '📋'}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.choreCardEditButton}
+                onPress={handleEditPress}
+                activeOpacity={0.6}
+              >
+                <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
-          ) : null}
+            <View style={styles.choreCardContent}>
+              <Text
+                style={[styles.choreCardName, chore.isCompleted && styles.choreCompleted]}
+                numberOfLines={1}
+              >
+                {chore.title}
+              </Text>
+              <View style={styles.choreCardMeta}>
+                {chore.assignee ? (
+                  <View style={styles.choreCardAssignee}>
+                    <Text style={styles.choreCardAssigneeText} numberOfLines={1}>
+                      {chore.assignee}
+                    </Text>
+                  </View>
+                ) : null}
+                <Text style={styles.choreCardTime} numberOfLines={1}>
+                  {formatChoreDueDateTime(chore.dueDate, chore.dueTime)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Right side: Checkbox */}
           <View style={styles.choreCardCheck}>
             {chore.isCompleted ? (
               <View style={styles.checkmark}>

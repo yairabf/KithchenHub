@@ -30,7 +30,6 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   signInWithGoogle: (options?: { householdId?: string; inviteCode?: string }) => Promise<{ isNewHousehold: boolean }>;
-  signInWithDemo: () => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -335,44 +334,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  /**
-   * Demo sign-in for development/testing without Supabase.
-   * Creates a mock user with a test household.
-   */
-  const handleSignInWithDemo = async () => {
-    try {
-      setIsLoading(true);
-
-      logger.debug('[AuthContext] Starting demo sign-in...');
-
-      // Create a demo user with a demo household
-      const demoUser: User = {
-        id: 'demo-user-id',
-        email: 'demo@kitchenhub.app',
-        name: 'Demo User',
-        avatarUrl: undefined,
-        householdId: 'demo-household-id',
-        isGuest: true,
-        role: 'owner',
-      };
-
-      logger.debug('[AuthContext] Demo user created:', demoUser);
-
-      // Save demo user to state and storage
-      setUser(demoUser);
-      await saveUser(demoUser);
-
-      // Trigger new household creation flow to simulate onboarding
-      setShowHouseholdNameScreen(true);
-
-      logger.debug('[AuthContext] Demo user signed in - showing household name screen');
-    } catch (error) {
-      logger.error('[AuthContext] Error signing in with demo:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   /**
    * Registers a new user with email and password
@@ -500,7 +461,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         signInWithGoogle: handleSignInWithGoogle,
-        signInWithDemo: handleSignInWithDemo,
         signUpWithEmail: handleSignUpWithEmail,
         signInWithEmail: handleSignInWithEmail,
         signOut: handleSignOut,

@@ -1,8 +1,20 @@
 import { StyleSheet } from 'react-native';
 import { colors, shadows, spacing } from '../../../../theme';
 
-/** Minimum height for shopping list item cards so every card has uniform dimensions */
-const SHOPPING_ITEM_CARD_MIN_HEIGHT = 82;
+/**
+ * Minimum height for shopping list item cards to ensure uniform dimensions.
+ * 
+ * Calculation breakdown:
+ * - Image/icon size: 40px (from GroceryCard styles)
+ * - Vertical padding: 2 × (sm + xs) = 2 × (8px + 4px) = 24px
+ * - Content gap: Minimal gap for text (8px)
+ * 
+ * Total calculated: 40px (image) + 24px (padding) = 64px
+ * Adjusted to 60px for tighter visual density while maintaining touch targets
+ */
+const ICON_SIZE = 40; // Matches itemImage/iconContainer height in GroceryCard
+const VERTICAL_PADDING = 2 * (spacing.sm + spacing.xs); // 2 × 12px = 24px
+const SHOPPING_ITEM_CARD_MIN_HEIGHT = ICON_SIZE + VERTICAL_PADDING - 4; // 64px - 4px = 60px
 
 /** 12px - used for list header margin, drawer gap, list card padding/gap, search bar margin */
 const SPACING_12 = spacing.sm + spacing.xs;
@@ -157,6 +169,34 @@ export const styles = StyleSheet.create({
   itemsList: {
     gap: spacing.md, // 16px spacing between items for better visual separation
   },
+  categoryGroup: {
+    gap: spacing.sm,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  categoryChevron: {
+    marginLeft: 'auto',
+  },
+  categoryHeaderIcon: {
+    width: 20,
+    height: 20,
+  },
+  categoryHeaderIconPlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.quantityBg,
+  },
+  categoryHeaderText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
   /** Ensures every shopping item card has the same width and height for a uniform list */
   shoppingItemCard: {
     width: '100%',
@@ -168,5 +208,10 @@ export const styles = StyleSheet.create({
   checkedTitle: {
     color: colors.textMuted,
     textDecorationLine: 'line-through',
+  },
+  fallbackCategoryImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
 });

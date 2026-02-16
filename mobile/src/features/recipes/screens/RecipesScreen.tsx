@@ -224,18 +224,11 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     <SafeAreaView style={styles.container}>
       <ScreenHeader
         title="House Recipes"
-        subtitle="KITCHEN COLLECTIONS"
+        titleIcon="book-outline"
         rightActions={{
-          add: { onPress: handleAddRecipe, label: 'Add new recipe' },
+          add: { onPress: handleAddRecipe, label: 'Add item' },
         }}
-      >
-        <View style={styles.headerStats}>
-          <View style={styles.statItem}>
-            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
-            <Text style={styles.statText}>{recipes.length} Recipes</Text>
-          </View>
-        </View>
-      </ScreenHeader>
+      />
 
       {isLoading && recipes.length === 0 ? (
         <ScrollView
