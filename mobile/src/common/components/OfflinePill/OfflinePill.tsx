@@ -82,14 +82,14 @@ export function OfflinePill({
    * @returns Object with icon, text, color, and optional showSpinner flag, or null if pill should be hidden
    */
   const getContent = (): {
-    icon: string | null;
+    icon: React.ComponentProps<typeof Ionicons>['name'] | null;
     text: string;
     color: string;
     showSpinner?: boolean;
   } | null => {
     if (isOffline) {
       return {
-        icon: 'wifi-outline' as const,
+        icon: 'wifi-outline',
         text: 'Offline',
         color: colors.error,
       };

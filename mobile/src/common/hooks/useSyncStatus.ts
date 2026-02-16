@@ -154,7 +154,7 @@ export function useEntitySyncStatus(
           isPending: false,
           isConfirmed: false,
           isFailed: true,
-          queueStatus,
+          queueStatus: queueStatus ?? undefined,
         };
       }
       // PENDING or RETRYING
@@ -162,7 +162,7 @@ export function useEntitySyncStatus(
         isPending: true,
         isConfirmed: false,
         isFailed: false,
-        queueStatus,
+        queueStatus: queueStatus ?? undefined,
       };
     }
 

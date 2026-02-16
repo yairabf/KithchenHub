@@ -51,10 +51,12 @@ import { getDirectionalIcon } from '../../utils/rtlIcons';
  */
 export function ScreenHeader({
   title,
+  titleIcon,
   subtitle,
   leftIcon = 'none',
   onLeftPress,
   rightActions,
+  rightSlot,
   variant = 'default',
   children,
 }: ScreenHeaderProps) {
@@ -78,17 +80,38 @@ export function ScreenHeader({
   };
 
   const renderTitle = () => {
+    const titleRow = (
+      <View style={styles.titleRow}>
+        {titleIcon && (
+          <Ionicons
+            name={titleIcon}
+            size={20}
+            color={colors.textPrimary}
+            style={styles.titleIcon}
+          />
+        )}
+        <Text
+          style={styles.title}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          {title}
+        </Text>
+      </View>
+    );
+
     if (variant === 'centered') {
       return (
         <View style={styles.centerSection}>
-          <Text style={styles.title}>{title}</Text>
+          {titleRow}
         </View>
       );
     }
 
     return (
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>{title}</Text>
+        {titleRow}
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
         {children}
       </View>
@@ -96,23 +119,26 @@ export function ScreenHeader({
   };
 
   const renderRightActions = () => {
-    if (!rightActions) return null;
+    if (!rightActions && !rightSlot) return null;
 
-    const { edit, share, add } = rightActions;
+    const { edit, share, add } = rightActions ?? {};
 
     // Don't render wrapper if no actual actions are provided
-    if (!edit && !share && !add) return null;
+    if (!rightSlot && !edit && !share && !add) return null;
 
     return (
       <View style={styles.rightSection}>
-        <HeaderActions
-          onEditPress={edit?.onPress}
-          onSharePress={share?.onPress}
-          onAddPress={add?.onPress}
-          editLabel={edit?.label}
-          shareLabel={share?.label}
-          addLabel={add?.label}
-        />
+        {rightSlot}
+        {(edit || share || add) && (
+          <HeaderActions
+            onEditPress={edit?.onPress}
+            onSharePress={share?.onPress}
+            onAddPress={add?.onPress}
+            editLabel={edit?.label}
+            shareLabel={share?.label}
+            addLabel={add?.label}
+          />
+        )}
       </View>
     );
   };

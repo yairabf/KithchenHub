@@ -28,6 +28,7 @@ import { colors } from "../../../theme";
 import { SafeImage } from "../../../common/components/SafeImage";
 import { Toast } from "../../../common/components/Toast";
 import { ListItemSkeleton } from "../../../common/components/ListItemSkeleton";
+import { ScreenHeader } from "../../../common/components/ScreenHeader";
 import { GrocerySearchBar } from "../../shopping/components/GrocerySearchBar";
 import type { GroceryItem } from "../../shopping/components/GrocerySearchBar";
 import type { ShoppingItem } from "../../../mocks/shopping";
@@ -404,56 +405,54 @@ export function DashboardScreen({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, !isTablet && styles.headerPhone]}>
-        <View style={styles.headerLeft}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="grid" size={20} color={colors.textLight} />
-          </View>
-          {isTablet && <Text style={styles.logoText}>Kitchen Hub</Text>}
-        </View>
-
-        <View style={styles.headerRight}>
-          <View style={styles.dateTimeContainer}>
-            <Text style={styles.timeText}>{formattedTime}</Text>
-            {isTablet && <Text style={styles.dateText}>{formattedDate}</Text>}
-          </View>
-          <TouchableOpacity
-            style={styles.notificationButton}
-            accessibilityLabel="Notifications - View recent activity and updates"
-            accessibilityRole="button"
-            accessibilityHint="Tap to open notifications"
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color={colors.textSecondary}
-            />
-            <View style={styles.notificationBadge} />
-          </TouchableOpacity>
-
-          <View style={styles.profileSectionSeparator} />
-
-          <View style={styles.profileSection}>
+      <ScreenHeader
+        title="Kitchen Hub"
+        titleIcon="grid-outline"
+        rightSlot={(
+          <View style={styles.headerRight}>
             {isTablet && (
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileRole}>{userRole}</Text>
-                <Text style={styles.profileName}>{displayName}</Text>
+              <View style={styles.dateTimeContainer}>
+                <Text style={styles.timeText}>{formattedTime}</Text>
+                <Text style={styles.dateText}>{formattedDate}</Text>
               </View>
             )}
-            <View style={styles.avatarContainer}>
-              {user?.avatarUrl ? (
-                <SafeImage uri={user.avatarUrl} style={styles.avatar} />
-              ) : (
-                <SafeImage
-                  uri={getAvatarUri(user?.name ?? "user")}
-                  style={styles.avatar}
-                />
+            <TouchableOpacity
+              style={styles.notificationButton}
+              accessibilityLabel="Notifications - View recent activity and updates"
+              accessibilityRole="button"
+              accessibilityHint="Tap to open notifications"
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={colors.textSecondary}
+              />
+              <View style={styles.notificationBadge} />
+            </TouchableOpacity>
+
+            <View style={styles.profileSectionSeparator} />
+
+            <View style={styles.profileSection}>
+              {isTablet && (
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileRole}>{userRole}</Text>
+                  <Text style={styles.profileName}>{displayName}</Text>
+                </View>
               )}
+              <View style={styles.avatarContainer}>
+                {user?.avatarUrl ? (
+                  <SafeImage uri={user.avatarUrl} style={styles.avatar} />
+                ) : (
+                  <SafeImage
+                    uri={getAvatarUri(user?.name ?? "user")}
+                    style={styles.avatar}
+                  />
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      </View>
+        )}
+      />
 
       <ScrollView
         style={styles.content}

@@ -19,6 +19,7 @@ import { CategoriesGrid } from '../components/CategoriesGrid';
 import { FrequentlyAddedGrid } from '../components/FrequentlyAddedGrid';
 import { CenteredModal } from '../../../common/components/CenteredModal';
 import { ShareModal } from '../../../common/components/ShareModal';
+import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { formatShoppingListText } from '../../../common/utils/shareUtils';
 import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
 import { CategoryPicker } from '../components/CategoryPicker';
@@ -620,8 +621,6 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     return groceryItems.filter(item => item.category === categoryName);
   };
 
-  const totalItems = filteredItems.reduce((sum, item) => sum + item.quantity, 0);
-
   // Format shopping list for sharing
   const shareText = useMemo(
     () => formatShoppingListText(activeList.name, filteredItems),
@@ -630,33 +629,14 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerSubtitle}>Household Hub</Text>
-          <Text style={styles.headerTitle}>Shopping List</Text>
-          <View style={styles.headerMeta}>
-            <Ionicons name="basket-outline" size={18} color={colors.textMuted} />
-            <Text style={styles.headerMetaText}>{totalItems} items remaining</Text>
-          </View>
-        </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            accessibilityLabel="Share shopping list"
-            style={styles.headerIconButton}
-            onPress={() => setShowShareModal(true)}
-          >
-            <Ionicons name="share-social-outline" size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityLabel="Add item to list"
-            style={styles.headerPrimaryButton}
-            onPress={() => setShowQuickAddModal(true)}
-          >
-            <Ionicons name="add-circle-outline" size={20} color={colors.textLight} />
-            <Text style={styles.headerPrimaryButtonText}>Add Item</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Shopping List"
+        titleIcon="basket-outline"
+        rightActions={{
+          share: { onPress: () => setShowShareModal(true), label: 'Share shopping list' },
+          add: { onPress: () => setShowQuickAddModal(true), label: 'Add item' },
+        }}
+      />
 
       <ScrollView
         style={styles.content}

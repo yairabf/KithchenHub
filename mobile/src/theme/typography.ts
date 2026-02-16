@@ -119,4 +119,12 @@ export const typography = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
+
+  // Button text
+  button: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    lineHeight: 24,
+  },
 });

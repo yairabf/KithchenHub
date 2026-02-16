@@ -7,7 +7,6 @@ import { colors, spacing, borderRadius, shadows } from '../../../theme';
  */
 const FILTER_MAX_HEIGHT = 110;       // Increased from 90 to accommodate filter chips + extra padding (prevents iOS clipping)
 const FILTER_VERTICAL_PADDING = 20;  // Increased from 15 to create more breathing room and prevent top clipping on iOS
-const STATS_TOP_MARGIN = 12;         // Space between subtitle/title and stats row in header
 const SEARCH_BOTTOM_MARGIN = 5;     // Reduced from 24px to tighten layout and reduce scrolling
 const FILTER_BOTTOM_MARGIN = 5;     // Minimal space before recipe grid starts
 
@@ -15,22 +14,6 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  headerStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginTop: STATS_TOP_MARGIN,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
   },
   searchContainer: {
     flexDirection: 'row',

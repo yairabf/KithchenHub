@@ -244,7 +244,7 @@ describe('useEntitySyncStatusWithEntity', () => {
     jest.clearAllMocks();
     mockSyncQueueStorage.getAll.mockResolvedValue([]);
 
-    mockCacheEvents.onCacheChange = jest.fn(() => jest.fn());
+    mockCacheEvents.onCacheChange = jest.fn((_entityType, _handler) => jest.fn()) as any;
   });
 
   describe.each([

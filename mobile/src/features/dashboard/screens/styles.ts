@@ -14,35 +14,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  // Header (sticky look)
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  logoContainer: {
-    width: componentSize.button.md,
-    height: componentSize.button.md,
-    backgroundColor: colors.textPrimary,
-    borderRadius: borderRadius.lg,
-    justifyContent: "center",
-    alignItems: "center",
-    ...shadows.lg,
-  },
-  logoText: {
-    ...typography.h3,
-    marginLeft: spacing.md,
-  },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
@@ -439,10 +410,5 @@ export const styles = StyleSheet.create({
   addHouseholdTaskText: {
     ...typography.labelBold,
     color: colors.textMuted,
-  },
-  // Phone-specific
-  headerPhone: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
   },
 });

@@ -250,13 +250,14 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   const headerActions = {
     share: { onPress: () => setShowShareModal(true), label: 'Share chores list' },
-    ...(onOpenChoresModal && { add: { onPress: onOpenChoresModal, label: 'Assign Chore' } as const }),
+    ...(onOpenChoresModal && { add: { onPress: onOpenChoresModal, label: 'Add item' } as const }),
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
         title="Home Chores"
+        titleIcon="checkbox-outline"
         rightActions={headerActions}
       />
 

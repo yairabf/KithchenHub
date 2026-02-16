@@ -40,6 +40,8 @@ describe('useCachedEntities', () => {
       state: 'missing',
       age: null,
       isValid: true,
+      lastSyncedAt: null,
+      status: 'ok',
     });
     
     // Mock cacheEvents.onCacheChange to return unsubscribe function
@@ -60,6 +62,8 @@ describe('useCachedEntities', () => {
         state: 'fresh',
         age: 0,
         isValid: true,
+        lastSyncedAt: new Date().toISOString(),
+        status: 'ok',
       });
 
       const { result } = renderHook(() =>
@@ -87,6 +91,8 @@ describe('useCachedEntities', () => {
                 state: 'missing',
                 age: null,
                 isValid: true,
+                lastSyncedAt: null,
+                status: 'ok',
               });
             }, 100);
           })
@@ -178,12 +184,16 @@ describe('useCachedEntities', () => {
           state: 'fresh',
           age: 0,
           isValid: true,
+          lastSyncedAt: new Date().toISOString(),
+          status: 'ok',
         })
         .mockResolvedValueOnce({
           data: updatedData,
           state: 'fresh',
           age: 0,
           isValid: true,
+          lastSyncedAt: new Date().toISOString(),
+          status: 'ok',
         });
 
       let changeHandler: (() => void) | undefined;
@@ -217,7 +227,7 @@ describe('useCachedEntities', () => {
 
     it('should unsubscribe on unmount', () => {
       const unsubscribe = jest.fn();
-      mockCacheEvents.onCacheChange = jest.fn(() => unsubscribe);
+      mockCacheEvents.onCacheChange = jest.fn((_entityType, _handler) => unsubscribe) as any;
 
       const { unmount } = renderHook(() =>
         useCachedEntities<TestEntity>('recipes')
@@ -266,12 +276,16 @@ describe('useCachedEntities', () => {
           state: 'fresh',
           age: 0,
           isValid: true,
+          lastSyncedAt: new Date().toISOString(),
+          status: 'ok',
         })
         .mockResolvedValueOnce({
           data: refreshedData,
           state: 'fresh',
           age: 0,
           isValid: true,
+          lastSyncedAt: new Date().toISOString(),
+          status: 'ok',
         });
 
       const { result } = renderHook(() =>
@@ -302,6 +316,8 @@ describe('useCachedEntities', () => {
           state: 'missing',
           age: null,
           isValid: true,
+          lastSyncedAt: null,
+          status: 'ok',
         })
         .mockRejectedValueOnce(error);
 
@@ -342,6 +358,8 @@ describe('useCachedEntities', () => {
           state: 'fresh',
           age: 0,
           isValid: true,
+          lastSyncedAt: new Date().toISOString(),
+          status: 'ok',
         });
 
         const { result } = renderHook(() =>

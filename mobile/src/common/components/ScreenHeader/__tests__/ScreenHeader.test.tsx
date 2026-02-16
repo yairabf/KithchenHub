@@ -32,6 +32,14 @@ describe('ScreenHeader', () => {
       expect(getByText('Test Subtitle')).toBeTruthy();
     });
 
+    it('should render title icon when provided', () => {
+      const { getByText } = render(
+        <ScreenHeader title="Shopping List" titleIcon="basket-outline" />
+      );
+
+      expect(getByText('Shopping List')).toBeTruthy();
+    });
+
     it('should not render subtitle when not provided', () => {
       const { queryByText } = render(<ScreenHeader title="Test Title" />);
       
@@ -183,6 +191,18 @@ describe('ScreenHeader', () => {
       expect(getByText('Test')).toBeTruthy();
       expect(getByText('Custom Stats')).toBeTruthy();
       expect(getByLabelText('Add item')).toBeTruthy();
+    });
+
+    it('should render custom right slot content', () => {
+      const { getByText } = render(
+        <ScreenHeader
+          title="Dashboard"
+          rightSlot={<Text>09:45</Text>}
+        />
+      );
+
+      expect(getByText('Dashboard')).toBeTruthy();
+      expect(getByText('09:45')).toBeTruthy();
     });
   });
 
