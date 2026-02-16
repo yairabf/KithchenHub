@@ -197,7 +197,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   };
 
   const handleAddChore: AddChoreHandler = async (newChore) => {
-    const chorePayload = { ...newChore, title: newChore.name };
+    const chorePayload = newChore;
     if (repository) {
       try {
         await repository.create(chorePayload);
