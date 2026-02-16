@@ -185,20 +185,21 @@ describe('buildCategoriesFromGroceries', () => {
     expect(categories1[0].localId).toBe(categories2[0].localId);
   });
 
-  it('should set category image to empty string (CategoriesGrid uses icon assets)', () => {
+  it('should use first item image as category image (for custom categories)', () => {
     const items: GroceryItem[] = [
       { id: '1', name: 'Apple', image: 'apple.jpg', category: 'Fruits', defaultQuantity: 1 },
-      { id: '2', name: 'Banana', image: '', category: 'Fruits', defaultQuantity: 1 },
+      { id: '2', name: 'Banana', image: 'banana.jpg', category: 'Fruits', defaultQuantity: 1 },
     ];
 
     const categories = buildCategoriesFromGroceries(items);
 
-    expect(categories[0].image).toBe('');
+    expect(categories[0].image).toBe('apple.jpg');
   });
 
-  it('should use empty string if no items have images', () => {
+  it('should use empty string if no items have valid images', () => {
     const items: GroceryItem[] = [
       { id: '1', name: 'Apple', image: '', category: 'Fruits', defaultQuantity: 1 },
+      { id: '2', name: 'Banana', image: '   ', category: 'Fruits', defaultQuantity: 1 },
     ];
 
     const categories = buildCategoriesFromGroceries(items);
@@ -207,18 +208,18 @@ describe('buildCategoriesFromGroceries', () => {
   });
 
   describe.each([
-    ['empty string', ''],
-    ['whitespace only', '   '],
-    ['valid image', 'apple.jpg'],
-  ])('image validation: %s', (description, imageInput) => {
-    it(`should set category image to empty string regardless of item image (${description})`, () => {
+    ['empty string', '', ''],
+    ['whitespace only', '   ', ''],
+    ['valid image', 'apple.jpg', 'apple.jpg'],
+  ])('image validation: %s', (description, imageInput, expectedOutput) => {
+    it(`should handle ${description} correctly`, () => {
       const items: GroceryItem[] = [
         { id: '1', name: 'Apple', image: imageInput, category: 'Fruits', defaultQuantity: 1 },
       ];
 
       const categories = buildCategoriesFromGroceries(items);
 
-      expect(categories[0].image).toBe('');
+      expect(categories[0].image).toBe(expectedOutput);
     });
   });
 });
