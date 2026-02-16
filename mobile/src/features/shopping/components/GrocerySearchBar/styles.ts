@@ -1,30 +1,31 @@
-import { StyleSheet, Platform } from 'react-native';
-import { colors, spacing, borderRadius, shadows } from '../../../../theme';
+import { StyleSheet, Platform } from "react-native";
+import { colors, spacing, borderRadius, shadows } from "../../../../theme";
 
-// Search bar dimension constants for consistent styling
-const SEARCH_BAR_INPUT_HEIGHT = 40;
-const SEARCH_BAR_TOTAL_HEIGHT = 56;
-const SEARCH_BAR_VERTICAL_PADDING = (SEARCH_BAR_TOTAL_HEIGHT - SEARCH_BAR_INPUT_HEIGHT) / 2;
+// Search bar dimension constants for consistent styling across screens
+const SEARCH_BAR_INPUT_HEIGHT = 42;
+const SEARCH_BAR_TOTAL_HEIGHT = 58;
+const SEARCH_BAR_VERTICAL_PADDING =
+  (SEARCH_BAR_TOTAL_HEIGHT - SEARCH_BAR_INPUT_HEIGHT) / 2;
 
 export const styles = StyleSheet.create({
   container: {
-    position: 'relative',
+    position: "relative",
     zIndex: 1000,
   },
   backdrop: {
-    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
+    position: Platform.OS === "web" ? "fixed" : "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: Platform.OS === 'web' ? '100vw' : '100%',
-    height: Platform.OS === 'web' ? '100vh' : '100%',
+    width: Platform.OS === "web" ? "100vw" : "100%",
+    height: Platform.OS === "web" ? "100vh" : "100%",
     zIndex: 998,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: SEARCH_BAR_VERTICAL_PADDING,
@@ -42,12 +43,16 @@ export const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+    lineHeight: 20,
     color: colors.textPrimary,
     height: SEARCH_BAR_INPUT_HEIGHT,
     paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    textAlignVertical: Platform.OS === "android" ? "center" : "auto",
   },
   searchDropdown: {
-    position: 'absolute',
+    position: "absolute",
     top: SEARCH_BAR_TOTAL_HEIGHT,
     left: 0,
     right: 0,
@@ -56,25 +61,25 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     maxHeight: 300,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadows.xl,
-    pointerEvents: 'auto',
+    pointerEvents: "auto",
     zIndex: 1000,
   },
   searchDropdownScroll: {
     maxHeight: 300,
   },
   searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: spacing.md,
     gap: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
   searchResultContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     gap: spacing.md,
   },
@@ -89,7 +94,7 @@ export const styles = StyleSheet.create({
   },
   searchResultName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
@@ -104,7 +109,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.shopping,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderRadius: borderRadius.md,
     marginHorizontal: spacing.xs,
     marginTop: spacing.xs,
@@ -113,8 +118,8 @@ export const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.shopping + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.shopping + "15",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

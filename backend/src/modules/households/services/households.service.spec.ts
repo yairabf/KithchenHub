@@ -197,7 +197,7 @@ describe('HouseholdsService', () => {
 
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
       jest
-        .spyOn(repository, 'createHousehold')
+        .spyOn(prisma.household, 'create')
         .mockResolvedValue(mockHousehold as any);
       jest.spyOn(prisma.user, 'update').mockResolvedValue(undefined as any);
 
@@ -206,13 +206,21 @@ describe('HouseholdsService', () => {
         mockHouseholdName,
       );
 
-      expect(repository.createHousehold).toHaveBeenCalledWith(
-        mockHouseholdName,
-        undefined,
-      );
+      expect(prisma.household.create).toHaveBeenCalledWith({
+        data: { name: mockHouseholdName },
+      });
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: mockUserId },
         data: { householdId: mockHouseholdId, role: 'Admin' },
+      });
+      expect(prisma.shoppingList.create).toHaveBeenCalledWith({
+        data: {
+          householdId: mockHouseholdId,
+          name: DEFAULT_MAIN_SHOPPING_LIST.NAME,
+          color: DEFAULT_MAIN_SHOPPING_LIST.COLOR,
+          icon: DEFAULT_MAIN_SHOPPING_LIST.ICON,
+          isMain: true,
+        },
       });
       expect(result).toBe(mockHouseholdId);
     });
@@ -238,7 +246,7 @@ describe('HouseholdsService', () => {
 
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
       jest
-        .spyOn(repository, 'createHousehold')
+        .spyOn(prisma.household, 'create')
         .mockResolvedValue(mockHousehold as any);
       jest.spyOn(prisma.user, 'update').mockResolvedValue(undefined as any);
 
@@ -248,13 +256,21 @@ describe('HouseholdsService', () => {
         customId,
       );
 
-      expect(repository.createHousehold).toHaveBeenCalledWith(
-        mockHouseholdName,
-        customId,
-      );
+      expect(prisma.household.create).toHaveBeenCalledWith({
+        data: { id: customId, name: mockHouseholdName },
+      });
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: mockUserId },
         data: { householdId: customId, role: 'Admin' },
+      });
+      expect(prisma.shoppingList.create).toHaveBeenCalledWith({
+        data: {
+          householdId: customId,
+          name: DEFAULT_MAIN_SHOPPING_LIST.NAME,
+          color: DEFAULT_MAIN_SHOPPING_LIST.COLOR,
+          icon: DEFAULT_MAIN_SHOPPING_LIST.ICON,
+          isMain: true,
+        },
       });
       expect(result).toBe(customId);
     });
@@ -265,7 +281,7 @@ describe('HouseholdsService', () => {
       await expect(
         service.createHouseholdForNewUser(mockUserId, mockHouseholdName),
       ).rejects.toThrow(NotFoundException);
-      expect(repository.createHousehold).not.toHaveBeenCalled();
+      expect(prisma.household.create).not.toHaveBeenCalled();
     });
 
     it('should return existing household id when user already has a household (race-safe)', async () => {
@@ -286,8 +302,9 @@ describe('HouseholdsService', () => {
       );
 
       expect(result).toBe(mockHouseholdId);
-      expect(repository.createHousehold).not.toHaveBeenCalled();
+      expect(prisma.household.create).not.toHaveBeenCalled();
       expect(prisma.user.update).not.toHaveBeenCalled();
+      expect(prisma.shoppingList.create).not.toHaveBeenCalled();
     });
   });
 

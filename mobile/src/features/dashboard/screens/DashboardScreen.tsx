@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -6,32 +12,42 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-} from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../../contexts/AuthContext';
-import { formatTimeForDisplay, formatDateForDisplay } from '../../../common/utils/dateTimeUtils';
-import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
-import { useDebouncedRemoteSearch, useResponsive } from '../../../common/hooks';
-import { useCatalog } from '../../../common/hooks/useCatalog';
-import { colors } from '../../../theme';
-import { SafeImage } from '../../../common/components/SafeImage';
-import { Toast } from '../../../common/components/Toast';
-import { ListItemSkeleton } from '../../../common/components/ListItemSkeleton';
-import { GrocerySearchBar } from '../../shopping/components/GrocerySearchBar';
-import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
-import type { ShoppingItem } from '../../../mocks/shopping';
-import { useDashboardChores } from '../hooks/useDashboardChores';
-import { useRecipes } from '../../recipes/hooks/useRecipes';
-import { createShoppingService } from '../../shopping/services/shoppingService';
-import { getActiveListId, getMainList } from '../../shopping/utils/selectionUtils';
-import { createShoppingItem } from '../../shopping/utils/shoppingFactory';
-import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../shopping/constants/categories';
-import { quickAddItem } from '../../shopping/utils/quickAddUtils';
-import { config } from '../../../config';
-import { styles } from './styles';
-import type { DashboardScreenProps } from './types';
-import type { TabKey } from '../../../common/components/BottomPillNav';
+  Platform,
+} from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../../contexts/AuthContext";
+import {
+  formatTimeForDisplay,
+  formatDateForDisplay,
+} from "../../../common/utils/dateTimeUtils";
+import { getDirectionalIcon } from "../../../common/utils/rtlIcons";
+import { useDebouncedRemoteSearch, useResponsive } from "../../../common/hooks";
+import { useCatalog } from "../../../common/hooks/useCatalog";
+import { colors } from "../../../theme";
+import { SafeImage } from "../../../common/components/SafeImage";
+import { Toast } from "../../../common/components/Toast";
+import { ListItemSkeleton } from "../../../common/components/ListItemSkeleton";
+import { GrocerySearchBar } from "../../shopping/components/GrocerySearchBar";
+import type { GroceryItem } from "../../shopping/components/GrocerySearchBar";
+import type { ShoppingItem } from "../../../mocks/shopping";
+import { useDashboardChores } from "../hooks/useDashboardChores";
+import { useRecipes } from "../../recipes/hooks/useRecipes";
+import { createShoppingService } from "../../shopping/services/shoppingService";
+import {
+  getActiveListId,
+  getMainList,
+} from "../../shopping/utils/selectionUtils";
+import { createShoppingItem } from "../../shopping/utils/shoppingFactory";
+import {
+  DEFAULT_CATEGORY,
+  normalizeShoppingCategory,
+} from "../../shopping/constants/categories";
+import { quickAddItem } from "../../shopping/utils/quickAddUtils";
+import { config } from "../../../config";
+import { styles } from "./styles";
+import type { DashboardScreenProps } from "./types";
+import type { TabKey } from "../../../common/components/BottomPillNav";
 
 const SUGGESTED_ITEMS_MAX = 8;
 
@@ -40,7 +56,7 @@ function getChoreRowBackground(completed: boolean): string {
 }
 
 function getAvatarUri(assignee?: string): string {
-  const seed = assignee ?? 'default';
+  const seed = assignee ?? "default";
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
 }
 
@@ -51,10 +67,12 @@ export function DashboardScreen({
 }: DashboardScreenProps) {
   const { user } = useAuth();
   const { isTablet } = useResponsive();
-  const [searchValue, setSearchValue] = useState('');
+  const isMobile = Platform.OS !== "web" && !isTablet;
+  const [searchValue, setSearchValue] = useState("");
+  const [showSuggestedItems, setShowSuggestedItems] = useState(!isMobile);
   const shoppingButtonRef = useRef<View>(null);
   const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [toastMessage, setToastMessage] = useState("");
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -70,7 +88,7 @@ export function DashboardScreen({
     query: searchValue,
     searchFn: searchGroceries,
     onError: (error) => {
-      console.error('Search failed:', error);
+      console.error("Search failed:", error);
     },
   });
 
@@ -85,10 +103,11 @@ export function DashboardScreen({
     isLoading: choresLoading,
   } = useDashboardChores();
 
-  const shouldUseMockData = config.mockData.enabled || !user || user?.isGuest === true;
+  const shouldUseMockData =
+    config.mockData.enabled || !user || user?.isGuest === true;
   const shoppingService = useMemo(
-    () => createShoppingService(shouldUseMockData ? 'guest' : 'signed-in'),
-    [shouldUseMockData]
+    () => createShoppingService(shouldUseMockData ? "guest" : "signed-in"),
+    [shouldUseMockData],
   );
   const { recipes, refresh: refreshRecipes } = useRecipes();
   const [activeListId, setActiveListId] = useState<string | null>(null);
@@ -99,7 +118,9 @@ export function DashboardScreen({
   const loadShoppingData = useCallback(async () => {
     try {
       const data = await shoppingService.getShoppingData();
-      setActiveListId((current) => getActiveListId(data.shoppingLists, current));
+      setActiveListId((current) =>
+        getActiveListId(data.shoppingLists, current),
+      );
       setShoppingListsCount(data.shoppingLists.length);
       setAllItems(data.shoppingItems);
     } catch (_err) {
@@ -129,31 +150,34 @@ export function DashboardScreen({
   useFocusEffect(
     useCallback(() => {
       loadShoppingData();
-    }, [loadShoppingData])
+    }, [loadShoppingData]),
   );
 
   const quickStats = useMemo(
     () => [
       {
-        icon: 'basket-outline' as const,
-        label: 'Shopping Lists',
-        value: shoppingListsCount === 1 ? '1 Active' : `${shoppingListsCount} Active`,
-        route: 'Shopping' as TabKey,
-        iconBgStyle: 'shopping' as const,
+        icon: "basket-outline" as const,
+        label: "Shopping Lists",
+        value:
+          shoppingListsCount === 1
+            ? "1 Active"
+            : `${shoppingListsCount} Active`,
+        route: "Shopping" as TabKey,
+        iconBgStyle: "shopping" as const,
       },
       {
-        icon: 'book-outline' as const,
-        label: 'Saved Recipes',
-        value: recipes.length === 1 ? '1 Item' : `${recipes.length} Items`,
-        route: 'Recipes' as TabKey,
-        iconBgStyle: 'recipes' as const,
+        icon: "book-outline" as const,
+        label: "Saved Recipes",
+        value: recipes.length === 1 ? "1 Item" : `${recipes.length} Items`,
+        route: "Recipes" as TabKey,
+        iconBgStyle: "recipes" as const,
       },
     ],
-    [shoppingListsCount, recipes.length]
+    [shoppingListsCount, recipes.length],
   );
 
-  const displayName = user?.name ?? 'Guest';
-  const userRole = user?.isGuest ? 'Guest' : 'KITCHEN LEAD';
+  const displayName = user?.name ?? "Guest";
+  const userRole = user?.isGuest ? "Guest" : "KITCHEN LEAD";
 
   // Live clock and date; timer respects mount state to avoid updates when unmounted
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -186,7 +210,7 @@ export function DashboardScreen({
   };
 
   const handleAddToShopping = () => {
-    setSearchValue('');
+    setSearchValue("");
     openShoppingModal();
   };
 
@@ -196,25 +220,30 @@ export function DashboardScreen({
       const mainList = getMainList(data.shoppingLists);
 
       if (!mainList) {
-        showToast('No main shopping list found. Please create one.');
+        showToast("No main shopping list found. Please create one.");
         return;
       }
 
       // Use the same pattern as ShoppingListsScreen but always use main list
       const normalizedItemName = item.name.trim().toLowerCase();
       const existingInList = data.shoppingItems.find(
-        (i) => i.listId === mainList.id && i.name.trim().toLowerCase() === normalizedItemName
+        (i) =>
+          i.listId === mainList.id &&
+          i.name.trim().toLowerCase() === normalizedItemName,
       );
 
       if (existingInList) {
-        const currentQuantity = typeof existingInList.quantity === 'number' ? existingInList.quantity : 0;
+        const currentQuantity =
+          typeof existingInList.quantity === "number"
+            ? existingInList.quantity
+            : 0;
         await shoppingService.updateItem(existingInList.id, {
           quantity: currentQuantity + 1,
         });
         showToast(`${item.name} quantity updated`);
       } else {
         // Use default category for custom items, otherwise use item's category
-        const categoryToUse = item.id.startsWith('custom-')
+        const categoryToUse = item.id.startsWith("custom-")
           ? normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase())
           : item.category;
 
@@ -223,8 +252,8 @@ export function DashboardScreen({
           name: item.name.trim(),
           quantity: 1,
           category: categoryToUse,
-          image: item.image ?? '',
-          catalogItemId: item.id.startsWith('custom-') ? undefined : item.id,
+          image: item.image ?? "",
+          catalogItemId: item.id.startsWith("custom-") ? undefined : item.id,
         } as any; // Type assertion needed because ShoppingItem doesn't have catalogItemId
 
         await shoppingService.createItem(newItemData);
@@ -232,8 +261,8 @@ export function DashboardScreen({
       }
       // Don't clear search value - keep dropdown open for multiple additions
     } catch (error) {
-      console.error('Failed to add item to shopping list:', error);
-      showToast('Failed to add item');
+      console.error("Failed to add item to shopping list:", error);
+      showToast("Failed to add item");
     }
   };
 
@@ -255,7 +284,7 @@ export function DashboardScreen({
     operation: () => Promise<T>,
     optimisticUpdate: () => void,
     revertUpdate: () => void,
-    errorMessage: string
+    errorMessage: string,
   ): Promise<T | null> => {
     optimisticUpdate();
     try {
@@ -269,7 +298,7 @@ export function DashboardScreen({
 
   const logShoppingError = (message: string, error: unknown) => {
     console.error(message, error);
-    showToast('Failed to add item');
+    showToast("Failed to add item");
   };
 
   const handleQuickAddGroceryItem = async (item: GroceryItem) => {
@@ -278,7 +307,7 @@ export function DashboardScreen({
       const mainList = getMainList(data.shoppingLists);
 
       if (!mainList) {
-        showToast('No main shopping list found. Please create one.');
+        showToast("No main shopping list found. Please create one.");
         return;
       }
 
@@ -298,8 +327,8 @@ export function DashboardScreen({
       const updatedData = await shoppingService.getShoppingData();
       setAllItems(updatedData.shoppingItems);
     } catch (error) {
-      console.error('Failed to add item to shopping list:', error);
-      showToast('Failed to add item');
+      console.error("Failed to add item to shopping list:", error);
+      showToast("Failed to add item");
     }
   };
 
@@ -316,7 +345,7 @@ export function DashboardScreen({
    * If the item already exists, increments its quantity by 1.
    * Otherwise creates a new item with quantity 1.
    * Opens the shopping modal only if there's no active list or if the operation fails due to missing list.
-   * 
+   *
    * @param item - The grocery item to add
    */
   const handleSuggestionPress = async (item: GroceryItem) => {
@@ -329,10 +358,15 @@ export function DashboardScreen({
       const data = await shoppingService.getShoppingData();
       const normalizedItemName = item.name.trim().toLowerCase();
       const existingInList = data.shoppingItems.find(
-        (i) => i.listId === activeListId && i.name.trim().toLowerCase() === normalizedItemName
+        (i) =>
+          i.listId === activeListId &&
+          i.name.trim().toLowerCase() === normalizedItemName,
       );
       if (existingInList) {
-        const currentQuantity = typeof existingInList.quantity === 'number' ? existingInList.quantity : 0;
+        const currentQuantity =
+          typeof existingInList.quantity === "number"
+            ? existingInList.quantity
+            : 0;
         await shoppingService.updateItem(existingInList.id, {
           quantity: currentQuantity + addQuantity,
         });
@@ -342,8 +376,8 @@ export function DashboardScreen({
           listId: activeListId,
           name: item.name.trim(),
           quantity: 1,
-          category: item.category ?? 'Other',
-          image: item.image ?? '',
+          category: item.category ?? "Other",
+          image: item.image ?? "",
         };
         await shoppingService.createItem(newItemData);
         showToast(`${item.name} added to shopping list`);
@@ -351,11 +385,12 @@ export function DashboardScreen({
       // Refresh shopping data to update the UI immediately
       await loadShoppingData();
     } catch (error) {
-      console.error('Failed to add item to shopping list:', error);
-      showToast('Failed to add item');
+      console.error("Failed to add item to shopping list:", error);
+      showToast("Failed to add item");
       // Only open modal if error is related to missing list, not other errors
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('list') || errorMessage.includes('List')) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("list") || errorMessage.includes("List")) {
         openShoppingModal();
       }
     }
@@ -389,7 +424,11 @@ export function DashboardScreen({
             accessibilityRole="button"
             accessibilityHint="Tap to open notifications"
           >
-            <Ionicons name="notifications-outline" size={22} color={colors.textSecondary} />
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color={colors.textSecondary}
+            />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
 
@@ -407,7 +446,7 @@ export function DashboardScreen({
                 <SafeImage uri={user.avatarUrl} style={styles.avatar} />
               ) : (
                 <SafeImage
-                  uri={getAvatarUri(user?.name ?? 'user')}
+                  uri={getAvatarUri(user?.name ?? "user")}
                   style={styles.avatar}
                 />
               )}
@@ -426,15 +465,22 @@ export function DashboardScreen({
         {/* Two-column layout */}
         <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
           {/* Left column: Shopping widget + Quick stats */}
-          <View style={[styles.leftColumn, !isTablet && styles.fullWidthColumn]}>
+          <View
+            style={[styles.leftColumn, !isTablet && styles.fullWidthColumn]}
+          >
             <View style={styles.leftColumnContent}>
               {/* Add to Shopping List card */}
-              <View style={styles.shoppingCard}>
+              <View
+                style={[
+                  styles.shoppingCard,
+                  isMobile && styles.shoppingCardMobile,
+                ]}
+              >
                 <View style={styles.shoppingCardHeader}>
                   <View style={styles.shoppingCardTitleBlock}>
-                    <Text style={styles.shoppingCardTitle}>Add to Shopping List</Text>
+                    <Text style={styles.shoppingCardTitle}>Quick Add</Text>
                     <Text style={styles.shoppingCardSubtitle}>
-                      Running low on something? Put it down now.
+                      Add groceries in seconds.
                     </Text>
                   </View>
                   <View style={styles.mainListBadge}>
@@ -450,11 +496,10 @@ export function DashboardScreen({
                       onChangeText={setSearchValue}
                       onSelectItem={handleSelectGroceryItem}
                       onQuickAddItem={handleQuickAddGroceryItem}
-                      variant="background"
-                      showShadow={false}
+                      variant="surface"
+                      showShadow={true}
                       allowCustomItems={true}
                       searchMode="remote"
-                      containerStyle={styles.grocerySearchBarContainer}
                     />
                   </View>
                   <TouchableOpacity
@@ -463,28 +508,65 @@ export function DashboardScreen({
                     accessibilityRole="button"
                     accessibilityHint="Add items using voice"
                   >
-                    <Ionicons name="mic-outline" size={22} color={colors.textMuted} />
+                    <Ionicons
+                      name="mic-outline"
+                      size={22}
+                      color={colors.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.suggestedSection}>
-                  <Text style={styles.suggestedLabel}>Suggested Items</Text>
-                  <View style={styles.suggestionChipsRow}>
-                    {suggestedItems.map((item) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={styles.suggestionChip}
-                        onPress={() => handleSuggestionPress(item)}
-                        activeOpacity={0.7}
-                        accessibilityLabel={`Add ${item.name}`}
-                        accessibilityRole="button"
-                        accessibilityHint={`Adds ${item.name} to shopping list`}
-                      >
-                        <Ionicons name="add" size={14} color={colors.textSecondary} />
-                        <Text style={styles.suggestionChipText}>{item.name}</Text>
-                      </TouchableOpacity>
-                    ))}
+                  <View style={styles.suggestedHeader}>
+                    <Text style={styles.suggestedLabel}>Suggested Items</Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setShowSuggestedItems((current) => !current)
+                      }
+                      activeOpacity={0.7}
+                      accessibilityLabel={
+                        showSuggestedItems
+                          ? "Hide suggested items"
+                          : "Show suggested items"
+                      }
+                      accessibilityRole="button"
+                      accessibilityHint="Toggles suggested shopping items"
+                    >
+                      <Text style={styles.suggestedToggleText}>
+                        {showSuggestedItems ? "Hide" : "Show"}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
+
+                  {showSuggestedItems ? (
+                    <ScrollView
+                      style={styles.suggestionScrollArea}
+                      contentContainerStyle={styles.suggestionChipsRow}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {suggestedItems.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={styles.suggestionChip}
+                          onPress={() => handleSuggestionPress(item)}
+                          activeOpacity={0.7}
+                          accessibilityLabel={`Add ${item.name}`}
+                          accessibilityRole="button"
+                          accessibilityHint={`Adds ${item.name} to shopping list`}
+                        >
+                          <Ionicons
+                            name="add"
+                            size={14}
+                            color={colors.textSecondary}
+                          />
+                          <Text style={styles.suggestionChipText}>
+                            {item.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : null}
                 </View>
               </View>
 
@@ -503,15 +585,17 @@ export function DashboardScreen({
                     <View
                       style={[
                         styles.quickStatIconContainer,
-                        stat.iconBgStyle === 'shopping' && styles.quickStatIconShopping,
-                        stat.iconBgStyle === 'recipes' && styles.quickStatIconRecipes,
+                        stat.iconBgStyle === "shopping" &&
+                          styles.quickStatIconShopping,
+                        stat.iconBgStyle === "recipes" &&
+                          styles.quickStatIconRecipes,
                       ]}
                     >
                       <Ionicons
                         name={stat.icon}
                         size={20}
                         color={
-                          stat.iconBgStyle === 'shopping'
+                          stat.iconBgStyle === "shopping"
                             ? colors.primary
                             : colors.secondary
                         }
@@ -520,7 +604,11 @@ export function DashboardScreen({
                     <Text style={styles.quickStatLabel}>{stat.label}</Text>
                     <View style={styles.quickStatValueRow}>
                       <Text style={styles.quickStatValue}>{stat.value}</Text>
-                      <Ionicons name={getDirectionalIcon('chevron-forward')} size={16} color={colors.textMuted} />
+                      <Ionicons
+                        name={getDirectionalIcon("chevron-forward")}
+                        size={16}
+                        color={colors.textMuted}
+                      />
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -529,17 +617,21 @@ export function DashboardScreen({
           </View>
 
           {/* Right column: Important Chores */}
-          <View style={[styles.rightColumn, !isTablet && styles.fullWidthColumn]}>
+          <View
+            style={[styles.rightColumn, !isTablet && styles.fullWidthColumn]}
+          >
             <View style={styles.choresCard}>
               <View style={styles.choresSectionHeader}>
                 <View style={styles.choresTitleBlock}>
-                  <Text style={styles.choresSectionTitle}>Important Chores</Text>
+                  <Text style={styles.choresSectionTitle}>
+                    Important Chores
+                  </Text>
                   <Text style={styles.choresSectionSubtitle}>
                     Assignments for the house
                   </Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => onNavigateToTab('Chores')}
+                  onPress={() => onNavigateToTab("Chores")}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityLabel="View all chores"
                   accessibilityRole="button"
@@ -564,13 +656,17 @@ export function DashboardScreen({
                       style={[
                         styles.choreRow,
                         chore.isCompleted && styles.choreRowDone,
-                        { backgroundColor: getChoreRowBackground(chore.isCompleted) },
+                        {
+                          backgroundColor: getChoreRowBackground(
+                            chore.isCompleted,
+                          ),
+                        },
                       ]}
                       onPress={() => toggleChore(chore.id)}
                       activeOpacity={0.8}
-                      accessibilityLabel={`${chore.title}, ${chore.isCompleted ? 'completed' : 'pending'}, assigned to ${chore.assignee ?? 'unassigned'}`}
+                      accessibilityLabel={`${chore.title}, ${chore.isCompleted ? "completed" : "pending"}, assigned to ${chore.assignee ?? "unassigned"}`}
                       accessibilityRole="button"
-                      accessibilityHint={`Tap to mark ${chore.isCompleted ? 'incomplete' : 'complete'}`}
+                      accessibilityHint={`Tap to mark ${chore.isCompleted ? "incomplete" : "complete"}`}
                     >
                       <View style={styles.choreAvatarContainer}>
                         <SafeImage
@@ -579,7 +675,12 @@ export function DashboardScreen({
                         />
                       </View>
                       <View style={[styles.choreContent, { flex: 1 }]}>
-                        <View style={[styles.choreTitleRow, { flexDirection: 'row', alignItems: 'center' }]}>
+                        <View
+                          style={[
+                            styles.choreTitleRow,
+                            { flexDirection: "row", alignItems: "center" },
+                          ]}
+                        >
                           <Text
                             style={[
                               styles.choreTitle,
@@ -602,21 +703,22 @@ export function DashboardScreen({
                             <Text
                               style={[
                                 styles.choreStatusBadgeText,
-                                chore.isCompleted && styles.choreStatusBadgeTextDone,
+                                chore.isCompleted &&
+                                  styles.choreStatusBadgeTextDone,
                               ]}
                             >
-                              {chore.isCompleted ? 'Done' : 'Pending'}
+                              {chore.isCompleted ? "Done" : "Pending"}
                             </Text>
                           </View>
                         </View>
                         <View style={styles.choreMetaRow}>
                           <Text style={styles.choreMetaText}>
-                            {chore.assignee ?? 'Unassigned'}
+                            {chore.assignee ?? "Unassigned"}
                           </Text>
                           <View style={styles.choreMetaDot} />
                           <Text style={styles.choreMetaText}>
                             {chore.dueDate}
-                            {chore.dueTime ? ` · ${chore.dueTime}` : ''}
+                            {chore.dueTime ? ` · ${chore.dueTime}` : ""}
                           </Text>
                         </View>
                       </View>
@@ -634,7 +736,9 @@ export function DashboardScreen({
                 accessibilityHint="Opens form to create a new chore"
               >
                 <Ionicons name="add" size={16} color={colors.textMuted} />
-                <Text style={styles.addHouseholdTaskText}>Add Household Task</Text>
+                <Text style={styles.addHouseholdTaskText}>
+                  Add Household Task
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

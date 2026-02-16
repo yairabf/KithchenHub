@@ -1,5 +1,13 @@
-import { StyleSheet } from 'react-native';
-import { colors, spacing, borderRadius, typography, shadows, componentSize, zIndex } from '../../../theme';
+import { StyleSheet } from "react-native";
+import {
+  colors,
+  spacing,
+  borderRadius,
+  typography,
+  shadows,
+  componentSize,
+  zIndex,
+} from "../../../theme";
 
 export const styles = StyleSheet.create({
   container: {
@@ -8,9 +16,9 @@ export const styles = StyleSheet.create({
   },
   // Header (sticky look)
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     backgroundColor: colors.surface,
@@ -18,8 +26,8 @@ export const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
   },
   logoContainer: {
@@ -27,8 +35,8 @@ export const styles = StyleSheet.create({
     height: componentSize.button.md,
     backgroundColor: colors.textPrimary,
     borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     ...shadows.lg,
   },
   logoText: {
@@ -36,17 +44,17 @@ export const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
   },
   dateTimeContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     marginRight: spacing.sm,
   },
   timeText: {
     ...typography.h4,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.textPrimary,
     lineHeight: 24,
   },
@@ -57,7 +65,7 @@ export const styles = StyleSheet.create({
   },
   notificationButton: {
     padding: spacing.sm,
-    position: 'relative',
+    position: "relative",
   },
   profileSectionSeparator: {
     width: 1,
@@ -67,7 +75,7 @@ export const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   notificationBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: spacing.sm,
     right: spacing.sm,
     width: 10,
@@ -78,12 +86,12 @@ export const styles = StyleSheet.create({
     borderColor: colors.surface,
   },
   profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
   },
   profileInfo: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   profileRole: {
     ...typography.tiny,
@@ -99,13 +107,13 @@ export const styles = StyleSheet.create({
     borderRadius: componentSize.avatar.md / 2,
     borderWidth: 2,
     borderColor: colors.surface,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: colors.avatarBackground,
     ...shadows.md,
   },
   avatar: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   content: {
     flex: 1,
@@ -117,7 +125,7 @@ export const styles = StyleSheet.create({
   },
   // Two-column layout
   mainGrid: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.xl,
   },
   leftColumn: {
@@ -127,12 +135,12 @@ export const styles = StyleSheet.create({
     flex: 5,
   },
   mainGridPhone: {
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: spacing.xl,
   },
   fullWidthColumn: {
     flex: undefined,
-    width: '100%',
+    width: "100%",
   },
   leftColumnContent: {
     gap: spacing.lg,
@@ -146,10 +154,13 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadows.lg,
   },
+  shoppingCardMobile: {
+    maxHeight: 360,
+  },
   shoppingCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: spacing.lg,
   },
   shoppingCardTitleBlock: {
@@ -168,17 +179,17 @@ export const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   mainListBadgeText: {
     ...typography.tiny,
     color: colors.primary,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1,
   },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.quantityBg,
     borderRadius: borderRadius.xxl,
     paddingHorizontal: spacing.sm,
@@ -188,14 +199,9 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   inputRowWithDropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.quantityBg,
-    borderRadius: borderRadius.xxl,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
     marginBottom: spacing.lg,
     zIndex: zIndex.dropdown + 1,
   },
@@ -203,15 +209,22 @@ export const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  grocerySearchBarContainer: {
-    flex: 1,
-  },
   suggestedSection: {
     zIndex: 0,
   },
+  suggestedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
+  suggestedToggleText: {
+    ...typography.labelBold,
+    color: colors.primary,
+  },
   inputActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   micButton: {
@@ -226,18 +239,20 @@ export const styles = StyleSheet.create({
   suggestedLabel: {
     ...typography.tiny,
     color: colors.textMuted,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 2,
-    marginBottom: spacing.sm,
+  },
+  suggestionScrollArea: {
+    maxHeight: 120,
   },
   suggestionChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
   },
   suggestionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -252,8 +267,8 @@ export const styles = StyleSheet.create({
   },
   // Quick stats row
   quickStatsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.md,
   },
   quickStatCard: {
@@ -270,8 +285,8 @@ export const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: borderRadius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.sm,
   },
   quickStatIconShopping: {
@@ -283,17 +298,17 @@ export const styles = StyleSheet.create({
   quickStatLabel: {
     ...typography.tiny,
     color: colors.textMuted,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     marginBottom: spacing.xs,
   },
   quickStatValueRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   quickStatValue: {
     ...typography.h4,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   // Chores section (right column)
   choresCard: {
@@ -306,9 +321,9 @@ export const styles = StyleSheet.create({
     ...shadows.lg,
   },
   choresSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: spacing.lg,
   },
   choresTitleBlock: {
@@ -331,8 +346,8 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   choreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: spacing.md,
     borderRadius: borderRadius.xxl,
     gap: spacing.md,
@@ -344,32 +359,32 @@ export const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: borderRadius.xl,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: colors.avatarBackground,
     borderWidth: 2,
     borderColor: colors.surface,
   },
   choreAvatar: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   choreContent: {
     flex: 1,
     minWidth: 0,
   },
   choreTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: spacing.sm,
   },
   choreTitle: {
     ...typography.body,
-    fontWeight: '700',
+    fontWeight: "700",
     flex: 1,
   },
   choreTitleDone: {
-    textDecorationLine: 'line-through',
+    textDecorationLine: "line-through",
     color: colors.textMuted,
   },
   choreStatusBadge: {
@@ -377,8 +392,8 @@ export const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
     ...typography.tiny,
-    textTransform: 'uppercase',
-    overflow: 'hidden',
+    textTransform: "uppercase",
+    overflow: "hidden",
   },
   choreStatusPending: {
     backgroundColor: colors.quantityBg,
@@ -389,14 +404,14 @@ export const styles = StyleSheet.create({
   choreStatusBadgeText: {
     ...typography.tiny,
     color: colors.textSecondary,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   choreStatusBadgeTextDone: {
     color: colors.textLight,
   },
   choreMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
@@ -411,13 +426,13 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.textMuted,
   },
   addHouseholdTaskButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.sm,
     paddingVertical: spacing.md,
     borderWidth: 2,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: colors.borderDashed,
     borderRadius: borderRadius.xl,
   },

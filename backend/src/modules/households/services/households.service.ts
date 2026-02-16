@@ -163,14 +163,29 @@ export class HouseholdsService {
     if (!user) throw new NotFoundException('User not found');
     if (user.householdId) return user.householdId;
 
-    const household = await this.householdsRepository.createHousehold(
-      name,
-      householdId,
-    );
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { householdId: household.id, role: 'Admin' },
+    const household = await this.prisma.$transaction(async (tx) => {
+      const createdHousehold = await tx.household.create({
+        data: householdId ? { id: householdId, name } : { name },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { householdId: createdHousehold.id, role: 'Admin' },
+      });
+
+      await tx.shoppingList.create({
+        data: {
+          householdId: createdHousehold.id,
+          name: DEFAULT_MAIN_SHOPPING_LIST.NAME,
+          color: DEFAULT_MAIN_SHOPPING_LIST.COLOR,
+          icon: DEFAULT_MAIN_SHOPPING_LIST.ICON,
+          isMain: true,
+        },
+      });
+
+      return createdHousehold;
     });
+
     return household.id;
   }
 

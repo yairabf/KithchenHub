@@ -47,15 +47,18 @@ export function useDashboardChores(): UseDashboardChoresReturn {
   }, [user]);
 
   const isSignedIn = userMode === 'signed-in';
+  const canUseRemoteChores = userMode === 'signed-in' && !!user?.householdId;
+  const isSignedInWithoutHousehold = isSignedIn && !user?.householdId;
+  const effectiveMode = isSignedIn ? 'signed-in' : 'guest';
 
   const choresService = useMemo(
-    () => createChoresService(userMode),
-    [userMode]
+    () => createChoresService(effectiveMode),
+    [effectiveMode]
   );
 
   const repository = useMemo(() => {
-    return isSignedIn ? new CacheAwareChoreRepository(choresService) : null;
-  }, [choresService, isSignedIn]);
+    return canUseRemoteChores ? new CacheAwareChoreRepository(choresService) : null;
+  }, [choresService, canUseRemoteChores]);
 
   const { data: cachedChores, isLoading: cacheLoading } =
     useCachedEntities<Chore>('chores');
@@ -63,8 +66,12 @@ export function useDashboardChores(): UseDashboardChoresReturn {
   const [guestChores, setGuestChores] = useState<Chore[]>([]);
   const [guestLoading, setGuestLoading] = useState(true);
 
-  const chores = isSignedIn ? cachedChores : guestChores;
-  const isLoading = isSignedIn ? cacheLoading : guestLoading;
+  const chores = canUseRemoteChores ? cachedChores : guestChores;
+  const isLoading = canUseRemoteChores
+    ? cacheLoading
+    : isSignedInWithoutHousehold
+      ? false
+      : guestLoading;
 
   const todayChores = useMemo(() => filterTodayChores(chores), [chores]);
 
@@ -72,15 +79,21 @@ export function useDashboardChores(): UseDashboardChoresReturn {
   // Subsequent navigations will use cache (no API calls)
   // Note: findAll() will only fetch from API if cache is missing, otherwise returns cache
   useEffect(() => {
-    if (isSignedIn && repository) {
+    if (canUseRemoteChores && repository) {
       // Check cache - only fetches from API if cache is missing
       repository.findAll().catch((error) => {
         console.error('Failed to check cache for chores:', error);
       });
     }
-  }, [isSignedIn, repository]);
+  }, [canUseRemoteChores, repository]);
 
   useEffect(() => {
+    if (isSignedInWithoutHousehold) {
+      setGuestChores([]);
+      setGuestLoading(false);
+      return;
+    }
+
     if (!isSignedIn) {
       let isMounted = true;
       const loadChores = async () => {
@@ -104,7 +117,7 @@ export function useDashboardChores(): UseDashboardChoresReturn {
         isMounted = false;
       };
     }
-  }, [choresService, isSignedIn]);
+  }, [choresService, isSignedIn, isSignedInWithoutHousehold]);
 
   const toggleChore = useCallback(
     async (id: string) => {
@@ -129,6 +142,11 @@ export function useDashboardChores(): UseDashboardChoresReturn {
   );
 
   const refresh = useCallback(async () => {
+    if (isSignedInWithoutHousehold) {
+      setGuestChores([]);
+      return;
+    }
+
     if (repository) {
       try {
         await repository.refresh();
@@ -144,7 +162,7 @@ export function useDashboardChores(): UseDashboardChoresReturn {
     } catch (error) {
       console.error('Failed to refresh chores:', error);
     }
-  }, [repository, choresService]);
+  }, [repository, choresService, isSignedInWithoutHousehold]);
 
   return {
     todayChores,
