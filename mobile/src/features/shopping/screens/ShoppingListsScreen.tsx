@@ -88,22 +88,26 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   // Load categories for custom item selection
   useEffect(() => {
-    catalogService.getShoppingCategories()
-      .then((cats) => {
-        const mergedCategories = Array.from(
-          new Set([...SHOPPING_CATEGORIES, ...cats].map((category) => normalizeCategoryKey(category))),
-        );
-        setAvailableCategories(mergedCategories);
+    // TEMPORARY FIX: Clear cache to remove deprecated categories (oils, teas, sweets)
+    // TODO: Remove this clearCache() call after cache is cleared once
+    catalogService.clearCache().then(() => {
+      catalogService.getShoppingCategories()
+        .then((cats) => {
+          const mergedCategories = Array.from(
+            new Set([...SHOPPING_CATEGORIES, ...cats].map((category) => normalizeCategoryKey(category))),
+          );
+          setAvailableCategories(mergedCategories);
 
-        // Set default category if not in list
-        if (mergedCategories.length > 0 && !mergedCategories.includes(normalizeCategoryKey(selectedItemCategory))) {
-          setSelectedItemCategory(normalizeCategoryKey(mergedCategories[0]));
-        }
-      })
-      .catch((error) => {
-        console.error('Failed to load categories:', error);
-        setAvailableCategories(SHOPPING_CATEGORIES);
-      });
+          // Set default category if not in list
+          if (mergedCategories.length > 0 && !mergedCategories.includes(normalizeCategoryKey(selectedItemCategory))) {
+            setSelectedItemCategory(normalizeCategoryKey(mergedCategories[0]));
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to load categories:', error);
+          setAvailableCategories(SHOPPING_CATEGORIES);
+        });
+    });
   }, []);
   const [showCreateListModal, setShowCreateListModal] = useState(false);
   const [editingList, setEditingList] = useState<ShoppingList | null>(null);
