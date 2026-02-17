@@ -37,6 +37,19 @@ export class GroceriesController {
     return this.shoppingService.searchGroceries(query || '');
   }
 
+  @Get('by-category')
+  @Public()
+  async getGroceriesByCategory(
+    @Query('category') category: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = Number(limit);
+    return this.shoppingService.getGroceriesByCategory(
+      category || '',
+      Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    );
+  }
+
   @Get('categories')
   @Public()
   async getCategories() {

@@ -160,6 +160,53 @@ export class ShoppingService {
   }
 
   /**
+   * Gets groceries by category name (case-insensitive).
+   *
+   * @param category - Category query string
+   * @param limit - Maximum number of results to return (1-200)
+   * @returns Array of matching grocery items
+   */
+  async getGroceriesByCategory(
+    category: string,
+    limit = 100,
+  ): Promise<GrocerySearchItemDto[]> {
+    const categoryTerm = category?.trim() ?? '';
+    if (!categoryTerm) {
+      return [];
+    }
+
+    const safeLimit = Math.min(Math.max(limit, 1), 200);
+
+    const rows = await this.prisma.masterGroceryCatalog.findMany({
+      where: {
+        category: {
+          contains: categoryTerm,
+          mode: 'insensitive',
+        },
+      },
+      orderBy: { name: 'asc' },
+      take: safeLimit,
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        defaultUnit: true,
+        imageUrl: true,
+        defaultQuantity: true,
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      defaultUnit: row.defaultUnit ?? undefined,
+      imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
+      defaultQuantity: row.defaultQuantity ?? 1,
+    }));
+  }
+
+  /**
    * Gets all unique grocery categories.
    *
    * @returns Sorted array of category names
