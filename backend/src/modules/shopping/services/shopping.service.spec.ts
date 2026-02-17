@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ShoppingService } from './shopping.service';
 import { ShoppingRepository } from '../repositories/shopping.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 
 /**
  * Shopping Service Unit Tests
@@ -109,6 +113,28 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       await expect(
         service.deleteList(mockListId, mockHouseholdId),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException when deleting the main list', async () => {
+      const mockMainList = {
+        id: mockListId,
+        householdId: mockHouseholdId,
+        name: 'Main List',
+        color: null,
+        icon: null,
+        isMain: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.spyOn(repository, 'findListById').mockResolvedValue(mockMainList);
+
+      await expect(
+        service.deleteList(mockListId, mockHouseholdId),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(repository.deleteList).not.toHaveBeenCalled();
     });
   });
 

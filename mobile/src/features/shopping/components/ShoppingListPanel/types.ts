@@ -44,6 +44,12 @@ export interface ShoppingListPanelProps {
   
   /** Callback fired when user wants to create a new list */
   onCreateList: () => void;
+
+  /** Callback fired when user wants to edit an existing list */
+  onEditList: (list: ShoppingList) => void;
+
+  /** Callback fired when user wants to delete an existing list */
+  onDeleteList: (list: ShoppingList) => void;
   
   /** Callback fired when user selects a grocery item from search */
   onSelectGroceryItem: (item: GroceryItem) => void;

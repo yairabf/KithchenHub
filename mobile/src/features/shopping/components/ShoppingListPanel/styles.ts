@@ -21,9 +21,10 @@ const SPACING_12 = spacing.sm + spacing.xs;
 
 /**
  * Spacing constants for list drawer shadow clearance and scroll padding.
- * These values ensure shadows are not clipped by overflow containers.
+ * These values ensure shadows and dropdown menus are not clipped by overflow containers.
  */
-const DRAWER_SHADOW_CLEARANCE = 28; // Vertical space for shadows.lg (offsetY 10 + blurRadius 40, rounded up)
+const DRAWER_SHADOW_CLEARANCE = 0; // No vertical space below drawer
+const DRAWER_DROPDOWN_CLEARANCE = 42; // Internal ScrollView padding for dropdown menu (menu height ~58px + shadow ~22px)
 const HORIZONTAL_SCROLL_PADDING = 20; // Horizontal padding to prevent shadow clipping on left/right edges
 
 export const styles = StyleSheet.create({
@@ -62,15 +63,18 @@ export const styles = StyleSheet.create({
   listsDrawer: {
     marginBottom: DRAWER_SHADOW_CLEARANCE,
     overflow: 'visible' as const,
+    position: 'relative',
+    zIndex: 2000,
   },
   listsDrawerContent: {
     gap: SPACING_12,
-    paddingTop: spacing.xs,
-    paddingBottom: DRAWER_SHADOW_CLEARANCE,
+    paddingTop: spacing.sm,
+    paddingBottom: DRAWER_DROPDOWN_CLEARANCE,
     paddingLeft: HORIZONTAL_SCROLL_PADDING,
     paddingRight: HORIZONTAL_SCROLL_PADDING,
   },
   listCard: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
@@ -81,6 +85,9 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     ...shadows.lg,
+  },
+  listCardMenuOpen: {
+    zIndex: 1050,
   },
   listCardActive: {
     borderColor: colors.primary + '40',
@@ -104,6 +111,57 @@ export const styles = StyleSheet.create({
   },
   listCardContent: {
     flex: 1,
+  },
+  listActionsContainer: {
+    position: 'relative',
+    alignItems: 'flex-end',
+  },
+  listActionButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.quantityBg,
+  },
+  listActionsMenu: {
+    position: 'absolute',
+    top: 30,
+    right: 0,
+    minWidth: 116,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.xs,
+    ...shadows.md,
+    zIndex: 1100,
+  },
+  listActionsDismissArea: {
+    position: 'absolute',
+    top: -2000,
+    left: -2000,
+    width: 4000,
+    height: 4000,
+    zIndex: 1090,
+  },
+  listActionMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  listActionMenuItemText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  listActionMenuItemTextDanger: {
+    color: colors.error,
+  },
+  listActionMenuItemTextDisabled: {
+    color: colors.textMuted,
   },
   listCardNameRow: {
     flexDirection: 'row',
@@ -165,6 +223,7 @@ export const styles = StyleSheet.create({
   },
   searchBarContainer: {
     marginBottom: SPACING_12,
+    zIndex: 1,
   },
   itemsList: {
     gap: spacing.md, // 16px spacing between items for better visual separation

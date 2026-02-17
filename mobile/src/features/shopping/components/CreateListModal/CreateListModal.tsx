@@ -30,6 +30,7 @@ export function CreateListModal({
   onClose,
   onConfirm,
   confirmDisabled,
+  mode = 'create',
   listName,
   onChangeListName,
   selectedIcon,
@@ -37,12 +38,14 @@ export function CreateListModal({
   selectedColor,
   onSelectColor,
 }: CreateListModalProps) {
+  const isEditMode = mode === 'edit';
+
   return (
     <CenteredModal
       visible={visible}
       onClose={onClose}
-      title="Create New List"
-      confirmText="Create"
+      title={isEditMode ? 'Edit List' : 'Create New List'}
+      confirmText={isEditMode ? 'Save' : 'Create'}
       onConfirm={onConfirm}
       confirmColor={colors.chores}
       confirmDisabled={confirmDisabled}

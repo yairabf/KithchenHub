@@ -8,6 +8,7 @@ export interface CreateListModalProps {
   onClose: () => void;
   onConfirm: () => void;
   confirmDisabled: boolean;
+  mode?: 'create' | 'edit';
   listName: string;
   onChangeListName: (value: string) => void;
   selectedIcon: ListIconName;

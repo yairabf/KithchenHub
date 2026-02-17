@@ -93,7 +93,6 @@ jest.mock('react-native-reanimated', () => {
 
 // Mock dependencies  
 jest.mock('../../../utils/categoryImage');
-jest.mock('../../../constants/categories');
 
 describe('ShoppingListPanel - Collapsible Categories', () => {
   const mockShoppingLists: ShoppingList[] = [
@@ -134,6 +133,8 @@ describe('ShoppingListPanel - Collapsible Categories', () => {
     groceryItems: mockGroceryItems,
     onSelectList: jest.fn(),
     onCreateList: jest.fn(),
+    onEditList: jest.fn(),
+    onDeleteList: jest.fn(),
     onSelectGroceryItem: jest.fn(),
     onQuickAddItem: jest.fn(),
     onQuantityChange: jest.fn(),
@@ -149,7 +150,7 @@ describe('ShoppingListPanel - Collapsible Categories', () => {
 
   describe('Initial Render', () => {
     it('should render all categories expanded by default', () => {
-      const { getByText, queryAllByTestId } = render(
+      const { getByText } = render(
         <ShoppingListPanel {...defaultProps} />
       );
 
@@ -158,9 +159,9 @@ describe('ShoppingListPanel - Collapsible Categories', () => {
       expect(getByText('Vegetables')).toBeTruthy();
       expect(getByText('Dairy')).toBeTruthy();
 
-      // All items should be visible (6 total items)
-      const items = queryAllByTestId(/shopping-item-/);
-      expect(items.length).toBeGreaterThan(0);
+      // Representative items should be visible
+      expect(getByText('Fruits Item 1')).toBeTruthy();
+      expect(getByText('Vegetables Item 1')).toBeTruthy();
     });
 
     it('should show chevron-up icon for expanded categories', () => {
@@ -338,6 +339,26 @@ describe('ShoppingListPanel - Collapsible Categories', () => {
 
       // Should fall back to "Other" category
       expect(getByText('Other')).toBeTruthy();
+    });
+
+    it('should preserve non-core catalog categories when grouping', () => {
+      const propsWithExtendedCategories = {
+        ...defaultProps,
+        filteredItems: [
+          ...createMockItems('Beverages', 2),
+          ...createMockItems('Baking', 1),
+          ...createMockItems('Condiments', 1),
+        ],
+      };
+
+      const { getByText, queryByText } = render(
+        <ShoppingListPanel {...propsWithExtendedCategories} />
+      );
+
+      expect(getByText('Beverages')).toBeTruthy();
+      expect(getByText('Baking')).toBeTruthy();
+      expect(getByText('Condiments')).toBeTruthy();
+      expect(queryByText('Other')).toBeNull();
     });
   });
 

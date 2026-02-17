@@ -1,11 +1,11 @@
-import { normalizeShoppingCategory } from '../constants/categories';
+import { normalizeCategoryKey } from '../constants/categories';
 
 export const isValidItemImage = (value?: string) =>
   typeof value === 'string' && value.trim().length > 0;
 
 export const getCategoryImageSource = (categoryId: string): number | null => {
   try {
-    switch (normalizeShoppingCategory(categoryId)) {
+    switch (normalizeCategoryKey(categoryId)) {
       case 'fruits':
         return require('../../../../assets/categories/fruits.png');
       case 'vegetables':

@@ -15,13 +15,18 @@ import { CategoriesGrid } from '../components/CategoriesGrid';
 import { FrequentlyAddedGrid } from '../components/FrequentlyAddedGrid';
 import { CenteredModal } from '../../../common/components/CenteredModal';
 import { ShareModal } from '../../../common/components/ShareModal';
+import { ConfirmationModal } from '../../../common/components/ConfirmationModal';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { formatShoppingListText } from '../../../common/utils/shareUtils';
 import { GrocerySearchBar, GroceryItem } from '../components/GrocerySearchBar';
 import { CreateCustomItemModal } from '../components/CreateCustomItemModal';
 import { CreateListModal, type ListIconName } from '../components/CreateListModal';
 import { catalogService } from '../../../common/services/catalogService';
-import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../constants/categories';
+import {
+  DEFAULT_CATEGORY,
+  SHOPPING_CATEGORIES,
+  normalizeCategoryKey,
+} from '../constants/categories';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
@@ -85,17 +90,23 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   useEffect(() => {
     catalogService.getShoppingCategories()
       .then((cats) => {
-        setAvailableCategories(cats);
+        const mergedCategories = Array.from(
+          new Set([...SHOPPING_CATEGORIES, ...cats].map((category) => normalizeCategoryKey(category))),
+        );
+        setAvailableCategories(mergedCategories);
+
         // Set default category if not in list
-        if (cats.length > 0 && !cats.includes(selectedItemCategory)) {
-          setSelectedItemCategory(normalizeShoppingCategory(cats[0]));
+        if (mergedCategories.length > 0 && !mergedCategories.includes(normalizeCategoryKey(selectedItemCategory))) {
+          setSelectedItemCategory(normalizeCategoryKey(mergedCategories[0]));
         }
       })
       .catch((error) => {
         console.error('Failed to load categories:', error);
+        setAvailableCategories(SHOPPING_CATEGORIES);
       });
   }, []);
   const [showCreateListModal, setShowCreateListModal] = useState(false);
+  const [editingList, setEditingList] = useState<ShoppingList | null>(null);
   const [newListName, setNewListName] = useState('');
   const [newListIcon, setNewListIcon] = useState<ListIconName>('cart-outline');
   const [newListColor, setNewListColor] = useState('#10B981');
@@ -103,6 +114,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [pendingDeleteList, setPendingDeleteList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Determine data mode based on user authentication state
@@ -307,6 +319,38 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     setShoppingLists(sortedLists);
     setSelectedList((current) => getSelectedList(sortedLists, current?.id));
     return created;
+  };
+
+  const updateList = async (listId: string, updates: Partial<ShoppingList>) => {
+    const updated = await shoppingService.updateList(listId, updates);
+    setShoppingLists((currentLists) =>
+      sortListsWithMainFirst(
+        currentLists.map((list) =>
+          list.id === listId ? { ...list, ...updated } : list,
+        ),
+      ),
+    );
+    setSelectedList((currentSelected) =>
+      currentSelected && currentSelected.id === listId
+        ? { ...currentSelected, ...updated }
+        : currentSelected,
+    );
+    return updated;
+  };
+
+  const deleteList = async (listId: string) => {
+    await shoppingService.deleteList(listId);
+    setShoppingLists((currentLists) => {
+      const nextLists = currentLists.filter((list) => list.id !== listId);
+      const sortedLists = sortListsWithMainFirst(nextLists);
+      setSelectedList((currentSelected) =>
+        getSelectedList(sortedLists, currentSelected?.id === listId ? undefined : currentSelected?.id),
+      );
+      return sortedLists;
+    });
+    setAllItems((currentItems) =>
+      currentItems.filter((item) => item.listId !== listId),
+    );
   };
 
   /**
@@ -518,7 +562,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       try {
         // Use selected category for custom items, otherwise use item's category
         const categoryToUse = selectedGroceryItem.id.startsWith('custom-')
-          ? normalizeShoppingCategory(selectedItemCategory)
+          ? normalizeCategoryKey(selectedItemCategory)
           : selectedGroceryItem.category;
 
         const newItem = await createItem({
@@ -561,14 +605,24 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   };
 
   const handleOpenCreateListModal = () => {
+    setEditingList(null);
     setShowCreateListModal(true);
     setNewListName('');
     setNewListIcon('cart-outline');
     setNewListColor('#10B981');
   };
 
+  const handleOpenEditListModal = (list: ShoppingList) => {
+    setEditingList(list);
+    setShowCreateListModal(true);
+    setNewListName(list.name);
+    setNewListIcon(list.icon);
+    setNewListColor(list.color);
+  };
+
   const handleCancelCreateListModal = () => {
     setShowCreateListModal(false);
+    setEditingList(null);
     setNewListName('');
     setNewListIcon('cart-outline');
     setNewListColor('#10B981');
@@ -582,16 +636,44 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
     // Use service directly
     try {
-      const newList = await createList({
-        name: trimmedName,
-        icon: newListIcon,
-        color: newListColor,
-      });
-
-      setSelectedList(newList);
+      if (editingList) {
+        await updateList(editingList.id, {
+          name: trimmedName,
+          icon: newListIcon,
+          color: newListColor,
+        });
+      } else {
+        const newList = await createList({
+          name: trimmedName,
+          icon: newListIcon,
+          color: newListColor,
+        });
+        setSelectedList(newList);
+      }
       handleCancelCreateListModal();
     } catch (error) {
-      logShoppingError('Failed to create shopping list:', error);
+      logShoppingError('Failed to save shopping list:', error);
+    }
+  };
+
+  const confirmDeleteList = (list: ShoppingList) => {
+    if (list.isMain) {
+      return;
+    }
+
+    setPendingDeleteList(list);
+  };
+
+  const handleConfirmDeleteList = async () => {
+    if (!pendingDeleteList) {
+      return;
+    }
+
+    try {
+      await deleteList(pendingDeleteList.id);
+      setPendingDeleteList(null);
+    } catch (error) {
+      logShoppingError('Failed to delete shopping list:', error);
     }
   };
 
@@ -647,6 +729,8 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             groceryItems={searchQuery ? searchResults : []}
             onSelectList={(list) => setSelectedList(list)}
             onCreateList={handleOpenCreateListModal}
+            onEditList={handleOpenEditListModal}
+            onDeleteList={confirmDeleteList}
             onSelectGroceryItem={handleSelectGroceryItem}
             onQuickAddItem={handleQuickAddItem}
             onQuantityChange={handleQuantityChange}
@@ -693,6 +777,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         onClose={handleCancelCreateListModal}
         onConfirm={handleCreateList}
         confirmDisabled={!newListName.trim()}
+        mode={editingList ? 'edit' : 'create'}
         listName={newListName}
         onChangeListName={setNewListName}
         selectedIcon={newListIcon}
@@ -770,6 +855,19 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         onClose={() => setShowShareModal(false)}
         title={`Share ${activeList.name}`}
         shareText={shareText}
+      />
+
+      <ConfirmationModal
+        visible={!!pendingDeleteList}
+        title="Delete List"
+        message={
+          pendingDeleteList
+            ? `Delete "${pendingDeleteList.name}"?`
+            : ''
+        }
+        confirmText="Delete"
+        onConfirm={handleConfirmDeleteList}
+        onCancel={() => setPendingDeleteList(null)}
       />
 
     </SafeAreaView>
