@@ -218,6 +218,30 @@ export class CatalogService {
   }
 
   /**
+   * Fetches groceries by category name.
+   *
+   * @param categoryName - Category name
+   * @returns Array of grocery items in that category
+   */
+  async getGroceriesByCategory(categoryName: string): Promise<GroceryItem[]> {
+    const trimmedCategory = categoryName.trim();
+    if (!trimmedCategory) {
+      return [];
+    }
+
+    try {
+      const results = await api.get<GrocerySearchItemDto[] | undefined>(
+        `/groceries/by-category?category=${encodeURIComponent(trimmedCategory)}`,
+      );
+      const list = Array.isArray(results) ? results : [];
+      return list.map(mapGroceryItem);
+    } catch (error) {
+      console.error('Category fetch failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Internal logging helper that conditionally logs based on environment.
    * Only logs in development mode to avoid performance impact in production.
    * 

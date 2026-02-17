@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Modal,
+  ActivityIndicator,
   TouchableOpacity,
   ScrollView,
   Image,
@@ -21,6 +22,8 @@ export function CategoryModal({
   visible,
   categoryName,
   items,
+  isLoading = false,
+  errorMessage = null,
   onClose,
   onSelectItem,
 }: CategoryModalProps) {
@@ -69,7 +72,9 @@ export function CategoryModal({
               >
                 {categoryName}
               </Text>
-              <Text style={styles.headerSubtitle}>{items.length} items</Text>
+              <Text style={styles.headerSubtitle}>
+                {isLoading ? 'Loading items...' : `${items.length} items`}
+              </Text>
             </View>
             <TouchableOpacity
               onPress={onClose}
@@ -87,7 +92,17 @@ export function CategoryModal({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={true}
           >
-            {items.length === 0 ? (
+            {isLoading ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator size="large" color={colors.shopping} />
+                <Text style={styles.emptyText}>Loading items...</Text>
+              </View>
+            ) : errorMessage ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
+                <Text style={styles.emptyText}>{errorMessage}</Text>
+              </View>
+            ) : items.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="cube-outline" size={48} color={colors.textMuted} />
                 <Text style={styles.emptyText}>No items in this category</Text>

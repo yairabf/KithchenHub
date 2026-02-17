@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -97,21 +98,25 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   }, []);
 
   const effectiveCategory = showCategoryFilter ? selectedCategory : 'All';
+  const isIOS = Platform.OS === 'ios';
 
-  // Calculate card width dynamically based on screen size
-  // Account for container padding and gap between columns
+  // Calculate card width dynamically based on platform and screen size
   const cardWidth = useMemo(() => {
     const containerPadding = spacing.lg * 2; // contentContainer padding (24px each side)
-    const availableWidth = width - containerPadding - COLUMN_GAP;
+    const availableWidth = width - containerPadding;
+
+    if (isIOS) {
+      return availableWidth;
+    }
 
     if (isTablet) {
       // 2 columns on tablet/web - wider cards with moderate gap between columns
-      return (availableWidth / 2) - (COLUMN_GAP / 2);
+      return (availableWidth - COLUMN_GAP) / 2;
     } else {
       // 2 columns on phone, use full available width
-      return availableWidth / 2;
+      return (availableWidth - COLUMN_GAP) / 2;
     }
-  }, [width, isTablet]);
+  }, [isIOS, width, isTablet]);
 
   // Deduplicate recipes by ID to prevent duplicate key warnings
   const uniqueRecipes = useMemo(() => {
@@ -146,6 +151,17 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     const matchesSearch = recipeName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const hasAnyRecipes = uniqueRecipes.length > 0;
+  const showCollectionEmptyState = !isLoading && !hasAnyRecipes;
+  const showFilteredEmptyState = !isLoading && hasAnyRecipes && filteredRecipes.length === 0;
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const hasActiveCategoryFilter = showCategoryFilter && selectedCategory !== 'All';
+
+  const handleResetFilters = useCallback(() => {
+    setSearchQuery('');
+    setSelectedCategory('All');
+  }, []);
 
   const handleAddRecipe = () => {
     setShowAddRecipeModal(true);
@@ -251,7 +267,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             ))}
           </View>
         </ScrollView>
-      ) : filteredRecipes.length === 0 && !isLoading ? (
+      ) : showCollectionEmptyState ? (
         <EmptyState
           icon="book-outline"
           title="No recipes yet"
@@ -274,45 +290,50 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
           </View>
 
           {showCategoryFilter ? (
-            <View style={styles.filterRow}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterContainer}
-                contentContainerStyle={styles.filterContent}
-              >
-                {RECIPE_FILTER_CATEGORIES.map((category) => {
-                  const iconName = getRecipeCategoryIcon(category);
-                  const isActive = selectedCategory === category;
-
-                  return (
-                    <TouchableOpacity
-                      key={category}
-                      style={styles.filterChip}
-                      onPress={() => setSelectedCategory(category)}
-                    >
-                      <View style={[styles.filterCircle, isActive && styles.filterCircleActive]}>
-                        <Ionicons
-                          name={iconName as React.ComponentProps<typeof Ionicons>['name']}
-                          size={24}
-                          color={isActive ? colors.primary : colors.textSecondary}
-                        />
-                      </View>
-                      <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                        {category}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.filterHideButton}
-                onPress={handleToggleCategoryFilter}
-                accessibilityLabel="Hide category filter"
-              >
+            <View style={styles.filterSection}>
+              <View style={styles.filterHeader}>
+                <TouchableOpacity
+                  style={styles.filterHideButton}
+                  onPress={handleToggleCategoryFilter}
+                  accessibilityLabel="Hide category filter"
+                >
                 <Ionicons name="eye-off-outline" size={20} color={colors.textMuted} />
                 <Text style={styles.filterHideButtonText}>Hide</Text>
               </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterRow}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.filterContainer}
+                  contentContainerStyle={styles.filterContent}
+                >
+                  {RECIPE_FILTER_CATEGORIES.map((category) => {
+                    const iconName = getRecipeCategoryIcon(category);
+                    const isActive = selectedCategory === category;
+
+                    return (
+                      <TouchableOpacity
+                        key={category}
+                        style={styles.filterChip}
+                        onPress={() => setSelectedCategory(category)}
+                      >
+                        <View style={[styles.filterCircle, isActive && styles.filterCircleActive]}>
+                          <Ionicons
+                            name={iconName as React.ComponentProps<typeof Ionicons>['name']}
+                            size={24}
+                            color={isActive ? colors.primary : colors.textSecondary}
+                          />
+                        </View>
+                        <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                          {category}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
             </View>
           ) : (
             <TouchableOpacity
@@ -332,18 +353,33 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
               <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
             }
           >
-            <View style={styles.grid}>
-              {filteredRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe.id}
-                  recipe={recipe}
-                  backgroundColor={colors.surface}
-                  onPress={() => onSelectRecipe?.(recipe)}
-                  onEdit={() => handleEditRecipe(recipe)}
-                  width={cardWidth}
-                />
-              ))}
-            </View>
+            {showFilteredEmptyState ? (
+              <EmptyState
+                icon="search-outline"
+                title={hasActiveSearch ? 'No matching recipes' : 'No recipes in this category'}
+                description={
+                  hasActiveSearch
+                    ? `No recipes match "${searchQuery.trim()}". Try another name or reset filters.`
+                    : 'Try a different category or reset filters.'
+                }
+                actionLabel={hasActiveSearch || hasActiveCategoryFilter ? 'Reset filters' : undefined}
+                onActionPress={hasActiveSearch || hasActiveCategoryFilter ? handleResetFilters : undefined}
+                actionColor={colors.recipes}
+              />
+            ) : (
+              <View style={styles.grid}>
+                {filteredRecipes.map((recipe) => (
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    backgroundColor={colors.surface}
+                    onPress={() => onSelectRecipe?.(recipe)}
+                    onEdit={() => handleEditRecipe(recipe)}
+                    width={cardWidth}
+                  />
+                ))}
+              </View>
+            )}
           </ScrollView>
         </>
       )}

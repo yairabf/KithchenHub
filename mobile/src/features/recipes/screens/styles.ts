@@ -1,14 +1,8 @@
-import { StyleSheet, Platform } from 'react-native';
-import { colors, spacing, borderRadius, shadows } from '../../../theme';
+import { StyleSheet } from 'react-native';
+import { colors, spacing, shadows } from '../../../theme';
 
-/**
- * Spacing constants for recipe screen layout.
- * These values optimize the vertical rhythm and ensure proper visual hierarchy.
- */
-const FILTER_MAX_HEIGHT = 110;       // Increased from 90 to accommodate filter chips + extra padding (prevents iOS clipping)
-const FILTER_VERTICAL_PADDING = 20;  // Increased from 15 to create more breathing room and prevent top clipping on iOS
-const SEARCH_BOTTOM_MARGIN = 5;     // Reduced from 24px to tighten layout and reduce scrolling
-const FILTER_BOTTOM_MARGIN = 5;     // Minimal space before recipe grid starts
+const FILTER_BOTTOM_MARGIN = spacing.xs;
+const FILTER_CHIPS_MIN_HEIGHT = 96;
 
 export const styles = StyleSheet.create({
   container: {
@@ -20,7 +14,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     marginHorizontal: 24,
-    // marginBottom: SEARCH_BOTTOM_MARGIN,
+    marginBottom: spacing.xs,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 32,
@@ -33,26 +27,32 @@ export const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    maxHeight: FILTER_MAX_HEIGHT,
+    minHeight: FILTER_CHIPS_MIN_HEIGHT,
     marginBottom: FILTER_BOTTOM_MARGIN,
   },
+  filterSection: {
+    marginTop: 2,
+  },
+  filterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginBottom: 2,
+  },
   filterContainer: {
-    flex: 1,
-    paddingTop: Platform.OS === 'ios' ? FILTER_VERTICAL_PADDING + 5 : FILTER_VERTICAL_PADDING,  // Extra padding on iOS
-    overflow: 'visible',  // Prevent clipping on iOS
+    flexGrow: 0,
   },
   filterContent: {
     paddingHorizontal: 24,
-    paddingBottom: 16,
-    // paddingTop: Platform.OS === 'ios' ? 20 : 12,  // Extra padding on iOS to prevent negative y position clipping
-    alignItems: 'flex-start',  // Changed from 'center' to prevent negative y positioning that clips content
-    gap: 20,
+    paddingTop: 2,
+    paddingBottom: spacing.xs,
+    alignItems: 'flex-start',
+    gap: spacing.lg,
   },
   filterChip: {
     alignItems: 'center',
-    justifyContent: 'flex-start',  // Changed from 'center' to prevent negative y positioning
+    justifyContent: 'center',
     gap: 8,
   },
   filterCircle: {
@@ -83,9 +83,8 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: spacing.sm,
+    paddingVertical: 4,
     paddingHorizontal: spacing.md,
-    marginRight: spacing.md,
   },
   filterHideButtonText: {
     fontSize: 12,
