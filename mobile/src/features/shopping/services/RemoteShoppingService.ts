@@ -1,6 +1,11 @@
 import { api } from '../../../services/api';
 import { colors } from '../../../theme';
-import { withUpdatedAt, markDeleted, withCreatedAtAndUpdatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
+import {
+  withUpdatedAt,
+  markDeleted,
+  withCreatedAtAndUpdatedAt,
+  normalizeTimestampsFromApi,
+} from '../../../common/utils/timestamps';
 import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingData, IShoppingService } from './shoppingService';
@@ -76,6 +81,13 @@ const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => (
   color: list.color ?? DEFAULT_LIST_COLOR,
   isMain: list.isMain ?? false,
 });
+
+type UpdateListDto = {
+  name?: string;
+  color?: string;
+  icon?: string;
+  isMain?: boolean;
+};
 
 const buildShoppingItemsFromDetails = (
   listId: string,
@@ -266,8 +278,25 @@ export class RemoteShoppingService implements IShoppingService {
     // Apply timestamp for optimistic UI and offline queue
     const updated = { ...existing, ...updates };
     const withTimestamps = withUpdatedAt(updated);
-    const payload = toSupabaseTimestamps(withTimestamps);
-    const response = await api.put<ShoppingListSummaryDto>(`/shopping-lists/${listId}`, payload);
+    const payload: UpdateListDto = {};
+
+    if (typeof updates.name === 'string') {
+      payload.name = updates.name;
+    }
+    if (typeof updates.color === 'string') {
+      payload.color = updates.color;
+    }
+    if (typeof updates.icon === 'string') {
+      payload.icon = updates.icon;
+    }
+    if (typeof updates.isMain === 'boolean') {
+      payload.isMain = updates.isMain;
+    }
+
+    const response = await api.patch<ShoppingListSummaryDto>(
+      `/shopping-lists/${listId}`,
+      payload,
+    );
     const mapped = mapShoppingListSummary(response);
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
@@ -296,10 +325,7 @@ export class RemoteShoppingService implements IShoppingService {
     // Apply timestamp for optimistic UI and offline queue
     const deleted = markDeleted(existing);
     const withTimestamps = withUpdatedAt(deleted);
-    const payload = toSupabaseTimestamps(withTimestamps);
-    
-    // Use PATCH instead of DELETE with body (more compatible)
-    await api.patch(`/shopping-lists/${listId}`, { deleted_at: payload.deleted_at });
+    await api.delete<{ success: boolean }>(`/shopping-lists/${listId}`);
     
     // Write-through cache update: update entity in cache with deleted timestamp
     // Note: Cache updates are best-effort; failures are logged but don't throw

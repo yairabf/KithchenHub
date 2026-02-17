@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { ShoppingListPanel } from '../ShoppingListPanel';
 import type { ShoppingItem, ShoppingList } from '../../../../../mocks/shopping';
 import type { GroceryItem } from '../../GrocerySearchBar';
@@ -65,6 +65,8 @@ const defaultProps = {
   groceryItems: mockGroceryItems,
   onSelectList: jest.fn(),
   onCreateList: jest.fn(),
+  onEditList: jest.fn(),
+  onDeleteList: jest.fn(),
   onSelectGroceryItem: jest.fn(),
   onQuickAddItem: jest.fn(),
   onQuantityChange: jest.fn(),
@@ -108,6 +110,20 @@ describe('ShoppingListPanel', () => {
   it('should render Create New button', () => {
     const { getByText } = render(<ShoppingListPanel {...defaultProps} />);
     expect(getByText('Create New')).toBeTruthy();
+  });
+
+  it('should render edit action for list cards', () => {
+    const { getByLabelText } = render(<ShoppingListPanel {...defaultProps} />);
+    fireEvent.press(getByLabelText('More actions for Weekly Shopping'));
+    expect(getByLabelText('Edit Weekly Shopping list')).toBeTruthy();
+  });
+
+  it('should disable delete action for main list', () => {
+    const { getByLabelText } = render(<ShoppingListPanel {...defaultProps} />);
+    fireEvent.press(getByLabelText('More actions for Weekly Shopping'));
+    expect(
+      getByLabelText('Weekly Shopping is main list and cannot be deleted')
+    ).toBeTruthy();
   });
 
   describe.each([

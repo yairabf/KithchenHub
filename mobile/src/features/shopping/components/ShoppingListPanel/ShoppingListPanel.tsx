@@ -1,10 +1,11 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   Image,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
@@ -15,7 +16,7 @@ import { EmptyState } from '../../../../common/components/EmptyState';
 import { ListItemSkeleton } from '../../../../common/components/ListItemSkeleton';
 import { colors, borderRadius } from '../../../../theme';
 import { getCategoryImageSource } from '../../utils/categoryImage';
-import { normalizeShoppingCategory } from '../../constants/categories';
+import { normalizeCategoryKey } from '../../constants/categories';
 import { toggleSetItem } from '../../../../common/utils/setUtils';
 import { styles } from './styles';
 import { ShoppingListPanelProps, ShoppingItemCardProps } from './types';
@@ -78,6 +79,8 @@ export function ShoppingListPanel({
   groceryItems,
   onSelectList,
   onCreateList,
+  onEditList,
+  onDeleteList,
   onSelectGroceryItem,
   onQuickAddItem,
   onQuantityChange,
@@ -94,6 +97,11 @@ export function ShoppingListPanel({
    * Uses a Set for O(1) lookup performance.
    */
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [openListMenuId, setOpenListMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOpenListMenuId(null);
+  }, [selectedList.id]);
 
   /**
    * Toggles the collapsed state of a category.
@@ -106,7 +114,7 @@ export function ShoppingListPanel({
   }, []);
 
   /**
-   * Groups filtered items by normalized category name.
+   * Groups filtered items by normalized category key.
    * Handles edge cases like missing categories, normalization errors, and empty values.
    * 
    * @returns Array of category groups sorted alphabetically, each containing category name and items
@@ -126,7 +134,7 @@ export function ShoppingListPanel({
           return;
         }
 
-        const key = normalizeShoppingCategory(item.category);
+         const key = normalizeCategoryKey(item.category);
         
         // Validate normalized result
         if (!key || typeof key !== 'string' || key.trim() === '') {
@@ -217,6 +225,14 @@ export function ShoppingListPanel({
 
       {/* Shopping Lists Drawer */}
       <View style={styles.listsDrawer}>
+        {openListMenuId && (
+          <Pressable
+            style={styles.listActionsBackdrop}
+            onPress={() => setOpenListMenuId(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Close list actions menu"
+          />
+        )}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -227,7 +243,8 @@ export function ShoppingListPanel({
               key={list.id}
               style={[
                 styles.listCard,
-                selectedList.id === list.id && styles.listCardActive
+                selectedList.id === list.id && styles.listCardActive,
+                openListMenuId === list.id && styles.listCardMenuOpen,
               ]}
               onPress={() => onSelectList(list)}
             >
@@ -251,6 +268,72 @@ export function ShoppingListPanel({
                   )}
                 </View>
                 <Text style={styles.listCardCount}>{list.itemCount} items</Text>
+              </View>
+              <View style={styles.listActionsContainer}>
+                <TouchableOpacity
+                  style={styles.listActionButton}
+                  onPress={() =>
+                    setOpenListMenuId((currentId) =>
+                      currentId === list.id ? null : list.id,
+                    )
+                  }
+                  accessibilityLabel={`More actions for ${list.name}`}
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="ellipsis-vertical"
+                    size={14}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+
+                {openListMenuId === list.id && (
+                  <View style={styles.listActionsMenu}>
+                      <TouchableOpacity
+                        style={styles.listActionMenuItem}
+                        onPress={() => {
+                          setOpenListMenuId(null);
+                          onEditList(list);
+                        }}
+                        accessibilityLabel={`Edit ${list.name} list`}
+                        accessibilityRole="button"
+                      >
+                        <Ionicons name="pencil" size={14} color={colors.textSecondary} />
+                        <Text style={styles.listActionMenuItemText}>Edit</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.listActionMenuItem}
+                        disabled={list.isMain}
+                        onPress={() => {
+                          setOpenListMenuId(null);
+                          onDeleteList(list);
+                        }}
+                        accessibilityLabel={
+                          list.isMain
+                            ? `${list.name} is main list and cannot be deleted`
+                            : `Delete ${list.name} list`
+                        }
+                        accessibilityRole="button"
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={14}
+                          color={list.isMain ? colors.textMuted : colors.error}
+                        />
+                        <Text
+                          style={[
+                            styles.listActionMenuItemText,
+                            list.isMain
+                              ? styles.listActionMenuItemTextDisabled
+                              : styles.listActionMenuItemTextDanger,
+                          ]}
+                        >
+                          Delete
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                )}
               </View>
               {selectedList.id === list.id && (
                 <View style={[styles.listCardIndicator, { backgroundColor: list.color }]} />
