@@ -91,13 +91,13 @@ export const mockGroceriesDB: GroceryItem[] = [
   { id: 'g73', name: 'Cranberry Juice', image: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=100', category: 'Beverages', defaultQuantity: 1 },
   { id: 'g74', name: 'Coffee Beans', image: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=100', category: 'Beverages', defaultQuantity: 1 },
   { id: 'g75', name: 'Instant Coffee', image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=100', category: 'Beverages', defaultQuantity: 1 },
-  { id: 'g76', name: 'Green Tea', image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=100', category: 'Teas', defaultQuantity: 1 },
-  { id: 'g77', name: 'Black Tea', image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=100', category: 'Teas', defaultQuantity: 1 },
-  { id: 'g78', name: 'Herbal Tea', image: 'https://images.unsplash.com/photo-1597318181390-8a9fed4d0dbb?w=100', category: 'Teas', defaultQuantity: 1 },
+  { id: 'g76', name: 'Green Tea', image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=100', category: 'Beverages', defaultQuantity: 1 },
+  { id: 'g77', name: 'Black Tea', image: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=100', category: 'Beverages', defaultQuantity: 1 },
+  { id: 'g78', name: 'Herbal Tea', image: 'https://images.unsplash.com/photo-1597318181390-8a9fed4d0dbb?w=100', category: 'Beverages', defaultQuantity: 1 },
   
   // === PANTRY (Test: "oil", "flour", "sugar", "beans", "pantry") ===
-  { id: 'g79', name: 'Olive Oil', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100', category: 'Oils', defaultQuantity: 1 },
-  { id: 'g80', name: 'Vegetable Oil', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100', category: 'Oils', defaultQuantity: 1 },
+  { id: 'g79', name: 'Olive Oil', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100', category: 'Condiments', defaultQuantity: 1 },
+  { id: 'g80', name: 'Vegetable Oil', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100', category: 'Condiments', defaultQuantity: 1 },
   { id: 'g81', name: 'All-Purpose Flour', image: 'https://images.unsplash.com/photo-1628273876255-d4c1c7e8e20d?w=100', category: 'Baking', defaultQuantity: 1 },
   { id: 'g82', name: 'Whole Wheat Flour', image: 'https://images.unsplash.com/photo-1628273876255-d4c1c7e8e20d?w=100', category: 'Baking', defaultQuantity: 1 },
   { id: 'g83', name: 'White Sugar', image: 'https://images.unsplash.com/photo-1514692547262-0c80a6d52c3f?w=100', category: 'Baking', defaultQuantity: 1 },
@@ -110,17 +110,17 @@ export const mockGroceriesDB: GroceryItem[] = [
   { id: 'g90', name: 'Honey', image: 'https://images.unsplash.com/photo-1587049352846-4a222e784210?w=100', category: 'Spreads', defaultQuantity: 1 },
   { id: 'g91', name: 'Jam', image: 'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?w=100', category: 'Spreads', defaultQuantity: 1 },
   
-  // === FROZEN & SWEETS (Test: "ice", "pizza", "cake", "chocolate", "frozen", "sweets") ===
+  // === FROZEN & BAKERY (Test: "ice", "pizza", "cake", "chocolate", "frozen", "bakery") ===
   { id: 'g92', name: 'Vanilla Ice Cream', image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=100', category: 'Freezer', defaultQuantity: 1 },
   { id: 'g93', name: 'Chocolate Ice Cream', image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=100', category: 'Freezer', defaultQuantity: 1 },
   { id: 'g94', name: 'Frozen Pizza', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=100', category: 'Freezer', defaultQuantity: 2 },
   { id: 'g95', name: 'Frozen Vegetables', image: 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?w=100', category: 'Freezer', defaultQuantity: 3 },
-  { id: 'g96', name: 'Chocolate Cake', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=100', category: 'Sweets', defaultQuantity: 1 },
-  { id: 'g97', name: 'Vanilla Cake', image: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=100', category: 'Sweets', defaultQuantity: 1 },
-  { id: 'g98', name: 'Dark Chocolate', image: 'https://images.unsplash.com/photo-1511381939415-e44015466834?w=100', category: 'Sweets', defaultQuantity: 2 },
-  { id: 'g99', name: 'Milk Chocolate', image: 'https://images.unsplash.com/photo-1606312619070-d48b4cbc4d23?w=100', category: 'Sweets', defaultQuantity: 2 },
-  { id: 'g100', name: 'Cookies', image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=100', category: 'Sweets', defaultQuantity: 1 },
-  { id: 'g101', name: 'Brownies', image: 'https://images.unsplash.com/photo-1607920591413-4ec007e70023?w=100', category: 'Sweets', defaultQuantity: 1 },
+  { id: 'g96', name: 'Chocolate Cake', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=100', category: 'Bakery', defaultQuantity: 1 },
+  { id: 'g97', name: 'Vanilla Cake', image: 'https://images.unsplash.com/photo-1464349095431-e9a21285b5f3?w=100', category: 'Bakery', defaultQuantity: 1 },
+  { id: 'g98', name: 'Dark Chocolate', image: 'https://images.unsplash.com/photo-1511381939415-e44015466834?w=100', category: 'Snacks', defaultQuantity: 2 },
+  { id: 'g99', name: 'Milk Chocolate', image: 'https://images.unsplash.com/photo-1606312619070-d48b4cbc4d23?w=100', category: 'Snacks', defaultQuantity: 2 },
+  { id: 'g100', name: 'Cookies', image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=100', category: 'Snacks', defaultQuantity: 1 },
+  { id: 'g101', name: 'Brownies', image: 'https://images.unsplash.com/photo-1607920591413-4ec007e70023?w=100', category: 'Snacks', defaultQuantity: 1 },
   
   // === CONDIMENTS & DIPS (Test: "ketchup", "mayo", "salsa", "hummus", "condiments", "dips") ===
   { id: 'g102', name: 'Hummus', image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=100', category: 'Dips', defaultQuantity: 1 },
