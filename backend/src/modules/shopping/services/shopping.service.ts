@@ -484,6 +484,10 @@ export class ShoppingService {
       throw new ForbiddenException('Access denied');
     }
 
+    if (list.isMain) {
+      throw new BadRequestException('Main shopping list cannot be deleted');
+    }
+
     await this.shoppingRepository.deleteList(listId);
   }
 
