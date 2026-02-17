@@ -9,6 +9,7 @@ import { getCached, setCached, readCachedEntitiesForUpdate } from '../../../comm
 import { EntityTimestamps } from '../../../common/types/entityMetadata';
 import { getIsOnline } from '../../../common/utils/networkStatus';
 import { resizeAndValidateImage, buildImageFormData } from '../../../common/utils';
+import { normalizeRecipeCategory } from '../constants';
 
 /**
  * DTO types for API responses
@@ -109,7 +110,7 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
         description: dto.description,
         prepTime: dto.prepTime,
         cookTime: dto.cookTime,
-        category: dto.category,
+        category: normalizeRecipeCategory(dto.category),
         ingredients: ingredients,
         instructions: instructions,
         imageUrl: dto.imageUrl,
@@ -153,7 +154,7 @@ function buildRecipeWithDefaults(recipe: Partial<Recipe>): Recipe {
         localId: recipeLocalId,
         title: recipeTitle,
         cookTime: recipe.cookTime,
-        category: recipe.category,
+        category: normalizeRecipeCategory(recipe.category),
         ingredients: recipe.ingredients || [],
         instructions: recipe.instructions || [],
         prepTime: recipe.prepTime,
@@ -393,7 +394,7 @@ export class RemoteRecipeService implements IRecipeService {
                 ingredients: [],
                 instructions: [],
                 cookTime: item.cookTime,
-                category: item.category,
+                category: normalizeRecipeCategory(item.category),
             };
             return recipe;
         });
@@ -412,7 +413,7 @@ export class RemoteRecipeService implements IRecipeService {
                 ingredients: normalized.ingredients || [],
                 instructions: normalized.instructions || [],
                 cookTime: normalized.cookTime ?? item.cookTime,
-                category: normalized.category ?? item.category,
+                category: normalizeRecipeCategory(normalized.category ?? item.category),
             };
             return finalRecipe;
         });
@@ -445,7 +446,7 @@ export class RemoteRecipeService implements IRecipeService {
             ingredients: normalized.ingredients || [],
             instructions: normalized.instructions || [],
             cookTime: normalized.cookTime ?? mappedResponse.cookTime,
-            category: normalized.category ?? mappedResponse.category,
+            category: normalizeRecipeCategory(normalized.category ?? mappedResponse.category),
         };
 
         // Update cache with full details
@@ -476,6 +477,8 @@ export class RemoteRecipeService implements IRecipeService {
      */
     private mapRecipeToCreateDto(recipe: Partial<Recipe>): {
         title: string;
+        description?: string;
+        category?: string;
         prepTime?: number;
         ingredients: Array<{
             name: string;
@@ -516,6 +519,7 @@ export class RemoteRecipeService implements IRecipeService {
         return {
             title: recipe.title || 'Untitled Recipe',
             description: recipe.description?.trim() || undefined,
+            category: normalizeRecipeCategory(recipe.category),
             prepTime,
             ingredients,
             instructions,
@@ -566,7 +570,7 @@ export class RemoteRecipeService implements IRecipeService {
             dto.description = recipe.description?.trim() || undefined;
         }
         if (recipe.category !== undefined) {
-            dto.category = recipe.category;
+            dto.category = normalizeRecipeCategory(recipe.category);
         }
         if (recipe.prepTime !== undefined) {
             dto.prepTime = recipe.prepTime;
@@ -668,7 +672,7 @@ export class RemoteRecipeService implements IRecipeService {
             ingredients: normalized.ingredients || [],
             instructions: normalized.instructions || [],
             cookTime: normalized.cookTime ?? mappedResponse.cookTime,
-            category: normalized.category ?? mappedResponse.category,
+            category: normalizeRecipeCategory(normalized.category ?? mappedResponse.category),
         };
         console.log('[RemoteRecipeService] Normalized recipe:', JSON.stringify(created, null, 2));
 
@@ -699,7 +703,10 @@ export class RemoteRecipeService implements IRecipeService {
         }
 
         const response = await api.put<RecipeApiResponse>(`/recipes/${recipeId}`, dto);
-        let updatedRecipe = normalizeTimestampsFromApi<Recipe>(response);
+        let updatedRecipe = {
+            ...normalizeTimestampsFromApi<Recipe>(response),
+            category: normalizeRecipeCategory(response.category),
+        };
 
         if (localImage) {
             try {

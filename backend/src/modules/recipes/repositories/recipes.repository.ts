@@ -28,6 +28,10 @@ export class RecipesRepository {
       };
     }
 
+    if (filters?.category) {
+      where.category = filters.category;
+    }
+
     this.logger.debug(`Prisma where clause: ${JSON.stringify(where, null, 2)}`);
 
     try {

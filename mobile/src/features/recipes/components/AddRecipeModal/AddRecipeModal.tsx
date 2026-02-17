@@ -16,11 +16,9 @@ import { stripToDigitsOnly, stripToNumeric } from '../../../../common/utils';
 import { useDebouncedRemoteSearch } from '../../../../common/hooks';
 import { GrocerySearchBar, GroceryItem } from '../../../shopping/components/GrocerySearchBar';
 import { UnitPicker } from '../UnitPicker';
-import { getUnitLabel } from '../../constants';
+import { getUnitLabel, RECIPE_CATEGORIES } from '../../constants';
 import { styles } from './styles';
 import { AddRecipeModalProps, NewRecipeData, Ingredient } from './types';
-
-const DEFAULT_CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack'];
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -38,7 +36,7 @@ export function AddRecipeModal({
   onClose,
   onSave,
   isSaving = false,
-  categories = DEFAULT_CATEGORIES,
+  categories = RECIPE_CATEGORIES,
   groceryItems = [],
   mode = 'create',
   initialRecipe,

@@ -20,7 +20,7 @@ import { CardSkeleton } from '../../../common/components/CardSkeleton';
 import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
-import { recipeCategories, type Recipe } from '../../../mocks/recipes';
+import { type Recipe } from '../../../mocks/recipes';
 import { useResponsive } from '../../../common/hooks';
 import { resizeAndValidateImage } from '../../../common/utils';
 import { config } from '../../../config';
@@ -32,6 +32,12 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { Toast } from '../../../common/components/Toast';
 import { logger } from '../../../common/utils/logger';
+import {
+  RECIPE_CATEGORIES,
+  RECIPE_FILTER_CATEGORIES,
+  getRecipeCategoryIcon,
+  normalizeRecipeCategory,
+} from '../constants';
 
 const RECIPES_SHOW_CATEGORY_FILTER_KEY = '@kitchen_hub_recipes_show_category_filter';
 
@@ -134,7 +140,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const filteredRecipes = uniqueRecipes.filter(recipe => {
     // Safely handle recipes that might be missing fields (e.g., from API list endpoint)
     const recipeName = recipe?.title || '';
-    const recipeCategory = recipe?.category || 'Dinner';
+    const recipeCategory = normalizeRecipeCategory(recipe?.category);
 
     const matchesCategory = effectiveCategory === 'All' || recipeCategory === effectiveCategory;
     const matchesSearch = recipeName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -275,16 +281,8 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                 style={styles.filterContainer}
                 contentContainerStyle={styles.filterContent}
               >
-                {recipeCategories.map((category) => {
-                  const categoryIcons: Record<string, string> = {
-                    All: 'apps-outline',
-                    Breakfast: 'cafe-outline',
-                    Lunch: 'fast-food-outline',
-                    Dinner: 'pizza-outline',
-                    Snacks: 'ice-cream-outline',
-                    Dessert: 'car-outline',
-                  };
-                  const iconName = categoryIcons[category] ?? 'restaurant-outline';
+                {RECIPE_FILTER_CATEGORIES.map((category) => {
+                  const iconName = getRecipeCategoryIcon(category);
                   const isActive = selectedCategory === category;
 
                   return (
@@ -356,7 +354,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         onClose={() => setShowAddRecipeModal(false)}
         onSave={handleSaveRecipe}
         isSaving={isSavingRecipe}
-        categories={recipeCategories.filter((c) => c !== 'All')}
+        categories={RECIPE_CATEGORIES}
         groceryItems={groceryItems}
         searchGroceries={searchGroceries}
       />
@@ -370,7 +368,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         }}
         onSave={handleUpdateRecipe}
         isSaving={isSavingEdit}
-        categories={recipeCategories.filter((c) => c !== 'All')}
+        categories={RECIPE_CATEGORIES}
         groceryItems={groceryItems}
         mode="edit"
         initialRecipe={editingRecipe ? mapRecipeToFormData(editingRecipe) : undefined}

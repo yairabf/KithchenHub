@@ -31,7 +31,7 @@ export interface AddRecipeModalProps {
   onClose: () => void;
   onSave: (recipe: NewRecipeData) => void;
   isSaving?: boolean;
-  categories?: string[];
+  categories?: readonly string[];
   groceryItems?: GroceryItem[];
   mode?: 'create' | 'edit';
   initialRecipe?: NewRecipeData;
