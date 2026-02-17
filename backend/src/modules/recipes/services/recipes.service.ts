@@ -123,12 +123,17 @@ export class RecipesService {
     this.logger.log(`Getting recipes for household ${householdId}`);
     this.logger.debug(`Filters: ${JSON.stringify(filters, null, 2)}`);
 
-    const normalizedFilters = {
-      category: filters?.category
-        ? normalizeRecipeCategory(filters.category)
-        : undefined,
-      search: filters?.search,
-    };
+    const normalizedCategory = filters?.category
+      ? normalizeRecipeCategory(filters.category)
+      : undefined;
+    const normalizedSearch = filters?.search;
+    const normalizedFilters =
+      normalizedCategory || normalizedSearch
+        ? {
+            category: normalizedCategory,
+            search: normalizedSearch,
+          }
+        : undefined;
 
     const recipes = await this.recipesRepository.findRecipesByHousehold(
       householdId,
