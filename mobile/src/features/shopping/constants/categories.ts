@@ -24,6 +24,15 @@ export const SHOPPING_CATEGORIES = [
   'grains',
   'snacks',
   'nuts',
+  'beverages',
+  'baking',
+  'canned',
+  'spreads',
+  'freezer',
+  'dips',
+  'condiments',
+  'spices',
+  'household',
   DEFAULT_CATEGORY.toLowerCase(), // 'other'
 ] as const;
 
@@ -58,4 +67,17 @@ export function normalizeShoppingCategory(category: string | null | undefined): 
   return isValidShoppingCategory(normalized) 
     ? normalized 
     : (DEFAULT_CATEGORY.toLowerCase() as ShoppingCategory);
+}
+
+/**
+ * Normalizes a category key for grouping/display use cases while preserving
+ * non-core categories returned by catalog/back-end data.
+ */
+export function normalizeCategoryKey(category: string | null | undefined): string {
+  if (!category || typeof category !== 'string') {
+    return DEFAULT_CATEGORY.toLowerCase();
+  }
+
+  const normalized = category.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : DEFAULT_CATEGORY.toLowerCase();
 }

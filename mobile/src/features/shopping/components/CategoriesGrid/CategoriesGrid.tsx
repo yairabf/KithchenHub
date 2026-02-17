@@ -3,81 +3,22 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ImageBackground,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { isValidImageUrl } from '../../../../common/utils/imageUtils';
-import { colors, spacing } from '../../../../theme';
+import { colors } from '../../../../theme';
+import {
+  SHOPPING_CATEGORIES,
+  normalizeCategoryKey,
+} from '../../constants/categories';
+import { getCategoryImageSource } from '../../utils/categoryImage';
 import { styles } from './styles';
 import { CategoriesGridProps } from './types';
 import { CategoriesGridItem } from './CategoriesGridItem';
 
 const INITIAL_CATEGORIES_LIMIT = 9;
 
-/**
- * Category overlay component that displays item count and name over category background.
- * Used consistently across icon, image, and placeholder rendering paths.
- */
-function CategoryOverlay({
-  backgroundColor,
-  itemCount,
-  name
-}: {
-  backgroundColor: string;
-  itemCount: number;
-  name: string;
-}) {
-  return (
-    <View style={styles.categoryOverlay}>
-      <View style={[styles.categoryOverlayBg, { backgroundColor }]} />
-      <View style={styles.categoryOverlayContent}>
-        <Text style={styles.categoryCount}>{itemCount}</Text>
-        <Text style={styles.categoryName}>{name}</Text>
-      </View>
-    </View>
-  );
-}
-
-/**
- * Get category icon from assets based on category ID.
- * Returns null if icon doesn't exist (will use placeholder).
- * 
- * @param categoryId - Normalized category ID (e.g., 'fruits', 'vegetables')
- * @returns Image source object from require() or null if category has no icon
- */
-function getCategoryIcon(categoryId: string): ReturnType<typeof require> | null {
-  try {
-    let iconResult: ReturnType<typeof require> | null = null;
-    switch (categoryId) {
-      case 'fruits': iconResult = require('../../../../../assets/categories/fruits.png'); break;
-      case 'vegetables': iconResult = require('../../../../../assets/categories/vegetables.png'); break;
-      case 'dairy': iconResult = require('../../../../../assets/categories/dairy.png'); break;
-      case 'meat': iconResult = require('../../../../../assets/categories/meat.png'); break;
-      case 'seafood': iconResult = require('../../../../../assets/categories/seafood.png'); break;
-      case 'bakery': iconResult = require('../../../../../assets/categories/bakery.png'); break;
-      case 'grains': iconResult = require('../../../../../assets/categories/grains.png'); break;
-      case 'snacks': iconResult = require('../../../../../assets/categories/snacks.png'); break;
-      case 'nuts': iconResult = require('../../../../../assets/categories/nuts.png'); break;
-      case 'other': iconResult = require('../../../../../assets/categories/other.png'); break;
-      case 'beverages': iconResult = require('../../../../../assets/categories/beverages.png'); break;
-      case 'baking': iconResult = require('../../../../../assets/categories/baking.png'); break;
-      case 'canned': iconResult = require('../../../../../assets/categories/canned.png'); break;
-      case 'spreads': iconResult = require('../../../../../assets/categories/spreads.png'); break;
-      case 'freezer': iconResult = require('../../../../../assets/categories/freezer.png'); break;
-      case 'dips': iconResult = require('../../../../../assets/categories/dips.png'); break;
-      case 'condiments': iconResult = require('../../../../../assets/categories/condiments.png'); break;
-      case 'spices': iconResult = require('../../../../../assets/categories/spices.png'); break;
-      case 'household': iconResult = require('../../../../../assets/categories/household.png'); break;
-      default:
-        return null;
-    }
-    return iconResult;
-  } catch (error) {
-    console.warn(`Failed to load icon for category "${categoryId}":`, error);
-    return null;
-  }
-}
+const formatCategoryName = (categoryId: string): string =>
+  categoryId.charAt(0).toUpperCase() + categoryId.slice(1);
 
 export function CategoriesGrid({
   categories,
@@ -89,14 +30,38 @@ export function CategoriesGrid({
   // This is defensive programming - even though buildCategoriesFromGroceries deduplicates,
   // this ensures no duplicates slip through from other data sources
   const uniqueCategories = React.useMemo(() => {
-    const seen = new Set<string>();
-    return categories.filter(cat => {
-      if (seen.has(cat.id)) {
-        return false;
+    const existingById = new Map(
+      categories.map((category) => [normalizeCategoryKey(category.id), category]),
+    );
+
+    const baseCategories = SHOPPING_CATEGORIES.map((id) => {
+      const existing = existingById.get(id);
+      if (existing) {
+        return { ...existing, id };
       }
-      seen.add(cat.id);
-      return true;
+
+      return {
+        id,
+        localId: `default-${id}`,
+        name: formatCategoryName(id),
+        itemCount: 0,
+        image: '',
+        backgroundColor: colors.surface,
+      };
     });
+
+    const seen = new Set(baseCategories.map((category) => category.id));
+    const extras = categories
+      .map((category) => ({ ...category, id: normalizeCategoryKey(category.id) }))
+      .filter((category) => {
+        if (seen.has(category.id)) {
+          return false;
+        }
+        seen.add(category.id);
+        return true;
+      });
+
+    return [...baseCategories, ...extras];
   }, [categories]);
 
   const hasMoreCategories = uniqueCategories.length > INITIAL_CATEGORIES_LIMIT;
@@ -119,7 +84,7 @@ export function CategoriesGrid({
             key={category.id}
             category={category}
             onPress={() => onCategoryPress(category.name)}
-            categoryIcon={getCategoryIcon(category.id)}
+            categoryIcon={getCategoryImageSource(category.id)}
           />
         ))}
       </View>

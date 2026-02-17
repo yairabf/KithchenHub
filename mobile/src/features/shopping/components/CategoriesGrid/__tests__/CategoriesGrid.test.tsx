@@ -25,72 +25,73 @@ describe('CategoriesGrid', () => {
     jest.clearAllMocks();
   });
 
-  it('should render Image when category has valid image', () => {
+  it('should render bundled icon for known category', () => {
     const categories: Category[] = [
-      { id: '1', localId: 'uuid-1', name: 'Fruits', image: 'https://example.com/fruits.jpg', itemCount: 5, backgroundColor: '#fff' },
+      { id: 'fruits', localId: 'uuid-1', name: 'Fruits', image: 'https://example.com/fruits.jpg', itemCount: 5, backgroundColor: '#fff' },
     ];
 
     const { getByTestId, getByText } = render(
       <CategoriesGrid {...defaultProps} categories={categories} />
     );
 
-    // Verify Image is rendered
-    expect(getByTestId('category-image-1')).toBeTruthy();
+    // Verify bundled icon is rendered
+    expect(getByTestId('category-icon-fruits')).toBeTruthy();
     
     // Verify content is rendered
     expect(getByText('Fruits')).toBeTruthy();
   });
 
-  it('should render View without Image when category has empty image', () => {
+  it('should render bundled icon even when known category image is empty', () => {
     const categories: Category[] = [
-      { id: '1', localId: 'uuid-1', name: 'Fruits', image: '', itemCount: 5, backgroundColor: '#fff' },
+      { id: 'fruits', localId: 'uuid-1', name: 'Fruits', image: '', itemCount: 5, backgroundColor: '#fff' },
     ];
 
     const { getByTestId, queryByTestId, getByText } = render(
       <CategoriesGrid {...defaultProps} categories={categories} />
     );
 
-    // Verify tile is rendered but no image
-    expect(getByTestId('category-tile-1')).toBeTruthy();
-    expect(queryByTestId('category-image-1')).toBeNull();
-    expect(queryByTestId('category-icon-1')).toBeNull();
+    // Verify tile and bundled icon are rendered
+    expect(getByTestId('category-tile-fruits')).toBeTruthy();
+    expect(queryByTestId('category-image-fruits')).toBeNull();
+    expect(getByTestId('category-icon-fruits')).toBeTruthy();
     
     // Verify content is rendered
     expect(getByText('Fruits')).toBeTruthy();
   });
 
-  it('should render View without Image when category has whitespace-only image', () => {
+  it('should render bundled icon even when known category image is whitespace', () => {
     const categories: Category[] = [
-      { id: '1', localId: 'uuid-1', name: 'Fruits', image: '   ', itemCount: 5, backgroundColor: '#fff' },
+      { id: 'fruits', localId: 'uuid-1', name: 'Fruits', image: '   ', itemCount: 5, backgroundColor: '#fff' },
     ];
 
     const { getByTestId, queryByTestId } = render(
       <CategoriesGrid {...defaultProps} categories={categories} />
     );
 
-    expect(getByTestId('category-tile-1')).toBeTruthy();
-    expect(queryByTestId('category-image-1')).toBeNull();
-    expect(queryByTestId('category-icon-1')).toBeNull();
+    expect(getByTestId('category-tile-fruits')).toBeTruthy();
+    expect(queryByTestId('category-image-fruits')).toBeNull();
+    expect(getByTestId('category-icon-fruits')).toBeTruthy();
   });
 
-  it('should handle multiple categories with mixed images correctly', () => {
+  it('should prioritize bundled icon over remote image for known categories', () => {
     const categories: Category[] = [
-      { id: '1', localId: 'uuid-1', name: 'Fruits', image: 'fruits.jpg', itemCount: 5, backgroundColor: '#fff' },
-      { id: '2', localId: 'uuid-2', name: 'Vegetables', image: '', itemCount: 3, backgroundColor: '#f0f0f0' },
+      { id: 'fruits', localId: 'uuid-1', name: 'Fruits', image: 'https://example.com/fruits.jpg', itemCount: 5, backgroundColor: '#fff' },
+      { id: 'vegetables', localId: 'uuid-2', name: 'Vegetables', image: '', itemCount: 3, backgroundColor: '#f0f0f0' },
     ];
 
     const { getByTestId, queryByTestId } = render(
       <CategoriesGrid {...defaultProps} categories={categories} />
     );
 
-    // First category has image
-    expect(getByTestId('category-image-1')).toBeTruthy();
-    expect(getByTestId('category-tile-1')).toBeTruthy();
+    // Known category uses bundled icon
+    expect(getByTestId('category-icon-fruits')).toBeTruthy();
+    expect(queryByTestId('category-image-fruits')).toBeNull();
+    expect(getByTestId('category-tile-fruits')).toBeTruthy();
 
-    // Second category has no image
-    expect(getByTestId('category-tile-2')).toBeTruthy();
-    expect(queryByTestId('category-image-2')).toBeNull();
-    expect(queryByTestId('category-icon-2')).toBeNull();
+    // Second known category also uses bundled icon
+    expect(getByTestId('category-tile-vegetables')).toBeTruthy();
+    expect(queryByTestId('category-image-vegetables')).toBeNull();
+    expect(getByTestId('category-icon-vegetables')).toBeTruthy();
   });
 
   it('should call onCategoryPress when category is pressed', () => {
