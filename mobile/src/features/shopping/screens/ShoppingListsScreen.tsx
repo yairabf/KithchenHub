@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { CategoryModal } from '../components/CategoryModal';
@@ -47,6 +48,13 @@ import {
 } from '../utils/shoppingRealtime';
 import { useShoppingRealtime } from '../hooks/useShoppingRealtime';
 
+/**
+ * Migration key for one-time category cache clearing.
+ * Used to remove deprecated categories (oils, teas, sweets) from AsyncStorage.
+ * Incremented when categories change to trigger re-migration.
+ */
+const CATEGORY_MIGRATION_KEY = '@kitchen_hub_category_migration_v1';
+
 interface ShoppingListsScreenProps {
   isActive?: boolean;
 }
@@ -55,7 +63,13 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const { isActive = true } = props;
   const { isTablet } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { groceryItems, categories: rawCategories, frequentlyAddedItems, searchGroceries } = useCatalog();
+  const {
+    groceryItems,
+    categories: rawCategories,
+    frequentlyAddedItems,
+    searchGroceries,
+    getGroceriesByCategory,
+  } = useCatalog();
 
   const [searchQuery, setSearchQuery] = useState('');
   const { results: searchResults } = useDebouncedRemoteSearch<GroceryItem>({
@@ -86,29 +100,63 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [selectedItemCategory, setSelectedItemCategory] = useState<string>(DEFAULT_CATEGORY.toLowerCase());
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
-  // Load categories for custom item selection
+  /**
+   * Load categories for custom item selection.
+   * Performs one-time migration to clear deprecated categories from cache.
+   * 
+   * Migration runs only once per app installation using AsyncStorage flag.
+   * After migration, loads categories normally without clearing cache.
+   */
   useEffect(() => {
-    // TEMPORARY FIX: Clear cache to remove deprecated categories (oils, teas, sweets)
-    // TODO: Remove this clearCache() call after cache is cleared once
-    catalogService.clearCache().then(() => {
-      catalogService.getShoppingCategories()
-        .then((cats) => {
-          const mergedCategories = Array.from(
-            new Set([...SHOPPING_CATEGORIES, ...cats].map((category) => normalizeCategoryKey(category))),
-          );
-          setAvailableCategories(mergedCategories);
+    let cancelled = false;
 
-          // Set default category if not in list
-          if (mergedCategories.length > 0 && !mergedCategories.includes(normalizeCategoryKey(selectedItemCategory))) {
-            setSelectedItemCategory(normalizeCategoryKey(mergedCategories[0]));
+    const loadCategoriesWithMigration = async () => {
+      try {
+        // Check if migration has already been completed
+        const migrationCompleted = await AsyncStorage.getItem(CATEGORY_MIGRATION_KEY);
+
+        if (!migrationCompleted) {
+          if (__DEV__) {
+            console.log('[CategoryMigration] Clearing deprecated category cache (one-time operation)');
           }
-        })
-        .catch((error) => {
-          console.error('Failed to load categories:', error);
-          setAvailableCategories(SHOPPING_CATEGORIES);
-        });
-    });
-  }, []);
+          await catalogService.clearCache();
+          await AsyncStorage.setItem(CATEGORY_MIGRATION_KEY, 'completed');
+        }
+
+        // Load categories from API or cache
+        const cats = await catalogService.getShoppingCategories();
+
+        // Prevent state updates if component unmounted during async operation
+        if (cancelled) return;
+
+        const mergedCategories = Array.from(
+          new Set([...SHOPPING_CATEGORIES, ...cats].map((category) => normalizeCategoryKey(category))),
+        );
+        setAvailableCategories(mergedCategories);
+
+        // Set default category if current selection is not in the list
+        const normalizedSelected = normalizeCategoryKey(selectedItemCategory);
+        if (mergedCategories.length > 0 && !mergedCategories.includes(normalizedSelected)) {
+          setSelectedItemCategory(normalizeCategoryKey(mergedCategories[0]));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          if (__DEV__) {
+            console.error('[CategoryMigration] Failed to load categories:', error);
+          }
+          // Fallback to static categories on error (convert readonly to mutable array)
+          setAvailableCategories([...SHOPPING_CATEGORIES]);
+        }
+      }
+    };
+
+    loadCategoriesWithMigration();
+
+    // Cleanup: prevent state updates after unmount
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedItemCategory]);
   const [showCreateListModal, setShowCreateListModal] = useState(false);
   const [editingList, setEditingList] = useState<ShoppingList | null>(null);
   const [newListName, setNewListName] = useState('');
@@ -116,10 +164,14 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [newListColor, setNewListColor] = useState('#10B981');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [categoryItems, setCategoryItems] = useState<GroceryItem[]>([]);
+  const [isCategoryItemsLoading, setIsCategoryItemsLoading] = useState(false);
+  const [categoryItemsError, setCategoryItemsError] = useState<string | null>(null);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [pendingDeleteList, setPendingDeleteList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const categoryRequestIdRef = useRef(0);
 
   // Determine data mode based on user authentication state
   const userMode = useMemo(() => {
@@ -681,23 +733,44 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     }
   };
 
-  const handleCategoryClick = (categoryName: string) => {
+  const handleCategoryClick = async (categoryName: string) => {
+    const requestId = categoryRequestIdRef.current + 1;
+    categoryRequestIdRef.current = requestId;
+
     setSelectedCategory(categoryName);
+    setCategoryItems([]);
+    setCategoryItemsError(null);
+    setIsCategoryItemsLoading(true);
     setShowCategoryModal(true);
+
+    try {
+      const items = await getGroceriesByCategory(categoryName);
+      if (categoryRequestIdRef.current === requestId) {
+        setCategoryItems(items);
+      }
+    } catch (error) {
+      console.error('Failed to load category items:', error);
+      if (categoryRequestIdRef.current === requestId) {
+        setCategoryItemsError('Failed to load category items. Please try again.');
+      }
+    } finally {
+      if (categoryRequestIdRef.current === requestId) {
+        setIsCategoryItemsLoading(false);
+      }
+    }
   };
 
   const handleCloseCategoryModal = () => {
     setShowCategoryModal(false);
     setSelectedCategory('');
+    setCategoryItems([]);
+    setCategoryItemsError(null);
+    setIsCategoryItemsLoading(false);
   };
 
   const handleSelectItemFromCategory = (groceryItem: GroceryItem) => {
     setShowCategoryModal(false);
     handleSelectGroceryItem(groceryItem);
-  };
-
-  const getCategoryItems = (categoryName: string): GroceryItem[] => {
-    return groceryItems.filter(item => item.category === categoryName);
   };
 
   // Format shopping list for sharing
@@ -794,7 +867,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       <CategoryModal
         visible={showCategoryModal}
         categoryName={selectedCategory}
-        items={getCategoryItems(selectedCategory)}
+        items={categoryItems}
+        isLoading={isCategoryItemsLoading}
+        errorMessage={categoryItemsError}
         onClose={handleCloseCategoryModal}
         onSelectItem={handleSelectItemFromCategory}
       />

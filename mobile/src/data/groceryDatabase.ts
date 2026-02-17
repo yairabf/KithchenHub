@@ -110,7 +110,7 @@ export const mockGroceriesDB: GroceryItem[] = [
   { id: 'g90', name: 'Honey', image: 'https://images.unsplash.com/photo-1587049352846-4a222e784210?w=100', category: 'Spreads', defaultQuantity: 1 },
   { id: 'g91', name: 'Jam', image: 'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?w=100', category: 'Spreads', defaultQuantity: 1 },
   
-  // === FROZEN & BAKERY (Test: "ice", "pizza", "cake", "chocolate", "frozen", "bakery") ===
+  // === FROZEN & BAKERY/SNACKS (Test: "ice", "pizza", "cake", "chocolate", "frozen", "bakery", "snacks") ===
   { id: 'g92', name: 'Vanilla Ice Cream', image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=100', category: 'Freezer', defaultQuantity: 1 },
   { id: 'g93', name: 'Chocolate Ice Cream', image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=100', category: 'Freezer', defaultQuantity: 1 },
   { id: 'g94', name: 'Frozen Pizza', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=100', category: 'Freezer', defaultQuantity: 2 },
