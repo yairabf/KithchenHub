@@ -2,27 +2,33 @@ import { StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius } from '../../../../theme';
 
 export const styles = StyleSheet.create({
-  choreNameSection: {
+  addFormContainer: {
+    marginBottom: spacing.md,
+    position: 'relative',
+    zIndex: 1000,
+  },
+  addForm: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.md,
   },
-  choreIcon: {
-    fontSize: 32,
-  },
-  choreNameInput: {
+  input: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
+    height: 48,
     backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingEnd: spacing.xl,
+    fontSize: 16,
+    color: colors.textPrimary,
   },
-  dateTimeSection: {
+  clearButton: {
+    position: 'absolute',
+    right: 12,
+    top: 14,
+    padding: spacing.xs,
+  },
+  dueDateSection: {
     marginBottom: spacing.md,
   },
   assigneeSection: {
@@ -62,25 +68,13 @@ export const styles = StyleSheet.create({
   assigneeChipTextSelected: {
     color: colors.textLight,
   },
-  iconContainer: {
-    marginRight: 12,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
+  assigneeChipManage: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
   },
   iconSelectionSection: {
-    marginTop: 16,
     marginBottom: spacing.md,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-    marginBottom: 8,
-    textTransform: 'uppercase',
   },
   iconList: {
     paddingVertical: 4,
@@ -97,15 +91,12 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   iconOptionSelected: {
-    backgroundColor: colors.surface, // Fallback if choresLight is missing
+    backgroundColor: colors.surface,
     borderColor: colors.chores,
     borderWidth: 2,
   },
   iconOptionText: {
     fontSize: 24,
-  },
-  iconOptionTextSelected: {
-    // Add if needed
   },
   recurrenceSection: {
     marginBottom: spacing.md,
@@ -116,7 +107,7 @@ export const styles = StyleSheet.create({
   },
   recurrenceOption: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
     backgroundColor: colors.background,
     borderWidth: 2,
@@ -129,7 +120,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.chores,
   },
   recurrenceOptionText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textPrimary,
   },

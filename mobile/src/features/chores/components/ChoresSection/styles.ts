@@ -32,6 +32,11 @@ export const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.textPrimary,
   },
+  sectionTitleRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    flex: 1,
+  },
   choreList: {
     gap: spacing.sm,
   },

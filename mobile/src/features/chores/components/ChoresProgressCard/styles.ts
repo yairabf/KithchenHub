@@ -70,4 +70,8 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 0,
   },
+  progressTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
 });

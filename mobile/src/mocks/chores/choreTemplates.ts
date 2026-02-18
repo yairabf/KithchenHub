@@ -1,4 +1,9 @@
-import type { ChoreTemplate } from '../../features/chores/components/ChoresQuickActionModal/types';
+interface ChoreTemplate {
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+}
 
 // Mock Chores Database - Common household chores
 export const mockChoresDB: ChoreTemplate[] = [

@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
   },
   choreCardLeft: {
     flex: 1,
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
   },
   choreCardIconRow: {
     flexDirection: 'row',
@@ -24,7 +24,7 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   choreCardIcon: {
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   choreCardIconText: {
     fontSize: 26,
@@ -44,6 +44,10 @@ export const styles = StyleSheet.create({
   choreCardName: {
     ...typography.labelBold,
     marginBottom: spacing.xs,
+  },
+  choreCardTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   choreCardMeta: {
     flexDirection: 'row',

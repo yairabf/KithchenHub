@@ -5,4 +5,6 @@ export interface ChoresProgressCardProps {
   totalCount: number;
   /** When true, uses horizontal layout (tablet/wide); when false, vertical (phone) */
   isWideScreen: boolean;
+  /** Apply explicit RTL text alignment on web */
+  isWebRtl?: boolean;
 }

@@ -31,6 +31,7 @@ export function ChoresProgressCard({
   completedCount,
   totalCount,
   isWideScreen,
+  isWebRtl = false,
 }: ChoresProgressCardProps) {
   // Validate and normalize inputs to handle edge cases
   const safeProgress = Math.max(0, Math.min(100, isNaN(progress) ? 0 : progress));
@@ -59,7 +60,7 @@ export function ChoresProgressCard({
           />
           <View style={styles.progressRingText}>
             <Text style={styles.progressPercent}>{Math.round(safeProgress)}%</Text>
-            <Text style={styles.progressLabel}>Today</Text>
+            <Text style={[styles.progressLabel, isWebRtl && styles.progressTextRtl]}>Today</Text>
           </View>
         </View>
         <View
@@ -68,9 +69,9 @@ export function ChoresProgressCard({
             !isWideScreen && styles.progressDetailsPhone,
           ]}
         >
-          <Text style={styles.progressTitle}>Daily Progress</Text>
+          <Text style={[styles.progressTitle, isWebRtl && styles.progressTextRtl]}>Daily Progress</Text>
           <Text
-            style={[styles.progressBody, !isWideScreen && styles.progressBodyPhone]}
+            style={[styles.progressBody, !isWideScreen && styles.progressBodyPhone, isWebRtl && styles.progressTextRtl]}
             numberOfLines={isWideScreen ? undefined : 3}
           >
             {bodyText}

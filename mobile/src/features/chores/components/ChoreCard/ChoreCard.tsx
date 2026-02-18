@@ -38,6 +38,7 @@ import type { ChoreCardProps } from './types';
 export const ChoreCard = React.memo(function ChoreCard({
   chore,
   bgColor,
+  isWebRtl = false,
   onToggle,
   onEdit,
   onDelete,
@@ -75,7 +76,7 @@ export const ChoreCard = React.memo(function ChoreCard({
             </View>
             <View style={styles.choreCardContent}>
               <Text
-                style={[styles.choreCardName, chore.isCompleted && styles.choreCompleted]}
+                style={[styles.choreCardName, isWebRtl && styles.choreCardTextRtl, chore.isCompleted && styles.choreCompleted]}
                 numberOfLines={1}
               >
                 {chore.title}
@@ -83,12 +84,12 @@ export const ChoreCard = React.memo(function ChoreCard({
               <View style={styles.choreCardMeta}>
                 {chore.assignee ? (
                   <View style={styles.choreCardAssignee}>
-                    <Text style={styles.choreCardAssigneeText} numberOfLines={1}>
+                    <Text style={[styles.choreCardAssigneeText, isWebRtl && styles.choreCardTextRtl]} numberOfLines={1}>
                       {chore.assignee}
                     </Text>
                   </View>
                 ) : null}
-                <Text style={styles.choreCardTime} numberOfLines={1}>
+                <Text style={[styles.choreCardTime, isWebRtl && styles.choreCardTextRtl]} numberOfLines={1}>
                   {formatChoreDueDateTime(chore.dueDate, chore.dueTime)}
                 </Text>
               </View>
