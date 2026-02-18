@@ -15,7 +15,7 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     backgroundColor: colors.background,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   listBubbleText: {
     fontSize: 14,

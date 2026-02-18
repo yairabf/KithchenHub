@@ -6,6 +6,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { FrequentlyAddedGridProps } from './types';
@@ -17,6 +18,7 @@ export function FrequentlyAddedGrid({
   items,
   onItemPress,
 }: FrequentlyAddedGridProps) {
+  const { t } = useTranslation('shopping');
   const displayItems = items.slice(0, MAX_DISPLAY_ITEMS);
 
   if (displayItems.length === 0) {
@@ -26,7 +28,7 @@ export function FrequentlyAddedGrid({
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Frequently Added</Text>
+        <Text style={styles.sectionTitle}>{t('frequentlyAdded.title')}</Text>
       </View>
       <View style={styles.grid}>
         {displayItems.map((item) => (

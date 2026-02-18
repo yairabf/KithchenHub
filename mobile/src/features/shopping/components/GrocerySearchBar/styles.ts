@@ -31,6 +31,9 @@ export const styles = StyleSheet.create({
     paddingVertical: SEARCH_BAR_VERTICAL_PADDING,
     gap: spacing.sm,
   },
+  searchBarRtl: {
+    flexDirection: "row-reverse",
+  },
   searchBarSurface: {
     backgroundColor: colors.surface,
   },
@@ -50,6 +53,11 @@ export const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
     textAlignVertical: Platform.OS === "android" ? "center" : "auto",
+  },
+  searchInputRtl: {
+    textAlign: "right",
+    writingDirection: "rtl",
+    alignSelf: "stretch",
   },
   searchDropdown: {
     position: "absolute",

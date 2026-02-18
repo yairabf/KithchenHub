@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -17,14 +18,12 @@ import { CategoriesGridItem } from './CategoriesGridItem';
 
 const INITIAL_CATEGORIES_LIMIT = 9;
 
-const formatCategoryName = (categoryId: string): string =>
-  categoryId.charAt(0).toUpperCase() + categoryId.slice(1);
-
 export function CategoriesGrid({
   categories,
   onCategoryPress,
 }: CategoriesGridProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useTranslation('shopping');
 
   // Deduplicate categories by ID to prevent duplicates
   // This is defensive programming - even though buildCategoriesFromGroceries deduplicates,
@@ -43,7 +42,7 @@ export function CategoriesGrid({
       return {
         id,
         localId: `default-${id}`,
-        name: formatCategoryName(id),
+        name: id,
         itemCount: 0,
         image: '',
         backgroundColor: colors.surface,
@@ -76,17 +75,21 @@ export function CategoriesGrid({
   return (
     <View style={styles.categoriesSection}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Categories</Text>
+        <Text style={styles.sectionTitle}>{t('categoriesSection.title')}</Text>
       </View>
       <View style={styles.categoriesGrid}>
-        {displayedCategories.map((category) => (
+        {displayedCategories.map((category) => {
+          const localizedName = t(`categories:${category.id}`, { defaultValue: category.name });
+
+          return (
           <CategoriesGridItem
             key={category.id}
-            category={category}
-            onPress={() => onCategoryPress(category.name)}
+            category={{ ...category, name: localizedName }}
+            onPress={() => onCategoryPress(category.id)}
             categoryIcon={getCategoryImageSource(category.id)}
           />
-        ))}
+          );
+        })}
       </View>
       {hasMoreCategories && (
         <TouchableOpacity
@@ -95,7 +98,7 @@ export function CategoriesGrid({
           activeOpacity={0.7}
         >
           <Text style={styles.showMoreText}>
-            {isExpanded ? 'Show less' : 'Show more'}
+            {isExpanded ? t('categoriesSection.showLess') : t('categoriesSection.showMore')}
           </Text>
           <Ionicons
             name={isExpanded ? 'chevron-up' : 'chevron-down'}

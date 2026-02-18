@@ -71,7 +71,7 @@ export const styles = StyleSheet.create({
   },
   triggerChevron: {
     color: colors.textSecondary,
-    marginLeft: spacing.xs,
+    marginStart: spacing.xs,
   },
   dropdown: {
     position: 'absolute',

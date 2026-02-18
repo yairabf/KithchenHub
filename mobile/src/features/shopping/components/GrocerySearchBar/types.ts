@@ -16,6 +16,7 @@ export interface GrocerySearchBarProps {
 
   // Optional UI Customization
   placeholder?: string;
+  isRtl?: boolean;
   variant?: 'surface' | 'background';  // white vs cream background
   showShadow?: boolean;
   maxResults?: number;                 // default: 8

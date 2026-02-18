@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { CategoryPicker } from '../CategoryPicker';
@@ -23,6 +24,7 @@ export function CreateCustomItemModal({
   onDecreaseQuantity,
   onIncreaseQuantity,
 }: CreateCustomItemModalProps) {
+  const { t } = useTranslation('shopping');
   const [didRemoteImageFail, setDidRemoteImageFail] = useState(false);
 
   useEffect(() => {
@@ -47,8 +49,8 @@ export function CreateCustomItemModal({
     <CenteredModal
       visible={visible}
       onClose={onClose}
-      title={`Add to ${listName}`}
-      confirmText="Add to List"
+      title={t('createCustomItemModal.title', { listName })}
+      confirmText={t('createCustomItemModal.confirm')}
       onConfirm={onConfirm}
       confirmColor={confirmColor}
     >
@@ -72,7 +74,7 @@ export function CreateCustomItemModal({
 
           {selectedGroceryItem.id.startsWith('custom-') && availableCategories.length > 0 && (
             <View style={styles.modalCategorySection}>
-              <Text style={styles.modalQuantityLabel}>Category</Text>
+              <Text style={styles.modalQuantityLabel}>{t('createCustomItemModal.categoryLabel')}</Text>
               <CategoryPicker
                 selectedCategory={selectedItemCategory}
                 onSelectCategory={onSelectCategory}
@@ -82,14 +84,14 @@ export function CreateCustomItemModal({
           )}
 
           <View style={styles.modalQuantitySection}>
-            <Text style={styles.modalQuantityLabel}>Quantity</Text>
+            <Text style={styles.modalQuantityLabel}>{t('createCustomItemModal.quantityLabel')}</Text>
             <View style={styles.modalQuantityControls}>
               <TouchableOpacity
                 style={styles.modalQuantityBtn}
                 onPress={onDecreaseQuantity}
-                accessibilityLabel="Decrease quantity"
+                accessibilityLabel={t('createCustomItemModal.decreaseQuantityAccessibility')}
                 accessibilityRole="button"
-                accessibilityHint="Reduces item quantity by one"
+                accessibilityHint={t('createCustomItemModal.decreaseQuantityHint')}
               >
                 <Ionicons name="remove" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
@@ -99,15 +101,15 @@ export function CreateCustomItemModal({
                 onChangeText={onChangeQuantity}
                 keyboardType="number-pad"
                 selectTextOnFocus
-                accessibilityLabel="Quantity"
-                accessibilityHint="Enter item quantity"
+                accessibilityLabel={t('createCustomItemModal.quantityInputAccessibility')}
+                accessibilityHint={t('createCustomItemModal.quantityInputHint')}
               />
               <TouchableOpacity
                 style={styles.modalQuantityBtn}
                 onPress={onIncreaseQuantity}
-                accessibilityLabel="Increase quantity"
+                accessibilityLabel={t('createCustomItemModal.increaseQuantityAccessibility')}
                 accessibilityRole="button"
-                accessibilityHint="Increases item quantity by one"
+                accessibilityHint={t('createCustomItemModal.increaseQuantityHint')}
               >
                 <Ionicons name="add" size={24} color={colors.textPrimary} />
               </TouchableOpacity>

@@ -47,6 +47,7 @@ import {
   updateShoppingListItemCounts,
 } from '../utils/shoppingRealtime';
 import { useShoppingRealtime } from '../hooks/useShoppingRealtime';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Migration key for one-time category cache clearing.
@@ -55,11 +56,42 @@ import { useShoppingRealtime } from '../hooks/useShoppingRealtime';
  */
 const CATEGORY_MIGRATION_KEY = '@kitchen_hub_category_migration_v1';
 
+/**
+ * Determines if a shopping item exists only locally (not yet persisted to server).
+ * Local-only items have temporary IDs starting with 'item-' prefix.
+ * 
+ * These items should be deleted from UI directly without API calls,
+ * as they were created optimistically but not yet confirmed by the server.
+ * 
+ * @param item - Shopping item to check
+ * @param isSignedIn - Whether user is authenticated
+ * @returns True if item is local-only, false if persisted or in guest mode
+ * 
+ * @example
+ * ```typescript
+ * if (isLocalOnlyItem(item, isSignedIn)) {
+ *   // Remove from UI without API call
+ *   removeFromUI(item);
+ * } else {
+ *   // Call DELETE API endpoint
+ *   await api.delete(`/items/${item.id}`);
+ * }
+ * ```
+ */
+function isLocalOnlyItem(item: ShoppingItem, isSignedIn: boolean): boolean {
+  return (
+    isSignedIn &&
+    typeof item.id === 'string' &&
+    item.id.startsWith('item-')
+  );
+}
+
 interface ShoppingListsScreenProps {
   isActive?: boolean;
 }
 
 export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
+  const { t } = useTranslation('shopping');
   const { isActive = true } = props;
   const { isTablet } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -172,6 +204,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [pendingDeleteList, setPendingDeleteList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const categoryRequestIdRef = useRef(0);
+  const deletingItemIdsRef = useRef<Set<string>>(new Set());
 
   // Determine data mode based on user authentication state
   const userMode = useMemo(() => {
@@ -497,16 +530,40 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       return;
     }
 
-    await executeWithOptimisticUpdate(
-      () => deleteItem(itemId),
-      () => {
-        setAllItems((prev: ShoppingItem[]) => prev.filter((item) => item.id !== itemId && item.localId !== itemId));
-      },
-      () => {
-        setAllItems((prev: ShoppingItem[]) => [...prev, targetItem]);
-      },
-      'Failed to delete shopping item:'
-    );
+    const deleteById = targetItem.id;
+    if (deletingItemIdsRef.current.has(deleteById)) {
+      return;
+    }
+
+    deletingItemIdsRef.current.add(deleteById);
+
+     // Item exists only locally (optimistic create not yet confirmed by server).
+    // Remove it from UI and skip DELETE API call to avoid 404/API errors.
+    if (isLocalOnlyItem(targetItem, isSignedIn)) {
+      setAllItems((prev: ShoppingItem[]) =>
+        prev.filter(
+          (item) =>
+            item.id !== targetItem.id && item.localId !== targetItem.localId,
+        ),
+      );
+      deletingItemIdsRef.current.delete(deleteById);
+      return;
+    }
+
+    try {
+      await executeWithOptimisticUpdate(
+        () => deleteItem(deleteById),
+        () => {
+          setAllItems((prev: ShoppingItem[]) => prev.filter((item) => item.id !== targetItem.id && item.localId !== targetItem.localId));
+        },
+        () => {
+          setAllItems((prev: ShoppingItem[]) => [...prev, targetItem]);
+        },
+        'Failed to delete shopping item:'
+      );
+    } finally {
+      deletingItemIdsRef.current.delete(deleteById);
+    }
   };
 
   const handleToggleItemChecked = async (itemId: string) => {
@@ -751,7 +808,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     } catch (error) {
       console.error('Failed to load category items:', error);
       if (categoryRequestIdRef.current === requestId) {
-        setCategoryItemsError('Failed to load category items. Please try again.');
+        setCategoryItemsError(t('categoryModal.loadFailed'));
       }
     } finally {
       if (categoryRequestIdRef.current === requestId) {
@@ -782,11 +839,11 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Shopping List"
+        title={t('screen.headerTitle')}
         titleIcon="basket-outline"
         rightActions={{
-          share: { onPress: () => setShowShareModal(true), label: 'Share shopping list' },
-          add: { onPress: () => setShowQuickAddModal(true), label: 'Add item' },
+          share: { onPress: () => setShowShareModal(true), label: t('screen.shareActionLabel') },
+          add: { onPress: () => setShowQuickAddModal(true), label: t('screen.addActionLabel') },
         }}
       />
 
@@ -878,7 +935,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       <CenteredModal
         visible={showQuickAddModal}
         onClose={() => setShowQuickAddModal(false)}
-        title="Quick Add"
+        title={t('screen.quickAddTitle')}
         showActions={false}
       >
         <View>
@@ -897,7 +954,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
                   activeList.id === list.id && { backgroundColor: list.color },
                 ]}
                 onPress={() => setSelectedList(list)}
-                accessibilityLabel={`Switch to ${list.name}`}
+                accessibilityLabel={t('screen.switchToList', { name: list.name })}
                 accessibilityRole="button"
                 accessibilityState={{ selected: activeList.id === list.id }}
               >
@@ -932,19 +989,19 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       <ShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title={`Share ${activeList.name}`}
+        title={t('screen.shareTitle', { name: activeList.name })}
         shareText={shareText}
       />
 
       <ConfirmationModal
         visible={!!pendingDeleteList}
-        title="Delete List"
+        title={t('screen.deleteListTitle')}
         message={
           pendingDeleteList
-            ? `Delete "${pendingDeleteList.name}"?`
+            ? t('screen.deleteListMessage', { name: pendingDeleteList.name })
             : ''
         }
-        confirmText="Delete"
+        confirmText={t('screen.deleteListConfirm')}
         onConfirm={handleConfirmDeleteList}
         onCancel={() => setPendingDeleteList(null)}
       />

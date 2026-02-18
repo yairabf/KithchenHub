@@ -96,11 +96,17 @@ export async function quickAddItem(
   } = dependencies;
 
   const quantity = 1;
+  const isCustomItem =
+    typeof groceryItem.id === 'string' && groceryItem.id.startsWith('custom-');
+  const safeCategory =
+    typeof groceryItem.category === 'string' && groceryItem.category.trim().length > 0
+      ? normalizeShoppingCategory(groceryItem.category)
+      : normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase());
   
   // Use default category for custom items in quick add (user can select category in modal)
-  const categoryToUse = groceryItem.id.startsWith('custom-') 
+  const categoryToUse = isCustomItem
     ? normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase())
-    : groceryItem.category;
+    : safeCategory;
 
   // Check if item already exists in the selected list
   const existingItem = allItems.find(
@@ -158,7 +164,7 @@ export async function quickAddItem(
         quantity,
         category: categoryToUse,
         image: groceryItem.image,
-        catalogItemId: groceryItem.id.startsWith('custom-') ? undefined : groceryItem.id,
+        catalogItemId: !isCustomItem && groceryItem.id ? groceryItem.id : undefined,
       });
       
       // Replace temp item with real item from service

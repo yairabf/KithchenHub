@@ -271,9 +271,9 @@ export function CategoryPicker({
           style={[styles.trigger, dropdownOpen && styles.triggerOpen]}
           onPress={handleTriggerPress}
           accessibilityRole="button"
-          accessibilityLabel={`Category: ${selectedName}. Tap to change.`}
+          accessibilityLabel={t('categoryPicker.triggerAccessibility', { name: selectedName })}
           accessibilityState={{ expanded: dropdownOpen }}
-          accessibilityHint="Opens category list"
+          accessibilityHint={t('categoryPicker.triggerHint')}
           testID="category-picker-trigger"
         >
           <View style={styles.triggerContent}>
