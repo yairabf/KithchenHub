@@ -1,5 +1,6 @@
 /**
- * Tests for setAppLanguage: normalization, supportedLngs validation, persistence, changeLanguage, and RTL restart.
+ * Tests for setAppLanguage: normalization, supportedLngs validation, persistence,
+ * language update, and RTL direction updates without reload.
  */
 import { setStoredLanguage } from '../storage';
 import { setAppLanguage, i18n } from '../index';
@@ -14,16 +15,12 @@ jest.mock('../localize', () => ({
   getLocales: jest.fn().mockReturnValue([]),
 }));
 
-/**
- * Minimal react-native mock to avoid loading native modules (e.g. TurboModuleRegistry).
- * __testSetIsRTL simulates the current RTL state for RTL-direction-change tests.
- */
 jest.mock('react-native', () => {
   const rtlState = { isRTL: false };
   return {
-    Alert: { alert: jest.fn() },
     I18nManager: {
       forceRTL: jest.fn(),
+      swapLeftAndRightInRTL: jest.fn(),
       get isRTL() {
         return rtlState.isRTL;
       },
@@ -35,18 +32,10 @@ jest.mock('react-native', () => {
   };
 });
 
-jest.mock('expo-updates', () => ({
-  reloadAsync: jest.fn(),
-}));
+const mockSetStoredLanguage = setStoredLanguage as jest.MockedFunction<typeof setStoredLanguage>;
 
-const mockSetStoredLanguage = setStoredLanguage as jest.MockedFunction<
-  typeof setStoredLanguage
->;
-
-/** Returns the mocked react-native module for assertions on I18nManager and Alert. */
 const getRN = () => require('react-native') as {
-  I18nManager: { forceRTL: jest.Mock; __testSetIsRTL: (v: boolean) => void };
-  Alert: { alert: jest.Mock };
+  I18nManager: { forceRTL: jest.Mock; swapLeftAndRightInRTL: jest.Mock; __testSetIsRTL: (v: boolean) => void };
 };
 
 describe('setAppLanguage', () => {
@@ -55,8 +44,6 @@ describe('setAppLanguage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSetStoredLanguage.mockResolvedValue(undefined);
-    const Updates = require('expo-updates') as { reloadAsync: jest.Mock };
-    Updates.reloadAsync.mockResolvedValue(undefined);
     getRN().I18nManager.__testSetIsRTL(false);
     i18n.options.supportedLngs = ['en'];
   });
@@ -114,12 +101,12 @@ describe('setAppLanguage', () => {
     });
   });
 
-  describe('RTL direction change and restart', () => {
+  describe('RTL direction change', () => {
     beforeEach(() => {
       i18n.options.supportedLngs = ['en', 'he', 'ar', 'es'];
     });
 
-    it('calls forceRTL(true) and reloadAsync when switching from en to he', async () => {
+    it('calls forceRTL(true) when switching from en to he', async () => {
       const RN = getRN();
       const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
 
@@ -128,12 +115,10 @@ describe('setAppLanguage', () => {
       expect(mockSetStoredLanguage).toHaveBeenCalledWith('he');
       expect(changeLanguageSpy).toHaveBeenCalledWith('he');
       expect(RN.I18nManager.forceRTL).toHaveBeenCalledWith(true);
-      const Updates = require('expo-updates') as { reloadAsync: jest.Mock };
-      expect(Updates.reloadAsync).toHaveBeenCalled();
       changeLanguageSpy.mockRestore();
     });
 
-    it('calls forceRTL(false) and reloadAsync when switching from he to en', async () => {
+    it('calls forceRTL(false) when switching from he to en', async () => {
       const RN = getRN();
       RN.I18nManager.__testSetIsRTL(true);
       const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
@@ -143,12 +128,10 @@ describe('setAppLanguage', () => {
       expect(mockSetStoredLanguage).toHaveBeenCalledWith('en');
       expect(changeLanguageSpy).toHaveBeenCalledWith('en');
       expect(RN.I18nManager.forceRTL).toHaveBeenCalledWith(false);
-      const Updates = require('expo-updates') as { reloadAsync: jest.Mock };
-      expect(Updates.reloadAsync).toHaveBeenCalled();
       changeLanguageSpy.mockRestore();
     });
 
-    it('does not call forceRTL or reloadAsync when switching between LTR languages (en to es)', async () => {
+    it('does not call forceRTL when switching between LTR languages (en to es)', async () => {
       const RN = getRN();
       const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
 
@@ -157,31 +140,6 @@ describe('setAppLanguage', () => {
       expect(mockSetStoredLanguage).toHaveBeenCalledWith('es');
       expect(changeLanguageSpy).toHaveBeenCalledWith('es');
       expect(RN.I18nManager.forceRTL).not.toHaveBeenCalled();
-      const Updates = require('expo-updates') as { reloadAsync: jest.Mock };
-      expect(Updates.reloadAsync).not.toHaveBeenCalled();
-      changeLanguageSpy.mockRestore();
-    });
-
-    it('reverts forceRTL and shows Alert when reloadAsync fails', async () => {
-      const RN = getRN();
-      const Updates = require('expo-updates') as { reloadAsync: jest.Mock };
-      Updates.reloadAsync.mockRejectedValueOnce(new Error('Reload failed'));
-      const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
-
-      await setAppLanguage('he');
-
-      expect(RN.I18nManager.forceRTL).toHaveBeenCalledTimes(2);
-      expect(RN.I18nManager.forceRTL).toHaveBeenNthCalledWith(1, true);
-      expect(RN.I18nManager.forceRTL).toHaveBeenNthCalledWith(2, false);
-      expect(Updates.reloadAsync).toHaveBeenCalled();
-      expect(RN.Alert.alert).toHaveBeenCalledTimes(1);
-      const [title, message, buttons] = RN.Alert.alert.mock.calls[0] as [string, string, { text: string }[]];
-      expect(typeof title).toBe('string');
-      expect(title.length).toBeGreaterThan(0);
-      expect(typeof message).toBe('string');
-      expect(message.length).toBeGreaterThan(0);
-      expect(buttons).toHaveLength(1);
-      expect(buttons[0]).toMatchObject({ text: expect.any(String) });
       changeLanguageSpy.mockRestore();
     });
   });

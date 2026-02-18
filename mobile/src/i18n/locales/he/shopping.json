@@ -1,13 +1,95 @@
 {
   "listPanel": {
-    "title": "Shopping Lists",
-    "emptyState": "No items yet"
+    "title": "רשימות קניות",
+    "emptyState": "עדיין אין פריטים",
+    "activeListsTitle": "הרשימות הפעילות שלי",
+    "closeActionsMenu": "סגור תפריט פעולות רשימה",
+    "mainBadge": "ראשית",
+    "moreActionsFor": "פעולות נוספות עבור {{name}}",
+    "edit": "ערוך",
+    "editListAccessibility": "ערוך את הרשימה {{name}}",
+    "delete": "מחק",
+    "mainListCannotDelete": "{{name}} היא הרשימה הראשית ולא ניתן למחוק אותה",
+    "deleteListAccessibility": "מחק את הרשימה {{name}}",
+    "createNew": "צור רשימה חדשה",
+    "emptyTitle": "אין פריטים ברשימה זו",
+    "emptyDescription": "התחל להוסיף פריטים לרשימת הקניות שלך",
+    "emptyAction": "הוסף פריט ראשון",
+    "categoryAccessibilityLabel": "קטגוריית {{category}}, {{count}}",
+    "expandCategoryHint": "הקש פעמיים כדי להרחיב ולהציג פריטים בקטגוריה זו",
+    "collapseCategoryHint": "הקש פעמיים כדי לצמצם ולהסתיר פריטים בקטגוריה זו"
   },
   "search": {
-    "placeholder": "Search groceries..."
+    "placeholder": "חיפוש מצרכים...",
+    "customItemLabel": "פריט מותאם",
+    "addCustomItem": "הוסף \"{{name}}\""
   },
-  "itemCount": "{{count}} item",
-  "itemCount_one": "{{count}} item",
-  "itemCount_other": "{{count}} items",
-  "itemCount_plural": "{{count}} items"
+  "frequentlyAdded": {
+    "title": "נוספו לאחרונה",
+    "addItemAccessibility": "הוסף את {{name}} לרשימה"
+  },
+  "categoryPicker": {
+    "triggerAccessibility": "קטגוריה: {{name}}. הקש לשנות.",
+    "triggerHint": "פותח רשימת קטגוריות"
+  },
+  "createListModal": {
+    "titleCreate": "צור רשימה חדשה",
+    "titleEdit": "ערוך רשימה",
+    "confirmCreate": "צור",
+    "confirmSave": "שמור",
+    "listNameLabel": "שם הרשימה",
+    "listNamePlaceholder": "הזן שם לרשימה...",
+    "listNameAccessibility": "שם הרשימה",
+    "listNameHint": "הזן שם לרשימת הקניות החדשה",
+    "iconLabel": "אייקון",
+    "iconSelectAccessibility": "בחר אייקון {{icon}}",
+    "colorLabel": "צבע",
+    "colorSelectAccessibility": "בחר צבע {{color}}"
+  },
+  "createCustomItemModal": {
+    "title": "הוסף ל{{listName}}",
+    "confirm": "הוסף לרשימה",
+    "categoryLabel": "קטגוריה",
+    "quantityLabel": "כמות",
+    "decreaseQuantityAccessibility": "הפחת כמות",
+    "decreaseQuantityHint": "מפחית את כמות הפריט באחד",
+    "quantityInputAccessibility": "כמות",
+    "quantityInputHint": "הזן כמות פריט",
+    "increaseQuantityAccessibility": "הגדל כמות",
+    "increaseQuantityHint": "מגדיל את כמות הפריט באחד"
+  },
+  "ingredientConflictModal": {
+    "title": "הפריט כבר ברשימה",
+    "message": "\"{{name}}\" כבר נמצא ברשימת הקניות שלך.",
+    "currentLabel": "נוכחי:",
+    "recipeNeedsLabel": "המתכון דורש:",
+    "replaceButton": "החלף ב-{{quantity}}",
+    "addButton": "הוסף לכמות ({{quantity}})"
+  },
+  "itemCount": "{{count}} פריט",
+  "itemCount_one": "{{count}} פריט",
+  "itemCount_other": "{{count}} פריטים",
+  "itemCount_plural": "{{count}} פריטים",
+  "categoriesSection": {
+    "title": "קטגוריות",
+    "showMore": "הצג עוד",
+    "showLess": "הצג פחות"
+  },
+  "categoryModal": {
+    "loadingItems": "טוען פריטים...",
+    "noItems": "אין פריטים בקטגוריה זו",
+    "close": "סגור חלון קטגוריה",
+    "loadFailed": "טעינת פריטי הקטגוריה נכשלה. נסה שוב."
+  },
+  "screen": {
+    "headerTitle": "רשימת קניות",
+    "shareActionLabel": "שתף רשימת קניות",
+    "addActionLabel": "הוסף פריט",
+    "quickAddTitle": "הוספה מהירה",
+    "switchToList": "עבור אל {{name}}",
+    "shareTitle": "שתף את {{name}}",
+    "deleteListTitle": "מחק רשימה",
+    "deleteListMessage": "למחוק את \"{{name}}\"?",
+    "deleteListConfirm": "מחק"
+  }
 }

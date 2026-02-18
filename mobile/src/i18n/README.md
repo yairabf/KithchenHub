@@ -30,8 +30,7 @@ RTL is implemented for Hebrew (he) and Arabic (ar):
 
 - At app bootstrap (`mobile/index.ts`), stored or device language determines RTL state.
 - `I18nManager.allowRTL(true)` and `forceRTL(isRTL)` are set before the React tree mounts.
-- Switching language to/from he or ar triggers `I18nManager.forceRTL` and app restart via `Updates.reloadAsync()`.
-- In dev mode, if reload fails, the user sees an Alert to restart manually.
+- Switching language to/from he or ar calls `I18nManager.forceRTL` without forcing an app restart.
 - Directional icons (chevron-forward, arrow-back, etc.) flip via the `getDirectionalIcon` helper.
 - Use `marginStart`/`marginEnd` (not `marginLeft`/`marginRight`) for RTL-safe layouts.
 

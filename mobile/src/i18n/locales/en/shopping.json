@@ -1,13 +1,95 @@
 {
   "listPanel": {
     "title": "Shopping Lists",
-    "emptyState": "No items yet"
+    "emptyState": "No items yet",
+    "activeListsTitle": "My Active Lists",
+    "closeActionsMenu": "Close list actions menu",
+    "mainBadge": "Main",
+    "moreActionsFor": "More actions for {{name}}",
+    "edit": "Edit",
+    "editListAccessibility": "Edit {{name}} list",
+    "delete": "Delete",
+    "mainListCannotDelete": "{{name}} is main list and cannot be deleted",
+    "deleteListAccessibility": "Delete {{name}} list",
+    "createNew": "Create New",
+    "emptyTitle": "No items in this list",
+    "emptyDescription": "Start adding items to your shopping list",
+    "emptyAction": "Add first item",
+    "categoryAccessibilityLabel": "{{category}} category, {{count}}",
+    "expandCategoryHint": "Double tap to expand and show items in this category",
+    "collapseCategoryHint": "Double tap to collapse and hide items in this category"
   },
   "search": {
-    "placeholder": "Search groceries..."
+    "placeholder": "Search groceries...",
+    "customItemLabel": "Custom Item",
+    "addCustomItem": "Add \"{{name}}\""
+  },
+  "frequentlyAdded": {
+    "title": "Frequently Added",
+    "addItemAccessibility": "Add {{name}} to list"
+  },
+  "categoryPicker": {
+    "triggerAccessibility": "Category: {{name}}. Tap to change.",
+    "triggerHint": "Opens category list"
+  },
+  "createListModal": {
+    "titleCreate": "Create New List",
+    "titleEdit": "Edit List",
+    "confirmCreate": "Create",
+    "confirmSave": "Save",
+    "listNameLabel": "List Name",
+    "listNamePlaceholder": "Enter list name...",
+    "listNameAccessibility": "List name",
+    "listNameHint": "Enter a name for the new shopping list",
+    "iconLabel": "Icon",
+    "iconSelectAccessibility": "Select {{icon}} icon",
+    "colorLabel": "Color",
+    "colorSelectAccessibility": "Select color {{color}}"
+  },
+  "createCustomItemModal": {
+    "title": "Add to {{listName}}",
+    "confirm": "Add to List",
+    "categoryLabel": "Category",
+    "quantityLabel": "Quantity",
+    "decreaseQuantityAccessibility": "Decrease quantity",
+    "decreaseQuantityHint": "Reduces item quantity by one",
+    "quantityInputAccessibility": "Quantity",
+    "quantityInputHint": "Enter item quantity",
+    "increaseQuantityAccessibility": "Increase quantity",
+    "increaseQuantityHint": "Increases item quantity by one"
+  },
+  "ingredientConflictModal": {
+    "title": "Item Already in List",
+    "message": "\"{{name}}\" is already in your shopping list.",
+    "currentLabel": "Current:",
+    "recipeNeedsLabel": "Recipe needs:",
+    "replaceButton": "Replace with {{quantity}}",
+    "addButton": "Add to quantity ({{quantity}})"
   },
   "itemCount": "{{count}} item",
   "itemCount_one": "{{count}} item",
   "itemCount_other": "{{count}} items",
-  "itemCount_plural": "{{count}} items"
+  "itemCount_plural": "{{count}} items",
+  "categoriesSection": {
+    "title": "Categories",
+    "showMore": "Show more",
+    "showLess": "Show less"
+  },
+  "categoryModal": {
+    "loadingItems": "Loading items...",
+    "noItems": "No items in this category",
+    "close": "Close category modal",
+    "loadFailed": "Failed to load category items. Please try again."
+  },
+  "screen": {
+    "headerTitle": "Shopping List",
+    "shareActionLabel": "Share shopping list",
+    "addActionLabel": "Add item",
+    "quickAddTitle": "Quick Add",
+    "switchToList": "Switch to {{name}}",
+    "shareTitle": "Share {{name}}",
+    "deleteListTitle": "Delete List",
+    "deleteListMessage": "Delete \"{{name}}\"?",
+    "deleteListConfirm": "Delete"
+  }
 }

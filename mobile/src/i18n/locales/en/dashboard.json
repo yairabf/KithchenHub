@@ -1,5 +1,46 @@
 {
   "title": "Dashboard",
   "greeting": "Hello",
-  "quickStats": "Quick stats"
+  "quickStats": {
+    "shoppingLists": "Shopping Lists",
+    "savedRecipes": "Saved Recipes",
+    "active": "{{count}} Active",
+    "item": "{{count}} Item",
+    "items": "{{count}} Items"
+  },
+  "header": {
+    "title": "Kitchen Hub",
+    "roleGuest": "Guest",
+    "roleKitchenLead": "KITCHEN LEAD"
+  },
+  "quickAdd": {
+    "title": "Quick Add",
+    "subtitle": "Add groceries in seconds.",
+    "mainListBadge": "Main List",
+    "voiceInput": "Voice input",
+    "voiceInputHint": "Add items using voice",
+    "suggestedItems": "Suggested Items",
+    "show": "Show",
+    "hide": "Hide",
+    "toggleSuggestedHint": "Toggles suggested shopping items",
+    "addItemLabel": "Add {{name}}",
+    "addItemHint": "Adds {{name}} to shopping list"
+  },
+  "choresPanel": {
+    "title": "Important Chores",
+    "subtitle": "Assignments for the house",
+    "viewAll": "View All",
+    "viewAllLabel": "View all chores",
+    "viewAllHint": "Navigate to chores screen",
+    "addTask": "Add Household Task",
+    "addTaskLabel": "Add household task",
+    "addTaskHint": "Opens form to create a new chore",
+    "unassigned": "Unassigned",
+    "markComplete": "Tap to mark complete",
+    "markIncomplete": "Tap to mark incomplete"
+  },
+  "notifications": {
+    "buttonLabel": "Notifications - View recent activity and updates",
+    "buttonHint": "Tap to open notifications"
+  }
 }

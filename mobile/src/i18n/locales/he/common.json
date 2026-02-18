@@ -1,27 +1,27 @@
 {
-  "appName": "Kitchen Hub",
+  "appName": "מרכז המטבח",
   "buttons": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "add": "Add",
-    "remove": "Remove",
-    "share": "Share",
-    "close": "Close",
+    "save": "שמור",
+    "cancel": "ביטול",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "add": "הוסף",
+    "remove": "הסר",
+    "share": "שתף",
+    "close": "סגור",
     "ok": "אישור"
   },
   "labels": {
-    "name": "Name",
-    "quantity": "Quantity",
-    "category": "Category",
-    "date": "Date",
-    "time": "Time"
+    "name": "שם",
+    "quantity": "כמות",
+    "category": "קטגוריה",
+    "date": "תאריך",
+    "time": "שעה"
   },
   "messages": {
-    "loading": "Loading...",
-    "saving": "Saving...",
-    "success": "Success!",
-    "error": "Error occurred"
+    "loading": "טוען...",
+    "saving": "שומר...",
+    "success": "הפעולה הצליחה!",
+    "error": "אירעה שגיאה"
   }
 }
