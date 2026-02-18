@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../../../theme';
-import { CenteredModal } from '../../../../common/components/CenteredModal';
+import { EntityFormModal } from '../../../../common/components/EntityFormModal';
 import { stripToDigitsOnly, stripToNumeric } from '../../../../common/utils';
 import { useDebouncedRemoteSearch } from '../../../../common/hooks';
 import { GrocerySearchBar, GroceryItem } from '../../../shopping/components/GrocerySearchBar';
@@ -225,16 +225,15 @@ export function AddRecipeModal({
   };
 
   return (
-    <CenteredModal
+    <EntityFormModal
       visible={visible}
       onClose={onClose}
-      title={mode === 'edit' ? 'Edit Recipe' : 'New Recipe'}
-      confirmText={isSaving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Save Recipe'}
-      cancelText="Cancel"
-      onConfirm={handleSave}
-      confirmColor={colors.recipes}
-      confirmDisabled={!isValid || isSaving}
-      confirmLoading={isSaving}
+      title={mode === 'edit' ? 'Edit Recipe' : 'Add Recipe'}
+      submitText={mode === 'edit' ? 'Save' : 'Add'}
+      onSubmit={handleSave}
+      submitColor={colors.recipes}
+      submitDisabled={!isValid || isSaving}
+      submitLoading={isSaving}
     >
       <ScrollView
         style={styles.scrollContent}
@@ -500,6 +499,6 @@ export function AddRecipeModal({
           />
         );
       })()}
-    </CenteredModal>
+    </EntityFormModal>
   );
 }

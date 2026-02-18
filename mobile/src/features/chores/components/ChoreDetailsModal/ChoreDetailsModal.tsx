@@ -1,135 +1,211 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
 import { useHousehold } from '../../../../contexts/HouseholdContext';
-import { CenteredModal } from '../../../../common/components/CenteredModal';
+import { EntityFormModal } from '../../../../common/components/EntityFormModal';
+import { ManageHouseholdModal } from '../../../settings/components/ManageHouseholdModal';
 import { DateTimePicker } from '../../../../common/components/DateTimePicker';
-import { styles } from './styles';
-import { ChoreDetailsModalProps, Chore } from './types';
 import { CHORE_ICONS } from '../../constants';
+import { styles } from './styles';
+import type { Chore } from '../../../../mocks/chores';
+import type { ChoreDetailsModalProps } from './types';
 
+/** Auto-focus delay (ms) to allow modal entrance animation to complete first. */
+const AUTOFOCUS_DELAY_MS = 150;
 
-export function ChoreDetailsModal({
-  visible,
-  chore,
-  onClose,
-  onUpdateAssignee,
-  onUpdateChore
-}: ChoreDetailsModalProps) {
+/**
+ * Determines which section bucket a due date falls into.
+ *
+ * Section values are constrained by the min-date picker to be today or later,
+ * so any non-today date is treated as "thisWeek" in the UI's two-bucket model.
+ * Recurring chores bypass date-based bucketing entirely.
+ *
+ * @param date - The selected due date
+ * @param isRecurring - Whether the chore repeats on a schedule
+ */
+function getDueDateSection(date: Date, isRecurring: boolean): 'today' | 'thisWeek' | 'recurring' {
+  if (isRecurring) return 'recurring';
+
+  const today = dayjs().startOf('day');
+  const selectedDay = dayjs(date).startOf('day');
+
+  if (selectedDay.isSame(today, 'day')) return 'today';
+
+  return 'thisWeek';
+}
+
+export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
+  const { visible, mode, onClose } = props;
+  const { t } = useTranslation('chores');
   const { members } = useHousehold();
-  const [selectedAssignee, setSelectedAssignee] = useState<string | undefined>(chore?.assignee);
-  const [choreName, setChoreName] = useState<string>(chore?.title || '');
-  const [selectedIcon, setSelectedIcon] = useState<string>(chore?.icon || '📋');
-  const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
-  const [recurrencePattern, setRecurrencePattern] = useState<string | null>(null);
 
-  // ... existing code ...
+  const [choreName, setChoreName] = useState('');
+  const [selectedAssignee, setSelectedAssignee] = useState<string | undefined>(undefined);
+  const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(new Date());
+  const [selectedIcon, setSelectedIcon] = useState<string>('📋');
+  const [showManageHousehold, setShowManageHousehold] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<'daily' | 'weekly' | 'monthly' | null>(null);
 
+  const inputRef = useRef<TextInput>(null);
+
+  // Populate form fields when the modal opens.
+  // In edit mode, seed with the existing chore's values.
+  // In add mode, reset to defaults.
   useEffect(() => {
-    if (visible && chore) {
-      setSelectedAssignee(chore.assignee);
-      setChoreName(chore.title);
-      setSelectedIcon(chore.icon || '📋');
-      setRecurrencePattern(chore.isRecurring ? 'daily' : null); // Default to daily if recurring
-      // ... date logic
+    if (!visible) return;
+
+    if (mode === 'edit' && props.chore) {
+      setChoreName(props.chore.title);
+      setSelectedAssignee(props.chore.assignee);
+      setSelectedIcon(props.chore.icon || '📋');
+      setSelectedDateTime(props.chore.originalDate ?? null);
+      setRecurrencePattern(props.chore.isRecurring ? 'daily' : null);
+      return;
     }
-  }, [visible, chore]);
 
-  const handleSave = () => {
-    if (chore) {
-      // ... existing code ...
+    setChoreName('');
+    setSelectedIcon('📋');
+    setSelectedAssignee(undefined);
+    setSelectedDateTime(new Date());
+    setRecurrencePattern(null);
+  }, [visible, mode, props.chore]);
 
-      // Build updates object
-      const updates: Partial<Chore> & { assigneeId?: string } = {};
+  // Auto-focus the name input when opening in add mode.
+  // The delay allows the modal's entrance animation to settle first.
+  useEffect(() => {
+    if (!visible || mode !== 'add') return;
 
-      if (choreName !== chore.title) {
-        updates.title = choreName;
-      }
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, AUTOFOCUS_DELAY_MS);
 
-      if (selectedIcon !== chore.icon) {
-        updates.icon = selectedIcon;
-      }
+    return () => clearTimeout(timer);
+  }, [visible, mode]);
 
-      // Handle recurrence pattern update
-      const currentIsRecurring = chore.isRecurring || false;
-      const newIsRecurring = recurrencePattern !== null;
-      if (currentIsRecurring !== newIsRecurring || recurrencePattern !== null) {
-        updates.isRecurring = newIsRecurring;
-      }
+  const handleAdd = () => {
+    if (mode !== 'add' || !choreName.trim() || !selectedDateTime) return;
 
-      // Handle assignee update - send assigneeId instead of name
-      if (selectedAssignee !== chore.assignee) {
-        // Lookup member by name to get userId
-        const member = members.find(m => m.name === selectedAssignee);
-        updates.assigneeId = member?.id || undefined;
-        updates.assignee = selectedAssignee; // Also update local name for display
-      }
+    const isRecurring = recurrencePattern !== null;
 
-      // ... existing date logic ...
+    props.onAddChore({
+      title: choreName.trim(),
+      icon: selectedIcon,
+      assignee: selectedAssignee,
+      dueDate: dayjs(selectedDateTime).format('MMM D, YYYY'),
+      dueTime: dayjs(selectedDateTime).format('h:mm A'),
+      section: getDueDateSection(selectedDateTime, isRecurring),
+      isRecurring,
+      recurrencePattern,
+    });
 
-      // Update date/time if changed and valid
-      if (selectedDateTime && onUpdateChore) {
-        const dateObj = dayjs(selectedDateTime);
-        updates.dueDate = dateObj.format('MMM D, YYYY');
-        updates.dueTime = dateObj.format('h:mm A');
-        // FIX: Update originalDate as well so local/guest mode keeps it in sync
-        updates.originalDate = selectedDateTime;
-      }
-
-      // Apply updates if any
-      if (onUpdateChore && Object.keys(updates).length > 0) {
-        onUpdateChore(chore.id, updates);
-      }
-    }
     onClose();
   };
 
-  if (!chore) return null;
+  const handleSave = () => {
+    if (mode !== 'edit' || !props.chore || !choreName.trim()) {
+      onClose();
+      return;
+    }
+
+    const updates: Partial<Chore> & { assigneeId?: string } = {};
+
+    if (choreName !== props.chore.title) {
+      updates.title = choreName;
+    }
+
+    if (selectedIcon !== props.chore.icon) {
+      updates.icon = selectedIcon;
+    }
+
+    const newIsRecurring = recurrencePattern !== null;
+    if ((props.chore.isRecurring || false) !== newIsRecurring) {
+      updates.isRecurring = newIsRecurring;
+      if (newIsRecurring) {
+        updates.section = 'recurring';
+      }
+    }
+
+    if (selectedAssignee !== props.chore.assignee) {
+      const member = members.find((m) => m.name === selectedAssignee);
+      updates.assigneeId = member?.id || undefined;
+      updates.assignee = selectedAssignee;
+    }
+
+    if (selectedDateTime) {
+      updates.dueDate = dayjs(selectedDateTime).format('MMM D, YYYY');
+      updates.dueTime = dayjs(selectedDateTime).format('h:mm A');
+      updates.originalDate = selectedDateTime;
+      updates.section = getDueDateSection(selectedDateTime, newIsRecurring);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      props.onUpdateChore(props.chore.id, updates);
+    }
+
+    onClose();
+  };
+
+  if (mode === 'edit' && !props.chore) {
+    return null;
+  }
+
+  const submitDisabled = !choreName.trim();
+  const handleSubmit = mode === 'add' ? handleAdd : handleSave;
+
+  const modalTitle = mode === 'add' ? t('modal.addTitle') : t('modal.editTitle');
+  const submitText = mode === 'add' ? t('modal.submitAdd') : t('modal.submitSave');
+
+  const recurrenceOptions: Array<{ value: 'daily' | 'weekly' | 'monthly' | null; labelKey: string }> = [
+    { value: null, labelKey: 'modal.recurrence.none' },
+    { value: 'daily', labelKey: 'modal.recurrence.daily' },
+    { value: 'weekly', labelKey: 'modal.recurrence.weekly' },
+    { value: 'monthly', labelKey: 'modal.recurrence.monthly' },
+  ];
 
   return (
-    <CenteredModal
+    <EntityFormModal
       visible={visible}
       onClose={onClose}
-      title="Edit Chore"
-      confirmText="Save"
-      cancelText="Cancel"
-      onConfirm={handleSave}
-      confirmColor={colors.chores}
+      title={modalTitle}
+      submitText={submitText}
+      cancelText={t('modal.cancel')}
+      onSubmit={handleSubmit}
+      submitColor={colors.chores}
+      submitDisabled={submitDisabled}
     >
-      <View style={styles.choreNameSection}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.choreIcon}>{selectedIcon}</Text>
+      <View style={styles.addFormContainer}>
+        <View style={styles.addForm}>
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            placeholder={t('modal.choreNamePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            value={choreName}
+            onChangeText={setChoreName}
+            onSubmitEditing={handleSubmit}
+            returnKeyType="done"
+          />
+          {choreName.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => setChoreName('')}
+            >
+              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
-        <TextInput
-          style={styles.choreNameInput}
-          value={choreName}
-          onChangeText={setChoreName}
-          placeholder="Chore name"
-          placeholderTextColor={colors.textMuted}
-        />
       </View>
 
       <View style={styles.iconSelectionSection}>
-        <Text style={styles.sectionLabel}>ICON:</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.iconList}
-        >
+        <Text style={styles.assigneeLabel}>{t('modal.iconLabel')}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.iconList}>
           {CHORE_ICONS.map((icon) => (
             <TouchableOpacity
               key={icon}
-              style={[
-                styles.iconOption,
-                selectedIcon === icon && styles.iconOptionSelected
-              ]}
+              style={[styles.iconOption, selectedIcon === icon && styles.iconOptionSelected]}
               onPress={() => setSelectedIcon(icon)}
             >
               <Text style={styles.iconOptionText}>{icon}</Text>
@@ -139,72 +215,33 @@ export function ChoreDetailsModal({
       </View>
 
       <View style={styles.recurrenceSection}>
-        <Text style={styles.sectionLabel}>REPEAT:</Text>
+        <Text style={styles.assigneeLabel}>{t('modal.repeatLabel')}</Text>
         <View style={styles.recurrenceOptions}>
-          <TouchableOpacity
-            style={[
-              styles.recurrenceOption,
-              recurrencePattern === null && styles.recurrenceOptionSelected
-            ]}
-            onPress={() => setRecurrencePattern(null)}
-          >
-            <Text style={[
-              styles.recurrenceOptionText,
-              recurrencePattern === null && styles.recurrenceOptionTextSelected
-            ]}>
-              None
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.recurrenceOption,
-              recurrencePattern === 'daily' && styles.recurrenceOptionSelected
-            ]}
-            onPress={() => setRecurrencePattern('daily')}
-          >
-            <Text style={[
-              styles.recurrenceOptionText,
-              recurrencePattern === 'daily' && styles.recurrenceOptionTextSelected
-            ]}>
-              Daily
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.recurrenceOption,
-              recurrencePattern === 'weekly' && styles.recurrenceOptionSelected
-            ]}
-            onPress={() => setRecurrencePattern('weekly')}
-          >
-            <Text style={[
-              styles.recurrenceOptionText,
-              recurrencePattern === 'weekly' && styles.recurrenceOptionTextSelected
-            ]}>
-              Weekly
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.recurrenceOption,
-              recurrencePattern === 'monthly' && styles.recurrenceOptionSelected
-            ]}
-            onPress={() => setRecurrencePattern('monthly')}
-          >
-            <Text style={[
-              styles.recurrenceOptionText,
-              recurrencePattern === 'monthly' && styles.recurrenceOptionTextSelected
-            ]}>
-              Monthly
-            </Text>
-          </TouchableOpacity>
+          {recurrenceOptions.map(({ value, labelKey }) => (
+            <TouchableOpacity
+              key={labelKey}
+              style={[styles.recurrenceOption, recurrencePattern === value && styles.recurrenceOptionSelected]}
+              onPress={() => setRecurrencePattern(value)}
+            >
+              <Text
+                style={[
+                  styles.recurrenceOptionText,
+                  recurrencePattern === value && styles.recurrenceOptionTextSelected,
+                ]}
+              >
+                {t(labelKey)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
-      <View style={styles.dateTimeSection}>
+      <View style={styles.dueDateSection}>
         <DateTimePicker
           value={selectedDateTime}
           onChange={setSelectedDateTime}
-          label="Due Date & Time"
+          label={t('modal.dueDateLabel')}
+          placeholder={t('modal.dueDatePlaceholder')}
           minDate={new Date()}
           accentColor={colors.chores}
           displayFormat="MMM D, YYYY h:mm A"
@@ -212,7 +249,7 @@ export function ChoreDetailsModal({
       </View>
 
       <View style={styles.assigneeSection}>
-        <Text style={styles.assigneeLabel}>ASSIGN TO:</Text>
+        <Text style={styles.assigneeLabel}>{t('modal.assignLabel')}</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -220,20 +257,14 @@ export function ChoreDetailsModal({
           contentContainerStyle={styles.assigneeScrollContent}
         >
           <TouchableOpacity
-            style={[
-              styles.assigneeChip,
-              !selectedAssignee && styles.assigneeChipSelected,
-            ]}
+            style={[styles.assigneeChip, !selectedAssignee && styles.assigneeChipSelected]}
             onPress={() => setSelectedAssignee(undefined)}
           >
-            <Text style={[
-              styles.assigneeChipText,
-              !selectedAssignee && styles.assigneeChipTextSelected,
-            ]}>
-              Unassigned
+            <Text style={[styles.assigneeChipText, !selectedAssignee && styles.assigneeChipTextSelected]}>
+              {t('modal.assigneeUnassigned')}
             </Text>
           </TouchableOpacity>
-          {members.map(member => (
+          {members.map((member) => (
             <TouchableOpacity
               key={member.id}
               style={[
@@ -243,16 +274,27 @@ export function ChoreDetailsModal({
               ]}
               onPress={() => setSelectedAssignee(member.name)}
             >
-              <Text style={[
-                styles.assigneeChipText,
-                selectedAssignee === member.name && styles.assigneeChipTextSelected,
-              ]}>
+              <Text
+                style={[
+                  styles.assigneeChipText,
+                  selectedAssignee === member.name && styles.assigneeChipTextSelected,
+                ]}
+              >
                 {member.name}
               </Text>
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            style={[styles.assigneeChip, styles.assigneeChipManage]}
+            onPress={() => setShowManageHousehold(true)}
+          >
+            <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.assigneeChipText}>{t('modal.assigneeManage')}</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
-    </CenteredModal>
+
+      <ManageHouseholdModal visible={showManageHousehold} onClose={() => setShowManageHousehold(false)} />
+    </EntityFormModal>
   );
 }

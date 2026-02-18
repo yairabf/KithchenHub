@@ -4,5 +4,38 @@
     "pending": "Pending",
     "done": "Done",
     "overdue": "Overdue"
+  },
+  "screen": {
+    "headerTitle": "Home Chores",
+    "shareActionLabel": "Share chores list",
+    "addActionLabel": "Add item",
+    "emptyTitle": "No chores yet",
+    "emptyDescription": "Create your first chore to start tracking household tasks",
+    "emptyAction": "Create first chore",
+    "searchPlaceholder": "Quick find tasks...",
+    "todayTitle": "Today's Chores",
+    "upcomingTitle": "Upcoming Chores",
+    "shareTitle": "Share Chores"
+  },
+  "modal": {
+    "addTitle": "Add Chore",
+    "editTitle": "Edit Chore",
+    "submitAdd": "Add",
+    "submitSave": "Save",
+    "cancel": "Cancel",
+    "choreNamePlaceholder": "Chore name",
+    "iconLabel": "ICON:",
+    "repeatLabel": "REPEAT:",
+    "assignLabel": "Assign to:",
+    "assigneeUnassigned": "Unassigned",
+    "assigneeManage": "Manage",
+    "recurrence": {
+      "none": "None",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "dueDateLabel": "Due Date & Time",
+    "dueDatePlaceholder": "Select date and time..."
   }
 }

@@ -24,6 +24,17 @@ jest.mock('react-native', () => {
   };
 });
 
+// Must use require() inside mock factory to avoid hoisting issues
+jest.mock('react-i18next', () => {
+  const { createI18nMock } = require('../../../../../common/__tests__/utils/i18nMock');
+  return {
+    useTranslation: () => createI18nMock({
+      'search.addCustomItem': 'Add "{{name}}"',
+      'search.customItemLabel': 'Custom item',
+    }),
+  };
+});
+
 // Mock useClickOutside hook
 jest.mock('../../../../../common/hooks/useClickOutside', () => ({
   useClickOutside: jest.fn(),

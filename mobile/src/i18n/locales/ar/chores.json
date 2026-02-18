@@ -4,5 +4,38 @@
     "pending": "Pending",
     "done": "Done",
     "overdue": "Overdue"
+  },
+  "screen": {
+    "headerTitle": "مهام المنزل",
+    "shareActionLabel": "مشاركة قائمة المهام",
+    "addActionLabel": "إضافة عنصر",
+    "emptyTitle": "لا توجد مهام بعد",
+    "emptyDescription": "أنشئ أول مهمة لبدء تتبع مهام المنزل",
+    "emptyAction": "إنشاء أول مهمة",
+    "searchPlaceholder": "بحث سريع عن المهام...",
+    "todayTitle": "مهام اليوم",
+    "upcomingTitle": "المهام القادمة",
+    "shareTitle": "مشاركة المهام"
+  },
+  "modal": {
+    "addTitle": "إضافة مهمة",
+    "editTitle": "تعديل مهمة",
+    "submitAdd": "إضافة",
+    "submitSave": "حفظ",
+    "cancel": "إلغاء",
+    "choreNamePlaceholder": "اسم المهمة",
+    "iconLabel": "الأيقونة:",
+    "repeatLabel": "التكرار:",
+    "assignLabel": "تعيين إلى:",
+    "assigneeUnassigned": "غير معين",
+    "assigneeManage": "إدارة",
+    "recurrence": {
+      "none": "بدون",
+      "daily": "يومي",
+      "weekly": "أسبوعي",
+      "monthly": "شهري"
+    },
+    "dueDateLabel": "تاريخ ووقت الاستحقاق",
+    "dueDatePlaceholder": "اختر التاريخ والوقت..."
   }
 }

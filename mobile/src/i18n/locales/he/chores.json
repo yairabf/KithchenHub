@@ -1,8 +1,41 @@
 {
-  "title": "Chores",
+  "title": "מטלות",
   "status": {
-    "pending": "Pending",
-    "done": "Done",
-    "overdue": "Overdue"
+    "pending": "ממתין",
+    "done": "הושלם",
+    "overdue": "באיחור"
+  },
+  "screen": {
+    "headerTitle": "מטלות הבית",
+    "shareActionLabel": "שתף רשימת מטלות",
+    "addActionLabel": "הוסף פריט",
+    "emptyTitle": "עדיין אין מטלות",
+    "emptyDescription": "צור את המטלה הראשונה כדי להתחיל לנהל מטלות בבית",
+    "emptyAction": "צור מטלה ראשונה",
+    "searchPlaceholder": "חיפוש מהיר של משימות...",
+    "todayTitle": "מטלות להיום",
+    "upcomingTitle": "מטלות בהמשך",
+    "shareTitle": "שתף מטלות"
+  },
+  "modal": {
+    "addTitle": "הוסף מטלה",
+    "editTitle": "ערוך מטלה",
+    "submitAdd": "הוסף",
+    "submitSave": "שמור",
+    "cancel": "ביטול",
+    "choreNamePlaceholder": "שם המטלה",
+    "iconLabel": "סמל:",
+    "repeatLabel": "חזרה:",
+    "assignLabel": "הקצה לְ:",
+    "assigneeUnassigned": "לא מוקצה",
+    "assigneeManage": "ניהול",
+    "recurrence": {
+      "none": "ללא",
+      "daily": "יומי",
+      "weekly": "שבועי",
+      "monthly": "חודשי"
+    },
+    "dueDateLabel": "תאריך ושעת יעד",
+    "dueDatePlaceholder": "בחר תאריך ושעה..."
   }
 }
