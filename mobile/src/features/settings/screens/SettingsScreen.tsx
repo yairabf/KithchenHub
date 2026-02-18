@@ -72,7 +72,7 @@ export function SettingsScreen() {
 
         {/* Account Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>{t('account')}</Text>
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
               {user?.avatarUrl ? (
@@ -84,10 +84,10 @@ export function SettingsScreen() {
               )}
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name ?? 'User'}</Text>
+              <Text style={styles.profileName}>{user?.name ?? t('defaultUserName')}</Text>
               {user?.id ? (
                 <View style={styles.roleBadge}>
-                  <Text style={styles.roleText}>{user?.role ?? 'Member'}</Text>
+                  <Text style={styles.roleText}>{user?.role ?? t('member')}</Text>
                 </View>
               ) : null}
               {user?.email ? (
@@ -98,18 +98,18 @@ export function SettingsScreen() {
 
           <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={20} color={colors.error} />
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>{t('signOut')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Notifications Section - hidden until push notifications are implemented */}
         {SHOW_PUSH_NOTIFICATIONS_SETTING && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notifications</Text>
+            <Text style={styles.sectionTitle}>{t('notifications')}</Text>
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
-                <Text style={styles.settingLabel}>Push notifications</Text>
+                <Text style={styles.settingLabel}>{t('pushNotifications')}</Text>
               </View>
               <Switch
                 value={pushNotifications}
@@ -123,7 +123,7 @@ export function SettingsScreen() {
 
         {/* Household Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Household</Text>
+          <Text style={styles.sectionTitle}>{t('household')}</Text>
           <TouchableOpacity
             style={styles.settingRow}
             onPress={() => setShowManageHousehold(true)}
@@ -132,7 +132,7 @@ export function SettingsScreen() {
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.cyan }]}>
                 <Ionicons name="people-outline" size={20} color={colors.primary} />
               </View>
-              <Text style={styles.settingLabel}>Manage household members</Text>
+              <Text style={styles.settingLabel}>{t('manageHouseholdMembers')}</Text>
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -146,7 +146,7 @@ export function SettingsScreen() {
                 <View style={[styles.iconContainer, { backgroundColor: colors.pastel.peach }]}>
                   <Ionicons name="person-add-outline" size={20} color={colors.secondary} />
                 </View>
-                <Text style={styles.settingLabel}>Invite member to household</Text>
+                <Text style={styles.settingLabel}>{t('inviteMemberToHousehold')}</Text>
               </View>
               <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -155,27 +155,27 @@ export function SettingsScreen() {
 
         {/* Data Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Data</Text>
+          <Text style={styles.sectionTitle}>{t('data')}</Text>
           {SHOW_EXPORT_DATA_SETTING && (
             <TouchableOpacity style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
-                <Text style={styles.settingLabel}>Export my data</Text>
+                <Text style={styles.settingLabel}>{t('exportMyData')}</Text>
               </View>
               <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.settingRow}
-            accessibilityLabel="Delete account - This action cannot be undone"
+            accessibilityLabel={t('deleteAccountAccessibilityLabel')}
             accessibilityRole="button"
-            accessibilityHint="Permanently delete your account and all data"
+            accessibilityHint={t('deleteAccountAccessibilityHint')}
           >
             <View style={styles.settingInfo}>
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
                 <Ionicons name="trash-outline" size={20} color={colors.error} />
               </View>
-              <Text style={[styles.settingLabel, { color: colors.error }]}>Delete account</Text>
+              <Text style={[styles.settingLabel, { color: colors.error }]}>{t('deleteAccount')}</Text>
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -183,7 +183,7 @@ export function SettingsScreen() {
 
         {/* About Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle}>{t('about')}</Text>
           <TouchableOpacity
             style={styles.settingRow}
             onPress={() => openLegalUrl(PRIVACY_POLICY_URL)}
@@ -215,7 +215,7 @@ export function SettingsScreen() {
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <Ionicons name="information-circle-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>App Version</Text>
+              <Text style={styles.settingLabel}>{t('appVersion')}</Text>
             </View>
             <Text style={styles.versionText}>1.0.0</Text>
           </View>
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '700',
     marginBottom: spacing.sm,
-    paddingLeft: spacing.sm,
+    paddingStart: spacing.sm,
   },
   profileCard: {
     flexDirection: 'row',
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   avatarContainer: {
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
   },
   avatar: {
     width: 60,

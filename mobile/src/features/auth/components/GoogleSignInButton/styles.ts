@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
     ...boxShadow(2, 4, 'rgba(0, 0, 0, 0.1)'),
   },
   iconContainer: {
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
   },
   text: {
     ...typography.button,

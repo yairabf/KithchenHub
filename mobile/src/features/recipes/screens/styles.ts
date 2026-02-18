@@ -22,7 +22,7 @@ export const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
+    marginStart: 12,
     fontSize: 16,
     color: colors.textPrimary,
   },

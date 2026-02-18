@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timeIcon: {
-    marginLeft: 4,
+    marginStart: 4,
   },
   buttonText: {
     flex: 1,

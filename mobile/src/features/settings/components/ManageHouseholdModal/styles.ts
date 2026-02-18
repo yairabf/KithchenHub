@@ -49,7 +49,7 @@ export const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   memberName: {
     flex: 1,
@@ -62,7 +62,7 @@ export const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   defaultBadgeText: {
     fontSize: 10,

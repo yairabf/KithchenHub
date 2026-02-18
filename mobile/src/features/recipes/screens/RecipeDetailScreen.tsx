@@ -38,6 +38,7 @@ import { config } from '../../../config';
 import type { ShoppingItem } from '../../../mocks/shopping';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
+import { useTranslation } from 'react-i18next';
 
 
 export function RecipeDetailScreen({
@@ -45,6 +46,7 @@ export function RecipeDetailScreen({
   onBack,
   onAddToShoppingList,
 }: RecipeDetailScreenProps) {
+  const { t } = useTranslation('recipes');
   const { isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -240,7 +242,7 @@ export function RecipeDetailScreen({
       setShowEditModal(false);
     } catch (error) {
       console.error('Failed to update recipe:', error);
-      showToast('Failed to update recipe');
+      showToast(t('detail.toasts.recipeUpdateFailed'));
     } finally {
       setIsSavingEdit(false);
     }
@@ -287,7 +289,7 @@ export function RecipeDetailScreen({
         const mainList = data.shoppingLists.find(list => list.isMain);
 
         if (!mainList) {
-          showToast('No main shopping list found. Please create one.');
+          showToast(t('detail.toasts.noMainList'));
           return;
         }
 
@@ -317,11 +319,11 @@ export function RecipeDetailScreen({
             unit: normalizedUnit,
             image: ingredient.image,
           });
-          showToast(`${ingredient.name} added to ${mainList.name}`);
+          showToast(t('detail.toasts.ingredientAdded', { name: ingredient.name, listName: mainList.name }));
         }
       } catch (error) {
         console.error('Failed to add ingredient:', error);
-        showToast('Failed to add ingredient');
+        showToast(t('detail.toasts.ingredientAddFailed'));
       }
     },
     [shoppingService, showToast, getIngredientAmount, getIngredientUnit]
@@ -336,13 +338,13 @@ export function RecipeDetailScreen({
         quantity,
         unit: getIngredientUnit(conflictingIngredient),
       });
-      showToast(`${conflictingIngredient.name} quantity updated`);
+      showToast(t('detail.toasts.ingredientUpdated', { name: conflictingIngredient.name }));
       setConflictModalVisible(false);
       setConflictingIngredient(null);
       setExistingItem(null);
     } catch (error) {
       console.error('Failed to replace ingredient:', error);
-      showToast('Failed to update ingredient');
+      showToast(t('detail.toasts.ingredientUpdateFailed'));
     }
   }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
 
@@ -368,20 +370,20 @@ export function RecipeDetailScreen({
       await shoppingService.updateItem(existingItem.id, {
         quantity: finalQuantity,
       });
-      showToast(`${conflictingIngredient.name} quantity updated`);
+      showToast(t('detail.toasts.ingredientUpdated', { name: conflictingIngredient.name }));
       setConflictModalVisible(false);
       setConflictingIngredient(null);
       setExistingItem(null);
     } catch (error) {
       console.error('Failed to add to quantity:', error);
-      showToast('Failed to update ingredient');
+      showToast(t('detail.toasts.ingredientUpdateFailed'));
     }
   }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
 
   const handleAddAllIngredients = useCallback(async () => {
     const ingredients = displayRecipe.ingredients || [];
     if (ingredients.length === 0) {
-      showToast('No ingredients to add');
+      showToast(t('detail.toasts.noIngredients'));
       return;
     }
 
@@ -390,7 +392,7 @@ export function RecipeDetailScreen({
       const mainList = data.shoppingLists.find(list => list.isMain);
 
       if (!mainList) {
-        showToast('No main shopping list found. Please create one.');
+        showToast(t('detail.toasts.noMainList'));
         return;
       }
 
@@ -440,10 +442,10 @@ export function RecipeDetailScreen({
         }
       }
 
-      showToast(`All ${ingredients.length} ingredients added to ${mainList.name}`);
+      showToast(t('detail.toasts.allIngredientsAdded', { count: ingredients.length, listName: mainList.name }));
     } catch (error) {
       console.error('Failed to add all ingredients:', error);
-      showToast('Failed to add ingredients');
+      showToast(t('detail.toasts.addIngredientsFailed'));
     }
   }, [shoppingService, displayRecipe.ingredients, showToast, getIngredientAmount, getIngredientUnit]);
 
@@ -485,13 +487,13 @@ export function RecipeDetailScreen({
     <SafeAreaView style={styles.container}>
       <View onLayout={handleScreenHeaderLayout}>
         <ScreenHeader
-          title="Kitchen Hub"
+          title={t('screen.headerTitle')}
           titleIcon="restaurant-outline"
           leftIcon="back"
           onLeftPress={onBack}
           rightActions={{
-            edit: { onPress: () => setShowEditModal(true), label: 'Edit recipe' },
-            share: { onPress: () => setShowShareModal(true), label: 'Share recipe' },
+            edit: { onPress: () => setShowEditModal(true), label: t('detail.editActionLabel') },
+            share: { onPress: () => setShowShareModal(true), label: t('detail.shareActionLabel') },
           }}
           variant="centered"
         />
@@ -544,7 +546,7 @@ export function RecipeDetailScreen({
         {isLoadingDetails ? (
           <View style={{ padding: 20, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={colors.recipes} />
-            <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading recipe details...</Text>
+            <Text style={{ marginTop: 10, color: colors.textSecondary }}>{t('screen.loadingDetails')}</Text>
           </View>
         ) : (
           <RecipeContentWrapper
@@ -589,7 +591,7 @@ export function RecipeDetailScreen({
       <ShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title="Share Recipe"
+        title={t('detail.shareTitle')}
         shareText={shareText}
       />
 

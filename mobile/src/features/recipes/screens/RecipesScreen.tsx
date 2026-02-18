@@ -39,6 +39,7 @@ import {
   getRecipeCategoryIcon,
   normalizeRecipeCategory,
 } from '../constants';
+import { useTranslation } from 'react-i18next';
 
 const RECIPES_SHOW_CATEGORY_FILTER_KEY = '@kitchen_hub_recipes_show_category_filter';
 
@@ -50,6 +51,7 @@ const CARD_SKELETON_STYLE: ViewStyle = { marginBottom: spacing.lg };
 
 
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
+  const { t } = useTranslation('recipes');
   const { width, isTablet } = useResponsive();
   const { user } = useAuth();
   const { recipes, isLoading, addRecipe, updateRecipe, refresh, getRecipeById } = useRecipes();
@@ -172,15 +174,15 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     try {
       const full = await getRecipeById(recipe.id);
       const hasDetails = !!full?.ingredients?.length && !!full?.instructions?.length;
-      if (!hasDetails) {
-        showToast('Recipe details are still loading. Please try again.');
+        if (!hasDetails) {
+        showToast(t('detail.toasts.recipeDetailsLoading'));
         return;
       }
       setEditingRecipe(full);
       setShowEditRecipeModal(true);
     } catch (error) {
       logger.error('Failed to load recipe details for edit:', error instanceof Error ? error : String(error));
-      showToast('Failed to load recipe details.');
+      showToast(t('detail.toasts.recipeDetailsLoadFailed'));
     } finally {
       setIsLoadingEdit(false);
     }
@@ -245,10 +247,10 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="House Recipes"
+        title={t('screen.headerTitle')}
         titleIcon="book-outline"
         rightActions={{
-          add: { onPress: handleAddRecipe, label: 'Add item' },
+          add: { onPress: handleAddRecipe, label: t('screen.addActionLabel') },
         }}
       />
 
@@ -270,9 +272,9 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       ) : showCollectionEmptyState ? (
         <EmptyState
           icon="book-outline"
-          title="No recipes yet"
-          description="Start building your collection by adding your favorite recipes"
-          actionLabel="Add your first recipe"
+          title={t('screen.emptyTitle')}
+          description={t('screen.emptyDescription')}
+          actionLabel={t('screen.emptyAction')}
           onActionPress={handleAddRecipe}
           actionColor={colors.recipes}
         />
@@ -282,7 +284,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             <Ionicons name="search" size={20} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name..."
+              placeholder={t('screen.searchPlaceholder')}
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -295,10 +297,10 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                 <TouchableOpacity
                   style={styles.filterHideButton}
                   onPress={handleToggleCategoryFilter}
-                  accessibilityLabel="Hide category filter"
+                  accessibilityLabel={t('screen.hideCategoryFilter')}
                 >
                 <Ionicons name="eye-off-outline" size={20} color={colors.textMuted} />
-                <Text style={styles.filterHideButtonText}>Hide</Text>
+                <Text style={styles.filterHideButtonText}>{t('screen.hide')}</Text>
               </TouchableOpacity>
               </View>
 
@@ -327,7 +329,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                           />
                         </View>
                         <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                          {category}
+                          {t(`categories:${category}`, { defaultValue: category })}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -339,10 +341,10 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             <TouchableOpacity
               style={styles.filterShowButton}
               onPress={handleToggleCategoryFilter}
-              accessibilityLabel="Show category filter"
+              accessibilityLabel={t('screen.showCategoryFilter')}
             >
               <Ionicons name="filter-outline" size={20} color={colors.textMuted} />
-              <Text style={styles.filterShowButtonText}>Show category filter</Text>
+              <Text style={styles.filterShowButtonText}>{t('screen.showCategoryFilterButton')}</Text>
             </TouchableOpacity>
           )}
 
@@ -356,13 +358,13 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             {showFilteredEmptyState ? (
               <EmptyState
                 icon="search-outline"
-                title={hasActiveSearch ? 'No matching recipes' : 'No recipes in this category'}
+                title={hasActiveSearch ? t('screen.noMatchingRecipes') : t('screen.noRecipesInCategory')}
                 description={
                   hasActiveSearch
-                    ? `No recipes match "${searchQuery.trim()}". Try another name or reset filters.`
-                    : 'Try a different category or reset filters.'
+                    ? t('screen.noRecipesMatchSearch', { query: searchQuery.trim() })
+                    : t('screen.tryDifferentCategory')
                 }
-                actionLabel={hasActiveSearch || hasActiveCategoryFilter ? 'Reset filters' : undefined}
+                actionLabel={hasActiveSearch || hasActiveCategoryFilter ? t('screen.resetFilters') : undefined}
                 onActionPress={hasActiveSearch || hasActiveCategoryFilter ? handleResetFilters : undefined}
                 actionColor={colors.recipes}
               />

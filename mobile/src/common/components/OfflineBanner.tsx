@@ -77,6 +77,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: spacing.xs,
-    marginLeft: spacing.sm,
+    marginStart: spacing.sm,
   },
 });

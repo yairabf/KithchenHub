@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.sm,
   },
   periodContainer: {
-    marginLeft: spacing.md,
+    marginStart: spacing.md,
     gap: spacing.xs,
   },
   periodButton: {
