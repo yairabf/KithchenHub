@@ -23,5 +23,41 @@
     "saving": "שומר...",
     "success": "הפעולה הצליחה!",
     "error": "אירעה שגיאה"
+  },
+  "share": {
+    "previewLabel": "תצוגה מקדימה",
+    "optionAccessibility": "שתף אל {{option}}",
+    "options": {
+      "whatsapp": "ווטסאפ",
+      "telegram": "טלגרם",
+      "web": "שתף...",
+      "clipboard": "העתק"
+    },
+    "feedback": {
+      "copied": "הועתק ללוח!",
+      "failed": "לא ניתן לשתף. נסה אפשרות אחרת."
+    },
+    "footer": "שותף מתוך Kitchen Hub"
+  },
+  "dateTimePicker": {
+    "title": "בחירת תאריך ושעה",
+    "confirm": "אישור",
+    "placeholder": "בחר תאריך ושעה",
+    "defaultLabel": "בורר תאריך ושעה",
+    "selected": "נבחר:",
+    "changeDate": "שנה תאריך",
+    "changeTime": "שנה שעה",
+    "tabs": {
+      "date": "תאריך",
+      "time": "שעה"
+    },
+    "accessibility": {
+      "picker": "{{value}}",
+      "hint": "פותח בחירת תאריך ושעה",
+      "dateTab": "לשונית תאריך",
+      "timeTab": "לשונית שעה",
+      "changeDate": "שנה תאריך",
+      "changeTime": "שנה שעה"
+    }
   }
 }

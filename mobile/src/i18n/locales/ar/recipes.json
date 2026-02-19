@@ -38,5 +38,17 @@
       "allIngredientsAdded": "تمت إضافة كل {{count}} مكونات إلى {{listName}}",
       "addIngredientsFailed": "فشل إضافة المكونات"
     }
+  },
+  "share": {
+    "notAvailable": "الوصفة غير متاحة",
+    "untitledRecipe": "وصفة بدون اسم",
+    "header": "الوصفة: {{name}}",
+    "cookTime": "وقت الطهي",
+    "prepTime": "وقت التحضير",
+    "servings": "الحصص",
+    "ingredients": "المكونات",
+    "instructions": "الخطوات",
+    "notAvailableValue": "غير متاح",
+    "emptyIngredients": "لا توجد مكونات."
   }
 }

@@ -37,5 +37,11 @@
     },
     "dueDateLabel": "Due Date & Time",
     "dueDatePlaceholder": "Select date and time..."
+  },
+  "share": {
+    "header": "Home Chores",
+    "empty": "No chores to share!",
+    "todaySection": "Today's Chores:",
+    "upcomingSection": "Upcoming Chores:"
   }
 }

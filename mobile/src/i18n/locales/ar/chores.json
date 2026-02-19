@@ -37,5 +37,11 @@
     },
     "dueDateLabel": "تاريخ ووقت الاستحقاق",
     "dueDatePlaceholder": "اختر التاريخ والوقت..."
+  },
+  "share": {
+    "header": "مهام المنزل",
+    "empty": "لا توجد مهام للمشاركة!",
+    "todaySection": "مهام اليوم:",
+    "upcomingSection": "المهام القادمة:"
   }
 }

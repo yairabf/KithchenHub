@@ -38,5 +38,17 @@
       "allIngredientsAdded": "כל {{count}} המרכיבים נוספו ל-{{listName}}",
       "addIngredientsFailed": "הוספת המרכיבים נכשלה"
     }
+  },
+  "share": {
+    "notAvailable": "המתכון אינו זמין",
+    "untitledRecipe": "מתכון ללא שם",
+    "header": "מתכון: {{name}}",
+    "cookTime": "זמן בישול",
+    "prepTime": "זמן הכנה",
+    "servings": "מנות",
+    "ingredients": "מרכיבים",
+    "instructions": "הוראות הכנה",
+    "notAvailableValue": "לא זמין",
+    "emptyIngredients": "אין מרכיבים."
   }
 }

@@ -38,5 +38,17 @@
       "allIngredientsAdded": "All {{count}} ingredients added to {{listName}}",
       "addIngredientsFailed": "Failed to add ingredients"
     }
+  },
+  "share": {
+    "notAvailable": "Recipe not available",
+    "untitledRecipe": "Untitled Recipe",
+    "header": "Recipe: {{name}}",
+    "cookTime": "Cook Time",
+    "prepTime": "Prep Time",
+    "servings": "Servings",
+    "ingredients": "Ingredients",
+    "instructions": "Instructions",
+    "notAvailableValue": "N/A",
+    "emptyIngredients": "No ingredients listed."
   }
 }

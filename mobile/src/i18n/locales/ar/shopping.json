@@ -91,5 +91,10 @@
     "deleteListTitle": "حذف القائمة",
     "deleteListMessage": "حذف \"{{name}}\"؟",
     "deleteListConfirm": "حذف"
+  },
+  "share": {
+    "shoppingListHeader": "قائمة التسوق: {{listName}}",
+    "emptyShopping": "لا توجد عناصر بعد.",
+    "categoryHeader": "{{category}}:"
   }
 }

@@ -91,5 +91,10 @@
     "deleteListTitle": "מחק רשימה",
     "deleteListMessage": "למחוק את \"{{name}}\"?",
     "deleteListConfirm": "מחק"
+  },
+  "share": {
+    "shoppingListHeader": "רשימת קניות: {{listName}}",
+    "emptyShopping": "עדיין אין פריטים.",
+    "categoryHeader": "{{category}}:"
   }
 }

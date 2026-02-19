@@ -23,5 +23,41 @@
     "saving": "Saving...",
     "success": "Success!",
     "error": "Error occurred"
+  },
+  "share": {
+    "previewLabel": "معاينة",
+    "optionAccessibility": "مشاركة عبر {{option}}",
+    "options": {
+      "whatsapp": "واتساب",
+      "telegram": "تيليجرام",
+      "web": "مشاركة...",
+      "clipboard": "نسخ"
+    },
+    "feedback": {
+      "copied": "تم النسخ إلى الحافظة!",
+      "failed": "تعذر المشاركة. يرجى المحاولة بخيار آخر."
+    },
+    "footer": "تمت المشاركة من Kitchen Hub"
+  },
+  "dateTimePicker": {
+    "title": "اختيار التاريخ والوقت",
+    "confirm": "تأكيد",
+    "placeholder": "اختر التاريخ والوقت",
+    "defaultLabel": "منتقي التاريخ والوقت",
+    "selected": "المحدد:",
+    "changeDate": "تغيير التاريخ",
+    "changeTime": "تغيير الوقت",
+    "tabs": {
+      "date": "التاريخ",
+      "time": "الوقت"
+    },
+    "accessibility": {
+      "picker": "{{value}}",
+      "hint": "يفتح اختيار التاريخ والوقت",
+      "dateTab": "تبويب التاريخ",
+      "timeTab": "تبويب الوقت",
+      "changeDate": "تغيير التاريخ",
+      "changeTime": "تغيير الوقت"
+    }
   }
 }

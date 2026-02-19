@@ -91,5 +91,10 @@
     "deleteListTitle": "Delete List",
     "deleteListMessage": "Delete \"{{name}}\"?",
     "deleteListConfirm": "Delete"
+  },
+  "share": {
+    "shoppingListHeader": "Shopping List: {{listName}}",
+    "emptyShopping": "No items yet.",
+    "categoryHeader": "{{category}}:"
   }
 }
