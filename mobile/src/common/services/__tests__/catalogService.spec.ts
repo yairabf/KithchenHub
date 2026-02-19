@@ -333,6 +333,36 @@ describe('CatalogService', () => {
       );
     });
 
+
+    it('should fallback to cached category items before hitting local providers', async () => {
+      const cachedItems: GroceryItem[] = [
+        { id: 'cached-apple', name: 'Cached Apple', image: '', category: 'Fruits', defaultQuantity: 1 },
+        { id: 'cached-milk', name: 'Cached Milk', image: '', category: 'Dairy', defaultQuantity: 1 },
+      ];
+
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(cachedItems));
+      mockApiGet.mockImplementation((url: string) => {
+        if (url.startsWith('/groceries/by-category')) {
+          return Promise.reject(new NetworkError('No internet'));
+        }
+        return Promise.reject(new Error(`Unexpected API call: ${url}`));
+      });
+
+      const items = await service.getGroceriesByCategory('Fruits');
+
+      expect(items).toEqual([
+        {
+          id: 'cached-apple',
+          name: 'Cached Apple',
+          image: '',
+          category: 'Fruits',
+          defaultQuantity: 1,
+        },
+      ]);
+      expect(mockApiGet).toHaveBeenCalledWith('/groceries/by-category?category=Fruits');
+      expect(mockApiGet).not.toHaveBeenCalledWith('/shopping-items/custom');
+    });
+
     it('should fallback to mock category items when API and local category are unavailable', async () => {
       mockApiGet.mockImplementation((url: string) => {
         if (url.startsWith('/groceries/by-category')) {

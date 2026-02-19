@@ -242,6 +242,25 @@ export class CatalogService {
     } catch (error) {
       console.error('Category fetch failed:', error);
 
+      // Fallback 1: Use persisted local catalog cache when available.
+      // This supports offline category browsing even if the category endpoint fails.
+      try {
+        const cachedItems = await this.getCachedGroceryItems();
+        const cachedCategoryItems = this.getCategoryItems(cachedItems, trimmedCategory);
+
+        if (cachedCategoryItems.length > 0) {
+          this.logCatalogEvent('log', 'Using cached category fallback items', {
+            category: trimmedCategory,
+            itemCount: cachedCategoryItems.length,
+            source: CatalogSource.CACHE,
+          });
+          return cachedCategoryItems;
+        }
+      } catch (fallbackError) {
+        console.error('Category fallback from cached catalog failed:', fallbackError);
+      }
+
+      // Fallback 2: Use in-memory/local catalog provider.
       try {
         const localItems = await this.getGroceryItems();
         const localCategoryItems = this.getCategoryItems(localItems, trimmedCategory);
@@ -258,6 +277,7 @@ export class CatalogService {
         console.error('Category fallback from local catalog failed:', fallbackError);
       }
 
+      // Fallback 3: Use bundled mock data as final safety net.
       const mockCategoryItems = this.getCategoryItems(mockGroceriesDB, trimmedCategory);
       this.logCatalogEvent('warn', 'Using mock category fallback items', {
         category: trimmedCategory,
