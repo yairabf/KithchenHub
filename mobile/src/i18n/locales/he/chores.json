@@ -17,6 +17,20 @@
     "upcomingTitle": "מטלות בהמשך",
     "shareTitle": "שתף מטלות"
   },
+  "progress": {
+    "today": "היום",
+    "title": "התקדמות יומית",
+    "bodyCompact": "השלמת {{completed}} מתוך {{total}} מטלות היום. כל הכבוד!",
+    "bodyWide": "השלמת {{completed}} מתוך {{total}} מטלות היום. המשך כך כדי להגיע ליעדים השבועיים שלך!"
+  },
+  "card": {
+    "editLabel": "ערוך מטלה {{title}}",
+    "editHint": "פותח את פרטי המטלה",
+    "toggleDoneHint": "הקש לסימון כלא הושלם",
+    "togglePendingHint": "הקש לסימון כהושלם",
+    "dueBy": "עד",
+    "oneTime": "חד-פעמי"
+  },
   "modal": {
     "addTitle": "הוסף מטלה",
     "editTitle": "ערוך מטלה",
@@ -43,5 +57,12 @@
     "empty": "אין מטלות לשיתוף!",
     "todaySection": "מטלות להיום:",
     "upcomingSection": "מטלות בהמשך:"
+  },
+  "quickActionModal": {
+    "title": "הוספה מהירה",
+    "choreNamePlaceholder": "הוסף מטלה...",
+    "assignLabel": "הקצה ל:",
+    "unassigned": "לא מוקצה",
+    "manage": "נהל"
   }
 }

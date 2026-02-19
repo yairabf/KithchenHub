@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { CenteredModal } from '../../../common/components/CenteredModal/CenteredModal';
-import { colors, spacing, typography } from '../../../theme';
+import { useTranslation } from 'react-i18next';
+import { CenteredModal } from '../../../../common/components/CenteredModal/CenteredModal';
+import { colors, spacing, typography } from '../../../../theme';
 
 interface GuestDataImportModalProps {
   visible: boolean;
@@ -38,20 +39,20 @@ export function GuestDataImportModal({
   onImport,
   onSkip,
 }: GuestDataImportModalProps) {
+  const { t } = useTranslation('auth');
+
   return (
     <CenteredModal
       visible={visible}
       onClose={onSkip}
-      title="Found existing data"
-      confirmText="Import local data"
-      cancelText="Not now"
+      title={t('guestDataImport.title')}
+      confirmText={t('guestDataImport.importButton')}
+      cancelText={t('guestDataImport.skipButton')}
       onConfirm={onImport}
       showActions={true}
       confirmColor={colors.primary}
     >
-      <Text style={styles.bodyText}>
-        We found recipes or plans from your guest session. Would you like to import them to your account?
-      </Text>
+      <Text style={styles.bodyText}>{t('guestDataImport.body')}</Text>
     </CenteredModal>
   );
 }

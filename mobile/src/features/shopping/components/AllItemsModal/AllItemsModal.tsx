@@ -7,10 +7,10 @@ import {
   ScrollView,
   Image,
   TouchableWithoutFeedback,
-  Animated,
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { AllItemsModalProps, GroceryItem } from './types';
@@ -22,10 +22,9 @@ export function AllItemsModal({
   onSelectItem,
   onQuickAddItem,
 }: AllItemsModalProps) {
+  const { t } = useTranslation('shopping');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-
-  console.log('AllItemsModal render - visible:', visible, 'items count:', items.length);
 
   // Filter items based on search query
   const filteredItems = useMemo(() => {
@@ -85,12 +84,14 @@ export function AllItemsModal({
         </TouchableWithoutFeedback>
 
         {/* Side Panel */}
-        <Animated.View style={styles.sidePanel}>
+        <View style={styles.sidePanel}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>All Items</Text>
-              <Text style={styles.headerSubtitle}>{filteredItems.length} items</Text>
+              <Text style={styles.headerTitle}>{t('allItems.title')}</Text>
+              <Text style={styles.headerSubtitle}>
+                {t('allItems.itemCount_other', { count: filteredItems.length })}
+              </Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
               <Ionicons name="close" size={28} color={colors.textPrimary} />
@@ -103,7 +104,7 @@ export function AllItemsModal({
               <Ionicons name="search-outline" size={18} color={colors.textMuted} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search items..."
+                placeholder={t('allItems.searchPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -125,8 +126,8 @@ export function AllItemsModal({
             {categories.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="search-outline" size={48} color={colors.textMuted} />
-                <Text style={styles.emptyText}>No items found</Text>
-                <Text style={styles.emptySubtext}>Try a different search term</Text>
+                <Text style={styles.emptyText}>{t('allItems.noItemsFound')}</Text>
+                <Text style={styles.emptySubtext}>{t('allItems.noItemsHint')}</Text>
               </View>
             ) : (
               categories.map((category) => {
@@ -199,7 +200,7 @@ export function AllItemsModal({
               })
             )}
           </ScrollView>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );

@@ -19,5 +19,25 @@
   "appVersion": "App Version",
   "privacyPolicy": "Privacy Policy",
   "termsOfService": "Terms of Service",
-  "opensExternalLink": "(opens external link)"
+  "opensExternalLink": "(opens external link)",
+  "importData": {
+    "title": "Import Data",
+    "titleSuccess": "Import Complete",
+    "loading": "Importing your recipes, lists, and chores...",
+    "loadingHint": "This may take a few moments.",
+    "successTitle": "Success!",
+    "successBody": "Your data has been successfully imported to your account.",
+    "clearDataButton": "Clear local data",
+    "keepCloseButton": "Keep & Close",
+    "errorTitle": "Import Failed",
+    "retryButton": "Retry",
+    "clearDataAlert": {
+      "title": "Clear Local Data?",
+      "message": "This will remove all guest data from this device. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Clear",
+      "errorTitle": "Error",
+      "errorMessage": "Failed to clear local data."
+    }
+  }
 }

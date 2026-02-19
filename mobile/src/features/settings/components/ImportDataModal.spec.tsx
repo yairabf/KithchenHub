@@ -2,11 +2,18 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { ImportDataModal } from './ImportDataModal';
 import { ImportService } from '../../../services/import/importService';
-import { Alert } from 'react-native';
+import { Alert, AlertButton } from 'react-native';
 
 // Mock dependencies
 jest.mock('@expo/vector-icons', () => ({
     Ionicons: 'Ionicons',
+}));
+
+jest.mock('react-i18next', () => ({
+    useTranslation: () => ({
+        t: (key: string) => key,
+        i18n: { language: 'en', dir: () => 'ltr' },
+    }),
 }));
 
 jest.mock('../../../services/import/importService', () => ({
@@ -29,15 +36,14 @@ describe('ImportDataModal', () => {
         // Default success mock behavior
         (ImportService.gatherLocalData as jest.Mock).mockResolvedValue({});
         (ImportService.submitImport as jest.Mock).mockResolvedValue({});
-        jest.spyOn(Alert, 'alert');
-    });
+    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  });
 
     it('renders and starts import automatically when visible', async () => {
         const onClose = jest.fn();
         const { getByText } = render(<ImportDataModal visible={true} onClose={onClose} />);
 
-        // Should start loading
-        expect(getByText('Importing your recipes, lists, and chores...')).toBeTruthy();
+        expect(getByText('importData.loading')).toBeTruthy();
         expect(ImportService.gatherLocalData).toHaveBeenCalled();
         await waitFor(() => {
             expect(ImportService.submitImport).toHaveBeenCalled();
@@ -48,23 +54,22 @@ describe('ImportDataModal', () => {
         const onClose = jest.fn();
         const { getByText, findByText } = render(<ImportDataModal visible={true} onClose={onClose} />);
 
-        // Wait for success
-        const successTitle = await findByText('Success!');
+        const successTitle = await findByText('importData.successTitle');
         expect(successTitle).toBeTruthy();
-        expect(getByText('Clear local data')).toBeTruthy();
-        expect(getByText('Keep & Close')).toBeTruthy();
+        expect(getByText('importData.clearDataButton')).toBeTruthy();
+        expect(getByText('importData.keepCloseButton')).toBeTruthy();
     });
 
-    it('triggers confirmation alert when Clear local data is pressed', async () => {
+    it('triggers confirmation alert when clear data button is pressed', async () => {
         const onClose = jest.fn();
         const { findByText, getByText } = render(<ImportDataModal visible={true} onClose={onClose} />);
 
-        await findByText('Success!');
-        fireEvent.press(getByText('Clear local data'));
+        await findByText('importData.successTitle');
+        fireEvent.press(getByText('importData.clearDataButton'));
 
         expect(Alert.alert).toHaveBeenCalledWith(
-            'Clear Local Data?',
-            expect.stringContaining('This will remove all guest data'),
+            'importData.clearDataAlert.title',
+            'importData.clearDataAlert.message',
             expect.any(Array)
         );
     });
@@ -73,17 +78,14 @@ describe('ImportDataModal', () => {
         const onClose = jest.fn();
         const { findByText, getByText } = render(<ImportDataModal visible={true} onClose={onClose} />);
 
-        await findByText('Success!');
-        fireEvent.press(getByText('Clear local data'));
+        await findByText('importData.successTitle');
+        fireEvent.press(getByText('importData.clearDataButton'));
 
-        // Mock the Alert button press
-        // @ts-ignore
-        const alertCalls = (Alert.alert as jest.Mock).mock.calls;
-        const buttons = alertCalls[0][2];
-        const clearButton = buttons.find((b: any) => b.text === 'Clear');
+        const alertSpy = Alert.alert as jest.MockedFunction<typeof Alert.alert>;
+        const buttons = alertSpy.mock.calls[0][2] as AlertButton[];
+        const confirmButton = buttons.find(b => b.text === 'importData.clearDataAlert.confirm');
 
-        // Execute the onPress of the "Clear" button
-        await clearButton.onPress();
+        await confirmButton?.onPress?.();
 
         expect(mockClearGuestData).toHaveBeenCalled();
         expect(onClose).toHaveBeenCalled();
@@ -93,18 +95,14 @@ describe('ImportDataModal', () => {
         const onClose = jest.fn();
         const { findByText, getByText } = render(<ImportDataModal visible={true} onClose={onClose} />);
 
-        await findByText('Success!');
-        fireEvent.press(getByText('Clear local data'));
+        await findByText('importData.successTitle');
+        fireEvent.press(getByText('importData.clearDataButton'));
 
-        // @ts-ignore
-        const alertCalls = (Alert.alert as jest.Mock).mock.calls;
-        const buttons = alertCalls[0][2];
-        const cancelButton = buttons.find((b: any) => b.text === 'Cancel');
+        const alertSpy = Alert.alert as jest.MockedFunction<typeof Alert.alert>;
+        const buttons = alertSpy.mock.calls[0][2] as AlertButton[];
+        const cancelButton = buttons.find(b => b.text === 'importData.clearDataAlert.cancel');
 
-        // Execute cancel (usually just closes alert, in our mock we do nothing or just ensure no callback)
-        if (cancelButton.onPress) {
-            cancelButton.onPress();
-        }
+        cancelButton?.onPress?.();
 
         expect(mockClearGuestData).not.toHaveBeenCalled();
     });

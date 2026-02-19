@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { colors } from '../../../../theme';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
@@ -15,9 +16,6 @@ import { ManageHouseholdModal } from '../../../settings/components/ManageHouseho
 import { DateTimePicker } from '../../../../common/components/DateTimePicker';
 import { styles } from './styles';
 import { ChoresQuickActionModalProps, ChoreTemplate } from './types';
-import { createChoresService } from '../../services/choresService';
-import { config } from '../../../../config';
-import { useAuth } from '../../../../contexts/AuthContext';
 import { getDirectionalIcon } from '../../../../common/utils/rtlIcons';
 
 // Mock Chores Database - Common household chores
@@ -78,26 +76,20 @@ const mockChoresDB: ChoreTemplate[] = [
 ];
 
 export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQuickActionModalProps) {
+  const { t } = useTranslation('chores');
   const { members } = useHousehold();
-  const { user } = useAuth();
   const [newChoreText, setNewChoreText] = useState('');
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string | undefined>(undefined);
+  const [selectedAssigneeName, setSelectedAssigneeName] = useState<string | undefined>(undefined);
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(new Date());
-  const [selectedAssignee, setSelectedAssignee] = useState<string | undefined>(undefined);
   const [showManageHousehold, setShowManageHousehold] = useState(false);
   const [selectedIcon, setSelectedIcon] = useState<string>('📋');
   const [searchResults, setSearchResults] = useState<ChoreTemplate[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [choreTemplates, setChoreTemplates] = useState<ChoreTemplate[]>([]);
+  const choreTemplates = mockChoresDB;
 
-  // ... existing refs and memo ...
   const inputRef = useRef<TextInput>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Load chore templates from mock DB on mount
-  useEffect(() => {
-    setChoreTemplates(mockChoresDB);
-  }, []);
 
   // Handle search logic
   useEffect(() => {
@@ -125,62 +117,59 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
     };
   }, [newChoreText, choreTemplates]);
 
-  const handleSelectChoreTemplate = (choreTemplate: ChoreTemplate) => {
+  const handleSelectChoreTemplate = useCallback((choreTemplate: ChoreTemplate) => {
     setNewChoreText(choreTemplate.name);
     setSelectedIcon(choreTemplate.icon);
     setShowSearchDropdown(false);
-  };
+  }, []);
 
-  // Helper to get formatted date section
-  const getDueDateSection = (date: Date): 'today' | 'thisWeek' => {
+  const handleSelectAssignee = useCallback((memberId: string, memberName: string) => {
+    setSelectedAssigneeId(memberId);
+    setSelectedAssigneeName(memberName);
+  }, []);
+
+  const handleClearAssignee = useCallback(() => {
+    setSelectedAssigneeId(undefined);
+    setSelectedAssigneeName(undefined);
+  }, []);
+
+  const getDueDateSection = useCallback((date: Date): 'today' | 'thisWeek' => {
     const today = dayjs().startOf('day');
     const compareDate = dayjs(date).startOf('day');
+    return compareDate.isSame(today, 'day') ? 'today' : 'thisWeek';
+  }, []);
 
-    if (compareDate.isSame(today, 'day')) {
-      return 'today';
-    }
-    return 'thisWeek';
-  };
-
-  const handleAddChore = () => {
+  const handleAddChore = useCallback(() => {
     if (!newChoreText.trim() || !selectedDateTime) return;
 
     const section = getDueDateSection(selectedDateTime);
-
-    // Format the date and time
     const formattedDate = dayjs(selectedDateTime).format('MMM D, YYYY');
     const formattedTime = dayjs(selectedDateTime).format('h:mm A');
 
-    // Call the callback to add chore to parent state
-    if (onAddChore) {
-      onAddChore({
-        name: newChoreText.trim(),
-        icon: selectedIcon,
-        assignee: selectedAssignee,
-        assigneeId: selectedAssigneeId,
-        dueDate: formattedDate,
-        dueTime: formattedTime,
-        section: section,
-      });
-    }
+    onAddChore?.({
+      name: newChoreText.trim(),
+      icon: selectedIcon,
+      assignee: selectedAssigneeName,
+      assigneeId: selectedAssigneeId,
+      dueDate: formattedDate,
+      dueTime: formattedTime,
+      section,
+    });
 
-    // Reset form
     setNewChoreText('');
     setSelectedIcon('📋');
-    setSelectedAssignee(undefined);
+    setSelectedAssigneeName(undefined);
     setSelectedAssigneeId(undefined);
     setSelectedDateTime(new Date());
     setShowSearchDropdown(false);
-
-    // Close modal after adding
     onClose();
-  };
+  }, [newChoreText, selectedDateTime, selectedIcon, selectedAssigneeName, selectedAssigneeId, getDueDateSection, onAddChore, onClose]);
 
   return (
     <CenteredModal
       visible={visible}
       onClose={onClose}
-      title="Quick Chores"
+      title={t('quickActionModal.title')}
       showActions={false}
     >
       {/* Quick Add Form */}
@@ -189,7 +178,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder="Add a chore..."
+            placeholder={t('quickActionModal.choreNamePlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={newChoreText}
             onChangeText={setNewChoreText}
@@ -257,7 +246,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
 
       {/* Assignee Selector */}
       <View style={styles.assigneeSection}>
-        <Text style={styles.assigneeLabel}>Assign to:</Text>
+        <Text style={styles.assigneeLabel}>{t('quickActionModal.assignLabel')}</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -267,15 +256,15 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
           <TouchableOpacity
             style={[
               styles.assigneeChip,
-              !selectedAssignee && styles.assigneeChipSelected,
+              !selectedAssigneeName && styles.assigneeChipSelected,
             ]}
-            onPress={() => setSelectedAssignee(undefined)}
+            onPress={handleClearAssignee}
           >
             <Text style={[
               styles.assigneeChipText,
-              !selectedAssignee && styles.assigneeChipTextSelected,
+              !selectedAssigneeName && styles.assigneeChipTextSelected,
             ]}>
-              Unassigned
+              {t('quickActionModal.unassigned')}
             </Text>
           </TouchableOpacity>
           {members.map(member => (
@@ -283,14 +272,14 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
               key={member.id}
               style={[
                 styles.assigneeChip,
-                selectedAssignee === member.name && styles.assigneeChipSelected,
+                selectedAssigneeName === member.name && styles.assigneeChipSelected,
                 { borderColor: member.color || colors.textMuted },
               ]}
-              onPress={() => setSelectedAssignee(member.name)}
+              onPress={() => handleSelectAssignee(member.id, member.name)}
             >
               <Text style={[
                 styles.assigneeChipText,
-                selectedAssignee === member.name && styles.assigneeChipTextSelected,
+                selectedAssigneeName === member.name && styles.assigneeChipTextSelected,
               ]}>
                 {member.name}
               </Text>
@@ -301,7 +290,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
             onPress={() => setShowManageHousehold(true)}
           >
             <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.assigneeChipText}>Manage</Text>
+            <Text style={styles.assigneeChipText}>{t('quickActionModal.manage')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

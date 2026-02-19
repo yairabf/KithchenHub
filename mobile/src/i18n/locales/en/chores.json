@@ -17,6 +17,20 @@
     "upcomingTitle": "Upcoming Chores",
     "shareTitle": "Share Chores"
   },
+  "progress": {
+    "today": "Today",
+    "title": "Daily Progress",
+    "bodyCompact": "You've completed {{completed}} out of {{total}} chores today. Keep it up!",
+    "bodyWide": "You've completed {{completed}} out of {{total}} chores today. Keep it up to reach your weekly goals!"
+  },
+  "card": {
+    "editLabel": "Edit chore {{title}}",
+    "editHint": "Opens chore details",
+    "toggleDoneHint": "Tap to mark incomplete",
+    "togglePendingHint": "Tap to mark complete",
+    "dueBy": "Due by",
+    "oneTime": "One-time"
+  },
   "modal": {
     "addTitle": "Add Chore",
     "editTitle": "Edit Chore",
@@ -43,5 +57,12 @@
     "empty": "No chores to share!",
     "todaySection": "Today's Chores:",
     "upcomingSection": "Upcoming Chores:"
+  },
+  "quickActionModal": {
+    "title": "Quick Chores",
+    "choreNamePlaceholder": "Add a chore...",
+    "assignLabel": "Assign to:",
+    "unassigned": "Unassigned",
+    "manage": "Manage"
   }
 }

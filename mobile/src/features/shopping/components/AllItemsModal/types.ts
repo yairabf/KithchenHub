@@ -1,10 +1,5 @@
-export interface GroceryItem {
-  id: string;
-  name: string;
-  image: string;
-  category: string;
-  defaultQuantity: number;
-}
+export type { GroceryItem } from '../../types/groceryItem';
+import type { GroceryItem } from '../../types/groceryItem';
 
 export interface AllItemsModalProps {
   visible: boolean;

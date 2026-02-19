@@ -96,5 +96,13 @@
     "shoppingListHeader": "قائمة التسوق: {{listName}}",
     "emptyShopping": "لا توجد عناصر بعد.",
     "categoryHeader": "{{category}}:"
+  },
+  "allItems": {
+    "title": "جميع العناصر",
+    "itemCount_one": "عنصر واحد",
+    "itemCount_other": "{{count}} عناصر",
+    "searchPlaceholder": "ابحث عن عناصر...",
+    "noItemsFound": "لم يتم العثور على عناصر",
+    "noItemsHint": "جرب مصطلح بحث مختلف"
   }
 }

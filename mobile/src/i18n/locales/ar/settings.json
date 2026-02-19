@@ -19,5 +19,25 @@
   "appVersion": "إصدار التطبيق",
   "privacyPolicy": "سياسة الخصوصية",
   "termsOfService": "شروط الخدمة",
-  "opensExternalLink": "(يفتح في رابط خارجي)"
+  "opensExternalLink": "(يفتح في رابط خارجي)",
+  "importData": {
+    "title": "استيراد البيانات",
+    "titleSuccess": "اكتمل الاستيراد",
+    "loading": "جارٍ استيراد الوصفات والقوائم والمهام...",
+    "loadingHint": "قد يستغرق هذا بضع لحظات.",
+    "successTitle": "نجح الاستيراد!",
+    "successBody": "تم استيراد بياناتك بنجاح إلى حسابك.",
+    "clearDataButton": "مسح البيانات المحلية",
+    "keepCloseButton": "احتفظ وأغلق",
+    "errorTitle": "فشل الاستيراد",
+    "retryButton": "إعادة المحاولة",
+    "clearDataAlert": {
+      "title": "مسح البيانات المحلية؟",
+      "message": "ستؤدي هذه العملية إلى إزالة جميع بيانات الضيف من هذا الجهاز. لا يمكن التراجع عن هذا الإجراء.",
+      "cancel": "إلغاء",
+      "confirm": "مسح",
+      "errorTitle": "خطأ",
+      "errorMessage": "فشل مسح البيانات المحلية."
+    }
+  }
 }

@@ -96,5 +96,13 @@
     "shoppingListHeader": "Shopping List: {{listName}}",
     "emptyShopping": "No items yet.",
     "categoryHeader": "{{category}}:"
+  },
+  "allItems": {
+    "title": "All Items",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "searchPlaceholder": "Search items...",
+    "noItemsFound": "No items found",
+    "noItemsHint": "Try a different search term"
   }
 }

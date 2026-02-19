@@ -17,6 +17,20 @@
     "upcomingTitle": "المهام القادمة",
     "shareTitle": "مشاركة المهام"
   },
+  "progress": {
+    "today": "اليوم",
+    "title": "التقدم اليومي",
+    "bodyCompact": "أنجزت {{completed}} من أصل {{total}} مهام اليوم. استمر!",
+    "bodyWide": "أنجزت {{completed}} من أصل {{total}} مهام اليوم. استمر للوصول إلى أهدافك الأسبوعية!"
+  },
+  "card": {
+    "editLabel": "تعديل المهمة {{title}}",
+    "editHint": "يفتح تفاصيل المهمة",
+    "toggleDoneHint": "اضغط للتحديد كغير مكتمل",
+    "togglePendingHint": "اضغط للتحديد كمكتمل",
+    "dueBy": "مستحقة قبل",
+    "oneTime": "مرة واحدة"
+  },
   "modal": {
     "addTitle": "إضافة مهمة",
     "editTitle": "تعديل مهمة",
@@ -43,5 +57,12 @@
     "empty": "لا توجد مهام للمشاركة!",
     "todaySection": "مهام اليوم:",
     "upcomingSection": "المهام القادمة:"
+  },
+  "quickActionModal": {
+    "title": "إضافة سريعة",
+    "choreNamePlaceholder": "أضف مهمة...",
+    "assignLabel": "تعيين إلى:",
+    "unassigned": "غير معين",
+    "manage": "إدارة"
   }
 }

@@ -96,5 +96,13 @@
     "shoppingListHeader": "רשימת קניות: {{listName}}",
     "emptyShopping": "עדיין אין פריטים.",
     "categoryHeader": "{{category}}:"
+  },
+  "allItems": {
+    "title": "כל הפריטים",
+    "itemCount_one": "פריט אחד",
+    "itemCount_other": "{{count}} פריטים",
+    "searchPlaceholder": "חפש פריטים...",
+    "noItemsFound": "לא נמצאו פריטים",
+    "noItemsHint": "נסה מונח חיפוש אחר"
   }
 }

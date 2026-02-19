@@ -19,5 +19,25 @@
   "appVersion": "גרסת האפליקציה",
   "privacyPolicy": "מדיניות פרטיות",
   "termsOfService": "תנאי שירות",
-  "opensExternalLink": "(נפתח בקישור חיצוני)"
+  "opensExternalLink": "(נפתח בקישור חיצוני)",
+  "importData": {
+    "title": "ייבוא נתונים",
+    "titleSuccess": "הייבוא הושלם",
+    "loading": "מייבא מתכונים, רשימות ומטלות...",
+    "loadingHint": "זה עשוי לקחת כמה רגעים.",
+    "successTitle": "הצלחה!",
+    "successBody": "הנתונים שלך יובאו בהצלחה לחשבונך.",
+    "clearDataButton": "מחק נתונים מקומיים",
+    "keepCloseButton": "שמור וסגור",
+    "errorTitle": "הייבוא נכשל",
+    "retryButton": "נסה שוב",
+    "clearDataAlert": {
+      "title": "למחוק נתונים מקומיים?",
+      "message": "פעולה זו תסיר את כל נתוני האורח מהמכשיר הזה. לא ניתן לבטל פעולה זו.",
+      "cancel": "ביטול",
+      "confirm": "מחק",
+      "errorTitle": "שגיאה",
+      "errorMessage": "לא ניתן למחוק נתונים מקומיים."
+    }
+  }
 }
