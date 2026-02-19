@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
@@ -39,7 +39,8 @@ export function CreateListModal({
   selectedColor,
   onSelectColor,
 }: CreateListModalProps) {
-  const { t } = useTranslation('shopping');
+  const { t, i18n } = useTranslation('shopping');
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const isEditMode = mode === 'edit';
 
   return (
@@ -52,10 +53,12 @@ export function CreateListModal({
       confirmColor={colors.chores}
       confirmDisabled={confirmDisabled}
     >
-      <View style={styles.createListInputSection}>
-        <Text style={styles.createListLabel}>{t('createListModal.listNameLabel')}</Text>
+      <View style={[styles.createListInputSection, isRtlLayout && styles.modalSectionRtl]}>
+        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+          <Text style={[styles.createListLabel, isRtlLayout && styles.modalTextRtl]}>{t('createListModal.listNameLabel')}</Text>
+        </View>
         <TextInput
-          style={styles.createListInput}
+          style={[styles.createListInput, isRtlLayout && styles.createListInputRtl, isRtlLayout && styles.modalTextRtl]}
           placeholder={t('createListModal.listNamePlaceholder')}
           placeholderTextColor={colors.textMuted}
           value={listName}
@@ -66,12 +69,14 @@ export function CreateListModal({
         />
       </View>
 
-      <View style={styles.createListIconSection}>
-        <Text style={styles.createListLabel}>{t('createListModal.iconLabel')}</Text>
+      <View style={[styles.createListIconSection, isRtlLayout && styles.modalSectionRtl]}>
+        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+          <Text style={[styles.createListLabel, isRtlLayout && styles.modalTextRtl]}>{t('createListModal.iconLabel')}</Text>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.iconPickerContent}
+          contentContainerStyle={[styles.iconPickerContent, isRtlLayout && styles.pickerContentRtl]}
         >
           {LIST_ICON_OPTIONS.map((icon) => (
             <TouchableOpacity
@@ -92,12 +97,14 @@ export function CreateListModal({
         </ScrollView>
       </View>
 
-      <View style={styles.createListColorSection}>
-        <Text style={styles.createListLabel}>{t('createListModal.colorLabel')}</Text>
+      <View style={[styles.createListColorSection, isRtlLayout && styles.modalSectionRtl]}>
+        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+          <Text style={[styles.createListLabel, isRtlLayout && styles.modalTextRtl]}>{t('createListModal.colorLabel')}</Text>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.colorPickerContent}
+          contentContainerStyle={[styles.colorPickerContent, isRtlLayout && styles.pickerContentRtl]}
         >
           {LIST_COLOR_OPTIONS.map((color) => (
             <TouchableOpacity

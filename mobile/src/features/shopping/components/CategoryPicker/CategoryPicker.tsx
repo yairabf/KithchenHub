@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   Image,
+  I18nManager,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,8 @@ export interface CategoryPickerProps {
   onSelectCategory: (category: string) => void;
   /** Array of available category IDs */
   categories: string[];
+  /** Force RTL layout */
+  isRtl?: boolean;
 }
 
 const PORTAL_Z_INDEX = 100000;
@@ -118,8 +121,10 @@ export function CategoryPicker({
   selectedCategory,
   onSelectCategory,
   categories,
+  isRtl,
 }: CategoryPickerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtlLayout = isRtl ?? (i18n.dir() === 'rtl' || I18nManager.isRTL);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [portalLayout, setPortalLayout] = useState<PortalLayout | null>(null);
   const triggerRef = useRef<View>(null);
@@ -203,6 +208,7 @@ export function CategoryPicker({
     <View
       style={[
         styles.dropdown,
+        isRtlLayout && styles.dropdownRtl,
         !usePortal && styles.dropdownInPlace,
         usePortal && styles.dropdownPortal,
         usePortal && portalLayout && {
@@ -227,6 +233,7 @@ export function CategoryPicker({
               key={categoryId}
               style={[
                 styles.dropdownItem,
+                isRtlLayout && styles.dropdownItemRtl,
                 isSelected && styles.dropdownItemSelected,
               ]}
               onPress={() => handleSelect(categoryId)}
@@ -251,6 +258,7 @@ export function CategoryPicker({
               <Text
                 style={[
                   styles.dropdownItemText,
+                  isRtlLayout && styles.textRtl,
                   isSelected && styles.dropdownItemTextSelected,
                 ]}
                 numberOfLines={1}
@@ -268,7 +276,7 @@ export function CategoryPicker({
     <View style={styles.container}>
       <View ref={triggerRef} collapsable={false}>
         <Pressable
-          style={[styles.trigger, dropdownOpen && styles.triggerOpen]}
+          style={[styles.trigger, isRtlLayout && styles.triggerRtl, dropdownOpen && styles.triggerOpen]}
           onPress={handleTriggerPress}
           accessibilityRole="button"
           accessibilityLabel={t('categoryPicker.triggerAccessibility', { name: selectedName })}
@@ -276,7 +284,7 @@ export function CategoryPicker({
           accessibilityHint={t('categoryPicker.triggerHint')}
           testID="category-picker-trigger"
         >
-          <View style={styles.triggerContent}>
+          <View style={[styles.triggerContent, isRtlLayout && styles.triggerContentRtl]}>
             {selectedIcon ? (
               <Image
                 source={selectedIcon}
@@ -290,14 +298,14 @@ export function CategoryPicker({
                 </Text>
               </View>
             )}
-            <Text style={styles.triggerText} numberOfLines={1}>
+            <Text style={[styles.triggerText, isRtlLayout && styles.textRtl]} numberOfLines={1}>
               {selectedName}
             </Text>
           </View>
           <Ionicons
             name={dropdownOpen ? 'chevron-up' : 'chevron-down'}
             size={20}
-            style={styles.triggerChevron}
+            style={[styles.triggerChevron, isRtlLayout && styles.triggerChevronRtl]}
           />
         </Pressable>
       </View>

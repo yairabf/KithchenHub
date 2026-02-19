@@ -8,7 +8,9 @@ export interface CreateCustomItemModalProps {
   confirmColor: string;
   selectedGroceryItem: GroceryItem | null;
   selectedItemCategory: string;
+  customItemName: string;
   onSelectCategory: (category: string) => void;
+  onChangeCustomItemName: (name: string) => void;
   availableCategories: string[];
   quantityInput: string;
   onChangeQuantity: (value: string) => void;

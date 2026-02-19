@@ -35,6 +35,9 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  triggerRtl: {
+    direction: 'rtl',
+  },
   triggerOpen: {
     borderColor: colors.shopping,
     borderWidth: 2,
@@ -45,6 +48,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.sm,
     minWidth: 0,
+  },
+
+  triggerContentRtl: {
+    flexDirection: 'row-reverse',
   },
   triggerIcon: {
     width: 28,
@@ -73,6 +80,10 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginStart: spacing.xs,
   },
+  triggerChevronRtl: {
+    marginStart: 0,
+    marginEnd: spacing.xs,
+  },
   dropdown: {
     position: 'absolute',
     top: TRIGGER_HEIGHT + DROPDOWN_SPACING,
@@ -85,6 +96,9 @@ export const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.lg,
     zIndex: PICKER_Z_INDEX + 1,
+  },
+  dropdownRtl: {
+    direction: 'rtl',
   },
   dropdownWrapper: {
     position: 'absolute',
@@ -120,6 +134,9 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
+  dropdownItemRtl: {
+    flexDirection: 'row-reverse',
+  },
   dropdownItemSelected: {
     backgroundColor: colors.shopping + '15',
   },
@@ -149,5 +166,9 @@ export const styles = StyleSheet.create({
   dropdownItemTextSelected: {
     color: colors.shopping,
     fontWeight: '600',
+  },
+  textRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
 });
