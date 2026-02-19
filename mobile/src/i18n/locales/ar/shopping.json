@@ -1,25 +1,108 @@
 {
-  "title": "قائمة التسوق",
   "listPanel": {
     "title": "قوائم التسوق",
-    "emptyState": "لا توجد عناصر بعد"
+    "emptyState": "لا توجد عناصر بعد",
+    "activeListsTitle": "قوائمي النشطة",
+    "closeActionsMenu": "إغلاق قائمة إجراءات القائمة",
+    "mainBadge": "الرئيسية",
+    "moreActionsFor": "إجراءات إضافية لـ {{name}}",
+    "edit": "تعديل",
+    "editListAccessibility": "تعديل قائمة {{name}}",
+    "delete": "حذف",
+    "mainListCannotDelete": "{{name}} هي القائمة الرئيسية ولا يمكن حذفها",
+    "deleteListAccessibility": "حذف قائمة {{name}}",
+    "createNew": "إنشاء قائمة جديدة",
+    "emptyTitle": "لا توجد عناصر في هذه القائمة",
+    "emptyDescription": "ابدأ بإضافة عناصر إلى قائمة التسوق الخاصة بك",
+    "emptyAction": "أضف أول عنصر",
+    "categoryAccessibilityLabel": "فئة {{category}}، {{count}}",
+    "expandCategoryHint": "انقر مرتين للتوسيع وإظهار العناصر في هذه الفئة",
+    "collapseCategoryHint": "انقر مرتين للطي وإخفاء العناصر في هذه الفئة"
   },
   "search": {
-    "placeholder": "البحث عن مقاضي..."
+    "placeholder": "ابحث عن المنتجات...",
+    "customItemLabel": "عنصر مخصص",
+    "addCustomItem": "أضف \"{{name}}\""
   },
-  "itemCount": "عنصر {{count}}",
-  "itemCount_one": "عنصر {{count}}",
+  "frequentlyAdded": {
+    "title": "أضيفت مؤخراً",
+    "addItemAccessibility": "أضف {{name}} إلى القائمة"
+  },
+  "categoryPicker": {
+    "triggerAccessibility": "الفئة: {{name}}. اضغط للتغيير.",
+    "triggerHint": "يفتح قائمة الفئات"
+  },
+  "createListModal": {
+    "titleCreate": "إنشاء قائمة جديدة",
+    "titleEdit": "تعديل القائمة",
+    "confirmCreate": "إنشاء",
+    "confirmSave": "حفظ",
+    "listNameLabel": "اسم القائمة",
+    "listNamePlaceholder": "أدخل اسم القائمة...",
+    "listNameAccessibility": "اسم القائمة",
+    "listNameHint": "أدخل اسمًا لقائمة التسوق الجديدة",
+    "iconLabel": "أيقونة",
+    "iconSelectAccessibility": "اختر أيقونة {{icon}}",
+    "colorLabel": "لون",
+    "colorSelectAccessibility": "اختر اللون {{color}}"
+  },
+  "createCustomItemModal": {
+    "title": "أضف إلى {{listName}}",
+    "confirm": "أضف إلى القائمة",
+    "categoryLabel": "الفئة",
+    "quantityLabel": "الكمية",
+    "decreaseQuantityAccessibility": "تقليل الكمية",
+    "decreaseQuantityHint": "يقلل كمية العنصر بواحد",
+    "quantityInputAccessibility": "الكمية",
+    "quantityInputHint": "أدخل كمية العنصر",
+    "increaseQuantityAccessibility": "زيادة الكمية",
+    "increaseQuantityHint": "يزيد كمية العنصر بواحد"
+  },
+  "ingredientConflictModal": {
+    "title": "العنصر موجود بالفعل في القائمة",
+    "message": "\"{{name}}\" موجود بالفعل في قائمة التسوق الخاصة بك.",
+    "currentLabel": "الحالي:",
+    "recipeNeedsLabel": "يحتاج الوصفة:",
+    "replaceButton": "استبدل بـ {{quantity}}",
+    "addButton": "أضف إلى الكمية ({{quantity}})"
+  },
+  "itemCount": "{{count}} عنصر",
+  "itemCount_one": "{{count}} عنصر",
   "itemCount_other": "{{count}} عناصر",
   "itemCount_plural": "{{count}} عناصر",
-  "actions": {
-    "shareList": "مشاركة قائمة التسوق",
-    "addItem": "إضافة عنصر"
+  "categoriesSection": {
+    "title": "الفئات",
+    "showMore": "عرض المزيد",
+    "showLess": "عرض أقل"
   },
-  "quickAdd": "إضافة سريعة",
-  "deleteList": {
-    "title": "حذف القائمة",
-    "message": "حذف \"{{name}}\"؟",
-    "confirm": "حذف"
+  "categoryModal": {
+    "loadingItems": "جارٍ تحميل العناصر...",
+    "noItems": "لا توجد عناصر في هذه الفئة",
+    "close": "إغلاق نافذة الفئة",
+    "loadFailed": "فشل تحميل عناصر الفئة. حاول مرة أخرى."
   },
-  "shareTitle": "مشاركة {{name}}"
+  "screen": {
+    "headerTitle": "قائمة التسوق",
+    "shareActionLabel": "مشاركة قائمة التسوق",
+    "addActionLabel": "إضافة عنصر",
+    "quickAddTitle": "إضافة سريعة",
+    "switchToList": "التبديل إلى {{name}}",
+    "shareTitle": "مشاركة {{name}}",
+    "deleteListTitle": "حذف القائمة",
+    "deleteListMessage": "حذف \"{{name}}\"؟",
+    "deleteListConfirm": "حذف"
+  },
+  "share": {
+    "shoppingListHeader": "قائمة التسوق: {{listName}}",
+    "emptyShopping": "لا توجد عناصر بعد.",
+    "categoryHeader": "{{category}}:"
+  },
+  "allItems": {
+    "title": "جميع العناصر",
+    "itemCount_one": "عنصر واحد",
+    "itemCount_other": "{{count}} عناصر",
+    "searchPlaceholder": "ابحث عن عناصر...",
+    "noItemsFound": "لم يتم العثور على عناصر",
+    "noItemsHint": "جرب مصطلح بحث مختلف"
+  }
 }

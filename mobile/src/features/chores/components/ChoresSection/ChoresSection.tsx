@@ -31,6 +31,7 @@ export function ChoresSection({
   title,
   chores,
   indicatorColor = 'primary',
+  isWebRtl = false,
   renderChoreCard,
   testID,
   onLayout,
@@ -44,7 +45,7 @@ export function ChoresSection({
     <View style={styles.section} testID={testID}>
       <View style={styles.sectionHeader} onLayout={onLayout}>
         <View style={indicatorStyle} />
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={[styles.sectionTitle, isWebRtl && styles.sectionTitleRtl]}>{title}</Text>
       </View>
       {chores.length > 0 ? (
         <View style={styles.choreList}>{chores.map(renderChoreCard)}</View>

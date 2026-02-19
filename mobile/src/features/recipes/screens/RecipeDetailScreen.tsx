@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 import { RecipeHeader } from '../components/RecipeHeader';
 import { RecipeContentWrapper } from '../components/RecipeContentWrapper';
 import { Toast } from '../../../common/components/Toast';
@@ -39,6 +38,7 @@ import { config } from '../../../config';
 import type { ShoppingItem } from '../../../mocks/shopping';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
+import { useTranslation } from 'react-i18next';
 
 
 export function RecipeDetailScreen({
@@ -46,7 +46,7 @@ export function RecipeDetailScreen({
   onBack,
   onAddToShoppingList,
 }: RecipeDetailScreenProps) {
-  const { t } = useTranslation('recipes');
+  const { t, i18n } = useTranslation('recipes');
   const { isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -207,7 +207,7 @@ export function RecipeDetailScreen({
   }, [shouldShowStickyHeader, animateStickyHeaderIn, animateStickyHeaderOut]);
 
   // Format recipe for sharing using centralized formatter
-  const shareText = useMemo(() => formatRecipeText(displayRecipe), [displayRecipe]);
+  const shareText = useMemo(() => formatRecipeText(displayRecipe, t), [displayRecipe, t, i18n.language]);
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -242,11 +242,11 @@ export function RecipeDetailScreen({
       setShowEditModal(false);
     } catch (error) {
       console.error('Failed to update recipe:', error);
-      showToast(t('detailScreen.toast.failedToUpdateRecipe'));
+      showToast(t('detail.toasts.recipeUpdateFailed'));
     } finally {
       setIsSavingEdit(false);
     }
-  }, [displayRecipe?.id, updateRecipe, user, showToast, displayRecipe, t]);
+  }, [displayRecipe?.id, updateRecipe, user, showToast, displayRecipe]);
 
   const parseQuantity = useCallback((value: unknown, fallback: number) => {
     if (typeof value === 'number') {
@@ -289,7 +289,7 @@ export function RecipeDetailScreen({
         const mainList = data.shoppingLists.find(list => list.isMain);
 
         if (!mainList) {
-          showToast(t('detailScreen.toast.noMainShoppingList'));
+          showToast(t('detail.toasts.noMainList'));
           return;
         }
 
@@ -319,19 +319,14 @@ export function RecipeDetailScreen({
             unit: normalizedUnit,
             image: ingredient.image,
           });
-          showToast(
-            t('detailScreen.toast.ingredientAddedToList', {
-              ingredientName: ingredient.name,
-              listName: mainList.name,
-            })
-          );
+          showToast(t('detail.toasts.ingredientAdded', { name: ingredient.name, listName: mainList.name }));
         }
       } catch (error) {
         console.error('Failed to add ingredient:', error);
-        showToast(t('detailScreen.toast.failedToAddIngredient'));
+        showToast(t('detail.toasts.ingredientAddFailed'));
       }
     },
-    [shoppingService, showToast, getIngredientAmount, getIngredientUnit, t]
+    [shoppingService, showToast, getIngredientAmount, getIngredientUnit]
   );
 
   const handleReplaceIngredient = useCallback(async () => {
@@ -343,19 +338,15 @@ export function RecipeDetailScreen({
         quantity,
         unit: getIngredientUnit(conflictingIngredient),
       });
-      showToast(
-        t('detailScreen.toast.ingredientQuantityUpdated', {
-          ingredientName: conflictingIngredient.name,
-        })
-      );
+      showToast(t('detail.toasts.ingredientUpdated', { name: conflictingIngredient.name }));
       setConflictModalVisible(false);
       setConflictingIngredient(null);
       setExistingItem(null);
     } catch (error) {
       console.error('Failed to replace ingredient:', error);
-      showToast(t('detailScreen.toast.failedToUpdateIngredient'));
+      showToast(t('detail.toasts.ingredientUpdateFailed'));
     }
-  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit, t]);
+  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
 
   const handleAddToQuantity = useCallback(async () => {
     if (!conflictingIngredient || !existingItem) return;
@@ -379,24 +370,20 @@ export function RecipeDetailScreen({
       await shoppingService.updateItem(existingItem.id, {
         quantity: finalQuantity,
       });
-      showToast(
-        t('detailScreen.toast.ingredientQuantityUpdated', {
-          ingredientName: conflictingIngredient.name,
-        })
-      );
+      showToast(t('detail.toasts.ingredientUpdated', { name: conflictingIngredient.name }));
       setConflictModalVisible(false);
       setConflictingIngredient(null);
       setExistingItem(null);
     } catch (error) {
       console.error('Failed to add to quantity:', error);
-      showToast(t('detailScreen.toast.failedToUpdateIngredient'));
+      showToast(t('detail.toasts.ingredientUpdateFailed'));
     }
-  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit, t]);
+  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
 
   const handleAddAllIngredients = useCallback(async () => {
     const ingredients = displayRecipe.ingredients || [];
     if (ingredients.length === 0) {
-      showToast(t('detailScreen.toast.noIngredientsToAdd'));
+      showToast(t('detail.toasts.noIngredients'));
       return;
     }
 
@@ -405,7 +392,7 @@ export function RecipeDetailScreen({
       const mainList = data.shoppingLists.find(list => list.isMain);
 
       if (!mainList) {
-        showToast(t('detailScreen.toast.noMainShoppingList'));
+        showToast(t('detail.toasts.noMainList'));
         return;
       }
 
@@ -455,17 +442,12 @@ export function RecipeDetailScreen({
         }
       }
 
-      showToast(
-        t('detailScreen.toast.allIngredientsAddedToList', {
-          count: ingredients.length,
-          listName: mainList.name,
-        })
-      );
+      showToast(t('detail.toasts.allIngredientsAdded', { count: ingredients.length, listName: mainList.name }));
     } catch (error) {
       console.error('Failed to add all ingredients:', error);
-      showToast(t('detailScreen.toast.failedToAddIngredients'));
+      showToast(t('detail.toasts.addIngredientsFailed'));
     }
-  }, [shoppingService, displayRecipe.ingredients, showToast, getIngredientAmount, getIngredientUnit, t]);
+  }, [shoppingService, displayRecipe.ingredients, showToast, getIngredientAmount, getIngredientUnit]);
 
   // Handle scroll position tracking
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -505,13 +487,13 @@ export function RecipeDetailScreen({
     <SafeAreaView style={styles.container}>
       <View onLayout={handleScreenHeaderLayout}>
         <ScreenHeader
-          title={t('appName', { ns: 'common' })}
+          title={t('screen.headerTitle')}
           titleIcon="restaurant-outline"
           leftIcon="back"
           onLeftPress={onBack}
           rightActions={{
-            edit: { onPress: () => setShowEditModal(true), label: t('detailScreen.header.editRecipe') },
-            share: { onPress: () => setShowShareModal(true), label: t('detailScreen.header.shareRecipe') },
+            edit: { onPress: () => setShowEditModal(true), label: t('detail.editActionLabel') },
+            share: { onPress: () => setShowShareModal(true), label: t('detail.shareActionLabel') },
           }}
           variant="centered"
         />
@@ -564,9 +546,7 @@ export function RecipeDetailScreen({
         {isLoadingDetails ? (
           <View style={{ padding: 20, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={colors.recipes} />
-            <Text style={{ marginTop: 10, color: colors.textSecondary }}>
-              {t('detailScreen.loading.details')}
-            </Text>
+            <Text style={{ marginTop: 10, color: colors.textSecondary }}>{t('screen.loadingDetails')}</Text>
           </View>
         ) : (
           <RecipeContentWrapper
@@ -611,7 +591,7 @@ export function RecipeDetailScreen({
       <ShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title={t('detailScreen.shareModal.title')}
+        title={t('detail.shareTitle')}
         shareText={shareText}
       />
 

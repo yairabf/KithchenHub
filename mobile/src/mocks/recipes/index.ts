@@ -34,6 +34,7 @@ export interface Instruction {
 export interface Recipe extends BaseEntity {
   title: string;
   prepTime?: number; // in minutes
+  cookTime?: number; // in minutes (optional; may come from API)
   category?: string;
   imageUrl?: string | null;
   thumbUrl?: string;
@@ -232,4 +233,4 @@ export const mockRecipes: Recipe[] = mockRecipesRaw.map((recipe) => ({
   instructions: normalizeMockInstructions(recipe.instructions),
 }));
 
-export const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner'];
+export const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Dessert', 'Other'];

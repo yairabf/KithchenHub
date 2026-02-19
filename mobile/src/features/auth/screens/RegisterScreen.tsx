@@ -12,11 +12,11 @@ import {
   ScrollView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { boxShadow } from '../../../theme/shadows';
+import { useTranslation } from 'react-i18next';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -32,8 +32,8 @@ interface RegisterScreenProps {
 }
 
 export function RegisterScreen({ navigation }: RegisterScreenProps) {
-  const { signUpWithEmail, signInWithEmail } = useAuth();
   const { t } = useTranslation('auth');
+  const { signUpWithEmail, signInWithEmail } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,13 +49,13 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
   const validatePassword = (password: string): { valid: boolean; message?: string } => {
     if (password.length < 8) {
-      return { valid: false, message: t('register.errors.passwordMinLength') };
+      return { valid: false, message: t('register.errors.passwordMin') };
     }
     if (!/[A-Z]/.test(password)) {
-      return { valid: false, message: t('register.errors.passwordUppercase') };
+      return { valid: false, message: t('register.errors.passwordUpper') };
     }
     if (!/[a-z]/.test(password)) {
-      return { valid: false, message: t('register.errors.passwordLowercase') };
+      return { valid: false, message: t('register.errors.passwordLower') };
     }
     if (!/[0-9]/.test(password)) {
       return { valid: false, message: t('register.errors.passwordNumber') };
@@ -66,7 +66,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const validateForm = (): string | null => {
     if (!name.trim()) return t('register.errors.nameRequired');
     if (!email.trim()) return t('register.errors.emailRequired');
-    if (!validateEmail(email)) return t('register.errors.invalidEmail');
+    if (!validateEmail(email)) return t('register.errors.emailInvalid');
 
     const passwordCheck = validatePassword(password);
     if (!passwordCheck.valid) return passwordCheck.message!;
@@ -92,7 +92,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const handleRegister = async () => {
     const error = validateForm();
     if (error) {
-      Alert.alert(t('register.errors.validationError'), error, [{ text: t('buttons.ok', { ns: 'common' }) }]);
+      Alert.alert(t('login.validationError'), error, [{ text: t('buttons.ok', { ns: 'common' }) }]);
       return;
     }
 
@@ -103,8 +103,8 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
       // Show success message with verification instructions
       Alert.alert(
-        t('register.accountCreated'),
-        t('register.verifyEmailMessage'),
+        t('register.success.title'),
+        t('register.success.message'),
         [
           {
             text: t('buttons.ok', { ns: 'common' }),
@@ -114,10 +114,10 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       );
     } catch (error) {
       Alert.alert(
-        t('register.registrationFailed'),
+        t('register.errors.registrationFailed'),
         error instanceof Error
           ? error.message
-          : t('register.unableToCreate'),
+          : t('register.errors.unableToCreateAccount'),
         [{ text: t('buttons.ok', { ns: 'common' }) }]
       );
     } finally {
@@ -165,7 +165,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                   autoCapitalize="words"
                   editable={!isLoading}
                   accessibilityLabel={t('register.name')}
-                  accessibilityHint="Enter your full name"
+                  accessibilityHint={t('register.nameHint')}
                 />
               </View>
 
@@ -183,7 +183,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                   autoCorrect={false}
                   editable={!isLoading}
                   accessibilityLabel={t('register.email')}
-                  accessibilityHint="Enter your email address"
+                  accessibilityHint={t('register.emailHint')}
                 />
               </View>
 
@@ -202,7 +202,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                     autoCorrect={false}
                     editable={!isLoading}
                     accessibilityLabel={t('register.password')}
-                    accessibilityHint="Enter your password, at least 6 characters"
+                    accessibilityHint={t('register.passwordHint')}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
@@ -233,8 +233,8 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
-                    accessibilityLabel="Confirm password"
-                    accessibilityHint="Re-enter your password"
+                    accessibilityLabel={t('register.confirmPassword')}
+                    accessibilityHint={t('register.confirmPasswordHint')}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
@@ -266,7 +266,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
               {/* Login Link */}
               <View style={styles.loginContainer}>
-                <Text style={styles.loginText}>{t('register.alreadyHaveAccount')}</Text>
+                <Text style={styles.loginText}>{t('register.alreadyHaveAccount')} </Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('Login')}
                   disabled={isLoading}

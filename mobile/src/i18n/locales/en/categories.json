@@ -8,5 +8,21 @@
   "grains": "Grains",
   "snacks": "Snacks",
   "nuts": "Nuts",
-  "other": "Other"
+  "beverages": "Beverages",
+  "baking": "Baking",
+  "canned": "Canned",
+  "spreads": "Spreads",
+  "freezer": "Freezer",
+  "dips": "Dips",
+  "condiments": "Condiments",
+  "spices": "Spices",
+  "household": "Household",
+  "other": "Other",
+  "All": "All",
+  "Breakfast": "Breakfast",
+  "Lunch": "Lunch",
+  "Dinner": "Dinner",
+  "Snacks": "Snacks",
+  "Dessert": "Dessert",
+  "Other": "Other"
 }

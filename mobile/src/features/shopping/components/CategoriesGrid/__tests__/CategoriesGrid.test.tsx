@@ -14,6 +14,32 @@ jest.mock('../../../../../common/utils/imageUtils', () => ({
   isValidImageUrl: jest.fn((image: string) => Boolean(image && image.trim().length > 0)),
 }));
 
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) => {
+      const map: Record<string, string> = {
+        'shopping:categoriesSection.title': 'Categories',
+        'categoriesSection.title': 'Categories',
+        'shopping:categoriesSection.showMore': 'Show more',
+        'categoriesSection.showMore': 'Show more',
+        'shopping:categoriesSection.showLess': 'Show less',
+        'categoriesSection.showLess': 'Show less',
+        'categories:fruits': 'Fruits',
+        'categories:vegetables': 'Vegetables',
+        'categories:dairy': 'Dairy',
+        'categories:meat': 'Meat',
+        'categories:seafood': 'Seafood',
+        'categories:bakery': 'Bakery',
+        'categories:grains': 'Grains',
+        'categories:snacks': 'Snacks',
+        'categories:nuts': 'Nuts',
+      };
+      return map[key] ?? options?.defaultValue ?? key;
+    },
+  }),
+}));
+
 describe('CategoriesGrid', () => {
   const mockOnCategoryPress = jest.fn();
 

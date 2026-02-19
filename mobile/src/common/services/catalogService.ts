@@ -218,6 +218,77 @@ export class CatalogService {
   }
 
   /**
+   * Fetches groceries by category name.
+   *
+   * @param categoryName - Category name
+   * @returns Array of grocery items in that category
+   */
+  async getGroceriesByCategory(categoryName: string): Promise<GroceryItem[]> {
+    const trimmedCategory = categoryName.trim();
+    if (!trimmedCategory) {
+      return [];
+    }
+
+    if (config?.mockData?.enabled) {
+      return this.getCategoryItems(mockGroceriesDB, trimmedCategory);
+    }
+
+    try {
+      const results = await api.get<GrocerySearchItemDto[] | undefined>(
+        `/groceries/by-category?category=${encodeURIComponent(trimmedCategory)}`,
+      );
+      const list = Array.isArray(results) ? results : [];
+      return list.map(mapGroceryItem);
+    } catch (error) {
+      console.error('Category fetch failed:', error);
+
+      // Fallback 1: Use persisted local catalog cache when available.
+      // This supports offline category browsing even if the category endpoint fails.
+      try {
+        const cachedItems = await this.getCachedGroceryItems();
+        const cachedCategoryItems = this.getCategoryItems(cachedItems, trimmedCategory);
+
+        if (cachedCategoryItems.length > 0) {
+          this.logCatalogEvent('log', 'Using cached category fallback items', {
+            category: trimmedCategory,
+            itemCount: cachedCategoryItems.length,
+            source: CatalogSource.CACHE,
+          });
+          return cachedCategoryItems;
+        }
+      } catch (fallbackError) {
+        console.error('Category fallback from cached catalog failed:', fallbackError);
+      }
+
+      // Fallback 2: Use in-memory/local catalog provider.
+      try {
+        const localItems = await this.getGroceryItems();
+        const localCategoryItems = this.getCategoryItems(localItems, trimmedCategory);
+
+        if (localCategoryItems.length > 0) {
+          this.logCatalogEvent('log', 'Using local category fallback items', {
+            category: trimmedCategory,
+            itemCount: localCategoryItems.length,
+            source: CatalogSource.CACHE,
+          });
+          return localCategoryItems;
+        }
+      } catch (fallbackError) {
+        console.error('Category fallback from local catalog failed:', fallbackError);
+      }
+
+      // Fallback 3: Use bundled mock data as final safety net.
+      const mockCategoryItems = this.getCategoryItems(mockGroceriesDB, trimmedCategory);
+      this.logCatalogEvent('warn', 'Using mock category fallback items', {
+        category: trimmedCategory,
+        itemCount: mockCategoryItems.length,
+        source: CatalogSource.MOCK,
+      });
+      return mockCategoryItems;
+    }
+  }
+
+  /**
    * Internal logging helper that conditionally logs based on environment.
    * Only logs in development mode to avoid performance impact in production.
    * 

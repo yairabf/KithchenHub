@@ -49,7 +49,7 @@ export const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
-    marginLeft: 16,
+    marginStart: 16,
   },
   scrollView: {
     flex: 1,
@@ -86,7 +86,7 @@ export const styles = StyleSheet.create({
   },
   itemDetails: {
     flex: 1,
-    marginLeft: 16,
+    marginStart: 16,
   },
   itemName: {
     fontSize: 16,

@@ -1,4 +1,5 @@
 import { api } from '../../../services/api';
+import { is404Error } from '../../../common/utils/apiErrorGuards';
 import { colors } from '../../../theme';
 import {
   withUpdatedAt,
@@ -11,7 +12,7 @@ import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingData, IShoppingService } from './shoppingService';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../../../common/utils/catalogUtils';
 import { catalogService } from '../../../common/services/catalogService';
-import { addEntityToCache, updateEntityInCache } from '../../../common/repositories/cacheAwareRepository';
+import { addEntityToCache, updateEntityInCache, removeEntityFromCache } from '../../../common/repositories/cacheAwareRepository';
 
 /**
  * Extended ShoppingItem type that includes catalog identifiers for API requests.
@@ -428,26 +429,20 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   async deleteItem(itemId: string): Promise<void> {
-    // Get existing item first
-    const allItems = await this.getShoppingItems(
-      await this.getShoppingLists(),
-      await this.getGroceryItems()
-    );
-    const existing = allItems.find(i => i.id === itemId || i.localId === itemId);
-    if (!existing) {
-      throw new Error(`Shopping item not found: ${itemId}`);
+    try {
+      // Use DELETE endpoint (backend has @Delete(':id') endpoint)
+      await api.delete(`/shopping-items/${itemId}`);
+    } catch (error) {
+      // Treat 404 as idempotent delete success (item already removed server-side).
+      if (is404Error(error)) {
+        console.warn(`[RemoteShoppingService] deleteItem(${itemId}) returned 404; treating as already deleted`);
+      } else {
+        throw error;
+      }
     }
 
-    // Use DELETE endpoint (backend has @Delete(':id') endpoint)
-    await api.delete(`/shopping-items/${itemId}`);
-
-    // Apply timestamp for optimistic UI and offline queue
-    const deleted = markDeleted(existing);
-    const withTimestamps = withUpdatedAt(deleted);
-    
-    // Write-through cache update: update entity in cache with deleted timestamp
-    // Note: Cache updates are best-effort; failures are logged but don't throw
-    await updateEntityInCache('shoppingItems', withTimestamps, (i) => i.id, (i) => i.id === itemId);
+    // Remove from cache (best-effort)
+    await removeEntityFromCache<ShoppingItem>('shoppingItems', itemId, (i) => i.id);
   }
 
   async toggleItem(itemId: string): Promise<ShoppingItem> {

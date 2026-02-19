@@ -1,12 +1,7 @@
 import { ViewStyle } from 'react-native';
 
-export interface GroceryItem {
-  id: string;
-  name: string;
-  image: string;
-  category: string;
-  defaultQuantity: number;
-}
+export type { GroceryItem } from '../../types/groceryItem';
+import type { GroceryItem } from '../../types/groceryItem';
 
 export interface GrocerySearchBarProps {
   // Required Props
@@ -16,6 +11,7 @@ export interface GrocerySearchBarProps {
 
   // Optional UI Customization
   placeholder?: string;
+  isRtl?: boolean;
   variant?: 'surface' | 'background';  // white vs cream background
   showShadow?: boolean;
   maxResults?: number;                 // default: 8

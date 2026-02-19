@@ -1,53 +1,54 @@
 {
-  "title": "وصفات المنزل",
-  "addRecipe": "إضافة وصفة",
-  "servings": "حصص",
-  "prepTime": "وقت التحضير",
-  "actions": {
-    "addItem": "إضافة عنصر"
+  "title": "Recipes",
+  "addRecipe": "Add Recipe",
+  "servings": "Servings",
+  "cookTime": "Cook time",
+  "screen": {
+    "headerTitle": "وصفات المنزل",
+    "addActionLabel": "إضافة عنصر",
+    "emptyTitle": "لا توجد وصفات بعد",
+    "emptyDescription": "ابدأ بناء مجموعتك بإضافة وصفاتك المفضلة",
+    "emptyAction": "أضف أول وصفة",
+    "searchPlaceholder": "ابحث بالاسم...",
+    "hideCategoryFilter": "إخفاء فلتر الفئات",
+    "showCategoryFilter": "إظهار فلتر الفئات",
+    "hide": "إخفاء",
+    "showCategoryFilterButton": "إظهار فلتر الفئات",
+    "noMatchingRecipes": "لا توجد وصفات مطابقة",
+    "noRecipesInCategory": "لا توجد وصفات في هذه الفئة",
+    "noRecipesMatchSearch": "لا توجد وصفات تطابق \"{{query}}\". جرّب اسمًا آخر أو أعد ضبط الفلاتر.",
+    "tryDifferentCategory": "جرّب فئة مختلفة أو أعد ضبط الفلاتر.",
+    "resetFilters": "إعادة ضبط الفلاتر",
+    "loadingDetails": "جارٍ تحميل تفاصيل الوصفة..."
   },
-  "emptyState": {
-    "title": "لا توجد وصفات بعد",
-    "description": "ابدأ ببناء مجموعتك بإضافة وصفاتك المفضلة",
-    "action": "أضف وصفتك الأولى"
-  },
-  "search": {
-    "placeholder": "البحث بالاسم..."
-  },
-  "categories": {
-    "all": "الكل",
-    "breakfast": "إفطار",
-    "lunch": "غداء",
-    "dinner": "عشاء",
-    "snacks": "وجبات خفيفة",
-    "dessert": "حلويات"
-  },
-  "showCategoryFilter": "إظهار فلتر الفئات",
-  "toast": {
-    "stillLoading": "لا تزال تفاصيل الوصفة قيد التحميل. يرجى المحاولة مرة أخرى.",
-    "failedToLoad": "فشل تحميل تفاصيل الوصفة."
-  },
-  "detailScreen": {
-    "header": {
-      "editRecipe": "تعديل الوصفة",
-      "shareRecipe": "مشاركة الوصفة"
-    },
-    "loading": {
-      "details": "جاري تحميل تفاصيل الوصفة..."
-    },
-    "shareModal": {
-      "title": "مشاركة الوصفة"
-    },
-    "toast": {
-      "failedToUpdateRecipe": "فشل تحديث الوصفة",
-      "noMainShoppingList": "لم يتم العثور على قائمة تسوق رئيسية. الرجاء إنشاء واحدة.",
-      "ingredientAddedToList": "تم إضافة {{ingredientName}} إلى {{listName}}",
-      "failedToAddIngredient": "فشل إضافة المكون",
-      "ingredientQuantityUpdated": "تم تحديث كمية {{ingredientName}}",
-      "failedToUpdateIngredient": "فشل تحديث المكون",
-      "noIngredientsToAdd": "لا توجد مكونات لإضافتها",
-      "allIngredientsAddedToList": "تم إضافة جميع المكونات ({{count}}) إلى {{listName}}",
-      "failedToAddIngredients": "فشل إضافة المكونات"
+  "detail": {
+    "shareTitle": "مشاركة الوصفة",
+    "editActionLabel": "تعديل الوصفة",
+    "shareActionLabel": "مشاركة الوصفة",
+    "toasts": {
+      "recipeDetailsLoading": "تفاصيل الوصفة ما زالت قيد التحميل. حاول مرة أخرى.",
+      "recipeDetailsLoadFailed": "فشل تحميل تفاصيل الوصفة.",
+      "recipeUpdateFailed": "فشل تحديث الوصفة",
+      "noMainList": "لم يتم العثور على قائمة تسوق رئيسية. يرجى إنشاء واحدة.",
+      "ingredientAdded": "تمت إضافة {{name}} إلى {{listName}}",
+      "ingredientAddFailed": "فشل إضافة المكوّن",
+      "ingredientUpdated": "تم تحديث كمية {{name}}",
+      "ingredientUpdateFailed": "فشل تحديث المكوّن",
+      "noIngredients": "لا توجد مكونات للإضافة",
+      "allIngredientsAdded": "تمت إضافة كل {{count}} مكونات إلى {{listName}}",
+      "addIngredientsFailed": "فشل إضافة المكونات"
     }
+  },
+  "share": {
+    "notAvailable": "الوصفة غير متاحة",
+    "untitledRecipe": "وصفة بدون اسم",
+    "header": "الوصفة: {{name}}",
+    "cookTime": "وقت الطهي",
+    "prepTime": "وقت التحضير",
+    "servings": "الحصص",
+    "ingredients": "المكونات",
+    "instructions": "الخطوات",
+    "notAvailableValue": "غير متاح",
+    "emptyIngredients": "لا توجد مكونات."
   }
 }

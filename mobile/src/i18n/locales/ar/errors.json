@@ -5,6 +5,6 @@
   "auth": {
     "signInFailed": "فشل تسجيل الدخول"
   },
-  "directionChangeTitle": "تم تغيير الاتجاه",
-  "directionChangeMessage": "يرجى إعادة تشغيل التطبيق لتطبيق اتجاه النص الجديد."
+  "directionChangeTitle": "تم تحديث الاتجاه",
+  "directionChangeMessage": "تم تحديث اتجاه النص."
 }

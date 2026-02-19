@@ -7,8 +7,10 @@ import {
   Image,
   Text,
   Pressable,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import { GrocerySearchBarProps, GroceryItem } from './types';
@@ -21,6 +23,7 @@ export function GrocerySearchBar({
   onSelectItem,
   onQuickAddItem,
   placeholder = 'Search groceries to add...',
+  isRtl,
   variant = 'surface',
   showShadow = true,
   maxResults = 8,
@@ -31,6 +34,9 @@ export function GrocerySearchBar({
   dropdownStyle,
   searchMode = 'local',
 }: GrocerySearchBarProps) {
+  const { t } = useTranslation('shopping');
+  const isRtlLayout = isRtl ?? I18nManager.isRTL;
+  const effectivePlaceholder = placeholder ?? t('search.placeholder');
   // Internal state for uncontrolled mode
   const [internalQuery, setInternalQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -168,6 +174,7 @@ export function GrocerySearchBar({
   // Determine search bar style based on variant
   const searchBarStyle = [
     styles.searchBar,
+    isRtlLayout && styles.searchBarRtl,
     variant === 'surface' ? styles.searchBarSurface : styles.searchBarBackground,
     showShadow && styles.searchBarShadow,
   ];
@@ -186,7 +193,7 @@ export function GrocerySearchBar({
       <View style={searchBarStyle}>
         <TextInput
           ref={inputRef}
-          style={styles.searchInput}
+          style={[styles.searchInput, isRtlLayout && styles.searchInputRtl]}
           placeholder={placeholder}
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
@@ -230,8 +237,8 @@ export function GrocerySearchBar({
                       <Ionicons name="add-circle-outline" size={24} color={colors.shopping} />
                     </View>
                     <View style={styles.searchResultInfo}>
-                      <Text style={styles.searchResultName}>Add "{customItem.name}"</Text>
-                      <Text style={styles.searchResultCategory}>Custom Item</Text>
+                      <Text style={styles.searchResultName}>{t('search.addCustomItem', { name: customItem.name })}</Text>
+                      <Text style={styles.searchResultCategory}>{t('search.customItemLabel')}</Text>
                     </View>
                   </TouchableOpacity>
                   <TouchableOpacity

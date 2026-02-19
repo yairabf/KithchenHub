@@ -20,6 +20,7 @@ import {
   RecipeInstructionDto,
 } from '../dtos/recipe-detail-response.dto';
 import { RecipeImagesService } from './recipe-images.service';
+import { normalizeRecipeCategory } from '../constants';
 
 /**
  * Shape of recipe entity as returned by the repository (Prisma JSON columns are untyped).
@@ -74,7 +75,7 @@ function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
     id: recipe.id,
     title: recipe.title,
     description: recipe.description ?? undefined,
-    category: recipe.category ?? undefined,
+    category: normalizeRecipeCategory(recipe.category),
     prepTime: recipe.prepTime ?? undefined,
     ingredients,
     instructions: Array.isArray(recipe.instructions)
@@ -122,9 +123,21 @@ export class RecipesService {
     this.logger.log(`Getting recipes for household ${householdId}`);
     this.logger.debug(`Filters: ${JSON.stringify(filters, null, 2)}`);
 
+    const normalizedCategory = filters?.category
+      ? normalizeRecipeCategory(filters.category)
+      : undefined;
+    const normalizedSearch = filters?.search;
+    const normalizedFilters =
+      normalizedCategory || normalizedSearch
+        ? {
+            category: normalizedCategory,
+            search: normalizedSearch,
+          }
+        : undefined;
+
     const recipes = await this.recipesRepository.findRecipesByHousehold(
       householdId,
-      filters,
+      normalizedFilters,
     );
 
     this.logger.log(
@@ -146,7 +159,7 @@ export class RecipesService {
           id: recipe.id,
           title: recipe.title,
           description: recipe.description ?? undefined,
-          category: recipe.category ?? undefined,
+          category: normalizeRecipeCategory(recipe.category),
           prepTime: recipe.prepTime ?? undefined,
           hasImage: Boolean(recipe.imageKey || recipe.imageUrl),
           imageUrl: finalImageUrl ?? undefined,
@@ -230,7 +243,7 @@ export class RecipesService {
     const recipe = await this.recipesRepository.createRecipe(householdId, {
       title: dto.title,
       description: dto.description,
-      category: dto.category,
+      category: normalizeRecipeCategory(dto.category),
       prepTime: dto.prepTime,
       ingredients: dto.ingredients,
       instructions: dto.instructions,
@@ -272,7 +285,10 @@ export class RecipesService {
     const updatedRecipe = await this.recipesRepository.updateRecipe(recipeId, {
       title: dto.title,
       description: dto.description,
-      category: dto.category,
+      category:
+        dto.category === undefined
+          ? undefined
+          : normalizeRecipeCategory(dto.category),
       prepTime: dto.prepTime,
       ingredients: dto.ingredients,
       instructions: dto.instructions,

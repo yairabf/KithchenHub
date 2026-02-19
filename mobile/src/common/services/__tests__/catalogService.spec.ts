@@ -288,6 +288,111 @@ describe('CatalogService', () => {
     });
   });
 
+  describe('getGroceriesByCategory', () => {
+    it('should return API category items when API request succeeds', async () => {
+      mockApiGet.mockResolvedValue([
+        { id: '1', name: 'Apple', imageUrl: 'apple.jpg', category: 'Fruits', defaultQuantity: 2 },
+      ]);
+
+      const items = await service.getGroceriesByCategory('Fruits');
+
+      expect(mockApiGet).toHaveBeenCalledWith('/groceries/by-category?category=Fruits');
+      expect(items).toEqual([
+        {
+          id: '1',
+          name: 'Apple',
+          image: 'apple.jpg',
+          category: 'Fruits',
+          defaultQuantity: 2,
+        },
+      ]);
+    });
+
+    it('should fallback to local catalog items when category API fails', async () => {
+      mockApiGet.mockImplementation((url: string) => {
+        if (url.startsWith('/groceries/by-category')) {
+          return Promise.reject(new NetworkError('No internet'));
+        }
+
+        if (url === '/shopping-items/custom') {
+          return Promise.resolve([
+            customItemDto('My Apple', 'Fruits'),
+            customItemDto('My Carrot', 'Vegetables'),
+          ]);
+        }
+
+        return Promise.resolve([]);
+      });
+
+      const items = await service.getGroceriesByCategory('Fruits');
+
+      expect(items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'My Apple', category: 'Fruits' }),
+        ]),
+      );
+    });
+
+
+    it('should fallback to cached category items before hitting local providers', async () => {
+      const cachedItems: GroceryItem[] = [
+        { id: 'cached-apple', name: 'Cached Apple', image: '', category: 'Fruits', defaultQuantity: 1 },
+        { id: 'cached-milk', name: 'Cached Milk', image: '', category: 'Dairy', defaultQuantity: 1 },
+      ];
+
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(cachedItems));
+      mockApiGet.mockImplementation((url: string) => {
+        if (url.startsWith('/groceries/by-category')) {
+          return Promise.reject(new NetworkError('No internet'));
+        }
+        return Promise.reject(new Error(`Unexpected API call: ${url}`));
+      });
+
+      const items = await service.getGroceriesByCategory('Fruits');
+
+      expect(items).toEqual([
+        {
+          id: 'cached-apple',
+          name: 'Cached Apple',
+          image: '',
+          category: 'Fruits',
+          defaultQuantity: 1,
+        },
+      ]);
+      expect(mockApiGet).toHaveBeenCalledWith('/groceries/by-category?category=Fruits');
+      expect(mockApiGet).not.toHaveBeenCalledWith('/shopping-items/custom');
+    });
+
+    it('should fallback to mock category items when API and local category are unavailable', async () => {
+      mockApiGet.mockImplementation((url: string) => {
+        if (url.startsWith('/groceries/by-category')) {
+          return Promise.reject(new Error('Server error'));
+        }
+
+        if (url === '/shopping-items/custom') {
+          return Promise.resolve([]);
+        }
+
+        return Promise.resolve([]);
+      });
+
+      const items = await service.getGroceriesByCategory('Fruits');
+
+      expect(items.length).toBeGreaterThan(0);
+      expect(items.every(item => item.category?.toLowerCase().includes('fruits'))).toBe(true);
+    });
+
+    it('should return mock category items directly when mock data is enabled', async () => {
+      mockConfigValue.mockData.enabled = true;
+
+      const items = await service.getGroceriesByCategory('Fruits');
+
+      expect(items.length).toBeGreaterThan(0);
+      expect(items.every(item => item.category?.toLowerCase().includes('fruits'))).toBe(true);
+      expect(mockApiGet).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getFrequentlyAddedItems', () => {
     it('should return first 8 items', async () => {
       const mockResponse = Array.from({ length: 20 }, (_, i) =>

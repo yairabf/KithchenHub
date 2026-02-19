@@ -54,7 +54,7 @@ export function HouseholdOnboardingScreen() {
             }
         } catch (error: any) {
             console.error('Create household error:', error);
-            showToast(error.message || t('onboarding.errors.failedToCreate'));
+            showToast(error.message || t('onboarding.errors.createFailed'));
         } finally {
             setLoading(false);
         }
@@ -75,7 +75,7 @@ export function HouseholdOnboardingScreen() {
             }
         } catch (error: any) {
             console.error('Join household error:', error);
-            showToast(error.message || t('onboarding.errors.failedToJoin'));
+            showToast(error.message || t('onboarding.errors.joinFailed'));
         } finally {
             setLoading(false);
         }
@@ -90,7 +90,7 @@ export function HouseholdOnboardingScreen() {
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <View style={styles.content}>
                         <View style={styles.header}>
-                            <Text style={styles.title}>{t('onboarding.welcome')}</Text>
+                            <Text style={styles.title}>{t('onboarding.title')}</Text>
                             <Text style={styles.subtitle}>
                                 {t('onboarding.subtitle')}
                             </Text>
@@ -100,7 +100,7 @@ export function HouseholdOnboardingScreen() {
                             <TouchableOpacity
                                 style={[styles.tab, mode === 'create' && styles.activeTab]}
                                 onPress={() => setMode('create')}
-                                accessibilityLabel="Create new household"
+                                accessibilityLabel={t('onboarding.createNewLabel')}
                                 accessibilityRole="button"
                                 accessibilityState={{ selected: mode === 'create' }}
                             >
@@ -111,7 +111,7 @@ export function HouseholdOnboardingScreen() {
                             <TouchableOpacity
                                 style={[styles.tab, mode === 'join' && styles.activeTab]}
                                 onPress={() => setMode('join')}
-                                accessibilityLabel="Join existing household"
+                                accessibilityLabel={t('onboarding.joinExistingLabel')}
                                 accessibilityRole="button"
                                 accessibilityState={{ selected: mode === 'join' }}
                             >
@@ -127,13 +127,13 @@ export function HouseholdOnboardingScreen() {
                                     <Text style={styles.label}>{t('onboarding.householdName')}</Text>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder={t('onboarding.householdPlaceholder')}
+                                        placeholder={t('onboarding.householdNamePlaceholder')}
                                         placeholderTextColor={colors.textMuted}
                                         value={name}
                                         onChangeText={setName}
                                         autoCapitalize="words"
-                                        accessibilityLabel="Household name"
-                                        accessibilityHint="Enter a name for your new household"
+                                        accessibilityLabel={t('onboarding.householdNameLabel')}
+                                        accessibilityHint={t('onboarding.householdNameHint')}
                                     />
                                     <Text style={styles.helperText}>
                                         {t('onboarding.householdHelper')}
@@ -142,9 +142,9 @@ export function HouseholdOnboardingScreen() {
                                         style={[styles.button, !name.trim() && styles.buttonDisabled]}
                                         onPress={handleCreate}
                                         disabled={loading || !name.trim()}
-                                        accessibilityLabel="Create household"
+                                        accessibilityLabel={t('onboarding.createHouseholdLabel')}
                                         accessibilityRole="button"
-                                        accessibilityHint="Creates a new household with the entered name"
+                                        accessibilityHint={t('onboarding.createHouseholdHint')}
                                     >
                                         {loading ? (
                                             <ActivityIndicator color="#fff" />
@@ -158,14 +158,14 @@ export function HouseholdOnboardingScreen() {
                                     <Text style={styles.label}>{t('onboarding.inviteCode')}</Text>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder={t('onboarding.invitePlaceholder')}
+                                        placeholder={t('onboarding.inviteCodePlaceholder')}
                                         placeholderTextColor={colors.textMuted}
                                         value={inviteCode}
                                         onChangeText={setInviteCode}
                                         autoCapitalize="none"
                                         autoCorrect={false}
-                                        accessibilityLabel="Invite code"
-                                        accessibilityHint="Enter the invite code shared by a household member"
+                                        accessibilityLabel={t('onboarding.inviteCodeLabel')}
+                                        accessibilityHint={t('onboarding.inviteCodeHint')}
                                     />
                                     <Text style={styles.helperText}>
                                         {t('onboarding.inviteHelper')}
@@ -174,9 +174,9 @@ export function HouseholdOnboardingScreen() {
                                         style={[styles.button, !inviteCode.trim() && styles.buttonDisabled]}
                                         onPress={handleJoin}
                                         disabled={loading || !inviteCode.trim()}
-                                        accessibilityLabel="Join household"
+                                        accessibilityLabel={t('onboarding.joinHouseholdLabel')}
                                         accessibilityRole="button"
-                                        accessibilityHint="Joins the household using the entered invite code"
+                                        accessibilityHint={t('onboarding.joinHouseholdHint')}
                                     >
                                         {loading ? (
                                             <ActivityIndicator color="#fff" />
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     label: {
         ...typography.label,
         marginBottom: spacing.xs,
-        marginLeft: 4,
+        marginStart: 4,
     },
     input: {
         backgroundColor: colors.background,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
         ...typography.caption,
         color: colors.textMuted,
         marginBottom: spacing.lg,
-        marginLeft: 4,
+        marginStart: 4,
     },
     button: {
         backgroundColor: colors.primary,

@@ -1,31 +1,46 @@
 {
-  "title": "Kitchen Hub",
-  "greeting": "مرحبًا",
-  "quickStats": "إحصائيات سريعة",
-  "shoppingLists": "قوائم التسوق",
-  "activeCount_one": "{{count}} نشطة",
-  "activeCount_other": "{{count}} نشطة",
-  "savedRecipes": "الوصفات المحفوظة",
-  "itemCount_one": "عنصر {{count}}",
-  "itemCount_other": "{{count}} عناصر",
-  "guest": "ضيف",
-  "kitchenLead": "مدير المطبخ",
+  "title": "Dashboard",
+  "greeting": "Hello",
+  "quickStats": {
+    "shoppingLists": "قوائم التسوق",
+    "savedRecipes": "وصفات محفوظة",
+    "active": "{{count}} نشطة",
+    "item": "{{count}} عنصر",
+    "items": "{{count}} عناصر"
+  },
+  "header": {
+    "title": "مركز المطبخ",
+    "roleGuest": "ضيف",
+    "roleKitchenLead": "قائد المطبخ"
+  },
   "quickAdd": {
     "title": "إضافة سريعة",
-    "subtitle": "أضف مقاضي في ثوانٍ.",
-    "mainList": "القائمة الرئيسية",
-    "suggestedItems": "عناصر مقترحة"
+    "subtitle": "أضف المشتريات خلال ثوانٍ.",
+    "mainListBadge": "القائمة الرئيسية",
+    "voiceInput": "إدخال صوتي",
+    "voiceInputHint": "إضافة عناصر باستخدام الصوت",
+    "suggestedItems": "عناصر مقترحة",
+    "show": "إظهار",
+    "hide": "إخفاء",
+    "toggleSuggestedHint": "تبديل عرض العناصر المقترحة",
+    "addItemLabel": "إضافة {{name}}",
+    "addItemHint": "يضيف {{name}} إلى قائمة التسوق"
   },
-  "chores": {
+  "choresPanel": {
     "title": "مهام مهمة",
-    "subtitle": "مهام المنزل",
-    "unassigned": "غير مخصص",
-    "addTask": "إضافة مهمة منزلية"
+    "subtitle": "مهام للمنزل",
+    "viewAll": "عرض الكل",
+    "viewAllLabel": "عرض جميع المهام",
+    "viewAllHint": "الانتقال إلى شاشة المهام",
+    "addTask": "إضافة مهمة منزلية",
+    "addTaskLabel": "إضافة مهمة منزلية",
+    "addTaskHint": "يفتح نموذج إنشاء مهمة جديدة",
+    "unassigned": "غير مُسند",
+    "markComplete": "اضغط للتحديد كمكتمل",
+    "markIncomplete": "اضغط للتحديد كغير مكتمل"
   },
-  "toast": {
-    "noMainList": "لم يتم العثور على قائمة تسوق رئيسية. الرجاء إنشاء واحدة.",
-    "quantityUpdated": "تم تحديث كمية {{name}}",
-    "itemAdded": "تم إضافة {{name}} إلى {{listName}}",
-    "failedToAdd": "فشلت الإضافة"
+  "notifications": {
+    "buttonLabel": "الإشعارات - عرض النشاط والتحديثات الأخيرة",
+    "buttonHint": "اضغط لفتح الإشعارات"
   }
 }

@@ -108,4 +108,9 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
   },
+  searchPlaceholderRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    flex: 1,
+  },
 });

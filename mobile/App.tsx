@@ -20,9 +20,12 @@ import { isRtlLanguage } from './src/i18n/rtl';
 
 export default function App() {
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [layoutDirection, setLayoutDirection] = useState<'ltr' | 'rtl'>('ltr');
+  const [treeKey, setTreeKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    let detachLanguageChanged: (() => void) | undefined;
     (async () => {
       try {
         const stored = await getStoredLanguage();
@@ -32,8 +35,26 @@ export default function App() {
         const initialLocale = normalized !== '' ? normalized : 'en';
         const isRTL = isRtlLanguage(initialLocale);
         I18nManager.allowRTL(true);
+        I18nManager.swapLeftAndRightInRTL(true);
         I18nManager.forceRTL(isRTL);
-        await import('./src/i18n');
+        setLayoutDirection(isRTL ? 'rtl' : 'ltr');
+        const { i18n } = await import('./src/i18n');
+
+        const onLanguageChanged = (lng: string) => {
+          const nextRtl = isRtlLanguage(lng);
+          const nextDirection = nextRtl ? 'rtl' : 'ltr';
+          setLayoutDirection((current) => {
+            if (current !== nextDirection) {
+              setTreeKey((k) => k + 1);
+            }
+            return nextDirection;
+          });
+        };
+
+        i18n.on('languageChanged', onLanguageChanged);
+        detachLanguageChanged = () => {
+          i18n.off('languageChanged', onLanguageChanged);
+        };
       } catch (err) {
         if (typeof console !== 'undefined' && console.warn) {
           console.warn('[App] RTL/i18n bootstrap failed, using default', err);
@@ -44,6 +65,9 @@ export default function App() {
     })();
     return () => {
       cancelled = true;
+      if (detachLanguageChanged) {
+        detachLanguageChanged();
+      }
     };
   }, []);
 
@@ -52,14 +76,28 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={[styles.container, { direction: layoutDirection }]}>
       <PaperProvider>
         <OnboardingProvider>
           <AuthProvider>
             <HouseholdProvider>
               <LegalConsentGate>
                 <StatusBar style="auto" />
-                <RootNavigator />
+                {/*
+                 * key={treeKey} forces a full unmount+remount of the navigator
+                 * when the RTL direction changes (e.g. switching Hebrew ↔ English).
+                 * This is the simplest way to apply I18nManager.forceRTL across the
+                 * entire layout tree synchronously.
+                 *
+                 * Trade-off: navigation state (current screen, stack history) is
+                 * reset on language change. This is acceptable UX because language
+                 * switching is a rare, deliberate action, and preserving a deep
+                 * navigation stack across an RTL flip would be confusing.
+                 *
+                 * If preservation becomes a requirement, pass an `initialState`
+                 * prop sourced from react-navigation's persistence API.
+                 */}
+                <RootNavigator key={`root-nav-${treeKey}`} />
               </LegalConsentGate>
             </HouseholdProvider>
           </AuthProvider>

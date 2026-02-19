@@ -94,9 +94,9 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
               style={styles.backButton}
               onPress={() => navigation.goBack()}
               activeOpacity={0.7}
-              accessibilityLabel="Go back"
+              accessibilityLabel={t('inviteCode.goBack')}
               accessibilityRole="button"
-              accessibilityHint="Returns to previous screen"
+              accessibilityHint={t('inviteCode.goBackHint')}
             >
               <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
@@ -131,8 +131,8 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                     autoCorrect={false}
                     autoFocus
                     editable={!isValidating}
-                    accessibilityLabel="Invite code"
-                    accessibilityHint="Enter the invite code shared by a household member"
+                    accessibilityLabel={t('inviteCode.inviteCodeLabel')}
+                    accessibilityHint={t('inviteCode.inviteCodeHint')}
                   />
                   {error && <Text style={styles.errorText}>{error}</Text>}
                 </View>
@@ -142,9 +142,9 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                   onPress={handleValidate}
                   activeOpacity={0.7}
                   disabled={isValidating}
-                  accessibilityLabel="Continue"
+                  accessibilityLabel={t('inviteCode.continue')}
                   accessibilityRole="button"
-                  accessibilityHint="Validates the invite code and proceeds to sign in"
+                  accessibilityHint={t('inviteCode.continueHint')}
                 >
                   {isValidating ? (
                     <ActivityIndicator color={colors.surface} />
@@ -170,9 +170,9 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                   style={[styles.button, styles.primaryButton]}
                   onPress={() => navigation.navigate('Login')}
                   activeOpacity={0.7}
-                  accessibilityLabel="Continue to sign in"
+                  accessibilityLabel={t('inviteCode.continueToSignIn')}
                   accessibilityRole="button"
-                  accessibilityHint="Proceeds to sign in screen to join the household"
+                  accessibilityHint={t('inviteCode.continueToSignInHint')}
                 >
                   <Text style={styles.primaryButtonText}>{t('inviteCode.continueToSignIn')}</Text>
                 </TouchableOpacity>
@@ -185,9 +185,9 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                     setError(null);
                   }}
                   activeOpacity={0.7}
-                  accessibilityLabel="Change code"
+                  accessibilityLabel={t('inviteCode.changeCode')}
                   accessibilityRole="button"
-                  accessibilityHint="Returns to enter a different invite code"
+                  accessibilityHint={t('inviteCode.changeCodeHint')}
                 >
                   <Text style={styles.changeCodeText}>{t('inviteCode.changeCode')}</Text>
                 </TouchableOpacity>

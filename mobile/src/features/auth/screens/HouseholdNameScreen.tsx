@@ -60,13 +60,13 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
       if (user?.householdId) {
         try {
           const userData = await authApi.getCurrentUser();
-          const householdName = userData.household?.name || 'My family';
+          const householdName = userData.household?.name || t('householdName.inputPlaceholder');
           setName(householdName);
           setOriginalName(householdName);
         } catch (error) {
           logger.error('Error fetching household name:', error);
           // Fallback to default
-          const defaultName = 'My family';
+          const defaultName = t('householdName.inputPlaceholder');
           setName(defaultName);
           setOriginalName(defaultName);
         }
@@ -189,8 +189,8 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
                 autoFocus
                 editable={!isSaving}
                 maxLength={40}
-                accessibilityLabel="Household name"
-                accessibilityHint="Enter a name for your household, 2 to 40 characters"
+                accessibilityLabel={t('householdName.inputLabel')}
+                accessibilityHint={t('householdName.inputHint')}
               />
               {error && <Text style={styles.errorText}>{error}</Text>}
               <Text style={styles.characterCount}>
@@ -203,9 +203,9 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
               onPress={handleSave}
               activeOpacity={0.7}
               disabled={isSaving || !name.trim()}
-              accessibilityLabel="Save household name"
+              accessibilityLabel={t('householdName.saveLabel')}
               accessibilityRole="button"
-              accessibilityHint="Saves the household name and continues to the app"
+              accessibilityHint={t('householdName.saveHint')}
             >
               {isSaving ? (
                 <ActivityIndicator color={colors.surface} />
@@ -219,9 +219,9 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
                 style={styles.skipButton}
                 onPress={handleSkip}
                 activeOpacity={0.7}
-                accessibilityLabel="Skip naming"
+                accessibilityLabel={t('householdName.skipLabel')}
                 accessibilityRole="button"
-                accessibilityHint="Continues to the app without changing the household name"
+                accessibilityHint={t('householdName.skipHint')}
               >
                 <Text style={styles.skipButtonText}>{t('householdName.skip')}</Text>
               </TouchableOpacity>

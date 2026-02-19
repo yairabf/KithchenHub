@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
-import { CatalogItem } from '../../../../mocks/shopping';
+import { GroceryItem } from '../GrocerySearchBar';
 
 interface FrequentlyAddedGridItemProps {
-    item: CatalogItem;
+    item: GroceryItem;
     onAdd: () => void;
 }
 
@@ -14,12 +15,13 @@ export const FrequentlyAddedGridItem: React.FC<FrequentlyAddedGridItemProps> = (
     item,
     onAdd,
 }) => {
+    const { t } = useTranslation('shopping');
     return (
         <TouchableOpacity
             style={styles.itemTile}
             onPress={onAdd}
             activeOpacity={0.8}
-            accessibilityLabel={`Add ${item.name} to list`}
+            accessibilityLabel={t('frequentlyAdded.addItemAccessibility', { name: item.name })}
             accessibilityRole="button"
         >
             <View style={styles.itemImageContainer}>

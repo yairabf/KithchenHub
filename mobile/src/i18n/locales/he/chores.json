@@ -1,25 +1,68 @@
 {
-  "title": "מטלות הבית",
+  "title": "מטלות",
   "status": {
     "pending": "ממתין",
     "done": "הושלם",
     "overdue": "באיחור"
   },
-  "actions": {
-    "shareList": "שתף רשימת מטלות",
-    "addItem": "הוסף פריט"
+  "screen": {
+    "headerTitle": "מטלות הבית",
+    "shareActionLabel": "שתף רשימת מטלות",
+    "addActionLabel": "הוסף פריט",
+    "emptyTitle": "עדיין אין מטלות",
+    "emptyDescription": "צור את המטלה הראשונה כדי להתחיל לנהל מטלות בבית",
+    "emptyAction": "צור מטלה ראשונה",
+    "searchPlaceholder": "חיפוש מהיר של משימות...",
+    "todayTitle": "מטלות להיום",
+    "upcomingTitle": "מטלות בהמשך",
+    "shareTitle": "שתף מטלות"
   },
-  "emptyState": {
-    "title": "אין מטלות עדיין",
-    "description": "צור את המטלה הראשונה שלך כדי לעקוב אחרי משימות הבית",
-    "action": "צור מטלה ראשונה"
+  "progress": {
+    "today": "היום",
+    "title": "התקדמות יומית",
+    "bodyCompact": "השלמת {{completed}} מתוך {{total}} מטלות היום. כל הכבוד!",
+    "bodyWide": "השלמת {{completed}} מתוך {{total}} מטלות היום. המשך כך כדי להגיע ליעדים השבועיים שלך!"
   },
-  "search": {
-    "placeholder": "חיפוש מהיר של משימות..."
+  "card": {
+    "editLabel": "ערוך מטלה {{title}}",
+    "editHint": "פותח את פרטי המטלה",
+    "toggleDoneHint": "הקש לסימון כלא הושלם",
+    "togglePendingHint": "הקש לסימון כהושלם",
+    "dueBy": "עד",
+    "oneTime": "חד-פעמי"
   },
-  "sections": {
-    "today": "מטלות להיום",
-    "upcoming": "מטלות קרובות"
+  "modal": {
+    "addTitle": "הוסף מטלה",
+    "editTitle": "ערוך מטלה",
+    "submitAdd": "הוסף",
+    "submitSave": "שמור",
+    "cancel": "ביטול",
+    "choreNamePlaceholder": "שם המטלה",
+    "iconLabel": "סמל:",
+    "repeatLabel": "חזרה:",
+    "assignLabel": "הקצה לְ:",
+    "assigneeUnassigned": "לא מוקצה",
+    "assigneeManage": "ניהול",
+    "recurrence": {
+      "none": "ללא",
+      "daily": "יומי",
+      "weekly": "שבועי",
+      "monthly": "חודשי"
+    },
+    "dueDateLabel": "תאריך ושעת יעד",
+    "dueDatePlaceholder": "בחר תאריך ושעה..."
   },
-  "shareTitle": "שתף מטלות"
+  "share": {
+    "header": "מטלות הבית",
+    "empty": "אין מטלות לשיתוף!",
+    "todaySection": "מטלות להיום:",
+    "upcomingSection": "מטלות בהמשך:"
+  },
+  "quickActionModal": {
+    "title": "הוספה מהירה",
+    "choreNamePlaceholder": "הוסף מטלה...",
+    "assignLabel": "הקצה ל:",
+    "unassigned": "לא מוקצה",
+    "manage": "נהל"
+  }
 }

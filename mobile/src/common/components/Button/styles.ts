@@ -21,10 +21,10 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   icon: {
-    marginRight: spacing.xs,
+    marginEnd: spacing.xs,
   },
   spinner: {
-    marginRight: spacing.xs,
+    marginEnd: spacing.xs,
   },
   fullWidth: {
     width: '100%',

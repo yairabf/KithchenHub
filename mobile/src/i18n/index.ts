@@ -3,8 +3,7 @@
  * Uses custom language detector (AsyncStorage + expo-localization).
  * Supports native (iOS/Android) and web platforms. Rely on detector + fallbackLng; do not hardcode lng.
  */
-import { Alert, I18nManager } from 'react-native';
-import * as Updates from 'expo-updates';
+import { I18nManager } from 'react-native';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { createLanguageDetector } from './languageDetector';
@@ -176,16 +175,7 @@ export async function setAppLanguage(locale: string): Promise<void> {
   const newIsRtl = isRtlLanguage(normalized);
   const currentIsRtl = I18nManager.isRTL;
   if (newIsRtl !== currentIsRtl) {
+    I18nManager.swapLeftAndRightInRTL(true);
     I18nManager.forceRTL(newIsRtl);
-    try {
-      await Updates.reloadAsync();
-    } catch {
-      I18nManager.forceRTL(currentIsRtl);
-      Alert.alert(
-        i18n.t('directionChangeTitle', { ns: 'errors' }),
-        i18n.t('directionChangeMessage', { ns: 'errors' }),
-        [{ text: i18n.t('buttons.ok') }],
-      );
-    }
   }
 }

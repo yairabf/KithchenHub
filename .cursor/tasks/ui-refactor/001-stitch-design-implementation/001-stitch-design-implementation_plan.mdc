@@ -1,0 +1,47 @@
+# 001 - Stitch Design Implementation
+
+**Epic:** UI/UX Refactor
+**Created:** 2026-02-10
+**Status:** Planning
+
+## Overview
+Refactor the KitchenHub mobile app UI to align with the "vibrant green" modern aesthetic found in the Stitch "kitchen" project (`15267100645135648985`). This involves moving away from the current earthy/olive tones to a more modern, glassmorphic design with vibrant green accents.
+
+## Architecture
+- **Theme Layer**: Modify `mobile/src/theme/colors.ts` and `mobile/src/theme/typography.ts`.
+- **Components**: Update shared components (Buttons, Cards, Modals) to use the new design language.
+- **Features**: Apply the refactored theme to the Dashboard and other core screens.
+
+## Implementation Steps
+### Phase 1: Theme Update (Groundwork)
+1. **Update Colors**: 
+   - Replace Olive Green (`#606c38`) with Vibrant Green (`#13ec13`).
+   - Replace Warm Cream background with a clean White/Slate-50 background.
+   - Refine Glassmorphism tokens.
+2. **Update Typography**: Ensure "Inter" is properly configured and headline weights are premium.
+3. **Update Spacing/Radius**: Align roundness with the `ROUND_EIGHT` (8px) and `XXXL` (24px) patterns.
+
+### Phase 2: Core Components Refactor
+1. **Glassmorphic Cards**: Update `ListItemCardWrapper` and other card containers to use backdrop filters (where possible in React Native) or optimized glass-look gradients/shadows.
+2. **Vibrant Buttons**: Update primary buttons to the new green.
+
+### Phase 3: Dashboard Refactor
+1. **Kitchen Dashboard**: Apply new styles to `DashboardScreen`.
+2. **Shopping/Chores Headers**: Update widget styling to be more "premium" and "alive".
+
+## Design System (Refined)
+- **Primary**: `#13ec13` (Vibrant Green)
+- **Secondary**: `#0f172a` (Slate-900 for contrast)
+- **Background**: `#F8FAFC` (Slate-50)
+- **Surface**: `rgba(255, 255, 255, 0.8)`
+- **Shadows**: Soft, multi-layered shadows for depth.
+
+## Testing Strategy
+1. **Visual Regression**: Compare screenshots of current vs new (if applicable).
+2. **Manual Testing**: Verify visibility and contrast of the new green on the clean background.
+3. **Accessibility**: Check contrast ratios for the vibrant green text (likely needs to be darker for small text).
+
+## Success Criteria
+- App feels "modern", "vibrant", and "premium".
+- UI reflects the design language of the Stitch "kitchen" project.
+- Consistent use of new design tokens across at least the Dashboard.

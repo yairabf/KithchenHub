@@ -1,31 +1,46 @@
 {
-  "title": "Kitchen Hub",
+  "title": "Dashboard",
   "greeting": "Hello",
-  "quickStats": "Quick stats",
-  "shoppingLists": "Shopping Lists",
-  "activeCount_one": "{{count}} Active",
-  "activeCount_other": "{{count}} Active",
-  "savedRecipes": "Saved Recipes",
-  "itemCount_one": "{{count}} Item",
-  "itemCount_other": "{{count}} Items",
-  "guest": "Guest",
-  "kitchenLead": "KITCHEN LEAD",
+  "quickStats": {
+    "shoppingLists": "Shopping Lists",
+    "savedRecipes": "Saved Recipes",
+    "active": "{{count}} Active",
+    "item": "{{count}} Item",
+    "items": "{{count}} Items"
+  },
+  "header": {
+    "title": "Kitchen Hub",
+    "roleGuest": "Guest",
+    "roleKitchenLead": "KITCHEN LEAD"
+  },
   "quickAdd": {
     "title": "Quick Add",
     "subtitle": "Add groceries in seconds.",
-    "mainList": "Main List",
-    "suggestedItems": "Suggested Items"
+    "mainListBadge": "Main List",
+    "voiceInput": "Voice input",
+    "voiceInputHint": "Add items using voice",
+    "suggestedItems": "Suggested Items",
+    "show": "Show",
+    "hide": "Hide",
+    "toggleSuggestedHint": "Toggles suggested shopping items",
+    "addItemLabel": "Add {{name}}",
+    "addItemHint": "Adds {{name}} to shopping list"
   },
-  "chores": {
+  "choresPanel": {
     "title": "Important Chores",
     "subtitle": "Assignments for the house",
+    "viewAll": "View All",
+    "viewAllLabel": "View all chores",
+    "viewAllHint": "Navigate to chores screen",
+    "addTask": "Add Household Task",
+    "addTaskLabel": "Add household task",
+    "addTaskHint": "Opens form to create a new chore",
     "unassigned": "Unassigned",
-    "addTask": "Add Household Task"
+    "markComplete": "Tap to mark complete",
+    "markIncomplete": "Tap to mark incomplete"
   },
-  "toast": {
-    "noMainList": "No main shopping list found. Please create one.",
-    "quantityUpdated": "{{name}} quantity updated",
-    "itemAdded": "{{name}} added to {{listName}}",
-    "failedToAdd": "Failed to add item"
+  "notifications": {
+    "buttonLabel": "Notifications - View recent activity and updates",
+    "buttonHint": "Tap to open notifications"
   }
 }

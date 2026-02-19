@@ -99,10 +99,11 @@ class ApiClient {
         const effectiveToken = token || this.authToken;
 
         const isFormData = customConfig.body instanceof FormData;
+        const hasBody = customConfig.body !== undefined && customConfig.body !== null;
         const config: RequestInit = {
             ...customConfig,
             headers: {
-                ...(!isFormData && { 'Content-Type': 'application/json' }),
+                ...(!isFormData && hasBody && { 'Content-Type': 'application/json' }),
                 ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
                 ...headers,
             },

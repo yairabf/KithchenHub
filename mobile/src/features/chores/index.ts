@@ -5,4 +5,3 @@ export { ChoresProgressCard } from './components/ChoresProgressCard';
 export { ChoresSection } from './components/ChoresSection';
 export { ProgressRing } from './components/ProgressRing';
 export { ChoreDetailsModal } from './components/ChoreDetailsModal';
-export { ChoresQuickActionModal } from './components/ChoresQuickActionModal';

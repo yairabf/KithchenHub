@@ -1,25 +1,68 @@
 {
-  "title": "مهام المنزل",
+  "title": "Chores",
   "status": {
-    "pending": "معلقة",
-    "done": "مكتملة",
-    "overdue": "متأخرة"
+    "pending": "Pending",
+    "done": "Done",
+    "overdue": "Overdue"
   },
-  "actions": {
-    "shareList": "مشاركة قائمة المهام",
-    "addItem": "إضافة عنصر"
+  "screen": {
+    "headerTitle": "مهام المنزل",
+    "shareActionLabel": "مشاركة قائمة المهام",
+    "addActionLabel": "إضافة عنصر",
+    "emptyTitle": "لا توجد مهام بعد",
+    "emptyDescription": "أنشئ أول مهمة لبدء تتبع مهام المنزل",
+    "emptyAction": "إنشاء أول مهمة",
+    "searchPlaceholder": "بحث سريع عن المهام...",
+    "todayTitle": "مهام اليوم",
+    "upcomingTitle": "المهام القادمة",
+    "shareTitle": "مشاركة المهام"
   },
-  "emptyState": {
-    "title": "لا توجد مهام بعد",
-    "description": "أنشئ أول مهمة لبدء تتبع المهام المنزلية",
-    "action": "إنشاء أول مهمة"
+  "progress": {
+    "today": "اليوم",
+    "title": "التقدم اليومي",
+    "bodyCompact": "أنجزت {{completed}} من أصل {{total}} مهام اليوم. استمر!",
+    "bodyWide": "أنجزت {{completed}} من أصل {{total}} مهام اليوم. استمر للوصول إلى أهدافك الأسبوعية!"
   },
-  "search": {
-    "placeholder": "البحث السريع عن المهام..."
+  "card": {
+    "editLabel": "تعديل المهمة {{title}}",
+    "editHint": "يفتح تفاصيل المهمة",
+    "toggleDoneHint": "اضغط للتحديد كغير مكتمل",
+    "togglePendingHint": "اضغط للتحديد كمكتمل",
+    "dueBy": "مستحقة قبل",
+    "oneTime": "مرة واحدة"
   },
-  "sections": {
-    "today": "مهام اليوم",
-    "upcoming": "المهام القادمة"
+  "modal": {
+    "addTitle": "إضافة مهمة",
+    "editTitle": "تعديل مهمة",
+    "submitAdd": "إضافة",
+    "submitSave": "حفظ",
+    "cancel": "إلغاء",
+    "choreNamePlaceholder": "اسم المهمة",
+    "iconLabel": "الأيقونة:",
+    "repeatLabel": "التكرار:",
+    "assignLabel": "تعيين إلى:",
+    "assigneeUnassigned": "غير معين",
+    "assigneeManage": "إدارة",
+    "recurrence": {
+      "none": "بدون",
+      "daily": "يومي",
+      "weekly": "أسبوعي",
+      "monthly": "شهري"
+    },
+    "dueDateLabel": "تاريخ ووقت الاستحقاق",
+    "dueDatePlaceholder": "اختر التاريخ والوقت..."
   },
-  "shareTitle": "مشاركة المهام"
+  "share": {
+    "header": "مهام المنزل",
+    "empty": "لا توجد مهام للمشاركة!",
+    "todaySection": "مهام اليوم:",
+    "upcomingSection": "المهام القادمة:"
+  },
+  "quickActionModal": {
+    "title": "إضافة سريعة",
+    "choreNamePlaceholder": "أضف مهمة...",
+    "assignLabel": "تعيين إلى:",
+    "unassigned": "غير معين",
+    "manage": "إدارة"
+  }
 }

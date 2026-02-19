@@ -33,12 +33,18 @@ import { withCreatedAt, withUpdatedAt, markDeleted } from '../utils/timestamps';
 type RecipeApiResponse = {
   id: string;
   localId?: string;
-  name: string;
+  title: string;
+  prepTime?: number;
   category?: string;
-  ingredients?: string[];
-  instructions?: string[];
-  prepTime?: string;
+  ingredients?: unknown[];
+  instructions?: unknown[];
+  hasImage?: boolean;
   imageUrl?: string;
+  thumbUrl?: string | null;
+  imageKey?: string | null;
+  thumbKey?: string | null;
+  imageVersion?: number;
+  imageUpdatedAt?: string | Date | null;
   description?: string;
   calories?: number;
   servings?: number;
@@ -205,6 +211,7 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
       id: localId, // Use localId as id initially (will be replaced by server id after sync)
       localId: localId,
       title: data.title ?? '',
+      cookTime: data.cookTime,
       prepTime: data.prepTime,
       category: data.category,
       imageUrl: data.imageUrl,

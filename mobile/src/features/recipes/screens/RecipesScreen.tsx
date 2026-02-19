@@ -8,11 +8,11 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import type { ViewStyle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
 import { spacing } from '../../../theme';
 import { colors } from '../../../theme/colors';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
@@ -21,7 +21,7 @@ import { CardSkeleton } from '../../../common/components/CardSkeleton';
 import { RecipeCard } from '../components/RecipeCard';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import type { GroceryItem } from '../../shopping/components/GrocerySearchBar';
-import { recipeCategories, type Recipe } from '../../../mocks/recipes';
+import { type Recipe } from '../../../mocks/recipes';
 import { useResponsive } from '../../../common/hooks';
 import { resizeAndValidateImage } from '../../../common/utils';
 import { config } from '../../../config';
@@ -33,6 +33,13 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { Toast } from '../../../common/components/Toast';
 import { logger } from '../../../common/utils/logger';
+import {
+  RECIPE_CATEGORIES,
+  RECIPE_FILTER_CATEGORIES,
+  getRecipeCategoryIcon,
+  normalizeRecipeCategory,
+} from '../constants';
+import { useTranslation } from 'react-i18next';
 
 const RECIPES_SHOW_CATEGORY_FILTER_KEY = '@kitchen_hub_recipes_show_category_filter';
 
@@ -93,21 +100,25 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   }, []);
 
   const effectiveCategory = showCategoryFilter ? selectedCategory : 'All';
+  const isIOS = Platform.OS === 'ios';
 
-  // Calculate card width dynamically based on screen size
-  // Account for container padding and gap between columns
+  // Calculate card width dynamically based on platform and screen size
   const cardWidth = useMemo(() => {
     const containerPadding = spacing.lg * 2; // contentContainer padding (24px each side)
-    const availableWidth = width - containerPadding - COLUMN_GAP;
+    const availableWidth = width - containerPadding;
+
+    if (isIOS) {
+      return availableWidth;
+    }
 
     if (isTablet) {
       // 2 columns on tablet/web - wider cards with moderate gap between columns
-      return (availableWidth / 2) - (COLUMN_GAP / 2);
+      return (availableWidth - COLUMN_GAP) / 2;
     } else {
       // 2 columns on phone, use full available width
-      return availableWidth / 2;
+      return (availableWidth - COLUMN_GAP) / 2;
     }
-  }, [width, isTablet]);
+  }, [isIOS, width, isTablet]);
 
   // Deduplicate recipes by ID to prevent duplicate key warnings
   const uniqueRecipes = useMemo(() => {
@@ -136,12 +147,23 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const filteredRecipes = uniqueRecipes.filter(recipe => {
     // Safely handle recipes that might be missing fields (e.g., from API list endpoint)
     const recipeName = recipe?.title || '';
-    const recipeCategory = recipe?.category || 'Dinner';
+    const recipeCategory = normalizeRecipeCategory(recipe?.category);
 
     const matchesCategory = effectiveCategory === 'All' || recipeCategory === effectiveCategory;
     const matchesSearch = recipeName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const hasAnyRecipes = uniqueRecipes.length > 0;
+  const showCollectionEmptyState = !isLoading && !hasAnyRecipes;
+  const showFilteredEmptyState = !isLoading && hasAnyRecipes && filteredRecipes.length === 0;
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const hasActiveCategoryFilter = showCategoryFilter && selectedCategory !== 'All';
+
+  const handleResetFilters = useCallback(() => {
+    setSearchQuery('');
+    setSelectedCategory('All');
+  }, []);
 
   const handleAddRecipe = () => {
     setShowAddRecipeModal(true);
@@ -152,15 +174,15 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     try {
       const full = await getRecipeById(recipe.id);
       const hasDetails = !!full?.ingredients?.length && !!full?.instructions?.length;
-      if (!hasDetails) {
-        showToast(t('toast.stillLoading'));
+        if (!hasDetails) {
+        showToast(t('detail.toasts.recipeDetailsLoading'));
         return;
       }
       setEditingRecipe(full);
       setShowEditRecipeModal(true);
     } catch (error) {
       logger.error('Failed to load recipe details for edit:', error instanceof Error ? error : String(error));
-      showToast(t('toast.failedToLoad'));
+      showToast(t('detail.toasts.recipeDetailsLoadFailed'));
     } finally {
       setIsLoadingEdit(false);
     }
@@ -225,10 +247,10 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title={t('title')}
+        title={t('screen.headerTitle')}
         titleIcon="book-outline"
         rightActions={{
-          add: { onPress: handleAddRecipe, label: t('actions.addItem') },
+          add: { onPress: handleAddRecipe, label: t('screen.addActionLabel') },
         }}
       />
 
@@ -247,12 +269,12 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             ))}
           </View>
         </ScrollView>
-      ) : filteredRecipes.length === 0 && !isLoading ? (
+      ) : showCollectionEmptyState ? (
         <EmptyState
           icon="book-outline"
-          title={t('emptyState.title')}
-          description={t('emptyState.description')}
-          actionLabel={t('emptyState.action')}
+          title={t('screen.emptyTitle')}
+          description={t('screen.emptyDescription')}
+          actionLabel={t('screen.emptyAction')}
           onActionPress={handleAddRecipe}
           actionColor={colors.recipes}
         />
@@ -262,7 +284,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             <Ionicons name="search" size={20} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder={t('search.placeholder')}
+              placeholder={t('screen.searchPlaceholder')}
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -270,70 +292,59 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
           </View>
 
           {showCategoryFilter ? (
-            <View style={styles.filterRow}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterContainer}
-                contentContainerStyle={styles.filterContent}
-              >
-                {recipeCategories.map((category) => {
-                  const categoryIcons: Record<string, string> = {
-                    All: 'apps-outline',
-                    Breakfast: 'cafe-outline',
-                    Lunch: 'fast-food-outline',
-                    Dinner: 'pizza-outline',
-                    Snacks: 'ice-cream-outline',
-                    Dessert: 'car-outline',
-                  };
-                  const categoryLabels: Record<string, string> = {
-                    All: t('categories.all'),
-                    Breakfast: t('categories.breakfast'),
-                    Lunch: t('categories.lunch'),
-                    Dinner: t('categories.dinner'),
-                    Snacks: t('categories.snacks'),
-                    Dessert: t('categories.dessert'),
-                  };
-                  const iconName = categoryIcons[category] ?? 'restaurant-outline';
-                  const isActive = selectedCategory === category;
-
-                  return (
-                    <TouchableOpacity
-                      key={category}
-                      style={styles.filterChip}
-                      onPress={() => setSelectedCategory(category)}
-                    >
-                      <View style={[styles.filterCircle, isActive && styles.filterCircleActive]}>
-                        <Ionicons
-                          name={iconName as React.ComponentProps<typeof Ionicons>['name']}
-                          size={24}
-                          color={isActive ? colors.primary : colors.textSecondary}
-                        />
-                      </View>
-                      <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                        {categoryLabels[category] ?? category}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.filterHideButton}
-                onPress={handleToggleCategoryFilter}
-                accessibilityLabel="Hide category filter"
-              >
+            <View style={styles.filterSection}>
+              <View style={styles.filterHeader}>
+                <TouchableOpacity
+                  style={styles.filterHideButton}
+                  onPress={handleToggleCategoryFilter}
+                  accessibilityLabel={t('screen.hideCategoryFilter')}
+                >
                 <Ionicons name="eye-off-outline" size={20} color={colors.textMuted} />
-                <Text style={styles.filterHideButtonText}>{t('buttons.hide', { ns: 'common' })}</Text>
+                <Text style={styles.filterHideButtonText}>{t('screen.hide')}</Text>
               </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterRow}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.filterContainer}
+                  contentContainerStyle={styles.filterContent}
+                >
+                  {RECIPE_FILTER_CATEGORIES.map((category) => {
+                    const iconName = getRecipeCategoryIcon(category);
+                    const isActive = selectedCategory === category;
+
+                    return (
+                      <TouchableOpacity
+                        key={category}
+                        style={styles.filterChip}
+                        onPress={() => setSelectedCategory(category)}
+                      >
+                        <View style={[styles.filterCircle, isActive && styles.filterCircleActive]}>
+                          <Ionicons
+                            name={iconName as React.ComponentProps<typeof Ionicons>['name']}
+                            size={24}
+                            color={isActive ? colors.primary : colors.textSecondary}
+                          />
+                        </View>
+                        <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                          {t(`categories:${category}`, { defaultValue: category })}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
             </View>
           ) : (
             <TouchableOpacity
               style={styles.filterShowButton}
               onPress={handleToggleCategoryFilter}
-              accessibilityLabel="Show category filter"
+              accessibilityLabel={t('screen.showCategoryFilter')}
             >
               <Ionicons name="filter-outline" size={20} color={colors.textMuted} />
-              <Text style={styles.filterShowButtonText}>{t('showCategoryFilter')}</Text>
+              <Text style={styles.filterShowButtonText}>{t('screen.showCategoryFilterButton')}</Text>
             </TouchableOpacity>
           )}
 
@@ -344,18 +355,33 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
               <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
             }
           >
-            <View style={styles.grid}>
-              {filteredRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe.id}
-                  recipe={recipe}
-                  backgroundColor={colors.surface}
-                  onPress={() => onSelectRecipe?.(recipe)}
-                  onEdit={() => handleEditRecipe(recipe)}
-                  width={cardWidth}
-                />
-              ))}
-            </View>
+            {showFilteredEmptyState ? (
+              <EmptyState
+                icon="search-outline"
+                title={hasActiveSearch ? t('screen.noMatchingRecipes') : t('screen.noRecipesInCategory')}
+                description={
+                  hasActiveSearch
+                    ? t('screen.noRecipesMatchSearch', { query: searchQuery.trim() })
+                    : t('screen.tryDifferentCategory')
+                }
+                actionLabel={hasActiveSearch || hasActiveCategoryFilter ? t('screen.resetFilters') : undefined}
+                onActionPress={hasActiveSearch || hasActiveCategoryFilter ? handleResetFilters : undefined}
+                actionColor={colors.recipes}
+              />
+            ) : (
+              <View style={styles.grid}>
+                {filteredRecipes.map((recipe) => (
+                  <RecipeCard
+                    key={recipe.id}
+                    recipe={recipe}
+                    backgroundColor={colors.surface}
+                    onPress={() => onSelectRecipe?.(recipe)}
+                    onEdit={() => handleEditRecipe(recipe)}
+                    width={cardWidth}
+                  />
+                ))}
+              </View>
+            )}
           </ScrollView>
         </>
       )}
@@ -366,7 +392,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         onClose={() => setShowAddRecipeModal(false)}
         onSave={handleSaveRecipe}
         isSaving={isSavingRecipe}
-        categories={recipeCategories.filter((c) => c !== 'All')}
+        categories={RECIPE_CATEGORIES}
         groceryItems={groceryItems}
         searchGroceries={searchGroceries}
       />
@@ -380,7 +406,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         }}
         onSave={handleUpdateRecipe}
         isSaving={isSavingEdit}
-        categories={recipeCategories.filter((c) => c !== 'All')}
+        categories={RECIPE_CATEGORIES}
         groceryItems={groceryItems}
         mode="edit"
         initialRecipe={editingRecipe ? mapRecipeToFormData(editingRecipe) : undefined}

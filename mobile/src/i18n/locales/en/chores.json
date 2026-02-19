@@ -1,25 +1,68 @@
 {
-  "title": "Home Chores",
+  "title": "Chores",
   "status": {
     "pending": "Pending",
     "done": "Done",
     "overdue": "Overdue"
   },
-  "actions": {
-    "shareList": "Share chores list",
-    "addItem": "Add item"
+  "screen": {
+    "headerTitle": "Home Chores",
+    "shareActionLabel": "Share chores list",
+    "addActionLabel": "Add item",
+    "emptyTitle": "No chores yet",
+    "emptyDescription": "Create your first chore to start tracking household tasks",
+    "emptyAction": "Create first chore",
+    "searchPlaceholder": "Quick find tasks...",
+    "todayTitle": "Today's Chores",
+    "upcomingTitle": "Upcoming Chores",
+    "shareTitle": "Share Chores"
   },
-  "emptyState": {
-    "title": "No chores yet",
-    "description": "Create your first chore to start tracking household tasks",
-    "action": "Create first chore"
+  "progress": {
+    "today": "Today",
+    "title": "Daily Progress",
+    "bodyCompact": "You've completed {{completed}} out of {{total}} chores today. Keep it up!",
+    "bodyWide": "You've completed {{completed}} out of {{total}} chores today. Keep it up to reach your weekly goals!"
   },
-  "search": {
-    "placeholder": "Quick find tasks..."
+  "card": {
+    "editLabel": "Edit chore {{title}}",
+    "editHint": "Opens chore details",
+    "toggleDoneHint": "Tap to mark incomplete",
+    "togglePendingHint": "Tap to mark complete",
+    "dueBy": "Due by",
+    "oneTime": "One-time"
   },
-  "sections": {
-    "today": "Today's Chores",
-    "upcoming": "Upcoming Chores"
+  "modal": {
+    "addTitle": "Add Chore",
+    "editTitle": "Edit Chore",
+    "submitAdd": "Add",
+    "submitSave": "Save",
+    "cancel": "Cancel",
+    "choreNamePlaceholder": "Chore name",
+    "iconLabel": "ICON:",
+    "repeatLabel": "REPEAT:",
+    "assignLabel": "Assign to:",
+    "assigneeUnassigned": "Unassigned",
+    "assigneeManage": "Manage",
+    "recurrence": {
+      "none": "None",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "dueDateLabel": "Due Date & Time",
+    "dueDatePlaceholder": "Select date and time..."
   },
-  "shareTitle": "Share Chores"
+  "share": {
+    "header": "Home Chores",
+    "empty": "No chores to share!",
+    "todaySection": "Today's Chores:",
+    "upcomingSection": "Upcoming Chores:"
+  },
+  "quickActionModal": {
+    "title": "Quick Chores",
+    "choreNamePlaceholder": "Add a chore...",
+    "assignLabel": "Assign to:",
+    "unassigned": "Unassigned",
+    "manage": "Manage"
+  }
 }

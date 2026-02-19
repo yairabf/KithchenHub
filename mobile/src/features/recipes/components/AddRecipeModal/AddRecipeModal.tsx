@@ -11,16 +11,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../../../../theme';
-import { CenteredModal } from '../../../../common/components/CenteredModal';
+import { EntityFormModal } from '../../../../common/components/EntityFormModal';
 import { stripToDigitsOnly, stripToNumeric } from '../../../../common/utils';
 import { useDebouncedRemoteSearch } from '../../../../common/hooks';
 import { GrocerySearchBar, GroceryItem } from '../../../shopping/components/GrocerySearchBar';
 import { UnitPicker } from '../UnitPicker';
-import { getUnitLabel } from '../../constants';
+import { getUnitLabel, RECIPE_CATEGORIES } from '../../constants';
 import { styles } from './styles';
 import { AddRecipeModalProps, NewRecipeData, Ingredient } from './types';
-
-const DEFAULT_CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snack'];
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -38,7 +36,7 @@ export function AddRecipeModal({
   onClose,
   onSave,
   isSaving = false,
-  categories = DEFAULT_CATEGORIES,
+  categories = RECIPE_CATEGORIES,
   groceryItems = [],
   mode = 'create',
   initialRecipe,
@@ -227,16 +225,15 @@ export function AddRecipeModal({
   };
 
   return (
-    <CenteredModal
+    <EntityFormModal
       visible={visible}
       onClose={onClose}
-      title={mode === 'edit' ? 'Edit Recipe' : 'New Recipe'}
-      confirmText={isSaving ? 'Saving…' : mode === 'edit' ? 'Save Changes' : 'Save Recipe'}
-      cancelText="Cancel"
-      onConfirm={handleSave}
-      confirmColor={colors.recipes}
-      confirmDisabled={!isValid || isSaving}
-      confirmLoading={isSaving}
+      title={mode === 'edit' ? 'Edit Recipe' : 'Add Recipe'}
+      submitText={mode === 'edit' ? 'Save' : 'Add'}
+      onSubmit={handleSave}
+      submitColor={colors.recipes}
+      submitDisabled={!isValid || isSaving}
+      submitLoading={isSaving}
     >
       <ScrollView
         style={styles.scrollContent}
@@ -502,6 +499,6 @@ export function AddRecipeModal({
           />
         );
       })()}
-    </CenteredModal>
+    </EntityFormModal>
   );
 }

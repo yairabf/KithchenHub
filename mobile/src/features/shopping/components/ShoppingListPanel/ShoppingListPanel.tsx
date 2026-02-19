@@ -20,6 +20,7 @@ import { normalizeCategoryKey } from '../../constants/categories';
 import { toggleSetItem } from '../../../../common/utils/setUtils';
 import { styles } from './styles';
 import { ShoppingListPanelProps, ShoppingItemCardProps } from './types';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Shopping Item Card Component
@@ -92,6 +93,7 @@ export function ShoppingListPanel({
   isLoading = false,
   onEmptyStateAction,
 }: ShoppingListPanelProps) {
+  const { t } = useTranslation(['shopping', 'categories']);
   /**
    * Track which categories are collapsed.
    * Uses a Set for O(1) lookup performance.
@@ -175,9 +177,9 @@ export function ShoppingListPanel({
    * @returns Formatted category name for display
    */
   const formatCategoryName = useCallback((category: string) => {
-    if (!category) return 'Other';
-    return category.charAt(0).toUpperCase() + category.slice(1);
-  }, []);
+    if (!category) return t('categories:other');
+    return t(`categories:${category}`, { defaultValue: category });
+  }, [t]);
 
   /**
    * Memoizes category images to avoid redundant lookups.
@@ -214,7 +216,7 @@ export function ShoppingListPanel({
       {/* List Header with Shopping Lists Drawer */}
       <View style={styles.sectionHeader}>
         <View style={styles.sectionIndicator} />
-        <Text style={styles.sectionTitle}>My Active Lists</Text>
+        <Text style={styles.sectionTitle}>{t('listPanel.activeListsTitle')}</Text>
         <TouchableOpacity
           style={styles.listHeaderButton}
           onPress={onCreateList}
@@ -230,7 +232,7 @@ export function ShoppingListPanel({
             style={styles.listActionsBackdrop}
             onPress={() => setOpenListMenuId(null)}
             accessibilityRole="button"
-            accessibilityLabel="Close list actions menu"
+            accessibilityLabel={t('listPanel.closeActionsMenu')}
           />
         )}
         <ScrollView
@@ -263,11 +265,11 @@ export function ShoppingListPanel({
                   {list.isMain && (
                     <View style={styles.mainBadge}>
                       <Ionicons name="home" size={12} color={colors.recipes} />
-                      <Text style={styles.mainBadgeText}>Main</Text>
+                      <Text style={styles.mainBadgeText}>{t('listPanel.mainBadge')}</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.listCardCount}>{list.itemCount} items</Text>
+                <Text style={styles.listCardCount}>{t('itemCount', { count: list.itemCount })}</Text>
               </View>
               <View style={styles.listActionsContainer}>
                 <TouchableOpacity
@@ -277,7 +279,7 @@ export function ShoppingListPanel({
                       currentId === list.id ? null : list.id,
                     )
                   }
-                  accessibilityLabel={`More actions for ${list.name}`}
+                  accessibilityLabel={t('listPanel.moreActionsFor', { name: list.name })}
                   accessibilityRole="button"
                 >
                   <Ionicons
@@ -295,11 +297,11 @@ export function ShoppingListPanel({
                           setOpenListMenuId(null);
                           onEditList(list);
                         }}
-                        accessibilityLabel={`Edit ${list.name} list`}
+                        accessibilityLabel={t('listPanel.editListAccessibility', { name: list.name })}
                         accessibilityRole="button"
                       >
                         <Ionicons name="pencil" size={14} color={colors.textSecondary} />
-                        <Text style={styles.listActionMenuItemText}>Edit</Text>
+                        <Text style={styles.listActionMenuItemText}>{t('listPanel.edit')}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -311,8 +313,8 @@ export function ShoppingListPanel({
                         }}
                         accessibilityLabel={
                           list.isMain
-                            ? `${list.name} is main list and cannot be deleted`
-                            : `Delete ${list.name} list`
+                            ? t('listPanel.mainListCannotDelete', { name: list.name })
+                            : t('listPanel.deleteListAccessibility', { name: list.name })
                         }
                         accessibilityRole="button"
                       >
@@ -329,7 +331,7 @@ export function ShoppingListPanel({
                               : styles.listActionMenuItemTextDanger,
                           ]}
                         >
-                          Delete
+                          {t('listPanel.delete')}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -342,7 +344,7 @@ export function ShoppingListPanel({
           ))}
           <TouchableOpacity style={styles.addListCard} onPress={onCreateList}>
             <Ionicons name="add-circle-outline" size={24} color={colors.textMuted} />
-            <Text style={styles.addListText}>Create New</Text>
+            <Text style={styles.addListText}>{t('listPanel.createNew')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -373,9 +375,9 @@ export function ShoppingListPanel({
         ) : filteredItems.length === 0 ? (
           <EmptyState
             icon="cart-outline"
-            title="No items in this list"
-            description="Start adding items to your shopping list"
-            actionLabel={onEmptyStateAction ? 'Add first item' : undefined}
+            title={t('listPanel.emptyTitle')}
+            description={t('listPanel.emptyDescription')}
+            actionLabel={onEmptyStateAction ? t('listPanel.emptyAction') : undefined}
             onActionPress={onEmptyStateAction}
             actionColor={colors.shopping}
           />
@@ -391,8 +393,15 @@ export function ShoppingListPanel({
                   onPress={() => toggleCategory(category)}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel={`${formatCategoryName(category)} category, ${items.length} ${items.length === 1 ? 'item' : 'items'}`}
-                  accessibilityHint={`Double tap to ${isCollapsed ? 'expand and show' : 'collapse and hide'} items in this category`}
+                  accessibilityLabel={t('listPanel.categoryAccessibilityLabel', {
+                    category: formatCategoryName(category),
+                    count: t('itemCount', { count: items.length }),
+                  })}
+                  accessibilityHint={
+                    isCollapsed
+                      ? t('listPanel.expandCategoryHint')
+                      : t('listPanel.collapseCategoryHint')
+                  }
                   accessibilityState={{ 
                     expanded: !isCollapsed,
                     disabled: false

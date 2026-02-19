@@ -1,53 +1,54 @@
 {
-  "title": "מתכוני הבית",
+  "title": "מתכונים",
   "addRecipe": "הוסף מתכון",
   "servings": "מנות",
-  "prepTime": "זמן הכנה",
-  "actions": {
-    "addItem": "הוסף פריט"
+  "cookTime": "זמן בישול",
+  "screen": {
+    "headerTitle": "מתכוני הבית",
+    "addActionLabel": "הוסף פריט",
+    "emptyTitle": "עדיין אין מתכונים",
+    "emptyDescription": "התחל לבנות את האוסף על ידי הוספת המתכונים האהובים עליך",
+    "emptyAction": "הוסף את המתכון הראשון שלך",
+    "searchPlaceholder": "חיפוש לפי שם...",
+    "hideCategoryFilter": "הסתר מסנן קטגוריות",
+    "showCategoryFilter": "הצג מסנן קטגוריות",
+    "hide": "הסתר",
+    "showCategoryFilterButton": "הצג מסנן קטגוריות",
+    "noMatchingRecipes": "לא נמצאו מתכונים תואמים",
+    "noRecipesInCategory": "אין מתכונים בקטגוריה זו",
+    "noRecipesMatchSearch": "לא נמצאו מתכונים התואמים ל-\"{{query}}\". נסה שם אחר או אפס מסננים.",
+    "tryDifferentCategory": "נסה קטגוריה אחרת או אפס מסננים.",
+    "resetFilters": "איפוס מסננים",
+    "loadingDetails": "טוען פרטי מתכון..."
   },
-  "emptyState": {
-    "title": "אין מתכונים עדיין",
-    "description": "התחל לבנות את האוסף שלך על ידי הוספת המתכונים האהובים עליך",
-    "action": "הוסף את המתכון הראשון שלך"
-  },
-  "search": {
-    "placeholder": "חיפוש לפי שם..."
-  },
-  "categories": {
-    "all": "הכל",
-    "breakfast": "ארוחת בוקר",
-    "lunch": "ארוחת צהריים",
-    "dinner": "ארוחת ערב",
-    "snacks": "חטיפים",
-    "dessert": "קינוח"
-  },
-  "showCategoryFilter": "הצג סינון קטגוריות",
-  "toast": {
-    "stillLoading": "פרטי המתכון עדיין נטענים. אנא נסה שוב.",
-    "failedToLoad": "טעינת פרטי המתכון נכשלה."
-  },
-  "detailScreen": {
-    "header": {
-      "editRecipe": "ערוך מתכון",
-      "shareRecipe": "שתף מתכון"
-    },
-    "loading": {
-      "details": "טוען פרטי מתכון..."
-    },
-    "shareModal": {
-      "title": "שתף מתכון"
-    },
-    "toast": {
-      "failedToUpdateRecipe": "עדכון המתכון נכשל",
-      "noMainShoppingList": "לא נמצאה רשימת קניות ראשית. אנא צור אחת.",
-      "ingredientAddedToList": "{{ingredientName}} נוסף ל{{listName}}",
-      "failedToAddIngredient": "הוספת המרכיב נכשלה",
-      "ingredientQuantityUpdated": "הכמות של {{ingredientName}} עודכנה",
-      "failedToUpdateIngredient": "עדכון המרכיב נכשל",
-      "noIngredientsToAdd": "אין מרכיבים להוספה",
-      "allIngredientsAddedToList": "כל {{count}} המרכיבים נוספו ל{{listName}}",
-      "failedToAddIngredients": "הוספת המרכיבים נכשלה"
+  "detail": {
+    "shareTitle": "שתף מתכון",
+    "editActionLabel": "ערוך מתכון",
+    "shareActionLabel": "שתף מתכון",
+    "toasts": {
+      "recipeDetailsLoading": "פרטי המתכון עדיין נטענים. נסה שוב.",
+      "recipeDetailsLoadFailed": "טעינת פרטי המתכון נכשלה.",
+      "recipeUpdateFailed": "עדכון המתכון נכשל",
+      "noMainList": "לא נמצאה רשימת קניות ראשית. צור אחת קודם.",
+      "ingredientAdded": "{{name}} נוסף ל-{{listName}}",
+      "ingredientAddFailed": "הוספת המרכיב נכשלה",
+      "ingredientUpdated": "הכמות של {{name}} עודכנה",
+      "ingredientUpdateFailed": "עדכון המרכיב נכשל",
+      "noIngredients": "אין מרכיבים להוספה",
+      "allIngredientsAdded": "כל {{count}} המרכיבים נוספו ל-{{listName}}",
+      "addIngredientsFailed": "הוספת המרכיבים נכשלה"
     }
+  },
+  "share": {
+    "notAvailable": "המתכון אינו זמין",
+    "untitledRecipe": "מתכון ללא שם",
+    "header": "מתכון: {{name}}",
+    "cookTime": "זמן בישול",
+    "prepTime": "זמן הכנה",
+    "servings": "מנות",
+    "ingredients": "מרכיבים",
+    "instructions": "הוראות הכנה",
+    "notAvailableValue": "לא זמין",
+    "emptyIngredients": "אין מרכיבים."
   }
 }

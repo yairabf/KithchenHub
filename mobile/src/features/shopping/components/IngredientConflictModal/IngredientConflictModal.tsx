@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { colors, spacing, borderRadius } from '../../../../theme';
 import type { Ingredient } from '../../../../mocks/recipes';
@@ -23,6 +24,8 @@ export function IngredientConflictModal({
   onReplace,
   onAddToQuantity,
 }: IngredientConflictModalProps) {
+  const { t } = useTranslation('shopping');
+
   const formatQuantity = (quantity: number, unit?: string) => {
     const qty = typeof quantity === 'number' ? quantity : parseFloat(String(quantity)) || 0;
     return unit ? `${qty} ${unit}` : String(qty);
@@ -39,14 +42,12 @@ export function IngredientConflictModal({
     ? ingredient.quantityAmount
     : parseFloat(String(ingredient.quantityAmount ?? ingredient.quantity)) || 0;
 
-  // Calculate combined quantity using unit conversion if possible
   const combinedAmount = addQuantities(
     currentQtyNum, existingItem.unit || '',
     ingredientQtyNum, ingredient.quantityUnit || ingredient.unit || '',
-    existingItem.unit || '' // Target existing unit
+    existingItem.unit || ''
   );
 
-  // Fallback to simple addition if incompatible (preserves existing behavior)
   const finalAmount = combinedAmount !== null ? combinedAmount : (currentQtyNum + ingredientQtyNum);
 
   const combinedQuantity = formatQuantity(
@@ -58,21 +59,21 @@ export function IngredientConflictModal({
     <CenteredModal
       visible={visible}
       onClose={onClose}
-      title="Item Already in List"
+      title={t('ingredientConflictModal.title')}
       showActions={false}
     >
       <View style={styles.content}>
         <Text style={styles.message}>
-          "{ingredient.name}" is already in your shopping list.
+          {t('ingredientConflictModal.message', { name: ingredient.name })}
         </Text>
 
         <View style={styles.comparisonRow}>
           <View style={styles.column}>
-            <Text style={styles.label}>Current:</Text>
+            <Text style={styles.label}>{t('ingredientConflictModal.currentLabel')}</Text>
             <Text style={styles.value}>{currentQuantity}</Text>
           </View>
           <View style={styles.column}>
-            <Text style={styles.label}>Recipe needs:</Text>
+            <Text style={styles.label}>{t('ingredientConflictModal.recipeNeedsLabel')}</Text>
             <Text style={styles.value}>{recipeQuantity}</Text>
           </View>
         </View>
@@ -83,7 +84,7 @@ export function IngredientConflictModal({
             onPress={onReplace}
           >
             <Text style={styles.replaceButtonText}>
-              Replace with {recipeQuantity}
+              {t('ingredientConflictModal.replaceButton', { quantity: recipeQuantity })}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -91,7 +92,7 @@ export function IngredientConflictModal({
             onPress={onAddToQuantity}
           >
             <Text style={styles.addButtonText}>
-              Add to quantity ({combinedQuantity})
+              {t('ingredientConflictModal.addButton', { quantity: combinedQuantity })}
             </Text>
           </TouchableOpacity>
         </View>

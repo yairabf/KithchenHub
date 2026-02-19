@@ -11,7 +11,6 @@ import {
   TextInput,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -19,6 +18,7 @@ import { useOnboarding } from '../contexts/OnboardingContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { boxShadow } from '../../../theme/shadows';
 import { useReducedMotion } from '../../../common/hooks/useReducedMotion';
+import { useTranslation } from 'react-i18next';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -35,6 +35,7 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
+  const { t } = useTranslation('auth');
   const { signInWithGoogle, signInWithEmail, showHouseholdNameScreen } = useAuth();
   const { mode, inviteContext, setMode, setInviteContext } = useOnboarding();
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +44,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const reduceMotion = useReducedMotion();
-  const { t } = useTranslation('auth');
 
   // Animation values
   const fadeAnim = React.useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -119,8 +119,8 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       if (mode === 'join_by_invite') {
         if (!inviteContext?.householdId || !inviteContext.code) {
           Alert.alert(
-            t('login.errors.inviteMissing'),
-            t('login.errors.inviteMissingMessage'),
+            t('login.inviteMissingTitle'),
+            t('login.inviteMissingMessage'),
             [{ text: t('buttons.ok', { ns: 'common' }) }]
           );
           return;
@@ -140,10 +140,10 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       // RootNavigator will automatically show MainNavigator if user is set and flag is not set
     } catch (error) {
       Alert.alert(
-        t('login.errors.signInFailed'),
+        t('login.signInFailed'),
         error instanceof Error
           ? error.message
-          : t('login.errors.unableToSignInGoogle'),
+          : t('login.unableToSignInGoogle'),
         [{ text: t('buttons.ok', { ns: 'common' }) }]
       );
     } finally {
@@ -163,7 +163,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
   const handleEmailLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert(t('login.errors.validationError'), t('login.errors.enterBothFields'), [{ text: t('buttons.ok', { ns: 'common' }) }]);
+      Alert.alert(t('login.validationError'), t('login.enterEmailAndPassword'), [{ text: t('buttons.ok', { ns: 'common' }) }]);
       return;
     }
 
@@ -173,10 +173,10 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       // Navigation handled by RootNavigator based on user state
     } catch (error) {
       Alert.alert(
-        t('login.errors.signInFailed'),
+        t('login.signInFailed'),
         error instanceof Error
           ? error.message
-          : t('login.errors.unableToSignIn'),
+          : t('login.unableToSignIn'),
         [{ text: t('buttons.ok', { ns: 'common' }) }]
       );
     } finally {
@@ -231,7 +231,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               <View style={styles.joiningBadge}>
                 <Ionicons name="people" size={14} color={colors.primary} />
                 <Text style={styles.joiningText}>
-                  {t('login.joining', { name: inviteContext.householdName })}
+                  {t('login.joiningPrefix')} {inviteContext.householdName}
                 </Text>
               </View>
             ) : null}
@@ -260,26 +260,26 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   style={styles.emailInput}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder={t('login.email')}
+                  placeholder={t('login.emailPlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}
-                  accessibilityLabel={t('login.email')}
+                  accessibilityLabel={t('login.emailPlaceholder')}
                 />
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={styles.passwordInput}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder={t('login.password')}
+                    placeholder={t('login.passwordPlaceholder')}
                     placeholderTextColor={colors.textSecondary}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
-                    accessibilityLabel={t('login.password')}
+                    accessibilityLabel={t('login.passwordPlaceholder')}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
@@ -312,10 +312,10 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                     setPassword('');
                   }}
                   disabled={isLoading}
-                  accessibilityLabel={t('buttons.cancel', { ns: 'common' })}
+                  accessibilityLabel={t('login.cancel')}
                   accessibilityRole="button"
                 >
-                  <Text style={styles.cancelEmailLoginText}>{t('buttons.cancel', { ns: 'common' })}</Text>
+                  <Text style={styles.cancelEmailLoginText}>{t('login.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -326,12 +326,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               onPress={() => navigation.navigate('Register')}
               activeOpacity={0.7}
               disabled={isLoading}
-              accessibilityLabel={t('buttons.createAccount', { ns: 'common' })}
+              accessibilityLabel={t('login.createAccount')}
               accessibilityRole="button"
-              accessibilityHint="Sign up with email and password"
+              accessibilityHint={t('login.createAccountHint')}
             >
               <Ionicons name="person-add-outline" size={20} color={colors.surface} style={styles.createAccountButtonIcon} />
-              <Text style={styles.createAccountButtonText}>{t('buttons.createAccount', { ns: 'common' })}</Text>
+              <Text style={styles.createAccountButtonText}>{t('login.createAccount')}</Text>
             </TouchableOpacity>
 
             {mode === 'join_by_invite' ? (
@@ -342,7 +342,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 disabled={isLoading}
                 accessibilityLabel={t('login.changeInviteCode')}
                 accessibilityRole="button"
-                accessibilityHint="Opens screen to enter a different invite code"
+                accessibilityHint={t('login.changeInviteCodeHint')}
               >
                 <Ionicons name="refresh-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
                 <Text style={styles.joinButtonText}>{t('login.changeInviteCode')}</Text>
@@ -355,7 +355,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 disabled={isLoading}
                 accessibilityLabel={t('login.joinHousehold')}
                 accessibilityRole="button"
-                accessibilityHint="Opens screen to enter household invite code"
+                accessibilityHint={t('login.joinHouseholdHint')}
               >
                 <Ionicons name="people-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
                 <Text style={styles.joinButtonText}>{t('login.joinHousehold')}</Text>
@@ -366,10 +366,10 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              {t('login.footer')}
-              <Text style={styles.footerLink}>{t('termsOfService', { ns: 'settings' })}</Text>
+              {t('login.agreePrefix')}{' '}
+              <Text style={styles.footerLink}>{t('login.termsOfService')}</Text>
               {' & '}
-              <Text style={styles.footerLink}>{t('privacyPolicy', { ns: 'settings' })}</Text>
+              <Text style={styles.footerLink}>{t('login.privacyPolicy')}</Text>
             </Text>
           </View>
         </View>
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
   },
   emailLoginToggleIcon: {
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   emailLoginToggleText: {
     ...typography.button,
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   joinButtonIcon: {
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   joinButtonText: {
     ...typography.button,
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
   },
   createAccountButtonIcon: {
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   createAccountButtonText: {
     ...typography.button,

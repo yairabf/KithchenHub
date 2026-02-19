@@ -324,7 +324,15 @@ export class ApiTestHelpers {
     title: string;
     category?: string;
     prepTime?: number;
-    ingredients: Array<{ name: string; quantity?: number; unit?: string }>;
+    ingredients: Array<{
+      name: string;
+      quantityAmount?: number;
+      quantityUnit?: string;
+      quantityUnitType?: string;
+      quantityModifier?: string;
+      quantity?: number;
+      unit?: string;
+    }>;
     instructions: Array<{ step: number; instruction: string }>;
     imageUrl?: string;
   }): Promise<CreateRecipeResponse> {
@@ -368,7 +376,15 @@ export class ApiTestHelpers {
       title?: string;
       category?: string;
       prepTime?: number;
-      ingredients?: Array<{ name: string; quantity?: number; unit?: string }>;
+      ingredients?: Array<{
+        name: string;
+        quantityAmount?: number;
+        quantityUnit?: string;
+        quantityUnitType?: string;
+        quantityModifier?: string;
+        quantity?: number;
+        unit?: string;
+      }>;
       instructions?: Array<{ step: number; instruction: string }>;
       imageUrl?: string;
     },

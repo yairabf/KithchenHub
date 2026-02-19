@@ -8,6 +8,25 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { ChoresProgressCard } from '../ChoresProgressCard';
 
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, string | number>) => {
+      if (key === 'progress.today') return 'Today';
+      if (key === 'progress.title') return 'Daily Progress';
+      if (key === 'progress.bodyCompact') {
+        return `You've completed ${options?.completed ?? 0} out of ${options?.total ?? 0} chores today. Keep it up!`;
+      }
+      if (key === 'progress.bodyWide') {
+        return `You've completed ${options?.completed ?? 0} out of ${options?.total ?? 0} chores today. Keep it up to reach your weekly goals!`;
+      }
+      return key;
+    },
+    i18n: {
+      dir: () => 'ltr',
+    },
+  }),
+}));
+
 describe('ChoresProgressCard', () => {
   describe.each([
     ['0% progress', 0, 0, 5, '0%'],

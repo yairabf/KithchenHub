@@ -1,63 +1,63 @@
 {
   "appName": "Kitchen Hub",
   "buttons": {
-    "save": "حفظ",
-    "cancel": "إلغاء",
-    "delete": "حذف",
-    "edit": "تعديل",
-    "add": "إضافة",
-    "remove": "إزالة",
-    "share": "مشاركة",
-    "close": "إغلاق",
-    "ok": "موافق",
-    "confirm": "تأكيد",
-    "skip": "تخطي",
-    "signIn": "تسجيل الدخول",
-    "createAccount": "إنشاء حساب",
-    "continue": "متابعة",
-    "back": "رجوع",
-    "hide": "إخفاء",
-    "show": "إظهار",
-    "viewAll": "عرض الكل"
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove",
+    "share": "Share",
+    "close": "Close",
+    "ok": "موافق"
   },
   "labels": {
-    "name": "الاسم",
-    "quantity": "الكمية",
-    "category": "الفئة",
-    "date": "التاريخ",
-    "time": "الوقت"
+    "name": "Name",
+    "quantity": "Quantity",
+    "category": "Category",
+    "date": "Date",
+    "time": "Time"
   },
   "messages": {
-    "loading": "جاري التحميل...",
-    "saving": "جاري الحفظ...",
-    "success": "تم بنجاح!",
-    "error": "حدث خطأ"
-  },
-  "navigation": {
-    "home": "الرئيسية",
-    "shop": "تسوق",
-    "chores": "مهام",
-    "recipes": "وصفات",
-    "profile": "الملف"
-  },
-  "accessibility": {
-    "goBack": "رجوع",
-    "goToHome": "الذهاب إلى الرئيسية",
-    "closeModal": "إغلاق النافذة",
-    "dismissBanner": "إخفاء شعار عدم الاتصال"
-  },
-  "offline": {
-    "banner": "أنت غير متصل. قد لا تتوفر بعض الميزات.",
-    "connectionType": "الاتصال: {{type}}",
-    "label": "غير متصل",
-    "syncing": "جاري المزامنة...",
-    "failedCount": "{{count}} فشلت",
-    "failed": "فشل",
-    "pendingCount": "{{count}} معلقة",
-    "pending": "معلق",
-    "synced": "متزامن"
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "success": "Success!",
+    "error": "Error occurred"
   },
   "share": {
-    "preview": "معاينة"
+    "previewLabel": "معاينة",
+    "optionAccessibility": "مشاركة عبر {{option}}",
+    "options": {
+      "whatsapp": "واتساب",
+      "telegram": "تيليجرام",
+      "web": "مشاركة...",
+      "clipboard": "نسخ"
+    },
+    "feedback": {
+      "copied": "تم النسخ إلى الحافظة!",
+      "failed": "تعذر المشاركة. يرجى المحاولة بخيار آخر."
+    },
+    "footer": "تمت المشاركة من Kitchen Hub"
+  },
+  "dateTimePicker": {
+    "title": "اختيار التاريخ والوقت",
+    "confirm": "تأكيد",
+    "placeholder": "اختر التاريخ والوقت",
+    "defaultLabel": "منتقي التاريخ والوقت",
+    "selected": "المحدد:",
+    "changeDate": "تغيير التاريخ",
+    "changeTime": "تغيير الوقت",
+    "tabs": {
+      "date": "التاريخ",
+      "time": "الوقت"
+    },
+    "accessibility": {
+      "picker": "{{value}}",
+      "hint": "يفتح اختيار التاريخ والوقت",
+      "dateTab": "تبويب التاريخ",
+      "timeTab": "تبويب الوقت",
+      "changeDate": "تغيير التاريخ",
+      "changeTime": "تغيير الوقت"
+    }
   }
 }

@@ -84,10 +84,10 @@ export function SettingsScreen() {
               )}
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name ?? t('userFallback')}</Text>
+              <Text style={styles.profileName}>{user?.name ?? t('defaultUserName')}</Text>
               {user?.id ? (
                 <View style={styles.roleBadge}>
-                  <Text style={styles.roleText}>{user?.role ?? t('memberRole')}</Text>
+                  <Text style={styles.roleText}>{user?.role ?? t('member')}</Text>
                 </View>
               ) : null}
               {user?.email ? (
@@ -160,14 +160,16 @@ export function SettingsScreen() {
             <TouchableOpacity style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
-                <Text style={styles.settingLabel}>{t('exportData')}</Text>
+                <Text style={styles.settingLabel}>{t('exportMyData')}</Text>
               </View>
               <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.settingRow}
+            accessibilityLabel={t('deleteAccountAccessibilityLabel')}
             accessibilityRole="button"
+            accessibilityHint={t('deleteAccountAccessibilityHint')}
           >
             <View style={styles.settingInfo}>
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
@@ -259,7 +261,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '700',
     marginBottom: spacing.sm,
-    paddingLeft: spacing.sm,
+    paddingStart: spacing.sm,
   },
   profileCard: {
     flexDirection: 'row',
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   avatarContainer: {
-    marginRight: spacing.md,
+    marginEnd: spacing.md,
   },
   avatar: {
     width: 60,
