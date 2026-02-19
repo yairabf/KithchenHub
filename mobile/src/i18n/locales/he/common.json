@@ -1,27 +1,63 @@
 {
   "appName": "Kitchen Hub",
   "buttons": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "add": "Add",
-    "remove": "Remove",
-    "share": "Share",
-    "close": "Close",
-    "ok": "אישור"
+    "save": "שמור",
+    "cancel": "ביטול",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "add": "הוסף",
+    "remove": "הסר",
+    "share": "שתף",
+    "close": "סגור",
+    "ok": "אישור",
+    "confirm": "אישור",
+    "skip": "דלג",
+    "signIn": "כניסה",
+    "createAccount": "יצירת חשבון",
+    "continue": "המשך",
+    "back": "חזרה",
+    "hide": "הסתר",
+    "show": "הצג",
+    "viewAll": "צפה בהכל"
   },
   "labels": {
-    "name": "Name",
-    "quantity": "Quantity",
-    "category": "Category",
-    "date": "Date",
-    "time": "Time"
+    "name": "שם",
+    "quantity": "כמות",
+    "category": "קטגוריה",
+    "date": "תאריך",
+    "time": "שעה"
   },
   "messages": {
-    "loading": "Loading...",
-    "saving": "Saving...",
-    "success": "Success!",
-    "error": "Error occurred"
+    "loading": "טוען...",
+    "saving": "שומר...",
+    "success": "הצלחה!",
+    "error": "אירעה שגיאה"
+  },
+  "navigation": {
+    "home": "בית",
+    "shop": "קניות",
+    "chores": "מטלות",
+    "recipes": "מתכונים",
+    "profile": "פרופיל"
+  },
+  "accessibility": {
+    "goBack": "חזרה",
+    "goToHome": "חזרה לדף הבית",
+    "closeModal": "סגור חלון",
+    "dismissBanner": "סגור באנר אופליין"
+  },
+  "offline": {
+    "banner": "אתה לא מחובר. חלק מהתכונות עלולות להיות לא זמינות.",
+    "connectionType": "חיבור: {{type}}",
+    "label": "לא מחובר",
+    "syncing": "מסנכרן...",
+    "failedCount": "{{count}} נכשלו",
+    "failed": "נכשל",
+    "pendingCount": "{{count}} ממתינים",
+    "pending": "ממתין",
+    "synced": "מסונכרן"
+  },
+  "share": {
+    "preview": "תצוגה מקדימה"
   }
 }

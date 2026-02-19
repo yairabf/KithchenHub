@@ -1,8 +1,25 @@
 {
-  "title": "Chores",
+  "title": "Home Chores",
   "status": {
     "pending": "Pending",
     "done": "Done",
     "overdue": "Overdue"
-  }
+  },
+  "actions": {
+    "shareList": "Share chores list",
+    "addItem": "Add item"
+  },
+  "emptyState": {
+    "title": "No chores yet",
+    "description": "Create your first chore to start tracking household tasks",
+    "action": "Create first chore"
+  },
+  "search": {
+    "placeholder": "Quick find tasks..."
+  },
+  "sections": {
+    "today": "Today's Chores",
+    "upcoming": "Upcoming Chores"
+  },
+  "shareTitle": "Share Chores"
 }

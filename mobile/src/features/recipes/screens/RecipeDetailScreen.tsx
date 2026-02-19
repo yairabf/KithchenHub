@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { RecipeHeader } from '../components/RecipeHeader';
 import { RecipeContentWrapper } from '../components/RecipeContentWrapper';
 import { Toast } from '../../../common/components/Toast';
@@ -45,6 +46,7 @@ export function RecipeDetailScreen({
   onBack,
   onAddToShoppingList,
 }: RecipeDetailScreenProps) {
+  const { t } = useTranslation('recipes');
   const { isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -240,11 +242,11 @@ export function RecipeDetailScreen({
       setShowEditModal(false);
     } catch (error) {
       console.error('Failed to update recipe:', error);
-      showToast('Failed to update recipe');
+      showToast(t('detailScreen.toast.failedToUpdateRecipe'));
     } finally {
       setIsSavingEdit(false);
     }
-  }, [displayRecipe?.id, updateRecipe, user, showToast, displayRecipe]);
+  }, [displayRecipe?.id, updateRecipe, user, showToast, displayRecipe, t]);
 
   const parseQuantity = useCallback((value: unknown, fallback: number) => {
     if (typeof value === 'number') {
@@ -287,7 +289,7 @@ export function RecipeDetailScreen({
         const mainList = data.shoppingLists.find(list => list.isMain);
 
         if (!mainList) {
-          showToast('No main shopping list found. Please create one.');
+          showToast(t('detailScreen.toast.noMainShoppingList'));
           return;
         }
 
@@ -317,14 +319,19 @@ export function RecipeDetailScreen({
             unit: normalizedUnit,
             image: ingredient.image,
           });
-          showToast(`${ingredient.name} added to ${mainList.name}`);
+          showToast(
+            t('detailScreen.toast.ingredientAddedToList', {
+              ingredientName: ingredient.name,
+              listName: mainList.name,
+            })
+          );
         }
       } catch (error) {
         console.error('Failed to add ingredient:', error);
-        showToast('Failed to add ingredient');
+        showToast(t('detailScreen.toast.failedToAddIngredient'));
       }
     },
-    [shoppingService, showToast, getIngredientAmount, getIngredientUnit]
+    [shoppingService, showToast, getIngredientAmount, getIngredientUnit, t]
   );
 
   const handleReplaceIngredient = useCallback(async () => {
@@ -336,15 +343,19 @@ export function RecipeDetailScreen({
         quantity,
         unit: getIngredientUnit(conflictingIngredient),
       });
-      showToast(`${conflictingIngredient.name} quantity updated`);
+      showToast(
+        t('detailScreen.toast.ingredientQuantityUpdated', {
+          ingredientName: conflictingIngredient.name,
+        })
+      );
       setConflictModalVisible(false);
       setConflictingIngredient(null);
       setExistingItem(null);
     } catch (error) {
       console.error('Failed to replace ingredient:', error);
-      showToast('Failed to update ingredient');
+      showToast(t('detailScreen.toast.failedToUpdateIngredient'));
     }
-  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
+  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit, t]);
 
   const handleAddToQuantity = useCallback(async () => {
     if (!conflictingIngredient || !existingItem) return;
@@ -368,20 +379,24 @@ export function RecipeDetailScreen({
       await shoppingService.updateItem(existingItem.id, {
         quantity: finalQuantity,
       });
-      showToast(`${conflictingIngredient.name} quantity updated`);
+      showToast(
+        t('detailScreen.toast.ingredientQuantityUpdated', {
+          ingredientName: conflictingIngredient.name,
+        })
+      );
       setConflictModalVisible(false);
       setConflictingIngredient(null);
       setExistingItem(null);
     } catch (error) {
       console.error('Failed to add to quantity:', error);
-      showToast('Failed to update ingredient');
+      showToast(t('detailScreen.toast.failedToUpdateIngredient'));
     }
-  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
+  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit, t]);
 
   const handleAddAllIngredients = useCallback(async () => {
     const ingredients = displayRecipe.ingredients || [];
     if (ingredients.length === 0) {
-      showToast('No ingredients to add');
+      showToast(t('detailScreen.toast.noIngredientsToAdd'));
       return;
     }
 
@@ -390,7 +405,7 @@ export function RecipeDetailScreen({
       const mainList = data.shoppingLists.find(list => list.isMain);
 
       if (!mainList) {
-        showToast('No main shopping list found. Please create one.');
+        showToast(t('detailScreen.toast.noMainShoppingList'));
         return;
       }
 
@@ -440,12 +455,17 @@ export function RecipeDetailScreen({
         }
       }
 
-      showToast(`All ${ingredients.length} ingredients added to ${mainList.name}`);
+      showToast(
+        t('detailScreen.toast.allIngredientsAddedToList', {
+          count: ingredients.length,
+          listName: mainList.name,
+        })
+      );
     } catch (error) {
       console.error('Failed to add all ingredients:', error);
-      showToast('Failed to add ingredients');
+      showToast(t('detailScreen.toast.failedToAddIngredients'));
     }
-  }, [shoppingService, displayRecipe.ingredients, showToast, getIngredientAmount, getIngredientUnit]);
+  }, [shoppingService, displayRecipe.ingredients, showToast, getIngredientAmount, getIngredientUnit, t]);
 
   // Handle scroll position tracking
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -485,13 +505,13 @@ export function RecipeDetailScreen({
     <SafeAreaView style={styles.container}>
       <View onLayout={handleScreenHeaderLayout}>
         <ScreenHeader
-          title="Kitchen Hub"
+          title={t('appName', { ns: 'common' })}
           titleIcon="restaurant-outline"
           leftIcon="back"
           onLeftPress={onBack}
           rightActions={{
-            edit: { onPress: () => setShowEditModal(true), label: 'Edit recipe' },
-            share: { onPress: () => setShowShareModal(true), label: 'Share recipe' },
+            edit: { onPress: () => setShowEditModal(true), label: t('detailScreen.header.editRecipe') },
+            share: { onPress: () => setShowShareModal(true), label: t('detailScreen.header.shareRecipe') },
           }}
           variant="centered"
         />
@@ -544,7 +564,9 @@ export function RecipeDetailScreen({
         {isLoadingDetails ? (
           <View style={{ padding: 20, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={colors.recipes} />
-            <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading recipe details...</Text>
+            <Text style={{ marginTop: 10, color: colors.textSecondary }}>
+              {t('detailScreen.loading.details')}
+            </Text>
           </View>
         ) : (
           <RecipeContentWrapper
@@ -589,7 +611,7 @@ export function RecipeDetailScreen({
       <ShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title="Share Recipe"
+        title={t('detailScreen.shareModal.title')}
         shareText={shareText}
       />
 

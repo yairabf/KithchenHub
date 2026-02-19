@@ -1,8 +1,25 @@
 {
-  "title": "Chores",
+  "title": "مهام المنزل",
   "status": {
-    "pending": "Pending",
-    "done": "Done",
-    "overdue": "Overdue"
-  }
+    "pending": "معلقة",
+    "done": "مكتملة",
+    "overdue": "متأخرة"
+  },
+  "actions": {
+    "shareList": "مشاركة قائمة المهام",
+    "addItem": "إضافة عنصر"
+  },
+  "emptyState": {
+    "title": "لا توجد مهام بعد",
+    "description": "أنشئ أول مهمة لبدء تتبع المهام المنزلية",
+    "action": "إنشاء أول مهمة"
+  },
+  "search": {
+    "placeholder": "البحث السريع عن المهام..."
+  },
+  "sections": {
+    "today": "مهام اليوم",
+    "upcoming": "المهام القادمة"
+  },
+  "shareTitle": "مشاركة المهام"
 }

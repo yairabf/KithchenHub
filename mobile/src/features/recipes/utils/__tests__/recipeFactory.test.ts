@@ -22,7 +22,7 @@ describe('recipeFactory', () => {
 
             expect(recipe.localId).toBe('test-uuid-recipe');
             expect(recipe.title).toBe(recipeData.title);
-            expect(recipe.cookTime).toBeUndefined(); // cookTime is optional number, not prepTime string
+            expect(recipe.prepTime).toBe(15);
             expect(recipe.category).toBe(recipeData.category);
             expect(recipe.id).toBeDefined(); // Legacy ID check
         });
@@ -39,7 +39,7 @@ describe('recipeFactory', () => {
 
             const recipe = createRecipe(recipeData);
 
-            expect(recipe.cookTime).toBeUndefined(); // cookTime is optional number
+            expect(recipe.prepTime).toBeUndefined();
             expect(recipe.category).toBe('');
         });
 

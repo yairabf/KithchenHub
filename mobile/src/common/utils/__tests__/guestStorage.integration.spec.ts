@@ -30,7 +30,7 @@ describe('guestStorage integration tests', () => {
         id: 'recipe-1',
         localId: 'recipe-uuid-1',
         title: 'Test Recipe',
-        cookTime: 30,
+        prepTime: 30,
         category: 'Dinner',
         ingredients: [],
         instructions: [],

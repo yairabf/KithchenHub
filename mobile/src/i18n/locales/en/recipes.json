@@ -1,6 +1,53 @@
 {
-  "title": "Recipes",
+  "title": "House Recipes",
   "addRecipe": "Add Recipe",
   "servings": "Servings",
-  "cookTime": "Cook time"
+  "prepTime": "Prep time",
+  "actions": {
+    "addItem": "Add item"
+  },
+  "emptyState": {
+    "title": "No recipes yet",
+    "description": "Start building your collection by adding your favorite recipes",
+    "action": "Add your first recipe"
+  },
+  "search": {
+    "placeholder": "Search by name..."
+  },
+  "categories": {
+    "all": "All",
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "dinner": "Dinner",
+    "snacks": "Snacks",
+    "dessert": "Dessert"
+  },
+  "showCategoryFilter": "Show category filter",
+  "toast": {
+    "stillLoading": "Recipe details are still loading. Please try again.",
+    "failedToLoad": "Failed to load recipe details."
+  },
+  "detailScreen": {
+    "header": {
+      "editRecipe": "Edit recipe",
+      "shareRecipe": "Share recipe"
+    },
+    "loading": {
+      "details": "Loading recipe details..."
+    },
+    "shareModal": {
+      "title": "Share Recipe"
+    },
+    "toast": {
+      "failedToUpdateRecipe": "Failed to update recipe",
+      "noMainShoppingList": "No main shopping list found. Please create one.",
+      "ingredientAddedToList": "{{ingredientName}} added to {{listName}}",
+      "failedToAddIngredient": "Failed to add ingredient",
+      "ingredientQuantityUpdated": "{{ingredientName}} quantity updated",
+      "failedToUpdateIngredient": "Failed to update ingredient",
+      "noIngredientsToAdd": "No ingredients to add",
+      "allIngredientsAddedToList": "All {{count}} ingredients added to {{listName}}",
+      "failedToAddIngredients": "Failed to add ingredients"
+    }
+  }
 }

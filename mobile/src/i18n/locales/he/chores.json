@@ -1,8 +1,25 @@
 {
-  "title": "Chores",
+  "title": "מטלות הבית",
   "status": {
-    "pending": "Pending",
-    "done": "Done",
-    "overdue": "Overdue"
-  }
+    "pending": "ממתין",
+    "done": "הושלם",
+    "overdue": "באיחור"
+  },
+  "actions": {
+    "shareList": "שתף רשימת מטלות",
+    "addItem": "הוסף פריט"
+  },
+  "emptyState": {
+    "title": "אין מטלות עדיין",
+    "description": "צור את המטלה הראשונה שלך כדי לעקוב אחרי משימות הבית",
+    "action": "צור מטלה ראשונה"
+  },
+  "search": {
+    "placeholder": "חיפוש מהיר של משימות..."
+  },
+  "sections": {
+    "today": "מטלות להיום",
+    "upcoming": "מטלות קרובות"
+  },
+  "shareTitle": "שתף מטלות"
 }

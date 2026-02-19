@@ -1,27 +1,63 @@
 {
   "appName": "Kitchen Hub",
   "buttons": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "add": "Add",
-    "remove": "Remove",
-    "share": "Share",
-    "close": "Close",
-    "ok": "موافق"
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "remove": "إزالة",
+    "share": "مشاركة",
+    "close": "إغلاق",
+    "ok": "موافق",
+    "confirm": "تأكيد",
+    "skip": "تخطي",
+    "signIn": "تسجيل الدخول",
+    "createAccount": "إنشاء حساب",
+    "continue": "متابعة",
+    "back": "رجوع",
+    "hide": "إخفاء",
+    "show": "إظهار",
+    "viewAll": "عرض الكل"
   },
   "labels": {
-    "name": "Name",
-    "quantity": "Quantity",
-    "category": "Category",
-    "date": "Date",
-    "time": "Time"
+    "name": "الاسم",
+    "quantity": "الكمية",
+    "category": "الفئة",
+    "date": "التاريخ",
+    "time": "الوقت"
   },
   "messages": {
-    "loading": "Loading...",
-    "saving": "Saving...",
-    "success": "Success!",
-    "error": "Error occurred"
+    "loading": "جاري التحميل...",
+    "saving": "جاري الحفظ...",
+    "success": "تم بنجاح!",
+    "error": "حدث خطأ"
+  },
+  "navigation": {
+    "home": "الرئيسية",
+    "shop": "تسوق",
+    "chores": "مهام",
+    "recipes": "وصفات",
+    "profile": "الملف"
+  },
+  "accessibility": {
+    "goBack": "رجوع",
+    "goToHome": "الذهاب إلى الرئيسية",
+    "closeModal": "إغلاق النافذة",
+    "dismissBanner": "إخفاء شعار عدم الاتصال"
+  },
+  "offline": {
+    "banner": "أنت غير متصل. قد لا تتوفر بعض الميزات.",
+    "connectionType": "الاتصال: {{type}}",
+    "label": "غير متصل",
+    "syncing": "جاري المزامنة...",
+    "failedCount": "{{count}} فشلت",
+    "failed": "فشل",
+    "pendingCount": "{{count}} معلقة",
+    "pending": "معلق",
+    "synced": "متزامن"
+  },
+  "share": {
+    "preview": "معاينة"
   }
 }

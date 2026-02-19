@@ -35,7 +35,7 @@ describe('SyncStatusIndicator', () => {
         <SyncStatusIndicator status="confirmed" showLabel={false} />
       );
       // Component returns null, so nothing should be rendered
-      expect(queryByText('Synced')).toBeNull();
+      expect(queryByText('offline.synced')).toBeNull();
     });
   });
 
@@ -61,7 +61,7 @@ describe('SyncStatusIndicator', () => {
         <SyncStatusIndicator status="pending" showLabel={true} />
       );
 
-      expect(getByText('Pending')).toBeTruthy();
+      expect(getByText('offline.pending')).toBeTruthy();
     });
 
     it('should hide label when showLabel is false', () => {
@@ -69,13 +69,13 @@ describe('SyncStatusIndicator', () => {
         <SyncStatusIndicator status="pending" showLabel={false} />
       );
 
-      expect(queryByText('Pending')).toBeNull();
+      expect(queryByText('offline.pending')).toBeNull();
     });
 
     describe.each([
-      ['pending with label', 'pending', 'Pending'],
-      ['failed with label', 'failed', 'Failed'],
-      ['confirmed with label', 'confirmed', 'Synced'],
+      ['pending with label', 'pending', 'offline.pending'],
+      ['failed with label', 'failed', 'offline.failed'],
+      ['confirmed with label', 'confirmed', 'offline.synced'],
     ])('%s', (description, status, expectedLabel) => {
       it(`should show ${expectedLabel} label`, () => {
         const { getByText } = render(
@@ -93,7 +93,7 @@ describe('SyncStatusIndicator', () => {
         <SyncStatusIndicator status="confirmed" showLabel={false} />
       );
 
-      expect(queryByText('Synced')).toBeNull();
+      expect(queryByText('offline.synced')).toBeNull();
     });
 
     it('should render checkmark when status is confirmed and showLabel is true', () => {
@@ -101,7 +101,7 @@ describe('SyncStatusIndicator', () => {
         <SyncStatusIndicator status="confirmed" showLabel={true} />
       );
 
-      expect(getByText('Synced')).toBeTruthy();
+      expect(getByText('offline.synced')).toBeTruthy();
     });
   });
 });

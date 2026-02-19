@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CenteredModal } from '../CenteredModal';
 import { executeShare, SHARE_OPTIONS, SHARE_STRINGS, type ShareTarget } from '../../utils/shareUtils';
 import { styles } from './styles';
@@ -10,6 +11,7 @@ import type { ShareModalProps } from './types';
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export function ShareModal({ visible, onClose, title, shareText }: ShareModalProps) {
+  const { t } = useTranslation('common');
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const previewText = useMemo(() => {
@@ -75,7 +77,7 @@ export function ShareModal({ visible, onClose, title, shareText }: ShareModalPro
         {feedback && <Text style={styles.feedbackText}>{feedback}</Text>}
 
         <View style={styles.previewSection}>
-          <Text style={styles.previewLabel}>Preview</Text>
+          <Text style={styles.previewLabel}>{t('share.preview')}</Text>
           <ScrollView style={styles.previewBox} nestedScrollEnabled>
             <Text style={styles.previewText}>{previewText}</Text>
           </ScrollView>

@@ -48,10 +48,10 @@ describe('OfflinePill', () => {
 
   describe('visibility states', () => {
     describe.each([
-      ['offline state', { isOffline: true }, { totalPending: 0, isProcessing: false, failedCount: 0 }, true, 'Offline'],
-      ['pending items', { isOffline: false }, { totalPending: 3, isProcessing: false, failedCount: 0 }, true, '3 pending'],
-      ['syncing state', { isOffline: false }, { totalPending: 0, isProcessing: true, failedCount: 0 }, true, 'Syncing...'],
-      ['failed items', { isOffline: false }, { totalPending: 0, isProcessing: false, failedCount: 2 }, true, '2 failed'],
+      ['offline state', { isOffline: true }, { totalPending: 0, isProcessing: false, failedCount: 0 }, true, 'offline.label'],
+      ['pending items', { isOffline: false }, { totalPending: 3, isProcessing: false, failedCount: 0 }, true, 'offline.pendingCount'],
+      ['syncing state', { isOffline: false }, { totalPending: 0, isProcessing: true, failedCount: 0 }, true, 'offline.syncing'],
+      ['failed items', { isOffline: false }, { totalPending: 0, isProcessing: false, failedCount: 2 }, true, 'offline.failedCount'],
       ['online with no pending', { isOffline: false }, { totalPending: 0, isProcessing: false, failedCount: 0 }, false, null],
     ])('%s', (description, networkState, queueStatus, shouldRender, expectedText) => {
       it(`should ${shouldRender ? 'render' : 'not render'}`, () => {
@@ -63,9 +63,9 @@ describe('OfflinePill', () => {
         if (shouldRender && expectedText) {
           expect(queryByText(expectedText)).toBeTruthy();
         } else {
-          expect(queryByText('Offline')).toBeNull();
-          expect(queryByText('pending')).toBeNull();
-          expect(queryByText('Syncing')).toBeNull();
+          expect(queryByText('offline.label')).toBeNull();
+          expect(queryByText('offline.pendingCount')).toBeNull();
+          expect(queryByText('offline.syncing')).toBeNull();
         }
       });
     });
@@ -82,8 +82,7 @@ describe('OfflinePill', () => {
         mockedUseNetwork.mockReturnValue({ isOffline: true });
 
         const { queryByText } = render(<OfflinePill position={position as any} />);
-        // Component should render when offline
-        expect(queryByText('Offline')).toBeTruthy();
+        expect(queryByText('offline.label')).toBeTruthy();
       });
     });
   });
@@ -93,16 +92,14 @@ describe('OfflinePill', () => {
       mockedUseNetwork.mockReturnValue({ isOffline: true });
 
       const { queryByText } = render(<OfflinePill dismissible={true} />);
-      // Component should render
-      expect(queryByText('Offline')).toBeTruthy();
+      expect(queryByText('offline.label')).toBeTruthy();
     });
 
     it('should render when dismissible is false', () => {
       mockedUseNetwork.mockReturnValue({ isOffline: true });
 
       const { queryByText } = render(<OfflinePill dismissible={false} />);
-      // Component should render
-      expect(queryByText('Offline')).toBeTruthy();
+      expect(queryByText('offline.label')).toBeTruthy();
     });
   });
 
@@ -117,7 +114,7 @@ describe('OfflinePill', () => {
 
       const { getByText } = render(<OfflinePill showPendingCount={true} />);
 
-      expect(getByText('5 pending')).toBeTruthy();
+      expect(getByText('offline.pendingCount')).toBeTruthy();
     });
 
     it('should show generic text when showPendingCount is false', () => {
@@ -130,7 +127,7 @@ describe('OfflinePill', () => {
 
       const { getByText } = render(<OfflinePill showPendingCount={false} />);
 
-      expect(getByText('Pending')).toBeTruthy();
+      expect(getByText('offline.pending')).toBeTruthy();
     });
   });
 });

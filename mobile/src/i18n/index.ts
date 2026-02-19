@@ -166,7 +166,11 @@ export async function setAppLanguage(locale: string): Promise<void> {
   if (!isAllowed) {
     return;
   }
-  await setStoredLanguage(normalized);
+  try {
+    await setStoredLanguage(normalized);
+  } catch {
+    // Storage failure should not block language switching
+  }
   await i18n.changeLanguage(normalized);
 
   const newIsRtl = isRtlLanguage(normalized);

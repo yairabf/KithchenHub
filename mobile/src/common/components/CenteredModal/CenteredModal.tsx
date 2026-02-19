@@ -19,6 +19,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import { CenteredModalProps } from './types';
@@ -52,8 +53,8 @@ export function CenteredModal({
   onClose,
   title,
   children,
-  cancelText = 'Cancel',
-  confirmText = 'Confirm',
+  cancelText,
+  confirmText,
   onConfirm,
   confirmColor = colors.primary,
   showActions = true,
@@ -61,6 +62,9 @@ export function CenteredModal({
   confirmLoading = false,
   triggerRef,
 }: CenteredModalProps) {
+  const { t } = useTranslation('common');
+  const resolvedCancelText = cancelText ?? t('buttons.cancel');
+  const resolvedConfirmText = confirmText ?? t('buttons.confirm');
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
   const modalTitleRef = useRef<Text>(null);
@@ -153,7 +157,7 @@ export function CenteredModal({
               <TouchableOpacity
                 onPress={handleClose}
                 style={styles.closeButton}
-                accessibilityLabel="Close modal"
+                accessibilityLabel={t('accessibility.closeModal')}
                 accessibilityRole="button"
               >
                 <Ionicons name="close" size={24} color={colors.textPrimary} />
@@ -170,7 +174,7 @@ export function CenteredModal({
                   style={styles.cancelButton}
                   onPress={handleClose}
                 >
-                  <Text style={styles.cancelText}>{cancelText}</Text>
+                  <Text style={styles.cancelText}>{resolvedCancelText}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -185,7 +189,7 @@ export function CenteredModal({
                     {confirmLoading ? (
                       <ActivityIndicator size="small" color={colors.textLight} />
                     ) : null}
-                    <Text style={styles.confirmText}>{confirmText}</Text>
+                    <Text style={styles.confirmText}>{resolvedConfirmText}</Text>
                   </View>
                 </TouchableOpacity>
               </View>

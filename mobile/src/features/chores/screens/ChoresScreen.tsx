@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../theme';
 import { ChoreCard } from '../components/ChoreCard';
 import { ChoresProgressCard } from '../components/ChoresProgressCard';
@@ -34,6 +35,7 @@ import { CacheAwareChoreRepository } from '../../../common/repositories/cacheAwa
 import { logger } from '../../../common/utils/logger';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
+  const { t } = useTranslation('chores');
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -249,14 +251,14 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   );
 
   const headerActions = {
-    share: { onPress: () => setShowShareModal(true), label: 'Share chores list' },
-    ...(onOpenChoresModal && { add: { onPress: onOpenChoresModal, label: 'Add item' } as const }),
+    share: { onPress: () => setShowShareModal(true), label: t('actions.shareList') },
+    ...(onOpenChoresModal && { add: { onPress: onOpenChoresModal, label: t('actions.addItem') } as const }),
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Home Chores"
+        title={t('title')}
         titleIcon="checkbox-outline"
         rightActions={headerActions}
       />
@@ -281,9 +283,9 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
         ) : chores.length === 0 ? (
           <EmptyState
             icon="checkmark-done-outline"
-            title="No chores yet"
-            description="Create your first chore to start tracking household tasks"
-            actionLabel="Create first chore"
+            title={t('emptyState.title')}
+            description={t('emptyState.description')}
+            actionLabel={t('emptyState.action')}
             onActionPress={onOpenChoresModal}
             actionColor={colors.chores}
           />
@@ -297,11 +299,11 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
                 isWideScreen={true}
               />
               <View style={styles.searchContainer}>
-                <Text style={styles.searchPlaceholder}>Quick find tasks...</Text>
+                <Text style={styles.searchPlaceholder}>{t('search.placeholder')}</Text>
                 <Ionicons name="search" size={20} color={colors.primary} />
               </View>
               <ChoresSection
-                title="Today's Chores"
+                title={t('sections.today')}
                 chores={todayChores}
                 indicatorColor="primary"
                 renderChoreCard={renderChoreCard}
@@ -309,7 +311,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
             </View>
             <View style={styles.rightColumn}>
               <ChoresSection
-                title="Upcoming Chores"
+                title={t('sections.upcoming')}
                 chores={upcomingChores}
                 indicatorColor="secondary"
                 renderChoreCard={renderChoreCard}
@@ -325,17 +327,17 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
               isWideScreen={false}
             />
             <View style={styles.searchContainer}>
-              <Text style={styles.searchPlaceholder}>Quick find tasks...</Text>
+              <Text style={styles.searchPlaceholder}>{t('search.placeholder')}</Text>
               <Ionicons name="search" size={20} color={colors.primary} />
             </View>
             <ChoresSection
-              title="Today's Chores"
+              title={t('sections.today')}
               chores={todayChores}
               indicatorColor="primary"
               renderChoreCard={renderChoreCard}
             />
             <ChoresSection
-              title="Upcoming Chores"
+              title={t('sections.upcoming')}
               chores={upcomingChores}
               indicatorColor="secondary"
               renderChoreCard={renderChoreCard}
@@ -357,7 +359,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       <ShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title="Share Chores"
+        title={t('shareTitle')}
         shareText={shareText}
       />
     </SafeAreaView>

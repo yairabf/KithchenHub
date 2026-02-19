@@ -1,5 +1,31 @@
 {
-  "title": "Dashboard",
-  "greeting": "Hello",
-  "quickStats": "Quick stats"
+  "title": "Kitchen Hub",
+  "greeting": "مرحبًا",
+  "quickStats": "إحصائيات سريعة",
+  "shoppingLists": "قوائم التسوق",
+  "activeCount_one": "{{count}} نشطة",
+  "activeCount_other": "{{count}} نشطة",
+  "savedRecipes": "الوصفات المحفوظة",
+  "itemCount_one": "عنصر {{count}}",
+  "itemCount_other": "{{count}} عناصر",
+  "guest": "ضيف",
+  "kitchenLead": "مدير المطبخ",
+  "quickAdd": {
+    "title": "إضافة سريعة",
+    "subtitle": "أضف مقاضي في ثوانٍ.",
+    "mainList": "القائمة الرئيسية",
+    "suggestedItems": "عناصر مقترحة"
+  },
+  "chores": {
+    "title": "مهام مهمة",
+    "subtitle": "مهام المنزل",
+    "unassigned": "غير مخصص",
+    "addTask": "إضافة مهمة منزلية"
+  },
+  "toast": {
+    "noMainList": "لم يتم العثور على قائمة تسوق رئيسية. الرجاء إنشاء واحدة.",
+    "quantityUpdated": "تم تحديث كمية {{name}}",
+    "itemAdded": "تم إضافة {{name}} إلى {{listName}}",
+    "failedToAdd": "فشلت الإضافة"
+  }
 }

@@ -1,4 +1,5 @@
 {
+  "title": "Shopping List",
   "listPanel": {
     "title": "Shopping Lists",
     "emptyState": "No items yet"
@@ -9,5 +10,16 @@
   "itemCount": "{{count}} item",
   "itemCount_one": "{{count}} item",
   "itemCount_other": "{{count}} items",
-  "itemCount_plural": "{{count}} items"
+  "itemCount_plural": "{{count}} items",
+  "actions": {
+    "shareList": "Share shopping list",
+    "addItem": "Add item"
+  },
+  "quickAdd": "Quick Add",
+  "deleteList": {
+    "title": "Delete List",
+    "message": "Delete \"{{name}}\"?",
+    "confirm": "Delete"
+  },
+  "shareTitle": "Share {{name}}"
 }

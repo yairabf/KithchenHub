@@ -15,6 +15,7 @@ import {
   Platform,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
@@ -68,6 +69,7 @@ export function DashboardScreen({
   onNavigateToTab,
 }: DashboardScreenProps) {
   const { user } = useAuth();
+  const { t } = useTranslation('dashboard');
   const { isTablet } = useResponsive();
   const isMobile = Platform.OS !== "web" && !isTablet;
   const [searchValue, setSearchValue] = useState("");
@@ -159,27 +161,24 @@ export function DashboardScreen({
     () => [
       {
         icon: "basket-outline" as const,
-        label: "Shopping Lists",
-        value:
-          shoppingListsCount === 1
-            ? "1 Active"
-            : `${shoppingListsCount} Active`,
+        label: t('shoppingLists'),
+        value: t('activeCount', { count: shoppingListsCount }),
         route: "Shopping" as TabKey,
         iconBgStyle: "shopping" as const,
       },
       {
         icon: "book-outline" as const,
-        label: "Saved Recipes",
-        value: recipes.length === 1 ? "1 Item" : `${recipes.length} Items`,
+        label: t('savedRecipes'),
+        value: t('itemCount', { count: recipes.length }),
         route: "Recipes" as TabKey,
         iconBgStyle: "recipes" as const,
       },
     ],
-    [shoppingListsCount, recipes.length],
+    [shoppingListsCount, recipes.length, t],
   );
 
-  const displayName = user?.name ?? "Guest";
-  const userRole = user?.isGuest ? "Guest" : "KITCHEN LEAD";
+  const displayName = user?.name ?? t('guest');
+  const userRole = user?.isGuest ? t('guest') : t('kitchenLead');
 
   // Live clock and date; timer respects mount state to avoid updates when unmounted
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -222,7 +221,7 @@ export function DashboardScreen({
       const mainList = getMainList(data.shoppingLists);
 
       if (!mainList) {
-        showToast("No main shopping list found. Please create one.");
+        showToast(t('toast.noMainList'));
         return;
       }
 
@@ -242,7 +241,7 @@ export function DashboardScreen({
         await shoppingService.updateItem(existingInList.id, {
           quantity: currentQuantity + 1,
         });
-        showToast(`${item.name} quantity updated`);
+        showToast(t('toast.quantityUpdated', { name: item.name }));
       } else {
         // Use default category for custom items, otherwise use item's category
         const categoryToUse = item.id.startsWith("custom-")
@@ -259,12 +258,12 @@ export function DashboardScreen({
         } as any; // Type assertion needed because ShoppingItem doesn't have catalogItemId
 
         await shoppingService.createItem(newItemData);
-        showToast(`${item.name} added to ${mainList.name}`);
+        showToast(t('toast.itemAdded', { name: item.name, listName: mainList.name }));
       }
       // Don't clear search value - keep dropdown open for multiple additions
     } catch (error) {
       console.error("Failed to add item to shopping list:", error);
-      showToast("Failed to add item");
+      showToast(t('toast.failedToAdd'));
     }
   };
 
@@ -300,7 +299,7 @@ export function DashboardScreen({
 
   const logShoppingError = (message: string, error: unknown) => {
     console.error(message, error);
-    showToast("Failed to add item");
+    showToast(t('toast.failedToAdd'));
   };
 
   const handleQuickAddGroceryItem = async (item: GroceryItem) => {
@@ -309,7 +308,7 @@ export function DashboardScreen({
       const mainList = getMainList(data.shoppingLists);
 
       if (!mainList) {
-        showToast("No main shopping list found. Please create one.");
+        showToast(t('toast.noMainList'));
         return;
       }
 
@@ -330,7 +329,7 @@ export function DashboardScreen({
       setAllItems(updatedData.shoppingItems);
     } catch (error) {
       console.error("Failed to add item to shopping list:", error);
-      showToast("Failed to add item");
+      showToast(t('toast.failedToAdd'));
     }
   };
 
@@ -372,7 +371,7 @@ export function DashboardScreen({
         await shoppingService.updateItem(existingInList.id, {
           quantity: currentQuantity + addQuantity,
         });
-        showToast(`${item.name} quantity updated`);
+        showToast(t('toast.quantityUpdated', { name: item.name }));
       } else {
         const newItemData: Partial<ShoppingItem> = {
           listId: activeListId,
@@ -382,13 +381,13 @@ export function DashboardScreen({
           image: item.image ?? "",
         };
         await shoppingService.createItem(newItemData);
-        showToast(`${item.name} added to shopping list`);
+        showToast(t('toast.itemAdded', { name: item.name, listName: t('shoppingLists') }));
       }
       // Refresh shopping data to update the UI immediately
       await loadShoppingData();
     } catch (error) {
       console.error("Failed to add item to shopping list:", error);
-      showToast("Failed to add item");
+      showToast(t('toast.failedToAdd'));
       // Only open modal if error is related to missing list, not other errors
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -407,7 +406,7 @@ export function DashboardScreen({
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Kitchen Hub"
+        title={t('title')}
         titleIcon="grid-outline"
         rightSlot={(
           <View style={styles.headerRight}>
@@ -478,13 +477,13 @@ export function DashboardScreen({
               >
                 <View style={styles.shoppingCardHeader}>
                   <View style={styles.shoppingCardTitleBlock}>
-                    <Text style={styles.shoppingCardTitle}>Quick Add</Text>
+                    <Text style={styles.shoppingCardTitle}>{t('quickAdd.title')}</Text>
                     <Text style={styles.shoppingCardSubtitle}>
-                      Add groceries in seconds.
+                      {t('quickAdd.subtitle')}
                     </Text>
                   </View>
                   <View style={styles.mainListBadge}>
-                    <Text style={styles.mainListBadgeText}>Main List</Text>
+                    <Text style={styles.mainListBadgeText}>{t('quickAdd.mainList')}</Text>
                   </View>
                 </View>
 
@@ -518,7 +517,7 @@ export function DashboardScreen({
 
                 <View style={styles.suggestedSection}>
                   <View style={styles.suggestedHeader}>
-                    <Text style={styles.suggestedLabel}>Suggested Items</Text>
+                    <Text style={styles.suggestedLabel}>{t('quickAdd.suggestedItems')}</Text>
                     <TouchableOpacity
                       onPress={() =>
                         setShowSuggestedItems((current) => !current)
@@ -533,7 +532,7 @@ export function DashboardScreen({
                       accessibilityHint="Toggles suggested shopping items"
                     >
                       <Text style={styles.suggestedToggleText}>
-                        {showSuggestedItems ? "Hide" : "Show"}
+                        {showSuggestedItems ? t('buttons.hide', { ns: 'common' }) : t('buttons.show', { ns: 'common' })}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -624,10 +623,10 @@ export function DashboardScreen({
               <View style={styles.choresSectionHeader}>
                 <View style={styles.choresTitleBlock}>
                   <Text style={styles.choresSectionTitle}>
-                    Important Chores
+                    {t('chores.title')}
                   </Text>
                   <Text style={styles.choresSectionSubtitle}>
-                    Assignments for the house
+                    {t('chores.subtitle')}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -637,7 +636,7 @@ export function DashboardScreen({
                   accessibilityRole="button"
                   accessibilityHint="Navigate to chores screen"
                 >
-                  <Text style={styles.viewAllLink}>View All</Text>
+                  <Text style={styles.viewAllLink}>{t('buttons.viewAll', { ns: 'common' })}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -691,7 +690,7 @@ export function DashboardScreen({
                         </View>
                         <View style={styles.choreMetaRow}>
                           <Text style={styles.choreMetaText} numberOfLines={1}>
-                            {chore.assignee ?? "Unassigned"}
+                            {chore.assignee ?? t('chores.unassigned')}
                           </Text>
                           <View style={styles.choreMetaDot} />
                           <Text style={styles.choreMetaText} numberOfLines={1}>
@@ -714,7 +713,7 @@ export function DashboardScreen({
               >
                 <Ionicons name="add" size={16} color={colors.textMuted} />
                 <Text style={styles.addHouseholdTaskText}>
-                  Add Household Task
+                  {t('chores.addTask')}
                 </Text>
               </TouchableOpacity>
             </View>

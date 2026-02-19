@@ -22,7 +22,6 @@ type RecipeDetailDto = {
     description?: string;
     category?: string;
     prepTime?: number;
-    cookTime?: number;
     ingredients: Array<{
         name: string;
         quantityAmount?: number;
@@ -47,7 +46,7 @@ type RecipeListItemDto = {
     title: string;
     description?: string;
     category?: string;
-    cookTime?: number;
+    prepTime?: number;
     imageUrl?: string;
     thumbUrl?: string;
     imageVersion?: number;
@@ -62,7 +61,6 @@ type RecipeApiResponse = {
     id: string;
     localId?: string;
     title: string;
-    cookTime?: number;
     category?: string;
     ingredients?: any[];
     instructions?: any[];
@@ -108,7 +106,6 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
         title: dto.title || 'Untitled Recipe',
         description: dto.description,
         prepTime: dto.prepTime,
-        cookTime: dto.cookTime,
         category: dto.category,
         ingredients: ingredients,
         instructions: instructions,
@@ -152,7 +149,6 @@ function buildRecipeWithDefaults(recipe: Partial<Recipe>): Recipe {
         id: `local-${Date.now()}`,
         localId: recipeLocalId,
         title: recipeTitle,
-        cookTime: recipe.cookTime,
         category: recipe.category,
         ingredients: recipe.ingredients || [],
         instructions: recipe.instructions || [],
@@ -392,7 +388,7 @@ export class RemoteRecipeService implements IRecipeService {
                 imageUpdatedAt: item.imageUpdatedAt,
                 ingredients: [],
                 instructions: [],
-                cookTime: item.cookTime,
+                prepTime: item.prepTime,
                 category: item.category,
             };
             return recipe;
@@ -411,7 +407,7 @@ export class RemoteRecipeService implements IRecipeService {
                 description: normalized.description ?? item.description,
                 ingredients: normalized.ingredients || [],
                 instructions: normalized.instructions || [],
-                cookTime: normalized.cookTime ?? item.cookTime,
+                prepTime: normalized.prepTime ?? item.prepTime,
                 category: normalized.category ?? item.category,
             };
             return finalRecipe;
@@ -444,7 +440,7 @@ export class RemoteRecipeService implements IRecipeService {
             title: recipeTitle,
             ingredients: normalized.ingredients || [],
             instructions: normalized.instructions || [],
-            cookTime: normalized.cookTime ?? mappedResponse.cookTime,
+            prepTime: normalized.prepTime ?? mappedResponse.prepTime,
             category: normalized.category ?? mappedResponse.category,
         };
 
@@ -531,7 +527,6 @@ export class RemoteRecipeService implements IRecipeService {
         description?: string;
         category?: string;
         prepTime?: number;
-        cookTime?: number;
         ingredients?: Array<{
             name: string;
             quantityAmount?: number;
@@ -547,7 +542,6 @@ export class RemoteRecipeService implements IRecipeService {
             description?: string;
             category?: string;
             prepTime?: number;
-            cookTime?: number;
             ingredients?: Array<{
                 name: string;
                 quantityAmount?: number;
@@ -570,9 +564,6 @@ export class RemoteRecipeService implements IRecipeService {
         }
         if (recipe.prepTime !== undefined) {
             dto.prepTime = recipe.prepTime;
-        }
-        if (recipe.cookTime !== undefined) {
-            dto.cookTime = recipe.cookTime;
         }
         if (recipe.ingredients !== undefined) {
             dto.ingredients = (recipe.ingredients || []).map((ing: Ingredient) => {
@@ -667,7 +658,7 @@ export class RemoteRecipeService implements IRecipeService {
             title: recipeTitle, // Explicitly set title to ensure it's preserved
             ingredients: normalized.ingredients || [],
             instructions: normalized.instructions || [],
-            cookTime: normalized.cookTime ?? mappedResponse.cookTime,
+            prepTime: normalized.prepTime ?? mappedResponse.prepTime,
             category: normalized.category ?? mappedResponse.category,
         };
         console.log('[RemoteRecipeService] Normalized recipe:', JSON.stringify(created, null, 2));

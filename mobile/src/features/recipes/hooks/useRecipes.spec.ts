@@ -41,7 +41,7 @@ function createMockRecipe(overrides: Partial<Recipe> = {}): Recipe {
     id: 'mock-1',
     localId: 'local-1',
     name: 'Mock Recipe',
-    cookTime: '30 min',
+    prepTime: 30,
     category: 'Dinner',
     ingredients: [],
     instructions: [],

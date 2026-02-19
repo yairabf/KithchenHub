@@ -12,6 +12,7 @@ import {
 import type { ViewStyle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { spacing } from '../../../theme';
 import { colors } from '../../../theme/colors';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
@@ -43,6 +44,7 @@ const CARD_SKELETON_STYLE: ViewStyle = { marginBottom: spacing.lg };
 
 
 export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
+  const { t } = useTranslation('recipes');
   const { width, isTablet } = useResponsive();
   const { user } = useAuth();
   const { recipes, isLoading, addRecipe, updateRecipe, refresh, getRecipeById } = useRecipes();
@@ -151,14 +153,14 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       const full = await getRecipeById(recipe.id);
       const hasDetails = !!full?.ingredients?.length && !!full?.instructions?.length;
       if (!hasDetails) {
-        showToast('Recipe details are still loading. Please try again.');
+        showToast(t('toast.stillLoading'));
         return;
       }
       setEditingRecipe(full);
       setShowEditRecipeModal(true);
     } catch (error) {
       logger.error('Failed to load recipe details for edit:', error instanceof Error ? error : String(error));
-      showToast('Failed to load recipe details.');
+      showToast(t('toast.failedToLoad'));
     } finally {
       setIsLoadingEdit(false);
     }
@@ -223,10 +225,10 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="House Recipes"
+        title={t('title')}
         titleIcon="book-outline"
         rightActions={{
-          add: { onPress: handleAddRecipe, label: 'Add item' },
+          add: { onPress: handleAddRecipe, label: t('actions.addItem') },
         }}
       />
 
@@ -248,9 +250,9 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       ) : filteredRecipes.length === 0 && !isLoading ? (
         <EmptyState
           icon="book-outline"
-          title="No recipes yet"
-          description="Start building your collection by adding your favorite recipes"
-          actionLabel="Add your first recipe"
+          title={t('emptyState.title')}
+          description={t('emptyState.description')}
+          actionLabel={t('emptyState.action')}
           onActionPress={handleAddRecipe}
           actionColor={colors.recipes}
         />
@@ -260,7 +262,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             <Ionicons name="search" size={20} color={colors.textMuted} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name..."
+              placeholder={t('search.placeholder')}
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -284,6 +286,14 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                     Snacks: 'ice-cream-outline',
                     Dessert: 'car-outline',
                   };
+                  const categoryLabels: Record<string, string> = {
+                    All: t('categories.all'),
+                    Breakfast: t('categories.breakfast'),
+                    Lunch: t('categories.lunch'),
+                    Dinner: t('categories.dinner'),
+                    Snacks: t('categories.snacks'),
+                    Dessert: t('categories.dessert'),
+                  };
                   const iconName = categoryIcons[category] ?? 'restaurant-outline';
                   const isActive = selectedCategory === category;
 
@@ -301,7 +311,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                         />
                       </View>
                       <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                        {category}
+                        {categoryLabels[category] ?? category}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -313,7 +323,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                 accessibilityLabel="Hide category filter"
               >
                 <Ionicons name="eye-off-outline" size={20} color={colors.textMuted} />
-                <Text style={styles.filterHideButtonText}>Hide</Text>
+                <Text style={styles.filterHideButtonText}>{t('buttons.hide', { ns: 'common' })}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -323,7 +333,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
               accessibilityLabel="Show category filter"
             >
               <Ionicons name="filter-outline" size={20} color={colors.textMuted} />
-              <Text style={styles.filterShowButtonText}>Show category filter</Text>
+              <Text style={styles.filterShowButtonText}>{t('showCategoryFilter')}</Text>
             </TouchableOpacity>
           )}
 

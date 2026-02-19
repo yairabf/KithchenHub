@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { CategoryModal } from '../components/CategoryModal';
@@ -53,6 +54,7 @@ interface ShoppingListsScreenProps {
 
 export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const { isActive = true } = props;
+  const { t } = useTranslation('shopping');
   const { isTablet } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
   const { groceryItems, categories: rawCategories, frequentlyAddedItems, searchGroceries } = useCatalog();
@@ -705,11 +707,11 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Shopping List"
+        title={t('title')}
         titleIcon="basket-outline"
         rightActions={{
-          share: { onPress: () => setShowShareModal(true), label: 'Share shopping list' },
-          add: { onPress: () => setShowQuickAddModal(true), label: 'Add item' },
+          share: { onPress: () => setShowShareModal(true), label: t('actions.shareList') },
+          add: { onPress: () => setShowQuickAddModal(true), label: t('actions.addItem') },
         }}
       />
 
@@ -799,7 +801,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       <CenteredModal
         visible={showQuickAddModal}
         onClose={() => setShowQuickAddModal(false)}
-        title="Quick Add"
+        title={t('quickAdd')}
         showActions={false}
       >
         <View>
@@ -853,19 +855,19 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       <ShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title={`Share ${activeList.name}`}
+        title={t('shareTitle', { name: activeList.name })}
         shareText={shareText}
       />
 
       <ConfirmationModal
         visible={!!pendingDeleteList}
-        title="Delete List"
+        title={t('deleteList.title')}
         message={
           pendingDeleteList
-            ? `Delete "${pendingDeleteList.name}"?`
+            ? t('deleteList.message', { name: pendingDeleteList.name })
             : ''
         }
-        confirmText="Delete"
+        confirmText={t('deleteList.confirm')}
         onConfirm={handleConfirmDeleteList}
         onCancel={() => setPendingDeleteList(null)}
       />

@@ -1,5 +1,31 @@
 {
-  "title": "Dashboard",
-  "greeting": "Hello",
-  "quickStats": "Quick stats"
+  "title": "Kitchen Hub",
+  "greeting": "שלום",
+  "quickStats": "סטטיסטיקה מהירה",
+  "shoppingLists": "רשימות קניות",
+  "activeCount_one": "{{count}} פעילה",
+  "activeCount_other": "{{count}} פעילות",
+  "savedRecipes": "מתכונים שמורים",
+  "itemCount_one": "פריט {{count}}",
+  "itemCount_other": "{{count}} פריטים",
+  "guest": "אורח",
+  "kitchenLead": "מנהל המטבח",
+  "quickAdd": {
+    "title": "הוספה מהירה",
+    "subtitle": "הוסף מצרכים בשניות.",
+    "mainList": "רשימה ראשית",
+    "suggestedItems": "פריטים מומלצים"
+  },
+  "chores": {
+    "title": "מטלות חשובות",
+    "subtitle": "משימות לבית",
+    "unassigned": "לא משויך",
+    "addTask": "הוסף משימה ביתית"
+  },
+  "toast": {
+    "noMainList": "לא נמצאה רשימת קניות ראשית. אנא צור אחת.",
+    "quantityUpdated": "הכמות של {{name}} עודכנה",
+    "itemAdded": "{{name}} נוסף ל{{listName}}",
+    "failedToAdd": "ההוספה נכשלה"
+  }
 }

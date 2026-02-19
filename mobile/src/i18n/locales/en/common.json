@@ -9,7 +9,16 @@
     "remove": "Remove",
     "share": "Share",
     "close": "Close",
-    "ok": "OK"
+    "ok": "OK",
+    "confirm": "Confirm",
+    "skip": "Skip",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "continue": "Continue",
+    "back": "Back",
+    "hide": "Hide",
+    "show": "Show",
+    "viewAll": "View All"
   },
   "labels": {
     "name": "Name",
@@ -23,5 +32,32 @@
     "saving": "Saving...",
     "success": "Success!",
     "error": "Error occurred"
+  },
+  "navigation": {
+    "home": "HOME",
+    "shop": "SHOP",
+    "chores": "CHORES",
+    "recipes": "RECIPES",
+    "profile": "PROFILE"
+  },
+  "accessibility": {
+    "goBack": "Go back",
+    "goToHome": "Go to home",
+    "closeModal": "Close modal",
+    "dismissBanner": "Dismiss offline banner"
+  },
+  "offline": {
+    "banner": "You're offline. Some features may be unavailable.",
+    "connectionType": "Connection: {{type}}",
+    "label": "Offline",
+    "syncing": "Syncing...",
+    "failedCount": "{{count}} failed",
+    "failed": "Failed",
+    "pendingCount": "{{count}} pending",
+    "pending": "Pending",
+    "synced": "Synced"
+  },
+  "share": {
+    "preview": "Preview"
   }
 }

@@ -34,7 +34,6 @@ type RecipeApiResponse = {
   id: string;
   localId?: string;
   name: string;
-  cookTime?: string;
   category?: string;
   ingredients?: string[];
   instructions?: string[];
@@ -206,7 +205,6 @@ export class CacheAwareRecipeRepository implements ICacheAwareRepository<Recipe>
       id: localId, // Use localId as id initially (will be replaced by server id after sync)
       localId: localId,
       title: data.title ?? '',
-      cookTime: data.cookTime,
       prepTime: data.prepTime,
       category: data.category,
       imageUrl: data.imageUrl,

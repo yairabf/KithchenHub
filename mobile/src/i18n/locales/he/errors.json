@@ -1,9 +1,9 @@
 {
   "network": {
-    "offline": "You're offline"
+    "offline": "אתה לא מחובר"
   },
   "auth": {
-    "signInFailed": "Sign in failed"
+    "signInFailed": "הכניסה נכשלה"
   },
   "directionChangeTitle": "כיוון השתנה",
   "directionChangeMessage": "אנא הפעל מחדש את האפליקציה כדי להחיל את כיוון הטקסט החדש."

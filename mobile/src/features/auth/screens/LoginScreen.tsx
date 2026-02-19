@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -42,6 +43,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const reduceMotion = useReducedMotion();
+  const { t } = useTranslation('auth');
 
   // Animation values
   const fadeAnim = React.useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
@@ -117,9 +119,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       if (mode === 'join_by_invite') {
         if (!inviteContext?.householdId || !inviteContext.code) {
           Alert.alert(
-            'Invite Missing',
-            'Please enter a valid invite code to join a household.',
-            [{ text: 'OK' }]
+            t('login.errors.inviteMissing'),
+            t('login.errors.inviteMissingMessage'),
+            [{ text: t('buttons.ok', { ns: 'common' }) }]
           );
           return;
         }
@@ -138,11 +140,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       // RootNavigator will automatically show MainNavigator if user is set and flag is not set
     } catch (error) {
       Alert.alert(
-        'Sign In Failed',
+        t('login.errors.signInFailed'),
         error instanceof Error
           ? error.message
-          : 'Unable to sign in with Google. Please try again.',
-        [{ text: 'OK' }]
+          : t('login.errors.unableToSignInGoogle'),
+        [{ text: t('buttons.ok', { ns: 'common' }) }]
       );
     } finally {
       setIsLoading(false);
@@ -161,7 +163,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
   const handleEmailLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Validation Error', 'Please enter both email and password', [{ text: 'OK' }]);
+      Alert.alert(t('login.errors.validationError'), t('login.errors.enterBothFields'), [{ text: t('buttons.ok', { ns: 'common' }) }]);
       return;
     }
 
@@ -171,11 +173,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       // Navigation handled by RootNavigator based on user state
     } catch (error) {
       Alert.alert(
-        'Sign In Failed',
+        t('login.errors.signInFailed'),
         error instanceof Error
           ? error.message
-          : 'Unable to sign in. Please check your credentials.',
-        [{ text: 'OK' }]
+          : t('login.errors.unableToSignIn'),
+        [{ text: t('buttons.ok', { ns: 'common' }) }]
       );
     } finally {
       setIsLoading(false);
@@ -223,13 +225,13 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             <View style={styles.logoContainer}>
               <Text style={styles.logoEmoji}>🍳</Text>
             </View>
-            <Text style={styles.appName}>Kitchen Hub</Text>
-            <Text style={styles.tagline}>Your family's kitchen assistant</Text>
+            <Text style={styles.appName}>{t('login.appName')}</Text>
+            <Text style={styles.tagline}>{t('login.tagline')}</Text>
             {mode === 'join_by_invite' && inviteContext?.householdName ? (
               <View style={styles.joiningBadge}>
                 <Ionicons name="people" size={14} color={colors.primary} />
                 <Text style={styles.joiningText}>
-                  Joining {inviteContext.householdName}
+                  {t('login.joining', { name: inviteContext.householdName })}
                 </Text>
               </View>
             ) : null}
@@ -246,11 +248,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 onPress={() => setShowEmailLogin(true)}
                 activeOpacity={0.7}
                 disabled={isLoading}
-                accessibilityLabel="Sign in with email"
+                accessibilityLabel={t('login.signInWithEmail')}
                 accessibilityRole="button"
               >
                 <Ionicons name="mail-outline" size={20} color={colors.primary} style={styles.emailLoginToggleIcon} />
-                <Text style={styles.emailLoginToggleText}>Sign in with Email</Text>
+                <Text style={styles.emailLoginToggleText}>{t('login.signInWithEmail')}</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.emailLoginForm}>
@@ -258,31 +260,31 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   style={styles.emailInput}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="Email"
+                  placeholder={t('login.email')}
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}
-                  accessibilityLabel="Email"
+                  accessibilityLabel={t('login.email')}
                 />
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={styles.passwordInput}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Password"
+                    placeholder={t('login.password')}
                     placeholderTextColor={colors.textSecondary}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
-                    accessibilityLabel="Password"
+                    accessibilityLabel={t('login.password')}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
-                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    accessibilityLabel={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                   >
                     <Ionicons
                       name={showPassword ? 'eye-off' : 'eye'}
@@ -295,11 +297,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                   style={[styles.emailLoginButton, isLoading && styles.buttonDisabled]}
                   onPress={handleEmailLogin}
                   disabled={isLoading}
-                  accessibilityLabel="Sign in"
+                  accessibilityLabel={t('login.signIn')}
                   accessibilityRole="button"
                 >
                   <Text style={styles.emailLoginButtonText}>
-                    {isLoading ? 'Signing In...' : 'Sign In'}
+                    {isLoading ? t('login.signingIn') : t('login.signIn')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -310,10 +312,10 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                     setPassword('');
                   }}
                   disabled={isLoading}
-                  accessibilityLabel="Cancel"
+                  accessibilityLabel={t('buttons.cancel', { ns: 'common' })}
                   accessibilityRole="button"
                 >
-                  <Text style={styles.cancelEmailLoginText}>Cancel</Text>
+                  <Text style={styles.cancelEmailLoginText}>{t('buttons.cancel', { ns: 'common' })}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -324,12 +326,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               onPress={() => navigation.navigate('Register')}
               activeOpacity={0.7}
               disabled={isLoading}
-              accessibilityLabel="Create account"
+              accessibilityLabel={t('buttons.createAccount', { ns: 'common' })}
               accessibilityRole="button"
               accessibilityHint="Sign up with email and password"
             >
               <Ionicons name="person-add-outline" size={20} color={colors.surface} style={styles.createAccountButtonIcon} />
-              <Text style={styles.createAccountButtonText}>Create Account</Text>
+              <Text style={styles.createAccountButtonText}>{t('buttons.createAccount', { ns: 'common' })}</Text>
             </TouchableOpacity>
 
             {mode === 'join_by_invite' ? (
@@ -338,12 +340,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 onPress={handleChangeInvite}
                 activeOpacity={0.7}
                 disabled={isLoading}
-                accessibilityLabel="Change invite code"
+                accessibilityLabel={t('login.changeInviteCode')}
                 accessibilityRole="button"
                 accessibilityHint="Opens screen to enter a different invite code"
               >
                 <Ionicons name="refresh-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
-                <Text style={styles.joinButtonText}>Change invite code</Text>
+                <Text style={styles.joinButtonText}>{t('login.changeInviteCode')}</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -351,12 +353,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 onPress={handleJoinHousehold}
                 activeOpacity={0.7}
                 disabled={isLoading}
-                accessibilityLabel="Join household"
+                accessibilityLabel={t('login.joinHousehold')}
                 accessibilityRole="button"
                 accessibilityHint="Opens screen to enter household invite code"
               >
                 <Ionicons name="people-outline" size={20} color={colors.secondary} style={styles.joinButtonIcon} />
-                <Text style={styles.joinButtonText}>Join household</Text>
+                <Text style={styles.joinButtonText}>{t('login.joinHousehold')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -364,10 +366,10 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              By signing in, you agree to our{' '}
-              <Text style={styles.footerLink}>Terms of Service</Text>
+              {t('login.footer')}
+              <Text style={styles.footerLink}>{t('termsOfService', { ns: 'settings' })}</Text>
               {' & '}
-              <Text style={styles.footerLink}>Privacy Policy</Text>
+              <Text style={styles.footerLink}>{t('privacyPolicy', { ns: 'settings' })}</Text>
             </Text>
           </View>
         </View>

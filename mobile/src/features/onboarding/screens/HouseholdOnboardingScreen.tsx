@@ -13,6 +13,7 @@ import {
     SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius } from '../../../theme';
 import { typography } from '../../../theme/typography';
 import { boxShadow } from '../../../theme/shadows';
@@ -22,7 +23,8 @@ import { useNavigation } from '@react-navigation/native';
 import { Toast } from '../../../common/components/Toast';
 
 export function HouseholdOnboardingScreen() {
-    const { user, refreshUser } = useAuth(); // Assuming refreshUser exists, or we need to implement it
+    const { t } = useTranslation('auth');
+    const { user, refreshUser } = useAuth();
     const [mode, setMode] = useState<'create' | 'join'>('create');
     const [name, setName] = useState('');
     const [inviteCode, setInviteCode] = useState('');
@@ -39,7 +41,7 @@ export function HouseholdOnboardingScreen() {
 
     const handleCreate = async () => {
         if (!name.trim()) {
-            showToast('Please enter a household name');
+            showToast(t('onboarding.errors.enterHouseholdName'));
             return;
         }
 
@@ -52,7 +54,7 @@ export function HouseholdOnboardingScreen() {
             }
         } catch (error: any) {
             console.error('Create household error:', error);
-            showToast(error.message || 'Failed to create household');
+            showToast(error.message || t('onboarding.errors.failedToCreate'));
         } finally {
             setLoading(false);
         }
@@ -60,7 +62,7 @@ export function HouseholdOnboardingScreen() {
 
     const handleJoin = async () => {
         if (!inviteCode.trim()) {
-            showToast('Please enter an invite code');
+            showToast(t('onboarding.errors.enterInviteCode'));
             return;
         }
 
@@ -73,7 +75,7 @@ export function HouseholdOnboardingScreen() {
             }
         } catch (error: any) {
             console.error('Join household error:', error);
-            showToast(error.message || 'Failed to join household');
+            showToast(error.message || t('onboarding.errors.failedToJoin'));
         } finally {
             setLoading(false);
         }
@@ -88,9 +90,9 @@ export function HouseholdOnboardingScreen() {
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <View style={styles.content}>
                         <View style={styles.header}>
-                            <Text style={styles.title}>Welcome to KitchenHub!</Text>
+                            <Text style={styles.title}>{t('onboarding.welcome')}</Text>
                             <Text style={styles.subtitle}>
-                                To get started, create a new household or join an existing one using an invite code.
+                                {t('onboarding.subtitle')}
                             </Text>
                         </View>
 
@@ -103,7 +105,7 @@ export function HouseholdOnboardingScreen() {
                                 accessibilityState={{ selected: mode === 'create' }}
                             >
                                 <Text style={[styles.tabText, mode === 'create' && styles.activeTabText]}>
-                                    Create New
+                                    {t('onboarding.createNew')}
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -114,7 +116,7 @@ export function HouseholdOnboardingScreen() {
                                 accessibilityState={{ selected: mode === 'join' }}
                             >
                                 <Text style={[styles.tabText, mode === 'join' && styles.activeTabText]}>
-                                    Join Existing
+                                    {t('onboarding.joinExisting')}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -122,10 +124,10 @@ export function HouseholdOnboardingScreen() {
                         <View style={styles.formContainer}>
                             {mode === 'create' ? (
                                 <>
-                                    <Text style={styles.label}>Household Name</Text>
+                                    <Text style={styles.label}>{t('onboarding.householdName')}</Text>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="e.g. The Smiths, Cozy Cottage"
+                                        placeholder={t('onboarding.householdPlaceholder')}
                                         placeholderTextColor={colors.textMuted}
                                         value={name}
                                         onChangeText={setName}
@@ -134,7 +136,7 @@ export function HouseholdOnboardingScreen() {
                                         accessibilityHint="Enter a name for your new household"
                                     />
                                     <Text style={styles.helperText}>
-                                        Give your shared space a name. You can change this later.
+                                        {t('onboarding.householdHelper')}
                                     </Text>
                                     <TouchableOpacity
                                         style={[styles.button, !name.trim() && styles.buttonDisabled]}
@@ -147,16 +149,16 @@ export function HouseholdOnboardingScreen() {
                                         {loading ? (
                                             <ActivityIndicator color="#fff" />
                                         ) : (
-                                            <Text style={styles.buttonText}>Create Household</Text>
+                                            <Text style={styles.buttonText}>{t('onboarding.createHousehold')}</Text>
                                         )}
                                     </TouchableOpacity>
                                 </>
                             ) : (
                                 <>
-                                    <Text style={styles.label}>Invite Code</Text>
+                                    <Text style={styles.label}>{t('onboarding.inviteCode')}</Text>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Paste invite code here"
+                                        placeholder={t('onboarding.invitePlaceholder')}
                                         placeholderTextColor={colors.textMuted}
                                         value={inviteCode}
                                         onChangeText={setInviteCode}
@@ -166,7 +168,7 @@ export function HouseholdOnboardingScreen() {
                                         accessibilityHint="Enter the invite code shared by a household member"
                                     />
                                     <Text style={styles.helperText}>
-                                        Ask a household member to share their invite code with you.
+                                        {t('onboarding.inviteHelper')}
                                     </Text>
                                     <TouchableOpacity
                                         style={[styles.button, !inviteCode.trim() && styles.buttonDisabled]}
@@ -179,7 +181,7 @@ export function HouseholdOnboardingScreen() {
                                         {loading ? (
                                             <ActivityIndicator color="#fff" />
                                         ) : (
-                                            <Text style={styles.buttonText}>Join Household</Text>
+                                            <Text style={styles.buttonText}>{t('onboarding.joinHousehold')}</Text>
                                         )}
                                     </TouchableOpacity>
                                 </>

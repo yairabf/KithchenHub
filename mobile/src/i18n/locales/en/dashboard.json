@@ -1,5 +1,31 @@
 {
-  "title": "Dashboard",
+  "title": "Kitchen Hub",
   "greeting": "Hello",
-  "quickStats": "Quick stats"
+  "quickStats": "Quick stats",
+  "shoppingLists": "Shopping Lists",
+  "activeCount_one": "{{count}} Active",
+  "activeCount_other": "{{count}} Active",
+  "savedRecipes": "Saved Recipes",
+  "itemCount_one": "{{count}} Item",
+  "itemCount_other": "{{count}} Items",
+  "guest": "Guest",
+  "kitchenLead": "KITCHEN LEAD",
+  "quickAdd": {
+    "title": "Quick Add",
+    "subtitle": "Add groceries in seconds.",
+    "mainList": "Main List",
+    "suggestedItems": "Suggested Items"
+  },
+  "chores": {
+    "title": "Important Chores",
+    "subtitle": "Assignments for the house",
+    "unassigned": "Unassigned",
+    "addTask": "Add Household Task"
+  },
+  "toast": {
+    "noMainList": "No main shopping list found. Please create one.",
+    "quantityUpdated": "{{name}} quantity updated",
+    "itemAdded": "{{name}} added to {{listName}}",
+    "failedToAdd": "Failed to add item"
+  }
 }

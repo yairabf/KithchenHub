@@ -33,7 +33,6 @@ export interface Instruction {
  */
 export interface Recipe extends BaseEntity {
   title: string;
-  cookTime?: number; // in minutes
   prepTime?: number; // in minutes
   category?: string;
   imageUrl?: string | null;
@@ -52,7 +51,6 @@ const mockRecipesRaw: Recipe[] = [
     id: '1',
     localId: '550e8400-e29b-41d4-a716-446655440100', // Stable UUID
     title: 'Pancakes',
-    cookTime: 20,
     prepTime: 10,
     category: 'Breakfast',
     description: 'Light, fluffy homemade pancakes topped with fresh berries and maple syrup. A classic breakfast favorite.',
@@ -80,7 +78,6 @@ const mockRecipesRaw: Recipe[] = [
     id: '2',
     localId: '550e8400-e29b-41d4-a716-446655440101',
     title: 'Pasta Carbonara',
-    cookTime: 30,
     prepTime: 15,
     category: 'Dinner',
     description: 'Creamy Italian pasta with crispy pancetta, eggs, and parmesan cheese. Rich and satisfying.',
@@ -109,7 +106,6 @@ const mockRecipesRaw: Recipe[] = [
     id: '3',
     localId: '550e8400-e29b-41d4-a716-446655440102',
     title: 'Caesar Salad',
-    cookTime: 15,
     prepTime: 10,
     category: 'Lunch',
     description: 'Fresh romaine lettuce with homemade Caesar dressing, crunchy croutons, and shaved parmesan.',
@@ -137,7 +133,6 @@ const mockRecipesRaw: Recipe[] = [
     id: '4',
     localId: '550e8400-e29b-41d4-a716-446655440103',
     title: 'Tomato Soup',
-    cookTime: 45,
     prepTime: 15,
     category: 'Lunch',
     description: 'Velvety smooth tomato soup made with roasted tomatoes and fresh basil. Comfort in a bowl.',
@@ -166,7 +161,6 @@ const mockRecipesRaw: Recipe[] = [
     id: '5',
     localId: '550e8400-e29b-41d4-a716-446655440104',
     title: 'Grilled Chicken',
-    cookTime: 35,
     prepTime: 20,
     category: 'Dinner',
     description: 'Juicy herb-marinated grilled chicken breast with a perfect char. High protein and delicious.',
@@ -195,7 +189,6 @@ const mockRecipesRaw: Recipe[] = [
     id: '6',
     localId: '550e8400-e29b-41d4-a716-446655440105',
     title: 'French Toast',
-    cookTime: 15,
     prepTime: 10,
     category: 'Breakfast',
     description: 'Golden, custard-soaked bread slices with a hint of cinnamon and vanilla. Weekend brunch perfection.',

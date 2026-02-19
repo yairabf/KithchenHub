@@ -324,7 +324,6 @@ export class ApiTestHelpers {
     title: string;
     category?: string;
     prepTime?: number;
-    cookTime?: number;
     ingredients: Array<{ name: string; quantity?: number; unit?: string }>;
     instructions: Array<{ step: number; instruction: string }>;
     imageUrl?: string;
@@ -369,7 +368,6 @@ export class ApiTestHelpers {
       title?: string;
       category?: string;
       prepTime?: number;
-      cookTime?: number;
       ingredients?: Array<{ name: string; quantity?: number; unit?: string }>;
       instructions?: Array<{ step: number; instruction: string }>;
       imageUrl?: string;

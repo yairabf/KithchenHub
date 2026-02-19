@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { inviteApi, InviteValidationResponse } from '../../households/services/inviteApi';
 import { useOnboarding } from '../contexts/OnboardingContext';
@@ -41,6 +42,7 @@ interface EnterInviteCodeScreenProps {
  * 4. User signs in with Google, joining the household
  */
 export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps) {
+  const { t } = useTranslation('auth');
   const [code, setCode] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
   const handleValidate = async () => {
     const trimmedCode = code.trim();
     if (!trimmedCode) {
-      setError('Please enter an invite code');
+      setError(t('inviteCode.errors.enterCode'));
       return;
     }
 
@@ -72,7 +74,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
       });
       navigation.navigate('Login');
     } catch (err) {
-      setError('Invalid or expired invite code');
+      setError(t('inviteCode.errors.invalidCode'));
       setInviteData(null);
     } finally {
       setIsValidating(false);
@@ -98,7 +100,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
             >
               <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.title}>Join household</Text>
+            <Text style={styles.title}>{t('inviteCode.title')}</Text>
             <View style={styles.backButton} />
           </View>
 
@@ -112,7 +114,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                 </View>
 
                 <Text style={styles.subtitle}>
-                  Enter the invite code shared by a household member
+                  {t('inviteCode.subtitle')}
                 </Text>
 
                 <View style={styles.inputContainer}>
@@ -123,7 +125,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                       setCode(text);
                       setError(null);
                     }}
-                    placeholder="Enter invite code"
+                    placeholder={t('inviteCode.inputPlaceholder')}
                     placeholderTextColor={colors.textSecondary}
                     autoCapitalize="characters"
                     autoCorrect={false}
@@ -147,7 +149,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                   {isValidating ? (
                     <ActivityIndicator color={colors.surface} />
                   ) : (
-                    <Text style={styles.primaryButtonText}>Continue</Text>
+                    <Text style={styles.primaryButtonText}>{t('inviteCode.continue')}</Text>
                   )}
                 </TouchableOpacity>
               </>
@@ -158,7 +160,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                   <Ionicons name="checkmark-circle" size={64} color={colors.success} />
                 </View>
 
-                <Text style={styles.subtitle}>You're joining:</Text>
+                <Text style={styles.subtitle}>{t('inviteCode.youreJoining')}</Text>
 
                 <View style={styles.householdPreviewContainer}>
                   <Text style={styles.householdName}>{inviteData.householdName}</Text>
@@ -172,7 +174,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                   accessibilityRole="button"
                   accessibilityHint="Proceeds to sign in screen to join the household"
                 >
-                  <Text style={styles.primaryButtonText}>Continue to sign in</Text>
+                  <Text style={styles.primaryButtonText}>{t('inviteCode.continueToSignIn')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -187,7 +189,7 @@ export function EnterInviteCodeScreen({ navigation }: EnterInviteCodeScreenProps
                   accessibilityRole="button"
                   accessibilityHint="Returns to enter a different invite code"
                 >
-                  <Text style={styles.changeCodeText}>Change code</Text>
+                  <Text style={styles.changeCodeText}>{t('inviteCode.changeCode')}</Text>
                 </TouchableOpacity>
               </>
             )}

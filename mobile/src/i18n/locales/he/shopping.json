@@ -1,13 +1,25 @@
 {
+  "title": "רשימת קניות",
   "listPanel": {
-    "title": "Shopping Lists",
-    "emptyState": "No items yet"
+    "title": "רשימות קניות",
+    "emptyState": "אין פריטים עדיין"
   },
   "search": {
-    "placeholder": "Search groceries..."
+    "placeholder": "חיפוש מצרכים..."
   },
-  "itemCount": "{{count}} item",
-  "itemCount_one": "{{count}} item",
-  "itemCount_other": "{{count}} items",
-  "itemCount_plural": "{{count}} items"
+  "itemCount": "פריט {{count}}",
+  "itemCount_one": "פריט {{count}}",
+  "itemCount_other": "{{count}} פריטים",
+  "itemCount_plural": "{{count}} פריטים",
+  "actions": {
+    "shareList": "שתף רשימת קניות",
+    "addItem": "הוסף פריט"
+  },
+  "quickAdd": "הוספה מהירה",
+  "deleteList": {
+    "title": "מחיקת רשימה",
+    "message": "למחוק את \"{{name}}\"?",
+    "confirm": "מחק"
+  },
+  "shareTitle": "שתף {{name}}"
 }

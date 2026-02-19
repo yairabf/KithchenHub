@@ -90,7 +90,6 @@ interface Recipe {
   title?: string;
   name?: string;
   description?: string;
-  cookTime?: string | number;
   prepTime?: string | number;
   servings?: number;
   ingredients: RecipeIngredient[];
@@ -184,11 +183,8 @@ export function formatRecipeText(recipe: Recipe): string {
     lines.push(`\n${recipe.description}`);
   }
 
-  const cookTime = recipe.cookTime || 'N/A';
-  lines.push(`\nCook Time: ${cookTime}`);
-  if (recipe.prepTime) {
-    lines.push(`Prep Time: ${recipe.prepTime}`);
-  }
+  const prepTime = recipe.prepTime || 'N/A';
+  lines.push(`\nPrep Time: ${prepTime}`);
   if (recipe.servings) {
     lines.push(`Servings: ${recipe.servings}`);
   }

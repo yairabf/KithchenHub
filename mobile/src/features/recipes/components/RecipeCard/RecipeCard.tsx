@@ -34,7 +34,7 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
     return '—';
   };
 
-  const timeLabel = recipe.prepTime ?? recipe.cookTime;
+  const timeLabel = recipe.prepTime;
 
   return (
     <TouchableOpacity

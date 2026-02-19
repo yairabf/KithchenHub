@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { householdApi } from '../../households/services/householdApi';
 import { authApi } from '../../auth/services/authApi';
@@ -45,6 +46,7 @@ interface HouseholdNameScreenProps {
  * - Skip (if name unchanged)
  */
 export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
+  const { t } = useTranslation('auth');
   const { user, setShowHouseholdNameScreen } = useAuth();
   const [name, setName] = useState('');
   const [originalName, setOriginalName] = useState('');
@@ -84,10 +86,10 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
       return null; // Don't show error for empty field unless touched
     }
     if (trimmedName.length < 2) {
-      return 'Name must be at least 2 characters';
+      return t('householdName.errors.tooShort');
     }
     if (trimmedName.length > 40) {
-      return 'Name must be less than 40 characters';
+      return t('householdName.errors.tooLong');
     }
 
     return null;
@@ -127,7 +129,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
       setShowHouseholdNameScreen(false);
       // RootNavigator will automatically show MainNavigator since user is set and flag is cleared
     } catch (err) {
-      setError('Failed to save household name. Please try again.');
+      setError(t('householdName.errors.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -153,7 +155,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Name your household</Text>
+            <Text style={styles.title}>{t('householdName.title')}</Text>
           </View>
 
           {/* Main Content */}
@@ -163,7 +165,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
             </View>
 
             <Text style={styles.subtitle}>
-              Give your household a name so everyone knows they're in the right place
+              {t('householdName.subtitle')}
             </Text>
 
             <View style={styles.inputContainer}>
@@ -182,7 +184,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
                   }
                 }}
                 onBlur={handleBlur}
-                placeholder="My family"
+                placeholder={t('householdName.inputPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
                 editable={!isSaving}
@@ -192,7 +194,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
               />
               {error && <Text style={styles.errorText}>{error}</Text>}
               <Text style={styles.characterCount}>
-                {name.length}/40 characters
+                {t('householdName.characterCount', { count: name.length })}
               </Text>
             </View>
 
@@ -208,7 +210,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
               {isSaving ? (
                 <ActivityIndicator color={colors.surface} />
               ) : (
-                <Text style={styles.primaryButtonText}>Save</Text>
+                <Text style={styles.primaryButtonText}>{t('householdName.save')}</Text>
               )}
             </TouchableOpacity>
 
@@ -221,7 +223,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
                 accessibilityRole="button"
                 accessibilityHint="Continues to the app without changing the household name"
               >
-                <Text style={styles.skipButtonText}>Skip</Text>
+                <Text style={styles.skipButtonText}>{t('householdName.skip')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -229,7 +231,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              You can change this name later in settings
+              {t('householdName.footerText')}
             </Text>
           </View>
         </View>

@@ -113,7 +113,7 @@ describe('Recipe Services', () => {
                     id: 'local-1',
                     localId: 'uuid-1',
                     title: 'Original Recipe',
-                    cookTime: 30,
+                    prepTime: 30,
                     category: 'Dinner',
                     ingredients: [],
                     instructions: [],
@@ -142,7 +142,7 @@ describe('Recipe Services', () => {
                 id: 'local-1',
                 localId: 'uuid-1',
                 name: 'Recipe to Delete',
-                cookTime: '30 min',
+                prepTime: 30,
                 category: 'Dinner',
                 ingredients: [],
                 instructions: [],
@@ -218,7 +218,7 @@ describe('Recipe Services', () => {
                         id: '1',
                         localId: 'uuid-1',
                         title: 'Existing',
-                        cookTime: 30,
+                        prepTime: 30,
                         category: 'Dinner',
                         ingredients: [],
                         instructions: [],
@@ -231,7 +231,7 @@ describe('Recipe Services', () => {
                         id: '1',
                         localId: 'uuid-1',
                         title: 'Deleted Recipe',
-                        cookTime: 30,
+                        prepTime: 30,
                         category: 'Dinner',
                         ingredients: [],
                         instructions: [],
@@ -362,7 +362,7 @@ describe('Recipe Services', () => {
         ])('updateRecipe: %s', (_label, updates) => {
             it('calls api.put with recipe id and payload', async () => {
                 const recipeId = 'remote-1';
-                const existingRecipe = { id: recipeId, title: 'Original', cookTime: 30, category: 'Dinner', ingredients: [], instructions: [] };
+                const existingRecipe = { id: recipeId, title: 'Original', prepTime: 30, category: 'Dinner', ingredients: [], instructions: [] };
                 const mockResult = { id: recipeId, ...existingRecipe, ...updates };
                 
                 await invalidateCache('recipes');

@@ -180,7 +180,6 @@ model Recipe {
   description  String?    @map("description")
   category     String?
   prepTime     Int?      @map("prep_time") // in minutes
-  cookTime     Int?      @map("cook_time") // in minutes
   ingredients  Json      // JSONB array of ingredients
   instructions Json      // JSONB array of instruction steps
   imageUrl     String?   @map("image_url") // Legacy URL, kept for migration

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { CenteredModal } from '../CenteredModal';
 import { colors } from '../../../theme';
 import { styles } from './styles';
@@ -9,19 +10,23 @@ export function ConfirmationModal({
   visible,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   confirmColor = colors.error,
   onConfirm,
   onCancel,
 }: ConfirmationModalProps) {
+  const { t } = useTranslation('common');
+  const resolvedConfirmText = confirmText ?? t('buttons.confirm');
+  const resolvedCancelText = cancelText ?? t('buttons.cancel');
+
   return (
     <CenteredModal
       visible={visible}
       onClose={onCancel}
       title={title}
-      confirmText={confirmText}
-      cancelText={cancelText}
+      confirmText={resolvedConfirmText}
+      cancelText={resolvedCancelText}
       confirmColor={confirmColor}
       onConfirm={onConfirm}
     >

@@ -111,7 +111,7 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
             <Ionicons name="time-outline" size={18} color={colors.recipes} />
             <Text style={styles.statText}>
             {(() => {
-              const time = recipe.prepTime ?? recipe.cookTime;
+              const time = recipe.prepTime;
               const num = time != null ? Number(time) : NaN;
               return Number.isFinite(num) ? `${num} min` : '—';
             })()}
