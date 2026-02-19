@@ -211,8 +211,8 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   // Format chores for sharing using centralized formatter
   const shareText = useMemo(
-    () => formatChoresText(todayChores, upcomingChores),
-    [todayChores, upcomingChores]
+    () => formatChoresText(todayChores, upcomingChores, t),
+    [todayChores, upcomingChores, t, i18n.language]
   );
 
   // Calculate progress (only for today's chores)

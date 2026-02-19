@@ -3,13 +3,15 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { CenteredModal } from '../CenteredModal';
-import { executeShare, SHARE_OPTIONS, SHARE_STRINGS, type ShareTarget } from '../../utils/shareUtils';
+import { executeShare, SHARE_OPTIONS, type ShareTarget } from '../../utils/shareUtils';
 import { styles } from './styles';
+import { useTranslation } from 'react-i18next';
 import type { ShareModalProps } from './types';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export function ShareModal({ visible, onClose, title, shareText }: ShareModalProps) {
+  const { t } = useTranslation('common');
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const previewText = useMemo(() => {
@@ -24,10 +26,10 @@ export function ShareModal({ visible, onClose, title, shareText }: ShareModalPro
     const success = await executeShare(target, title, shareText);
 
     if (target === 'clipboard' && success) {
-      setFeedback(SHARE_STRINGS.COPIED_FEEDBACK);
+      setFeedback(t('share.feedback.copied'));
       setTimeout(() => setFeedback(null), 2000);
     } else if (!success && target !== 'clipboard') {
-      setFeedback(SHARE_STRINGS.SHARE_FAILED);
+      setFeedback(t('share.feedback.failed'));
       setTimeout(() => setFeedback(null), 2000);
     }
   };
@@ -53,7 +55,7 @@ export function ShareModal({ visible, onClose, title, shareText }: ShareModalPro
               onPress={() => handleShare(option.id)}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel={`Share to ${option.label}`}
+              accessibilityLabel={t('share.optionAccessibility', { option: t(`share.options.${option.id}`) })}
             >
               <View
                 style={[
@@ -67,7 +69,7 @@ export function ShareModal({ visible, onClose, title, shareText }: ShareModalPro
                   color={option.color}
                 />
               </View>
-              <Text style={styles.optionLabel}>{option.label}</Text>
+              <Text style={styles.optionLabel}>{t(`share.options.${option.id}`)}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -75,7 +77,7 @@ export function ShareModal({ visible, onClose, title, shareText }: ShareModalPro
         {feedback && <Text style={styles.feedbackText}>{feedback}</Text>}
 
         <View style={styles.previewSection}>
-          <Text style={styles.previewLabel}>Preview</Text>
+          <Text style={styles.previewLabel}>{t('share.previewLabel')}</Text>
           <ScrollView style={styles.previewBox} nestedScrollEnabled>
             <Text style={styles.previewText}>{previewText}</Text>
           </ScrollView>

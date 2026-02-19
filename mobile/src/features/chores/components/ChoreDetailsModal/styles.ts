@@ -7,10 +7,32 @@ export const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 1000,
   },
+
+  modalSectionRtl: {
+    direction: 'rtl',
+    alignSelf: 'stretch',
+  },
+  rtlTextRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  modalTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
+  },
+  pickerContentRtl: {
+    direction: 'rtl',
+  },
   addForm: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  addFormRtl: {
+    flexDirection: 'row-reverse',
   },
   input: {
     flex: 1,
@@ -22,11 +44,18 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
+  inputRtl: {
+    textAlign: 'right',
+  },
   clearButton: {
     position: 'absolute',
     right: 12,
     top: 14,
     padding: spacing.xs,
+  },
+  clearButtonRtl: {
+    right: undefined,
+    left: 12,
   },
   dueDateSection: {
     marginBottom: spacing.md,
@@ -105,6 +134,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
+  recurrenceOptionsRtl: {
+    flexDirection: 'row-reverse',
+  },
   recurrenceOption: {
     flex: 1,
     paddingVertical: spacing.sm,
@@ -114,6 +146,11 @@ export const styles = StyleSheet.create({
     borderColor: colors.divider,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  recurrenceOptionRtl: {
+    alignItems: 'stretch',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
   recurrenceOptionSelected: {
     backgroundColor: colors.chores,

@@ -46,7 +46,7 @@ export function RecipeDetailScreen({
   onBack,
   onAddToShoppingList,
 }: RecipeDetailScreenProps) {
-  const { t } = useTranslation('recipes');
+  const { t, i18n } = useTranslation('recipes');
   const { isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -207,7 +207,7 @@ export function RecipeDetailScreen({
   }, [shouldShowStickyHeader, animateStickyHeaderIn, animateStickyHeaderOut]);
 
   // Format recipe for sharing using centralized formatter
-  const shareText = useMemo(() => formatRecipeText(displayRecipe), [displayRecipe]);
+  const shareText = useMemo(() => formatRecipeText(displayRecipe, t), [displayRecipe, t, i18n.language]);
 
   const showToast = useCallback((message: string) => {
     setToastMessage(message);

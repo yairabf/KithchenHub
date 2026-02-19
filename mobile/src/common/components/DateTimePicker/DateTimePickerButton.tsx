@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius } from '../../../theme';
 import { DateTimePickerButtonProps } from './types';
 
@@ -12,6 +13,10 @@ export function DateTimePickerButton({
   disabled,
   onPress,
 }: DateTimePickerButtonProps) {
+  const { t } = useTranslation('common');
+  const pickerLabel = label || t('dateTimePicker.defaultLabel');
+  const displayValue = value || placeholder;
+
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -21,8 +26,8 @@ export function DateTimePickerButton({
         disabled={disabled}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel={`${label || 'Date and time picker'}, ${value || placeholder}`}
-        accessibilityHint="Opens date and time selection"
+        accessibilityLabel={t('dateTimePicker.accessibility.picker', { value: `${pickerLabel}, ${displayValue}` })}
+        accessibilityHint={t('dateTimePicker.accessibility.hint')}
         accessibilityState={{ disabled }}
       >
         <View style={styles.iconContainer}>
@@ -40,7 +45,7 @@ export function DateTimePickerButton({
           style={[styles.buttonText, !value && styles.buttonPlaceholder]}
           numberOfLines={1}
         >
-          {value || placeholder}
+          {displayValue}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
       </TouchableOpacity>
