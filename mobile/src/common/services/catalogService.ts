@@ -229,6 +229,10 @@ export class CatalogService {
       return [];
     }
 
+    if (config?.mockData?.enabled) {
+      return this.getCategoryItems(mockGroceriesDB, trimmedCategory);
+    }
+
     try {
       const results = await api.get<GrocerySearchItemDto[] | undefined>(
         `/groceries/by-category?category=${encodeURIComponent(trimmedCategory)}`,
@@ -237,7 +241,30 @@ export class CatalogService {
       return list.map(mapGroceryItem);
     } catch (error) {
       console.error('Category fetch failed:', error);
-      throw error;
+
+      try {
+        const localItems = await this.getGroceryItems();
+        const localCategoryItems = this.getCategoryItems(localItems, trimmedCategory);
+
+        if (localCategoryItems.length > 0) {
+          this.logCatalogEvent('log', 'Using local category fallback items', {
+            category: trimmedCategory,
+            itemCount: localCategoryItems.length,
+            source: CatalogSource.CACHE,
+          });
+          return localCategoryItems;
+        }
+      } catch (fallbackError) {
+        console.error('Category fallback from local catalog failed:', fallbackError);
+      }
+
+      const mockCategoryItems = this.getCategoryItems(mockGroceriesDB, trimmedCategory);
+      this.logCatalogEvent('warn', 'Using mock category fallback items', {
+        category: trimmedCategory,
+        itemCount: mockCategoryItems.length,
+        source: CatalogSource.MOCK,
+      });
+      return mockCategoryItems;
     }
   }
 
