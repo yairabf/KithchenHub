@@ -17,8 +17,21 @@ import { createI18nMock } from '../../../../common/__tests__/utils/i18nMock';
 import type { ShoppingItem, ShoppingList } from '../../../../mocks/shopping';
 
 // Mock dependencies
+// jest.mock factories cannot reference out-of-scope variables, so we inline a
+// minimal i18n mock here instead of calling createI18nMock() directly.
 jest.mock('react-i18next', () => ({
-  useTranslation: () => createI18nMock(),
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, unknown>) => {
+      if (params && typeof params === 'object') {
+        return Object.entries(params).reduce(
+          (acc, [k, v]) => acc.replace(`{{${k}}}`, String(v)),
+          key,
+        );
+      }
+      return key;
+    },
+    i18n: { dir: () => 'ltr', language: 'en' },
+  }),
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -48,23 +61,23 @@ jest.mock('../../../../common/hooks', () => ({
 }));
 
 jest.mock('../../hooks/useShoppingRealtime', () => ({
-  useShoppingRealtime: () => {},
+  useShoppingRealtime: () => ({ error: null }),
 }));
 
 // Mock shopping service
 const mockDeleteItem = jest.fn();
-const mockGetShoppingLists = jest.fn();
-const mockGetShoppingItems = jest.fn();
-const mockGetGroceryItems = jest.fn();
+const mockGetShoppingData = jest.fn();
 
 jest.mock('../../services/shoppingService', () => ({
   createShoppingService: jest.fn(() => ({
     deleteItem: mockDeleteItem,
-    getShoppingLists: mockGetShoppingLists,
-    getShoppingItems: mockGetShoppingItems,
-    getGroceryItems: mockGetGroceryItems,
-    initialize: jest.fn(),
-    cleanup: jest.fn(),
+    getShoppingData: mockGetShoppingData,
+    createItem: jest.fn(),
+    updateItem: jest.fn(),
+    toggleItem: jest.fn(),
+    createList: jest.fn(),
+    updateList: jest.fn(),
+    deleteList: jest.fn(),
   })),
 }));
 
@@ -87,6 +100,7 @@ const localOnlyItem: ShoppingItem = {
   name: 'Local Milk',
   listId: 'list-123',
   category: 'dairy',
+  image: '',
   isChecked: false,
   quantity: 1,
   unit: 'gallon',
@@ -100,6 +114,7 @@ const serverPersistedItem: ShoppingItem = {
   name: 'Eggs',
   listId: 'list-123',
   category: 'dairy',
+  image: '',
   isChecked: false,
   quantity: 12,
   unit: 'count',
@@ -110,11 +125,11 @@ const serverPersistedItem: ShoppingItem = {
 describe('ShoppingListsScreen - Item Deletion', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Default mocks
-    mockGetShoppingLists.mockResolvedValue([mockList]);
-    mockGetShoppingItems.mockResolvedValue([localOnlyItem, serverPersistedItem]);
-    mockGetGroceryItems.mockResolvedValue([]);
+
+    mockGetShoppingData.mockResolvedValue({
+      shoppingLists: [mockList],
+      shoppingItems: [localOnlyItem, serverPersistedItem],
+    });
   });
 
   describe('Local-only item deletion', () => {
@@ -125,7 +140,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
 
       // Wait for component to load
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Simulate deletion of local-only item
@@ -139,7 +154,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       const { queryByText } = render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // After deletion, local-only item should be removed from UI
@@ -154,7 +169,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Simulate deletion of server-persisted item
@@ -165,7 +180,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
     });
 
     it('should optimistically remove item from UI before API completes', async () => {
-      let resolveDelete: () => void;
+      let resolveDelete: (value?: unknown) => void;
       mockDeleteItem.mockReturnValue(
         new Promise((resolve) => {
           resolveDelete = resolve;
@@ -175,7 +190,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       const { queryByText } = render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // After triggering delete, item should be removed immediately
@@ -195,7 +210,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Even though API returned 404, item should be removed from UI
@@ -212,7 +227,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Would verify console.warn was called with 404 message
@@ -229,7 +244,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Simulate rapid double-click on delete
@@ -245,7 +260,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Delete item 1
@@ -263,7 +278,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       const { findByText } = render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Trigger delete
@@ -278,7 +293,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // If realtime update already restored the item,
@@ -291,7 +306,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Attempt to delete item that doesn't exist
@@ -304,7 +319,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Delete local-only item: no API call
@@ -326,18 +341,22 @@ describe('ShoppingListsScreen - Item Deletion', () => {
         name: `Test ${scenario}`,
         listId: 'list-123',
         category: 'other',
+        image: '',
         isChecked: false,
         quantity: 1,
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
       };
 
-      mockGetShoppingItems.mockResolvedValue([item]);
+      mockGetShoppingData.mockResolvedValue({
+        shoppingLists: [mockList],
+        shoppingItems: [item],
+      });
 
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingLists).toHaveBeenCalled();
+        expect(mockGetShoppingData).toHaveBeenCalled();
       });
 
       // Verify behavior based on item type
