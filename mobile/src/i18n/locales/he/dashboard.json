@@ -1,5 +1,46 @@
 {
-  "title": "Dashboard",
-  "greeting": "Hello",
-  "quickStats": "Quick stats"
+  "title": "לוח בקרה",
+  "greeting": "שלום",
+  "quickStats": {
+    "shoppingLists": "רשימות קניות",
+    "savedRecipes": "מתכונים שמורים",
+    "active": "{{count}} פעילות",
+    "item": "{{count}} פריט",
+    "items": "{{count}} פריטים"
+  },
+  "header": {
+    "title": "מרכז המטבח",
+    "roleGuest": "אורח",
+    "roleKitchenLead": "מנהל"
+  },
+  "quickAdd": {
+    "title": "הוספה מהירה",
+    "subtitle": "הוספת מצרכים בתוך שניות.",
+    "mainListBadge": "הרשימה הראשית",
+    "voiceInput": "קלט קולי",
+    "voiceInputHint": "הוספת פריטים באמצעות קול",
+    "suggestedItems": "פריטים מוצעים",
+    "show": "הצג",
+    "hide": "הסתר",
+    "toggleSuggestedHint": "מחליף מצב תצוגה של פריטים מוצעים",
+    "addItemLabel": "הוסף {{name}}",
+    "addItemHint": "מוסיף את {{name}} לרשימת הקניות"
+  },
+  "choresPanel": {
+    "title": "מטלות חשובות",
+    "subtitle": "משימות לבית",
+    "viewAll": "לכל המטלות",
+    "viewAllLabel": "הצג את כל המטלות",
+    "viewAllHint": "ניווט למסך המטלות",
+    "addTask": "הוסף מטלה לבית",
+    "addTaskLabel": "הוספת מטלה לבית",
+    "addTaskHint": "פותח טופס ליצירת מטלה חדשה",
+    "unassigned": "ללא שיוך",
+    "markComplete": "הקש לסימון כהושלם",
+    "markIncomplete": "הקש לסימון כלא הושלם"
+  },
+  "notifications": {
+    "buttonLabel": "התראות - צפייה בפעילות ועדכונים אחרונים",
+    "buttonHint": "הקש כדי לפתוח התראות"
+  }
 }

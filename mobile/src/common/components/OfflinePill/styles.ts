@@ -47,7 +47,7 @@ export const createStyles = (position: OfflinePillPosition) => {
       fontWeight: '600',
     },
     dismissButton: {
-      marginLeft: spacing.xs,
+      marginStart: spacing.xs,
       padding: spacing.xs,
     },
   });

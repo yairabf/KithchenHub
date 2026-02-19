@@ -1,15 +1,17 @@
 import { Share, Linking } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
+export type ShareLocalize = (
+  key: string,
+  options?: Record<string, string | number | undefined>
+) => string;
+
 // ============================================================================
-// Constants (Issue 5: Extract hardcoded strings)
+// Constants
 // ============================================================================
 
 export const SHARE_STRINGS = {
-  FOOTER: '\nShared from Kitchen Hub',
   DIVIDER: '────────────────────',
-  COPIED_FEEDBACK: 'Copied to clipboard!',
-  SHARE_FAILED: 'Could not share. Please try another option.',
   EMPTY_CHORES: 'No chores to share!',
   EMPTY_SHOPPING: 'No items yet.',
   EMPTY_RECIPE_INGREDIENTS: 'No ingredients listed.',
@@ -56,7 +58,7 @@ export const SHARE_OPTIONS: ShareOption[] = [
 ];
 
 // ============================================================================
-// Text Formatters (Issue 2: Extract formatters to utilities)
+// Text Formatters
 // ============================================================================
 
 interface ShoppingItem {
@@ -97,21 +99,66 @@ interface Recipe {
   instructions: RecipeInstruction[];
 }
 
+function getDefaultLocalizer(): ShareLocalize {
+  return (key, options) => {
+    switch (key) {
+      case 'shopping:share.shoppingListHeader':
+        return `Shopping List: ${options?.listName ?? ''}`;
+      case 'shopping:share.emptyShopping':
+        return SHARE_STRINGS.EMPTY_SHOPPING;
+      case 'shopping:share.categoryHeader':
+        return `${options?.category ?? ''}:`;
+      case 'chores:share.header':
+        return 'Home Chores';
+      case 'chores:share.empty':
+        return SHARE_STRINGS.EMPTY_CHORES;
+      case 'chores:share.todaySection':
+        return "Today's Chores:";
+      case 'chores:share.upcomingSection':
+        return 'Upcoming Chores:';
+      case 'recipes:share.notAvailable':
+        return 'Recipe not available';
+      case 'recipes:share.untitledRecipe':
+        return 'Untitled Recipe';
+      case 'recipes:share.header':
+        return `Recipe: ${options?.name ?? ''}`;
+      case 'recipes:share.cookTime':
+        return 'Cook Time';
+      case 'recipes:share.prepTime':
+        return 'Prep Time';
+      case 'recipes:share.servings':
+        return 'Servings';
+      case 'recipes:share.ingredients':
+        return 'Ingredients';
+      case 'recipes:share.instructions':
+        return 'Instructions';
+      case 'recipes:share.notAvailableValue':
+        return 'N/A';
+      case 'recipes:share.emptyIngredients':
+        return SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS;
+      case 'common:share.footer':
+        return 'Shared from Kitchen Hub';
+      default:
+        return '';
+    }
+  };
+}
+
 /**
  * Format shopping list items into shareable text
  */
 export function formatShoppingListText(
   listName: string,
-  items: ShoppingItem[]
+  items: ShoppingItem[],
+  t?: ShareLocalize,
 ): string {
-  const header = `Shopping List: ${listName}`;
+  const localize = t ?? getDefaultLocalizer();
+  const header = localize('shopping:share.shoppingListHeader', { listName });
 
-  // Issue 4: Handle empty state
   if (items.length === 0) {
-    return `${header}\n\n${SHARE_STRINGS.EMPTY_SHOPPING}${SHARE_STRINGS.FOOTER}`;
+    return `${header}\n\n${localize('shopping:share.emptyShopping')}\n\n${localize('common:share.footer')}`;
   }
 
-  // Group items by category
   const itemsByCategory = items.reduce((acc, item) => {
     if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push(item);
@@ -120,14 +167,16 @@ export function formatShoppingListText(
 
   const itemLines: string[] = [];
   Object.entries(itemsByCategory).forEach(([category, categoryItems]) => {
-    itemLines.push(`\n${category}:`);
+    const categoryKey = category.trim().toLowerCase();
+    const translatedCategory = localize(`categories:${categoryKey}`, { defaultValue: category }) || category;
+
+    itemLines.push(`\n${localize('shopping:share.categoryHeader', { category: translatedCategory })}`);
     categoryItems.forEach(item => {
-      // Use ceil to match "General Count" display strategy
       itemLines.push(`  • ${item.name} (${Math.ceil(item.quantity)})`);
     });
   });
 
-  return `${header}\n${SHARE_STRINGS.DIVIDER}${itemLines.join('\n')}${SHARE_STRINGS.FOOTER}`;
+  return `${header}\n${SHARE_STRINGS.DIVIDER}${itemLines.join('\n')}\n\n${localize('common:share.footer')}`;
 }
 
 /**
@@ -135,19 +184,20 @@ export function formatShoppingListText(
  */
 export function formatChoresText(
   todayChores: Chore[],
-  upcomingChores: Chore[]
+  upcomingChores: Chore[],
+  t?: ShareLocalize,
 ): string {
-  const header = 'Home Chores';
+  const localize = t ?? getDefaultLocalizer();
+  const header = localize('chores:share.header');
 
-  // Issue 4: Handle empty state
   if (todayChores.length === 0 && upcomingChores.length === 0) {
-    return `${header}\n\n${SHARE_STRINGS.EMPTY_CHORES}${SHARE_STRINGS.FOOTER}`;
+    return `${header}\n\n${localize('chores:share.empty')}\n\n${localize('common:share.footer')}`;
   }
 
   const lines: string[] = [];
 
   if (todayChores.length > 0) {
-    lines.push("\nToday's Chores:");
+    lines.push(`\n${localize('chores:share.todaySection')}`);
     todayChores.forEach(chore => {
       const status = chore.isCompleted ? '✓' : '○';
       const assignee = chore.assignee ? ` (${chore.assignee})` : '';
@@ -156,7 +206,7 @@ export function formatChoresText(
   }
 
   if (upcomingChores.length > 0) {
-    lines.push('\nUpcoming Chores:');
+    lines.push(`\n${localize('chores:share.upcomingSection')}`);
     upcomingChores.forEach(chore => {
       const status = chore.isCompleted ? '✓' : '○';
       const assignee = chore.assignee ? ` (${chore.assignee})` : '';
@@ -164,39 +214,40 @@ export function formatChoresText(
     });
   }
 
-  return `${header}\n${SHARE_STRINGS.DIVIDER}${lines.join('\n')}${SHARE_STRINGS.FOOTER}`;
+  return `${header}\n${SHARE_STRINGS.DIVIDER}${lines.join('\n')}\n\n${localize('common:share.footer')}`;
 }
 
 /**
  * Format recipe into shareable text
  */
-export function formatRecipeText(recipe: Recipe): string {
-  // Defensive check: ensure recipe has required fields
+export function formatRecipeText(recipe: Recipe, t?: ShareLocalize): string {
+  const localize = t ?? getDefaultLocalizer();
+
   if (!recipe) {
-    return 'Recipe not available';
+    return localize('recipes:share.notAvailable');
   }
 
-  const recipeName = recipe.title || recipe.name || 'Untitled Recipe';
-  const header = `Recipe: ${recipeName}`;
+  const recipeName = recipe.title || recipe.name || localize('recipes:share.untitledRecipe');
+  const header = localize('recipes:share.header', { name: recipeName });
   const lines: string[] = [];
 
   if (recipe.description) {
     lines.push(`\n${recipe.description}`);
   }
 
-  const cookTime = recipe.cookTime || 'N/A';
-  lines.push(`\nCook Time: ${cookTime}`);
+  const cookTime = recipe.cookTime || localize('recipes:share.notAvailableValue');
+  lines.push(`\n${localize('recipes:share.cookTime')}: ${cookTime}`);
   if (recipe.prepTime) {
-    lines.push(`Prep Time: ${recipe.prepTime}`);
+    lines.push(`${localize('recipes:share.prepTime')}: ${recipe.prepTime}`);
   }
   if (recipe.servings) {
-    lines.push(`Servings: ${recipe.servings}`);
+    lines.push(`${localize('recipes:share.servings')}: ${recipe.servings}`);
   }
 
-  lines.push('\nIngredients:');
+  lines.push(`\n${localize('recipes:share.ingredients')}:`);
   const ingredients = recipe.ingredients || [];
   if (ingredients.length === 0) {
-    lines.push(`  ${SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS}`);
+    lines.push(`  ${localize('recipes:share.emptyIngredients')}`);
   } else {
     ingredients.forEach(ing => {
       const quantity = ing.quantityAmount ?? ing.quantity ?? '';
@@ -206,10 +257,10 @@ export function formatRecipeText(recipe: Recipe): string {
     });
   }
 
-  lines.push('\nInstructions:');
+  lines.push(`\n${localize('recipes:share.instructions')}:`);
   const instructions = recipe.instructions || [];
   if (instructions.length === 0) {
-    lines.push(`  ${SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS}`); // Reuse empty string constant
+    lines.push(`  ${localize('recipes:share.emptyIngredients')}`);
   } else {
     instructions.forEach((step, index) => {
       const instruction = step?.instruction || step?.text || '';
@@ -217,11 +268,11 @@ export function formatRecipeText(recipe: Recipe): string {
     });
   }
 
-  return `${header}\n${SHARE_STRINGS.DIVIDER}${lines.join('\n')}${SHARE_STRINGS.FOOTER}`;
+  return `${header}\n${SHARE_STRINGS.DIVIDER}${lines.join('\n')}\n\n${localize('common:share.footer')}`;
 }
 
 // ============================================================================
-// Share Functions (Issue 6: Add error logging)
+// Share Functions
 // ============================================================================
 
 /**
@@ -238,7 +289,6 @@ export async function shareToWhatsApp(text: string): Promise<boolean> {
       return true;
     }
 
-    // Fallback to web WhatsApp
     const webUrl = `https://wa.me/?text=${encoded}`;
     await Linking.openURL(webUrl);
     return true;
@@ -262,7 +312,6 @@ export async function shareToTelegram(text: string): Promise<boolean> {
       return true;
     }
 
-    // Fallback to web Telegram
     const webUrl = `https://t.me/share/url?text=${encoded}`;
     await Linking.openURL(webUrl);
     return true;

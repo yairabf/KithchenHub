@@ -1,5 +1,5 @@
 {
-  "required": "This field is required",
-  "minLength": "Must be at least {{min}} characters",
-  "maxLength": "Must be at most {{max}} characters"
+  "required": "שדה זה הוא חובה",
+  "minLength": "חייב להכיל לפחות {{min}} תווים",
+  "maxLength": "חייב להכיל לכל היותר {{max}} תווים"
 }

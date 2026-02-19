@@ -2,5 +2,53 @@
   "title": "Recipes",
   "addRecipe": "Add Recipe",
   "servings": "Servings",
-  "cookTime": "Cook time"
+  "cookTime": "Cook time",
+  "screen": {
+    "headerTitle": "House Recipes",
+    "addActionLabel": "Add item",
+    "emptyTitle": "No recipes yet",
+    "emptyDescription": "Start building your collection by adding your favorite recipes",
+    "emptyAction": "Add your first recipe",
+    "searchPlaceholder": "Search by name...",
+    "hideCategoryFilter": "Hide category filter",
+    "showCategoryFilter": "Show category filter",
+    "hide": "Hide",
+    "showCategoryFilterButton": "Show category filter",
+    "noMatchingRecipes": "No matching recipes",
+    "noRecipesInCategory": "No recipes in this category",
+    "noRecipesMatchSearch": "No recipes match \"{{query}}\". Try another name or reset filters.",
+    "tryDifferentCategory": "Try a different category or reset filters.",
+    "resetFilters": "Reset filters",
+    "loadingDetails": "Loading recipe details..."
+  },
+  "detail": {
+    "shareTitle": "Share Recipe",
+    "editActionLabel": "Edit recipe",
+    "shareActionLabel": "Share recipe",
+    "toasts": {
+      "recipeDetailsLoading": "Recipe details are still loading. Please try again.",
+      "recipeDetailsLoadFailed": "Failed to load recipe details.",
+      "recipeUpdateFailed": "Failed to update recipe",
+      "noMainList": "No main shopping list found. Please create one.",
+      "ingredientAdded": "{{name}} added to {{listName}}",
+      "ingredientAddFailed": "Failed to add ingredient",
+      "ingredientUpdated": "{{name}} quantity updated",
+      "ingredientUpdateFailed": "Failed to update ingredient",
+      "noIngredients": "No ingredients to add",
+      "allIngredientsAdded": "All {{count}} ingredients added to {{listName}}",
+      "addIngredientsFailed": "Failed to add ingredients"
+    }
+  },
+  "share": {
+    "notAvailable": "Recipe not available",
+    "untitledRecipe": "Untitled Recipe",
+    "header": "Recipe: {{name}}",
+    "cookTime": "Cook Time",
+    "prepTime": "Prep Time",
+    "servings": "Servings",
+    "ingredients": "Ingredients",
+    "instructions": "Instructions",
+    "notAvailableValue": "N/A",
+    "emptyIngredients": "No ingredients listed."
+  }
 }

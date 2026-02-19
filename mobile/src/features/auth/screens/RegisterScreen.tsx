@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { boxShadow } from '../../../theme/shadows';
+import { useTranslation } from 'react-i18next';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -31,6 +32,7 @@ interface RegisterScreenProps {
 }
 
 export function RegisterScreen({ navigation }: RegisterScreenProps) {
+  const { t } = useTranslation('auth');
   const { signUpWithEmail, signInWithEmail } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -47,29 +49,29 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
   const validatePassword = (password: string): { valid: boolean; message?: string } => {
     if (password.length < 8) {
-      return { valid: false, message: 'Password must be at least 8 characters' };
+      return { valid: false, message: t('register.errors.passwordMin') };
     }
     if (!/[A-Z]/.test(password)) {
-      return { valid: false, message: 'Password must contain at least one uppercase letter' };
+      return { valid: false, message: t('register.errors.passwordUpper') };
     }
     if (!/[a-z]/.test(password)) {
-      return { valid: false, message: 'Password must contain at least one lowercase letter' };
+      return { valid: false, message: t('register.errors.passwordLower') };
     }
     if (!/[0-9]/.test(password)) {
-      return { valid: false, message: 'Password must contain at least one number' };
+      return { valid: false, message: t('register.errors.passwordNumber') };
     }
     return { valid: true };
   };
 
   const validateForm = (): string | null => {
-    if (!name.trim()) return 'Name is required';
-    if (!email.trim()) return 'Email is required';
-    if (!validateEmail(email)) return 'Please enter a valid email address';
+    if (!name.trim()) return t('register.errors.nameRequired');
+    if (!email.trim()) return t('register.errors.emailRequired');
+    if (!validateEmail(email)) return t('register.errors.emailInvalid');
 
     const passwordCheck = validatePassword(password);
     if (!passwordCheck.valid) return passwordCheck.message!;
 
-    if (password !== confirmPassword) return 'Passwords do not match';
+    if (password !== confirmPassword) return t('register.errors.passwordMismatch');
     return null;
   };
 
@@ -90,7 +92,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const handleRegister = async () => {
     const error = validateForm();
     if (error) {
-      Alert.alert('Validation Error', error, [{ text: 'OK' }]);
+      Alert.alert(t('login.validationError'), error, [{ text: t('buttons.ok', { ns: 'common' }) }]);
       return;
     }
 
@@ -101,22 +103,22 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
       // Show success message with verification instructions
       Alert.alert(
-        'Account Created!',
-        'Please check your email to verify your account before signing in.',
+        t('register.success.title'),
+        t('register.success.message'),
         [
           {
-            text: 'OK',
+            text: t('buttons.ok', { ns: 'common' }),
             onPress: () => navigation.navigate('Login'),
           },
         ]
       );
     } catch (error) {
       Alert.alert(
-        'Registration Failed',
+        t('register.errors.registrationFailed'),
         error instanceof Error
           ? error.message
-          : 'Unable to create account. Please try again.',
-        [{ text: 'OK' }]
+          : t('register.errors.unableToCreateAccount'),
+        [{ text: t('buttons.ok', { ns: 'common' }) }]
       );
     } finally {
       setIsLoading(false);
@@ -135,7 +137,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
-              accessibilityLabel="Go back"
+              accessibilityLabel={t('register.goBack')}
               accessibilityRole="button"
             >
               <Ionicons name="arrow-back" size={24} color={colors.primary} />
@@ -145,49 +147,49 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
           {/* Glass Card */}
           <View style={styles.glassCard}>
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Sign up to get started</Text>
+              <Text style={styles.title}>{t('register.title')}</Text>
+              <Text style={styles.subtitle}>{t('register.subtitle')}</Text>
             </View>
 
             {/* Form Fields */}
             <View style={styles.formContainer}>
               {/* Name Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Name</Text>
+                <Text style={styles.label}>{t('register.name')}</Text>
                 <TextInput
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
-                  placeholder="John Doe"
+                  placeholder={t('register.namePlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                   autoCapitalize="words"
                   editable={!isLoading}
-                  accessibilityLabel="Name"
-                  accessibilityHint="Enter your full name"
+                  accessibilityLabel={t('register.name')}
+                  accessibilityHint={t('register.nameHint')}
                 />
               </View>
 
               {/* Email Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>{t('register.email')}</Text>
                 <TextInput
                   style={styles.input}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="john@example.com"
+                  placeholder={t('register.emailPlaceholder')}
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}
-                  accessibilityLabel="Email"
-                  accessibilityHint="Enter your email address"
+                  accessibilityLabel={t('register.email')}
+                  accessibilityHint={t('register.emailHint')}
                 />
               </View>
 
               {/* Password Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{t('register.password')}</Text>
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={styles.passwordInput}
@@ -199,13 +201,13 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
-                    accessibilityLabel="Password"
-                    accessibilityHint="Enter your password, at least 6 characters"
+                    accessibilityLabel={t('register.password')}
+                    accessibilityHint={t('register.passwordHint')}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
-                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    accessibilityLabel={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                     accessibilityRole="button"
                   >
                     <Ionicons
@@ -219,7 +221,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 
               {/* Confirm Password Field */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm Password</Text>
+                <Text style={styles.label}>{t('register.confirmPassword')}</Text>
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={styles.passwordInput}
@@ -231,13 +233,13 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                     autoCapitalize="none"
                     autoCorrect={false}
                     editable={!isLoading}
-                    accessibilityLabel="Confirm password"
-                    accessibilityHint="Re-enter your password"
+                    accessibilityLabel={t('register.confirmPassword')}
+                    accessibilityHint={t('register.confirmPasswordHint')}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    accessibilityLabel={showConfirmPassword ? t('login.hidePassword') : t('login.showPassword')}
                     accessibilityRole="button"
                   >
                     <Ionicons
@@ -254,24 +256,24 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                 style={[styles.registerButton, isLoading && styles.buttonDisabled]}
                 onPress={handleRegister}
                 disabled={isLoading}
-                accessibilityLabel="Create account"
+                accessibilityLabel={t('register.createAccount')}
                 accessibilityRole="button"
               >
                 <Text style={styles.registerButtonText}>
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
+                  {isLoading ? t('register.creatingAccount') : t('register.createAccount')}
                 </Text>
               </TouchableOpacity>
 
               {/* Login Link */}
               <View style={styles.loginContainer}>
-                <Text style={styles.loginText}>Already have an account? </Text>
+                <Text style={styles.loginText}>{t('register.alreadyHaveAccount')} </Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('Login')}
                   disabled={isLoading}
-                  accessibilityLabel="Sign in"
+                  accessibilityLabel={t('register.signIn')}
                   accessibilityRole="button"
                 >
-                  <Text style={styles.loginLink}>Sign In</Text>
+                  <Text style={styles.loginLink}>{t('register.signIn')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

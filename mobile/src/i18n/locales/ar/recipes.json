@@ -2,5 +2,53 @@
   "title": "Recipes",
   "addRecipe": "Add Recipe",
   "servings": "Servings",
-  "cookTime": "Cook time"
+  "cookTime": "Cook time",
+  "screen": {
+    "headerTitle": "وصفات المنزل",
+    "addActionLabel": "إضافة عنصر",
+    "emptyTitle": "لا توجد وصفات بعد",
+    "emptyDescription": "ابدأ بناء مجموعتك بإضافة وصفاتك المفضلة",
+    "emptyAction": "أضف أول وصفة",
+    "searchPlaceholder": "ابحث بالاسم...",
+    "hideCategoryFilter": "إخفاء فلتر الفئات",
+    "showCategoryFilter": "إظهار فلتر الفئات",
+    "hide": "إخفاء",
+    "showCategoryFilterButton": "إظهار فلتر الفئات",
+    "noMatchingRecipes": "لا توجد وصفات مطابقة",
+    "noRecipesInCategory": "لا توجد وصفات في هذه الفئة",
+    "noRecipesMatchSearch": "لا توجد وصفات تطابق \"{{query}}\". جرّب اسمًا آخر أو أعد ضبط الفلاتر.",
+    "tryDifferentCategory": "جرّب فئة مختلفة أو أعد ضبط الفلاتر.",
+    "resetFilters": "إعادة ضبط الفلاتر",
+    "loadingDetails": "جارٍ تحميل تفاصيل الوصفة..."
+  },
+  "detail": {
+    "shareTitle": "مشاركة الوصفة",
+    "editActionLabel": "تعديل الوصفة",
+    "shareActionLabel": "مشاركة الوصفة",
+    "toasts": {
+      "recipeDetailsLoading": "تفاصيل الوصفة ما زالت قيد التحميل. حاول مرة أخرى.",
+      "recipeDetailsLoadFailed": "فشل تحميل تفاصيل الوصفة.",
+      "recipeUpdateFailed": "فشل تحديث الوصفة",
+      "noMainList": "لم يتم العثور على قائمة تسوق رئيسية. يرجى إنشاء واحدة.",
+      "ingredientAdded": "تمت إضافة {{name}} إلى {{listName}}",
+      "ingredientAddFailed": "فشل إضافة المكوّن",
+      "ingredientUpdated": "تم تحديث كمية {{name}}",
+      "ingredientUpdateFailed": "فشل تحديث المكوّن",
+      "noIngredients": "لا توجد مكونات للإضافة",
+      "allIngredientsAdded": "تمت إضافة كل {{count}} مكونات إلى {{listName}}",
+      "addIngredientsFailed": "فشل إضافة المكونات"
+    }
+  },
+  "share": {
+    "notAvailable": "الوصفة غير متاحة",
+    "untitledRecipe": "وصفة بدون اسم",
+    "header": "الوصفة: {{name}}",
+    "cookTime": "وقت الطهي",
+    "prepTime": "وقت التحضير",
+    "servings": "الحصص",
+    "ingredients": "المكونات",
+    "instructions": "الخطوات",
+    "notAvailableValue": "غير متاح",
+    "emptyIngredients": "لا توجد مكونات."
+  }
 }

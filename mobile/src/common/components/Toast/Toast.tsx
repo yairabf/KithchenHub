@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -48,31 +48,61 @@ export function Toast({
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
   const [isMounted, setIsMounted] = useState(false);
+  const isComponentMountedRef = useRef(true);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const unmountToast = useCallback(() => {
+    if (!isComponentMountedRef.current) {
+      return;
+    }
+    setIsMounted(false);
+  }, []);
+
+  const hideAndNotify = useCallback(() => {
+    if (!isComponentMountedRef.current) {
+      return;
+    }
+    onHide();
+    setIsMounted(false);
+  }, [onHide]);
 
   useEffect(() => {
+    isComponentMountedRef.current = true;
+    return () => {
+      isComponentMountedRef.current = false;
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
     if (visible) {
       setIsMounted(true);
       translateY.value = withSpring(0, { damping: 15, stiffness: 120 });
       opacity.value = withTiming(1, { duration: ANIMATION_DURATION });
 
-      const timer = setTimeout(() => {
+      hideTimerRef.current = setTimeout(() => {
         translateY.value = withTiming(-100, { duration: ANIMATION_DURATION });
         opacity.value = withTiming(0, { duration: ANIMATION_DURATION }, () => {
-          runOnJS(() => {
-            onHide();
-            setIsMounted(false);
-          })();
+          runOnJS(hideAndNotify)();
         });
       }, duration);
 
-      return () => clearTimeout(timer);
+      return;
     } else {
       translateY.value = withTiming(-100, { duration: ANIMATION_DURATION });
       opacity.value = withTiming(0, { duration: ANIMATION_DURATION }, () => {
-        runOnJS(setIsMounted)(false);
+        runOnJS(unmountToast)();
       });
     }
-  }, [visible, duration, onHide]);
+  }, [visible, duration, hideAndNotify, unmountToast]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

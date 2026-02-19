@@ -5,6 +5,7 @@ export interface ChoresSectionProps {
   title: string;
   chores: Chore[];
   indicatorColor?: 'primary' | 'secondary';
+  isWebRtl?: boolean;
   renderChoreCard: (chore: Chore) => React.ReactNode;
   testID?: string;
   onLayout?: (event: LayoutChangeEvent) => void;

@@ -23,6 +23,14 @@ jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
 }));
 
+// Must use require() inside mock factory to avoid hoisting issues
+jest.mock('react-i18next', () => {
+  const { createI18nMock } = require('../../../../../common/__tests__/utils/i18nMock');
+  return {
+    useTranslation: () => createI18nMock(),
+  };
+});
+
 const mockList: ShoppingList = {
   id: 'list-1',
   localId: 'local-1',

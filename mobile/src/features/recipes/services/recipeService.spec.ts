@@ -89,7 +89,7 @@ describe('Recipe Services', () => {
             expect(recipe.id).toBeDefined();
             expect(recipe.localId).toBeDefined();
             expect(recipe.title).toBe('Test Recipe');
-            expect(recipe.category).toBeUndefined();
+            expect(recipe.category).toBe('Other');
             // Verify createdAt is set and is a valid Date
             expect(recipe.createdAt).toBeInstanceOf(Date);
             expect(recipe.createdAt!.getTime()).toBeGreaterThanOrEqual(beforeCreation);

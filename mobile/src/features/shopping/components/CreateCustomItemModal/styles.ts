@@ -26,6 +26,22 @@ export const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 4,
   },
+  modalItemNameInput: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 4,
+    width: '100%',
+  },
+  modalItemNameInputRtl: {
+    textAlign: 'right',
+  },
   modalItemCategory: {
     fontSize: 13,
     color: colors.textMuted,
@@ -35,6 +51,28 @@ export const styles = StyleSheet.create({
   },
   modalQuantitySection: {
     marginBottom: 0,
+  },
+
+  modalItemDisplayRtl: {
+    flexDirection: 'row-reverse',
+  },
+  modalItemInfoRtl: {
+    alignItems: 'flex-end',
+  },
+  modalSectionRtl: {
+    direction: 'rtl',
+    alignSelf: 'stretch',
+  },
+  rtlTextRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  modalTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
   modalQuantityLabel: {
     fontSize: 14,
@@ -47,6 +85,10 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
+  },
+  modalQuantityControlsRtl: {
+    direction: 'rtl',
+    justifyContent: 'center',
   },
   modalQuantityBtn: {
     width: 48,
@@ -65,5 +107,8 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     textAlign: 'center',
+  },
+  modalQuantityInputRtl: {
+    writingDirection: 'rtl',
   },
 });

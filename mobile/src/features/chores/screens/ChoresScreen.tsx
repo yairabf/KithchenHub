@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   RefreshControl,
   Platform,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../theme';
@@ -32,8 +33,12 @@ import { determineUserDataMode } from '../../../common/types/dataModes';
 import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareChoreRepository } from '../../../common/repositories/cacheAwareChoreRepository';
 import { logger } from '../../../common/utils/logger';
+import { useTranslation } from 'react-i18next';
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
+  const { t, i18n } = useTranslation('chores');
+  const isWebRtl = Platform.OS === 'web' && i18n.dir() === 'rtl';
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -150,22 +155,6 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     setShowDetailsModal(true);
   };
 
-  const handleUpdateAssignee = async (choreId: string, assignee: string | undefined) => {
-    if (repository) {
-      // Signed-in: use repository
-      try {
-        await repository.update(choreId, { assignee });
-      } catch (error) {
-        logger.error('Failed to update chore assignee:', error instanceof Error ? error : String(error));
-      }
-    } else {
-      // Guest: update local state
-      setGuestChores(prevChores => prevChores.map(chore =>
-        chore.id === choreId ? { ...chore, assignee } : chore
-      ));
-    }
-  };
-
   const handleUpdateChore = async (choreId: string, updates: Partial<Chore>) => {
     if (repository) {
       // Signed-in: use repository
@@ -224,8 +213,8 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   // Format chores for sharing using centralized formatter
   const shareText = useMemo(
-    () => formatChoresText(todayChores, upcomingChores),
-    [todayChores, upcomingChores]
+    () => formatChoresText(todayChores, upcomingChores, t),
+    [todayChores, upcomingChores, t, i18n.language]
   );
 
   // Calculate progress (only for today's chores)
@@ -242,6 +231,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       key={chore.id}
       chore={chore}
       bgColor={colors.surface}
+      isWebRtl={isWebRtl}
       onToggle={toggleChore}
       onEdit={handleChorePress}
       onDelete={handleDeleteChore}
@@ -249,14 +239,14 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   );
 
   const headerActions = {
-    share: { onPress: () => setShowShareModal(true), label: 'Share chores list' },
-    ...(onOpenChoresModal && { add: { onPress: onOpenChoresModal, label: 'Add item' } as const }),
+    share: { onPress: () => setShowShareModal(true), label: t('screen.shareActionLabel') },
+    ...(onOpenChoresModal && { add: { onPress: onOpenChoresModal, label: t('screen.addActionLabel') } as const }),
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title="Home Chores"
+        title={t('screen.headerTitle')}
         titleIcon="checkbox-outline"
         rightActions={headerActions}
       />
@@ -281,9 +271,9 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
         ) : chores.length === 0 ? (
           <EmptyState
             icon="checkmark-done-outline"
-            title="No chores yet"
-            description="Create your first chore to start tracking household tasks"
-            actionLabel="Create first chore"
+            title={t('screen.emptyTitle')}
+            description={t('screen.emptyDescription')}
+            actionLabel={t('screen.emptyAction')}
             onActionPress={onOpenChoresModal}
             actionColor={colors.chores}
           />
@@ -295,23 +285,27 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
                 completedCount={completedToday}
                 totalCount={todayChores.length}
                 isWideScreen={true}
+                isWebRtl={isWebRtl}
+                isRtl={isRtlLayout}
               />
               <View style={styles.searchContainer}>
-                <Text style={styles.searchPlaceholder}>Quick find tasks...</Text>
+                <Text style={[styles.searchPlaceholder, isWebRtl && styles.searchPlaceholderRtl]}>{t('screen.searchPlaceholder')}</Text>
                 <Ionicons name="search" size={20} color={colors.primary} />
               </View>
               <ChoresSection
-                title="Today's Chores"
+                title={t('screen.todayTitle')}
                 chores={todayChores}
                 indicatorColor="primary"
+                isWebRtl={isWebRtl}
                 renderChoreCard={renderChoreCard}
               />
             </View>
             <View style={styles.rightColumn}>
               <ChoresSection
-                title="Upcoming Chores"
+                title={t('screen.upcomingTitle')}
                 chores={upcomingChores}
                 indicatorColor="secondary"
+                isWebRtl={isWebRtl}
                 renderChoreCard={renderChoreCard}
               />
             </View>
@@ -323,21 +317,25 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
               completedCount={completedToday}
               totalCount={todayChores.length}
               isWideScreen={false}
+              isWebRtl={isWebRtl}
+              isRtl={isRtlLayout}
             />
             <View style={styles.searchContainer}>
-              <Text style={styles.searchPlaceholder}>Quick find tasks...</Text>
+              <Text style={[styles.searchPlaceholder, isWebRtl && styles.searchPlaceholderRtl]}>{t('screen.searchPlaceholder')}</Text>
               <Ionicons name="search" size={20} color={colors.primary} />
             </View>
             <ChoresSection
-              title="Today's Chores"
+              title={t('screen.todayTitle')}
               chores={todayChores}
               indicatorColor="primary"
+              isWebRtl={isWebRtl}
               renderChoreCard={renderChoreCard}
             />
             <ChoresSection
-              title="Upcoming Chores"
+              title={t('screen.upcomingTitle')}
               chores={upcomingChores}
               indicatorColor="secondary"
+              isWebRtl={isWebRtl}
               renderChoreCard={renderChoreCard}
             />
           </View>
@@ -347,9 +345,9 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       {/* Chore Details Modal */}
       <ChoreDetailsModal
         visible={showDetailsModal}
+        mode="edit"
         chore={selectedChore}
         onClose={() => setShowDetailsModal(false)}
-        onUpdateAssignee={handleUpdateAssignee}
         onUpdateChore={handleUpdateChore}
       />
 
@@ -357,7 +355,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
       <ShareModal
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
-        title="Share Chores"
+        title={t('screen.shareTitle')}
         shareText={shareText}
       />
     </SafeAreaView>

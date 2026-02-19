@@ -17,6 +17,7 @@ import { householdApi } from '../../households/services/householdApi';
 import { authApi } from '../../auth/services/authApi';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logger } from '../../../common/utils/logger';
+import { useTranslation } from 'react-i18next';
 
 type AuthStackParamList = {
   Login: undefined;
@@ -45,6 +46,7 @@ interface HouseholdNameScreenProps {
  * - Skip (if name unchanged)
  */
 export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
+  const { t } = useTranslation('auth');
   const { user, setShowHouseholdNameScreen } = useAuth();
   const [name, setName] = useState('');
   const [originalName, setOriginalName] = useState('');
@@ -58,13 +60,13 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
       if (user?.householdId) {
         try {
           const userData = await authApi.getCurrentUser();
-          const householdName = userData.household?.name || 'My family';
+          const householdName = userData.household?.name || t('householdName.inputPlaceholder');
           setName(householdName);
           setOriginalName(householdName);
         } catch (error) {
           logger.error('Error fetching household name:', error);
           // Fallback to default
-          const defaultName = 'My family';
+          const defaultName = t('householdName.inputPlaceholder');
           setName(defaultName);
           setOriginalName(defaultName);
         }
@@ -84,10 +86,10 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
       return null; // Don't show error for empty field unless touched
     }
     if (trimmedName.length < 2) {
-      return 'Name must be at least 2 characters';
+      return t('householdName.errors.tooShort');
     }
     if (trimmedName.length > 40) {
-      return 'Name must be less than 40 characters';
+      return t('householdName.errors.tooLong');
     }
 
     return null;
@@ -127,7 +129,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
       setShowHouseholdNameScreen(false);
       // RootNavigator will automatically show MainNavigator since user is set and flag is cleared
     } catch (err) {
-      setError('Failed to save household name. Please try again.');
+      setError(t('householdName.errors.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -153,7 +155,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Name your household</Text>
+            <Text style={styles.title}>{t('householdName.title')}</Text>
           </View>
 
           {/* Main Content */}
@@ -163,7 +165,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
             </View>
 
             <Text style={styles.subtitle}>
-              Give your household a name so everyone knows they're in the right place
+              {t('householdName.subtitle')}
             </Text>
 
             <View style={styles.inputContainer}>
@@ -182,17 +184,17 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
                   }
                 }}
                 onBlur={handleBlur}
-                placeholder="My family"
+                placeholder={t('householdName.inputPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
                 editable={!isSaving}
                 maxLength={40}
-                accessibilityLabel="Household name"
-                accessibilityHint="Enter a name for your household, 2 to 40 characters"
+                accessibilityLabel={t('householdName.inputLabel')}
+                accessibilityHint={t('householdName.inputHint')}
               />
               {error && <Text style={styles.errorText}>{error}</Text>}
               <Text style={styles.characterCount}>
-                {name.length}/40 characters
+                {t('householdName.characterCount', { count: name.length })}
               </Text>
             </View>
 
@@ -201,14 +203,14 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
               onPress={handleSave}
               activeOpacity={0.7}
               disabled={isSaving || !name.trim()}
-              accessibilityLabel="Save household name"
+              accessibilityLabel={t('householdName.saveLabel')}
               accessibilityRole="button"
-              accessibilityHint="Saves the household name and continues to the app"
+              accessibilityHint={t('householdName.saveHint')}
             >
               {isSaving ? (
                 <ActivityIndicator color={colors.surface} />
               ) : (
-                <Text style={styles.primaryButtonText}>Save</Text>
+                <Text style={styles.primaryButtonText}>{t('householdName.save')}</Text>
               )}
             </TouchableOpacity>
 
@@ -217,11 +219,11 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
                 style={styles.skipButton}
                 onPress={handleSkip}
                 activeOpacity={0.7}
-                accessibilityLabel="Skip naming"
+                accessibilityLabel={t('householdName.skipLabel')}
                 accessibilityRole="button"
-                accessibilityHint="Continues to the app without changing the household name"
+                accessibilityHint={t('householdName.skipHint')}
               >
-                <Text style={styles.skipButtonText}>Skip</Text>
+                <Text style={styles.skipButtonText}>{t('householdName.skip')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -229,7 +231,7 @@ export function HouseholdNameScreen({ navigation }: HouseholdNameScreenProps) {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              You can change this name later in settings
+              {t('householdName.footerText')}
             </Text>
           </View>
         </View>

@@ -94,6 +94,47 @@ jest.mock('react-native-reanimated', () => {
 // Mock dependencies  
 jest.mock('../../../utils/categoryImage');
 
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      if (key.startsWith('categories:')) {
+        const value = key.replace('categories:', '');
+        if (!value) return 'Other';
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      }
+
+      if (key === 'itemCount') {
+        const count = Number(options?.count ?? 0);
+        return `${count} ${count === 1 ? 'item' : 'items'}`;
+      }
+
+      if (key === 'listPanel.categoryAccessibilityLabel') {
+        return `${options?.category} category, ${options?.count}`;
+      }
+
+      if (key === 'listPanel.expandCategoryHint') {
+        return 'Double tap to expand and show items in this category';
+      }
+
+      if (key === 'listPanel.collapseCategoryHint') {
+        return 'Double tap to collapse and hide items in this category';
+      }
+
+      const labels: Record<string, string> = {
+        'listPanel.activeListsTitle': 'My Active Lists',
+        'listPanel.mainBadge': 'Main',
+        'listPanel.moreActionsFor': `More actions for ${options?.name ?? ''}`,
+        'listPanel.createNew': 'Create New',
+        'listPanel.emptyTitle': 'No items in this list',
+        'listPanel.emptyDescription': 'Start adding items to your shopping list',
+        'listPanel.emptyAction': 'Add first item',
+      };
+
+      return labels[key] ?? key;
+    },
+  }),
+}));
+
 describe('ShoppingListPanel - Collapsible Categories', () => {
   const mockShoppingLists: ShoppingList[] = [
     {

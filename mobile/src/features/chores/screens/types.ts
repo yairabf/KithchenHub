@@ -9,5 +9,7 @@ export type AddChoreHandler = (newChore: {
   assignee?: string;
   dueDate: string;
   dueTime?: string;
-  section: 'today' | 'thisWeek';
+  isRecurring?: boolean;
+  recurrencePattern?: 'daily' | 'weekly' | 'monthly' | null;
+  section: 'today' | 'thisWeek' | 'recurring';
 }) => Promise<void> | void;

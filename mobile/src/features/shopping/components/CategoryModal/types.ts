@@ -10,6 +10,8 @@ export interface CategoryModalProps {
   visible: boolean;
   categoryName: string;
   items: GroceryItem[];
+  isLoading?: boolean;
+  errorMessage?: string | null;
   onClose: () => void;
   onSelectItem: (item: GroceryItem) => void;
 }

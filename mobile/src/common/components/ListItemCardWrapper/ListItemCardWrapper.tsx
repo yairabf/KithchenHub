@@ -21,6 +21,9 @@ export const ListItemCardWrapper: React.FC<ListItemCardWrapperProps> = ({
     style,
     onPress,
     testID,
+    accessibilityLabel,
+    accessibilityRole,
+    accessibilityHint,
 }) => {
     const containerStyle = [
         styles.wrapper,
@@ -35,6 +38,9 @@ export const ListItemCardWrapper: React.FC<ListItemCardWrapperProps> = ({
                 onPress={onPress}
                 activeOpacity={0.7}
                 testID={testID}
+                accessibilityLabel={accessibilityLabel}
+                accessibilityRole={accessibilityRole}
+                accessibilityHint={accessibilityHint}
             >
                 {children}
             </TouchableOpacity>
@@ -42,7 +48,13 @@ export const ListItemCardWrapper: React.FC<ListItemCardWrapperProps> = ({
     }
 
     return (
-        <View style={containerStyle} testID={testID}>
+        <View
+            style={containerStyle}
+            testID={testID}
+            accessibilityLabel={accessibilityLabel}
+            accessibilityRole={accessibilityRole}
+            accessibilityHint={accessibilityHint}
+        >
             {children}
         </View>
     );

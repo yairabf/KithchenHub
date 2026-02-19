@@ -3,10 +3,12 @@ import type { BaseEntity } from '../../common/types/entityMetadata';
 export interface Chore extends BaseEntity {
   title: string;
   assignee?: string;
+  assigneeId?: string;
   dueDate: string;
   dueTime?: string;
   reminder?: string;
   isRecurring?: boolean;
+  recurrencePattern?: 'daily' | 'weekly' | 'monthly' | null;
   isCompleted: boolean;
   section: 'today' | 'thisWeek' | 'recurring';
   icon?: string;

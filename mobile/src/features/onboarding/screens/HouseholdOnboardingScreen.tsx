@@ -20,8 +20,10 @@ import { householdService } from '../../../services/householdService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { Toast } from '../../../common/components/Toast';
+import { useTranslation } from 'react-i18next';
 
 export function HouseholdOnboardingScreen() {
+    const { t } = useTranslation('auth');
     const { user, refreshUser } = useAuth(); // Assuming refreshUser exists, or we need to implement it
     const [mode, setMode] = useState<'create' | 'join'>('create');
     const [name, setName] = useState('');
@@ -39,7 +41,7 @@ export function HouseholdOnboardingScreen() {
 
     const handleCreate = async () => {
         if (!name.trim()) {
-            showToast('Please enter a household name');
+            showToast(t('onboarding.errors.enterHouseholdName'));
             return;
         }
 
@@ -52,7 +54,7 @@ export function HouseholdOnboardingScreen() {
             }
         } catch (error: any) {
             console.error('Create household error:', error);
-            showToast(error.message || 'Failed to create household');
+            showToast(error.message || t('onboarding.errors.createFailed'));
         } finally {
             setLoading(false);
         }
@@ -60,7 +62,7 @@ export function HouseholdOnboardingScreen() {
 
     const handleJoin = async () => {
         if (!inviteCode.trim()) {
-            showToast('Please enter an invite code');
+            showToast(t('onboarding.errors.enterInviteCode'));
             return;
         }
 
@@ -73,7 +75,7 @@ export function HouseholdOnboardingScreen() {
             }
         } catch (error: any) {
             console.error('Join household error:', error);
-            showToast(error.message || 'Failed to join household');
+            showToast(error.message || t('onboarding.errors.joinFailed'));
         } finally {
             setLoading(false);
         }
@@ -88,9 +90,9 @@ export function HouseholdOnboardingScreen() {
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <View style={styles.content}>
                         <View style={styles.header}>
-                            <Text style={styles.title}>Welcome to KitchenHub!</Text>
+                            <Text style={styles.title}>{t('onboarding.title')}</Text>
                             <Text style={styles.subtitle}>
-                                To get started, create a new household or join an existing one using an invite code.
+                                {t('onboarding.subtitle')}
                             </Text>
                         </View>
 
@@ -98,23 +100,23 @@ export function HouseholdOnboardingScreen() {
                             <TouchableOpacity
                                 style={[styles.tab, mode === 'create' && styles.activeTab]}
                                 onPress={() => setMode('create')}
-                                accessibilityLabel="Create new household"
+                                accessibilityLabel={t('onboarding.createNewLabel')}
                                 accessibilityRole="button"
                                 accessibilityState={{ selected: mode === 'create' }}
                             >
                                 <Text style={[styles.tabText, mode === 'create' && styles.activeTabText]}>
-                                    Create New
+                                    {t('onboarding.createNew')}
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.tab, mode === 'join' && styles.activeTab]}
                                 onPress={() => setMode('join')}
-                                accessibilityLabel="Join existing household"
+                                accessibilityLabel={t('onboarding.joinExistingLabel')}
                                 accessibilityRole="button"
                                 accessibilityState={{ selected: mode === 'join' }}
                             >
                                 <Text style={[styles.tabText, mode === 'join' && styles.activeTabText]}>
-                                    Join Existing
+                                    {t('onboarding.joinExisting')}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -122,64 +124,64 @@ export function HouseholdOnboardingScreen() {
                         <View style={styles.formContainer}>
                             {mode === 'create' ? (
                                 <>
-                                    <Text style={styles.label}>Household Name</Text>
+                                    <Text style={styles.label}>{t('onboarding.householdName')}</Text>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="e.g. The Smiths, Cozy Cottage"
+                                        placeholder={t('onboarding.householdNamePlaceholder')}
                                         placeholderTextColor={colors.textMuted}
                                         value={name}
                                         onChangeText={setName}
                                         autoCapitalize="words"
-                                        accessibilityLabel="Household name"
-                                        accessibilityHint="Enter a name for your new household"
+                                        accessibilityLabel={t('onboarding.householdNameLabel')}
+                                        accessibilityHint={t('onboarding.householdNameHint')}
                                     />
                                     <Text style={styles.helperText}>
-                                        Give your shared space a name. You can change this later.
+                                        {t('onboarding.householdHelper')}
                                     </Text>
                                     <TouchableOpacity
                                         style={[styles.button, !name.trim() && styles.buttonDisabled]}
                                         onPress={handleCreate}
                                         disabled={loading || !name.trim()}
-                                        accessibilityLabel="Create household"
+                                        accessibilityLabel={t('onboarding.createHouseholdLabel')}
                                         accessibilityRole="button"
-                                        accessibilityHint="Creates a new household with the entered name"
+                                        accessibilityHint={t('onboarding.createHouseholdHint')}
                                     >
                                         {loading ? (
                                             <ActivityIndicator color="#fff" />
                                         ) : (
-                                            <Text style={styles.buttonText}>Create Household</Text>
+                                            <Text style={styles.buttonText}>{t('onboarding.createHousehold')}</Text>
                                         )}
                                     </TouchableOpacity>
                                 </>
                             ) : (
                                 <>
-                                    <Text style={styles.label}>Invite Code</Text>
+                                    <Text style={styles.label}>{t('onboarding.inviteCode')}</Text>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Paste invite code here"
+                                        placeholder={t('onboarding.inviteCodePlaceholder')}
                                         placeholderTextColor={colors.textMuted}
                                         value={inviteCode}
                                         onChangeText={setInviteCode}
                                         autoCapitalize="none"
                                         autoCorrect={false}
-                                        accessibilityLabel="Invite code"
-                                        accessibilityHint="Enter the invite code shared by a household member"
+                                        accessibilityLabel={t('onboarding.inviteCodeLabel')}
+                                        accessibilityHint={t('onboarding.inviteCodeHint')}
                                     />
                                     <Text style={styles.helperText}>
-                                        Ask a household member to share their invite code with you.
+                                        {t('onboarding.inviteHelper')}
                                     </Text>
                                     <TouchableOpacity
                                         style={[styles.button, !inviteCode.trim() && styles.buttonDisabled]}
                                         onPress={handleJoin}
                                         disabled={loading || !inviteCode.trim()}
-                                        accessibilityLabel="Join household"
+                                        accessibilityLabel={t('onboarding.joinHouseholdLabel')}
                                         accessibilityRole="button"
-                                        accessibilityHint="Joins the household using the entered invite code"
+                                        accessibilityHint={t('onboarding.joinHouseholdHint')}
                                     >
                                         {loading ? (
                                             <ActivityIndicator color="#fff" />
                                         ) : (
-                                            <Text style={styles.buttonText}>Join Household</Text>
+                                            <Text style={styles.buttonText}>{t('onboarding.joinHousehold')}</Text>
                                         )}
                                     </TouchableOpacity>
                                 </>
@@ -257,7 +259,7 @@ const styles = StyleSheet.create({
     label: {
         ...typography.label,
         marginBottom: spacing.xs,
-        marginLeft: 4,
+        marginStart: 4,
     },
     input: {
         backgroundColor: colors.background,
@@ -273,7 +275,7 @@ const styles = StyleSheet.create({
         ...typography.caption,
         color: colors.textMuted,
         marginBottom: spacing.lg,
-        marginLeft: 4,
+        marginStart: 4,
     },
     button: {
         backgroundColor: colors.primary,

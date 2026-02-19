@@ -16,9 +16,10 @@ export interface ChoresQuickActionModalProps {
   visible: boolean;
   onClose: () => void;
   onAddChore?: (chore: {
-    title: string;
+    name: string;
     icon: string;
     assignee?: string;
+    assigneeId?: string;
     dueDate: string;
     dueTime?: string;
     section: 'today' | 'thisWeek';

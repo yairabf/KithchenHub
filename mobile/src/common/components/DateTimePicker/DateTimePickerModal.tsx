@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -8,6 +8,7 @@ import { TimePickerWeb } from './TimePickerWeb';
 import { colors, spacing, borderRadius } from '../../../theme';
 import { boxShadow } from '../../../theme/shadows';
 import { DateTimePickerModalProps, ActiveTab } from './types';
+import { useTranslation } from 'react-i18next';
 
 export function DateTimePickerModal({
   visible,
@@ -20,6 +21,8 @@ export function DateTimePickerModal({
   timeFormat,
   minuteInterval,
 }: DateTimePickerModalProps) {
+  const { t, i18n } = useTranslation('common');
+  const locale = useMemo(() => i18n.resolvedLanguage || i18n.language || undefined, [i18n.resolvedLanguage, i18n.language]);
   const [activeTab, setActiveTab] = useState<ActiveTab>('date');
   const [tempDate, setTempDate] = useState<Date>(value || new Date());
   const [showAndroidDatePicker, setShowAndroidDatePicker] = useState(false);
@@ -88,7 +91,7 @@ export function DateTimePickerModal({
         activeOpacity={0.7}
         accessibilityRole="tab"
         accessibilityState={{ selected: isActive }}
-        accessibilityLabel={`${label} tab`}
+        accessibilityLabel={tab === 'date' ? t('dateTimePicker.accessibility.dateTab') : t('dateTimePicker.accessibility.timeTab')}
       >
         <Ionicons
           name={icon as keyof typeof Ionicons.glyphMap}
@@ -120,7 +123,8 @@ export function DateTimePickerModal({
             maximumDate={maxDate}
             minuteInterval={minuteInterval}
             textColor={colors.textPrimary}
-          />
+          locale={locale}
+            />
         </View>
       );
     }
@@ -128,9 +132,9 @@ export function DateTimePickerModal({
     if (Platform.OS === 'android') {
       return (
         <View style={styles.androidPickerContainer}>
-          <Text style={styles.androidPreviewLabel}>Selected:</Text>
+          <Text style={styles.androidPreviewLabel}>{t('dateTimePicker.selected')}</Text>
           <Text style={styles.androidPreviewText}>
-            {tempDate.toLocaleDateString()} {tempDate.toLocaleTimeString([], {
+            {tempDate.toLocaleDateString(locale)} {tempDate.toLocaleTimeString(locale, {
               hour: '2-digit',
               minute: '2-digit',
               hour12: timeFormat === '12h'
@@ -143,11 +147,11 @@ export function DateTimePickerModal({
               setShowAndroidDatePicker(true);
             }}
             accessibilityRole="button"
-            accessibilityLabel="Change date"
+            accessibilityLabel={t('dateTimePicker.accessibility.changeDate')}
           >
             <Ionicons name="calendar" size={20} color={accentColor} />
             <Text style={[styles.androidPickerButtonText, { color: accentColor }]}>
-              Change Date
+              {t('dateTimePicker.changeDate')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -157,11 +161,11 @@ export function DateTimePickerModal({
               setShowAndroidTimePicker(true);
             }}
             accessibilityRole="button"
-            accessibilityLabel="Change time"
+            accessibilityLabel={t('dateTimePicker.accessibility.changeTime')}
           >
             <Ionicons name="time" size={20} color={accentColor} />
             <Text style={[styles.androidPickerButtonText, { color: accentColor }]}>
-              Change Time
+              {t('dateTimePicker.changeTime')}
             </Text>
           </TouchableOpacity>
 
@@ -173,6 +177,7 @@ export function DateTimePickerModal({
               onChange={handleNativeDateTimeChange}
               minimumDate={minDate}
               maximumDate={maxDate}
+              locale={locale}
             />
           )}
           {showAndroidTimePicker && (
@@ -182,6 +187,7 @@ export function DateTimePickerModal({
               display="default"
               onChange={handleNativeDateTimeChange}
               minuteInterval={minuteInterval}
+              locale={locale}
             />
           )}
         </View>
@@ -217,16 +223,16 @@ export function DateTimePickerModal({
     <CenteredModal
       visible={visible}
       onClose={onClose}
-      title="Select Date & Time"
-      confirmText="Confirm"
+      title={t('dateTimePicker.title')}
+      confirmText={t('dateTimePicker.confirm')}
       onConfirm={handleConfirm}
       confirmColor={accentColor}
     >
       {/* Tab Switcher - only show on iOS and Web */}
       {Platform.OS !== 'android' && (
         <View style={styles.tabContainer} accessibilityRole="tablist">
-          {renderTabButton('date', 'calendar', 'Date')}
-          {renderTabButton('time', 'time', 'Time')}
+          {renderTabButton('date', 'calendar', t('dateTimePicker.tabs.date'))}
+          {renderTabButton('time', 'time', t('dateTimePicker.tabs.time'))}
         </View>
       )}
 

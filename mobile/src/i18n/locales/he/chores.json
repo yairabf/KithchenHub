@@ -1,8 +1,68 @@
 {
-  "title": "Chores",
+  "title": "מטלות",
   "status": {
-    "pending": "Pending",
-    "done": "Done",
-    "overdue": "Overdue"
+    "pending": "ממתין",
+    "done": "הושלם",
+    "overdue": "באיחור"
+  },
+  "screen": {
+    "headerTitle": "מטלות הבית",
+    "shareActionLabel": "שתף רשימת מטלות",
+    "addActionLabel": "הוסף פריט",
+    "emptyTitle": "עדיין אין מטלות",
+    "emptyDescription": "צור את המטלה הראשונה כדי להתחיל לנהל מטלות בבית",
+    "emptyAction": "צור מטלה ראשונה",
+    "searchPlaceholder": "חיפוש מהיר של משימות...",
+    "todayTitle": "מטלות להיום",
+    "upcomingTitle": "מטלות בהמשך",
+    "shareTitle": "שתף מטלות"
+  },
+  "progress": {
+    "today": "היום",
+    "title": "התקדמות יומית",
+    "bodyCompact": "השלמת {{completed}} מתוך {{total}} מטלות היום. כל הכבוד!",
+    "bodyWide": "השלמת {{completed}} מתוך {{total}} מטלות היום. המשך כך כדי להגיע ליעדים השבועיים שלך!"
+  },
+  "card": {
+    "editLabel": "ערוך מטלה {{title}}",
+    "editHint": "פותח את פרטי המטלה",
+    "toggleDoneHint": "הקש לסימון כלא הושלם",
+    "togglePendingHint": "הקש לסימון כהושלם",
+    "dueBy": "עד",
+    "oneTime": "חד-פעמי"
+  },
+  "modal": {
+    "addTitle": "הוסף מטלה",
+    "editTitle": "ערוך מטלה",
+    "submitAdd": "הוסף",
+    "submitSave": "שמור",
+    "cancel": "ביטול",
+    "choreNamePlaceholder": "שם המטלה",
+    "iconLabel": "סמל:",
+    "repeatLabel": "חזרה:",
+    "assignLabel": "הקצה לְ:",
+    "assigneeUnassigned": "לא מוקצה",
+    "assigneeManage": "ניהול",
+    "recurrence": {
+      "none": "ללא",
+      "daily": "יומי",
+      "weekly": "שבועי",
+      "monthly": "חודשי"
+    },
+    "dueDateLabel": "תאריך ושעת יעד",
+    "dueDatePlaceholder": "בחר תאריך ושעה..."
+  },
+  "share": {
+    "header": "מטלות הבית",
+    "empty": "אין מטלות לשיתוף!",
+    "todaySection": "מטלות להיום:",
+    "upcomingSection": "מטלות בהמשך:"
+  },
+  "quickActionModal": {
+    "title": "הוספה מהירה",
+    "choreNamePlaceholder": "הוסף מטלה...",
+    "assignLabel": "הקצה ל:",
+    "unassigned": "לא מוקצה",
+    "manage": "נהל"
   }
 }

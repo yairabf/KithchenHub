@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { AccessibilityRole, StyleProp, ViewStyle } from 'react-native';
 
 export interface ListItemCardWrapperProps {
     /** Content to render inside the card */
@@ -19,4 +19,13 @@ export interface ListItemCardWrapperProps {
 
     /** Test ID for testing */
     testID?: string;
+
+    /** Accessibility label for screen readers */
+    accessibilityLabel?: string;
+
+    /** Accessibility role */
+    accessibilityRole?: AccessibilityRole;
+
+    /** Accessibility hint for screen readers */
+    accessibilityHint?: string;
 }

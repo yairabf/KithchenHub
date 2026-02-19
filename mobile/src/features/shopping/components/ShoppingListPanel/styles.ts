@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, shadows, spacing } from '../../../../theme';
+import { colors, shadows, spacing, borderRadius } from '../../../../theme';
 
 /**
  * Minimum height for shopping list item cards to ensure uniform dimensions.
@@ -37,7 +37,7 @@ export const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.base,
     marginBottom: SPACING_12,
   },
   sectionIndicator: {
@@ -47,15 +47,15 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   sectionTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: spacing.md,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
   listHeaderButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: borderRadius.md * 2, // Half of width/height for circular button
+    marginStart: 'auto',
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -70,15 +70,15 @@ export const styles = StyleSheet.create({
     gap: SPACING_12,
     paddingTop: spacing.sm,
     paddingBottom: DRAWER_DROPDOWN_CLEARANCE,
-    paddingLeft: HORIZONTAL_SCROLL_PADDING,
-    paddingRight: HORIZONTAL_SCROLL_PADDING,
+    paddingStart: HORIZONTAL_SCROLL_PADDING,
+    paddingEnd: HORIZONTAL_SCROLL_PADDING,
   },
   listCard: {
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: spacing.lg,
     padding: SPACING_12,
     gap: SPACING_12,
     minWidth: 180,
@@ -95,11 +95,11 @@ export const styles = StyleSheet.create({
   },
   listCardDot: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: spacing.base,
+    right: spacing.base,
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: spacing.xs,
     backgroundColor: colors.primary,
   },
   listIconContainer: {
@@ -130,12 +130,20 @@ export const styles = StyleSheet.create({
     right: 0,
     minWidth: 116,
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: spacing.xs,
     ...shadows.md,
     zIndex: 1100,
+  },
+  listActionsBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1040,
   },
   listActionsDismissArea: {
     position: 'absolute',
@@ -179,7 +187,7 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.recipes + '15',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
     gap: 3,
   },
   mainBadgeText: {
@@ -197,8 +205,8 @@ export const styles = StyleSheet.create({
   },
   listCardIndicator: {
     width: 4,
-    height: 24,
-    borderRadius: 2,
+    height: spacing.lg,
+    borderRadius: borderRadius.xs,
     position: 'absolute',
     right: 0,
     opacity: 0.7,
@@ -239,7 +247,7 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   categoryChevron: {
-    marginLeft: 'auto',
+    marginStart: 'auto',
   },
   categoryHeaderIcon: {
     width: 20,

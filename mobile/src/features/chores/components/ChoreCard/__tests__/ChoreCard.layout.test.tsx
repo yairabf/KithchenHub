@@ -14,6 +14,27 @@ import { render } from '@testing-library/react-native';
 import { formatChoreDueDateTime } from '../../../../../common/utils/choreDisplayUtils';
 import type { Chore } from '../../../../../mocks/chores';
 
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, string>) => {
+      if (key === 'modal.assigneeUnassigned') return 'Unassigned';
+      if (key === 'modal.recurrence.daily') return 'Daily';
+      if (key === 'modal.recurrence.weekly') return 'Weekly';
+      if (key === 'modal.recurrence.monthly') return 'Monthly';
+      if (key === 'card.editLabel') return `Edit chore ${options?.title ?? ''}`.trim();
+      if (key === 'card.editHint') return 'Opens chore details';
+      if (key === 'card.toggleDoneHint') return 'Tap to mark incomplete';
+      if (key === 'card.togglePendingHint') return 'Tap to mark complete';
+      if (key === 'card.oneTime') return 'One-time';
+      if (key === 'card.dueBy') return 'Due by';
+      return key;
+    },
+    i18n: {
+      dir: () => 'ltr',
+    },
+  }),
+}));
+
 // Mock the SwipeableWrapper to avoid gesture handler issues in tests
 jest.mock('../../../../../common/components/SwipeableWrapper', () => {
   const { View } = require('react-native');
@@ -39,6 +60,7 @@ import { ChoreCard } from '../ChoreCard';
 
 const mockChore: Chore = {
   id: '1',
+  localId: 'local-1',
   title: 'Clean kitchen',
   icon: '🧹',
   assignee: 'John',
@@ -46,6 +68,8 @@ const mockChore: Chore = {
   dueTime: '6:00 PM',
   isCompleted: false,
   section: 'today',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
 
 const mockHandlers = {
@@ -125,7 +149,7 @@ describe('ChoreCard Layout', () => {
       if (chore.assignee) {
         expect(queryByText(chore.assignee)).toBeTruthy();
       } else {
-        expect(queryByText('Unassigned')).toBeNull();
+        expect(queryByText('Unassigned')).toBeTruthy();
       }
     });
   });
@@ -159,7 +183,7 @@ describe('ChoreCard Layout', () => {
         />
       );
       
-      expect(getByText(expectedText)).toBeTruthy();
+      expect(getByText(`Due by ${expectedText}`)).toBeTruthy();
     });
   });
 
@@ -224,7 +248,7 @@ describe('ChoreCard Layout', () => {
       
       // Date/time should be present (using utility function)
       const formattedDateTime = formatChoreDueDateTime(mockChore.dueDate, mockChore.dueTime);
-      expect(getByText(formattedDateTime)).toBeTruthy();
+      expect(getByText(`Due by ${formattedDateTime}`)).toBeTruthy();
     });
   });
 
@@ -263,7 +287,7 @@ describe('ChoreCard Layout', () => {
       
       expect(getByText(maxLengthChore.title)).toBeTruthy();
       expect(getByText(maxLengthChore.assignee!)).toBeTruthy();
-      expect(getByText('February 16, 2026 · 11:59 PM')).toBeTruthy();
+      expect(getByText('Due by February 16, 2026 · 11:59 PM')).toBeTruthy();
     });
   });
 
@@ -278,7 +302,7 @@ describe('ChoreCard Layout', () => {
       );
       
       const expectedText = formatChoreDueDateTime(mockChore.dueDate, mockChore.dueTime);
-      expect(getByText(expectedText)).toBeTruthy();
+      expect(getByText(`Due by ${expectedText}`)).toBeTruthy();
     });
   });
 });

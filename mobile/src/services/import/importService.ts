@@ -60,10 +60,19 @@ export class ImportService {
             id: recipe.localId,
             title: recipe.title,
             prepTime: typeof recipe.prepTime === 'number' ? recipe.prepTime : safeParseInt(recipe.prepTime),
-            imageUrl: recipe.imageUrl,
+            imageUrl: recipe.imageUrl ?? undefined,
             ingredients: recipe.ingredients.map(ing => ({
                 name: ing.name,
-                quantity: typeof ing.quantity === 'number' ? ing.quantity : safeParseFloat(String(ing.quantity)),
+                quantityAmount:
+                    typeof ing.quantityAmount === 'number'
+                        ? ing.quantityAmount
+                        : typeof ing.quantity === 'number'
+                            ? ing.quantity
+                            : safeParseFloat(String(ing.quantityAmount ?? ing.quantity)),
+                quantityUnit: ing.quantityUnit ?? ing.unit,
+                quantityUnitType: ing.quantityUnitType,
+                quantityModifier: ing.quantityModifier,
+                quantity: typeof ing.quantity === 'number' ? ing.quantity : undefined,
                 unit: ing.unit,
             })),
             instructions: recipe.instructions.map((inst, index) => ({

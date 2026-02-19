@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, I18nManager } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ProgressRing } from '../ProgressRing';
 import { styles } from './styles';
 import type { ChoresProgressCardProps } from './types';
@@ -31,16 +32,32 @@ export function ChoresProgressCard({
   completedCount,
   totalCount,
   isWideScreen,
+  isWebRtl = false,
+  isRtl,
 }: ChoresProgressCardProps) {
+  const { t, i18n } = useTranslation('chores');
+  const isDocumentRtl =
+    typeof document !== 'undefined' && document?.documentElement?.dir === 'rtl';
+
   // Validate and normalize inputs to handle edge cases
   const safeProgress = Math.max(0, Math.min(100, isNaN(progress) ? 0 : progress));
   const safeCompleted = Math.max(0, completedCount ?? 0);
   const safeTotal = Math.max(0, totalCount ?? 0);
+  const isRtlLayout = Boolean(
+    isRtl ||
+      isWebRtl ||
+      (typeof i18n?.dir === 'function' && i18n.dir() === 'rtl') ||
+      I18nManager.isRTL ||
+      isDocumentRtl
+  );
+  const ProgressTextWrapper = isRtlLayout
+    ? ({ children }: { children: React.ReactNode }) => <View style={styles.progressTextRowRtl}>{children}</View>
+    : React.Fragment;
 
   const ringSize = isWideScreen ? 160 : 140;
   const bodyText = isWideScreen
-    ? `You've completed ${safeCompleted} out of ${safeTotal} chores today. Keep it up to reach your weekly goals!`
-    : `You've completed ${safeCompleted} out of ${safeTotal} chores today. Keep it up!`;
+    ? t('progress.bodyWide', { completed: safeCompleted, total: safeTotal })
+    : t('progress.bodyCompact', { completed: safeCompleted, total: safeTotal });
 
   return (
     <View style={styles.progressCard}>
@@ -59,7 +76,7 @@ export function ChoresProgressCard({
           />
           <View style={styles.progressRingText}>
             <Text style={styles.progressPercent}>{Math.round(safeProgress)}%</Text>
-            <Text style={styles.progressLabel}>Today</Text>
+            <Text style={[styles.progressLabel, isRtlLayout && styles.progressTextRtl]}>{t('progress.today')}</Text>
           </View>
         </View>
         <View
@@ -68,13 +85,22 @@ export function ChoresProgressCard({
             !isWideScreen && styles.progressDetailsPhone,
           ]}
         >
-          <Text style={styles.progressTitle}>Daily Progress</Text>
-          <Text
-            style={[styles.progressBody, !isWideScreen && styles.progressBodyPhone]}
-            numberOfLines={isWideScreen ? undefined : 3}
-          >
-            {bodyText}
-          </Text>
+          <ProgressTextWrapper>
+            <Text style={[styles.progressTitle, isRtlLayout && styles.progressTextRtl]}>{t('progress.title')}</Text>
+          </ProgressTextWrapper>
+          <ProgressTextWrapper>
+            <Text
+              style={[
+                styles.progressBody,
+                !isWideScreen && !isRtlLayout && styles.progressBodyPhone,
+                isRtlLayout && styles.progressTextRtl,
+                isRtlLayout && styles.progressBodyRtl,
+              ]}
+              numberOfLines={isWideScreen ? undefined : 3}
+            >
+              {bodyText}
+            </Text>
+          </ProgressTextWrapper>
         </View>
       </View>
     </View>

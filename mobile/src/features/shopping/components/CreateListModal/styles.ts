@@ -5,6 +5,25 @@ export const styles = StyleSheet.create({
   createListInputSection: {
     marginBottom: 24,
   },
+
+  modalSectionRtl: {
+    direction: 'rtl',
+    alignSelf: 'stretch',
+  },
+  rtlTextRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  modalTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
+  },
+  createListInputRtl: {
+    textAlign: 'right',
+  },
   createListLabel: {
     fontSize: 14,
     fontWeight: '600',
@@ -27,6 +46,9 @@ export const styles = StyleSheet.create({
   iconPickerContent: {
     gap: 12,
     paddingVertical: 4,
+  },
+  pickerContentRtl: {
+    direction: 'rtl',
   },
   iconOption: {
     width: 48,

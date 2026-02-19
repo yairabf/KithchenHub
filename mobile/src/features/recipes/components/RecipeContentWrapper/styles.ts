@@ -35,7 +35,7 @@ export const styles = StyleSheet.create({
   },
   tabletTitleRight: {
     flex: 65,
-    paddingLeft: spacing.xl,
+    paddingStart: spacing.xl,
   },
   tabletContent: {
     flexDirection: 'row',

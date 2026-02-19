@@ -1,5 +1,46 @@
 {
   "title": "Dashboard",
   "greeting": "Hello",
-  "quickStats": "Quick stats"
+  "quickStats": {
+    "shoppingLists": "قوائم التسوق",
+    "savedRecipes": "وصفات محفوظة",
+    "active": "{{count}} نشطة",
+    "item": "{{count}} عنصر",
+    "items": "{{count}} عناصر"
+  },
+  "header": {
+    "title": "مركز المطبخ",
+    "roleGuest": "ضيف",
+    "roleKitchenLead": "قائد المطبخ"
+  },
+  "quickAdd": {
+    "title": "إضافة سريعة",
+    "subtitle": "أضف المشتريات خلال ثوانٍ.",
+    "mainListBadge": "القائمة الرئيسية",
+    "voiceInput": "إدخال صوتي",
+    "voiceInputHint": "إضافة عناصر باستخدام الصوت",
+    "suggestedItems": "عناصر مقترحة",
+    "show": "إظهار",
+    "hide": "إخفاء",
+    "toggleSuggestedHint": "تبديل عرض العناصر المقترحة",
+    "addItemLabel": "إضافة {{name}}",
+    "addItemHint": "يضيف {{name}} إلى قائمة التسوق"
+  },
+  "choresPanel": {
+    "title": "مهام مهمة",
+    "subtitle": "مهام للمنزل",
+    "viewAll": "عرض الكل",
+    "viewAllLabel": "عرض جميع المهام",
+    "viewAllHint": "الانتقال إلى شاشة المهام",
+    "addTask": "إضافة مهمة منزلية",
+    "addTaskLabel": "إضافة مهمة منزلية",
+    "addTaskHint": "يفتح نموذج إنشاء مهمة جديدة",
+    "unassigned": "غير مُسند",
+    "markComplete": "اضغط للتحديد كمكتمل",
+    "markIncomplete": "اضغط للتحديد كغير مكتمل"
+  },
+  "notifications": {
+    "buttonLabel": "الإشعارات - عرض النشاط والتحديثات الأخيرة",
+    "buttonHint": "اضغط لفتح الإشعارات"
+  }
 }

@@ -15,7 +15,7 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 24,
     backgroundColor: colors.surface,
-    marginRight: 12,
+    marginEnd: 12,
     borderWidth: 1,
     borderColor: 'transparent',
     ...shadows.sm,
@@ -45,7 +45,7 @@ export const styles = StyleSheet.create({
   },
   leftColumn: {
     flex: 2,
-    paddingRight: 12,
+    paddingEnd: 12,
   },
   rightColumn: {
     flex: 1,
@@ -81,7 +81,7 @@ export const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.pill,
     backgroundColor: colors.background,
-    marginRight: spacing.sm,
+    marginEnd: spacing.sm,
   },
   quickAddListBubbleText: {
     fontSize: 14,

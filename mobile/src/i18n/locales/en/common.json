@@ -23,5 +23,41 @@
     "saving": "Saving...",
     "success": "Success!",
     "error": "Error occurred"
+  },
+  "share": {
+    "previewLabel": "Preview",
+    "optionAccessibility": "Share to {{option}}",
+    "options": {
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "web": "Share...",
+      "clipboard": "Copy"
+    },
+    "feedback": {
+      "copied": "Copied to clipboard!",
+      "failed": "Could not share. Please try another option."
+    },
+    "footer": "Shared from Kitchen Hub"
+  },
+  "dateTimePicker": {
+    "title": "Select Date & Time",
+    "confirm": "Confirm",
+    "placeholder": "Select date & time",
+    "defaultLabel": "Date and time picker",
+    "selected": "Selected:",
+    "changeDate": "Change Date",
+    "changeTime": "Change Time",
+    "tabs": {
+      "date": "Date",
+      "time": "Time"
+    },
+    "accessibility": {
+      "picker": "{{value}}",
+      "hint": "Opens date and time selection",
+      "dateTab": "Date tab",
+      "timeTab": "Time tab",
+      "changeDate": "Change date",
+      "changeTime": "Change time"
+    }
   }
 }

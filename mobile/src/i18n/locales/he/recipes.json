@@ -1,6 +1,54 @@
 {
-  "title": "Recipes",
-  "addRecipe": "Add Recipe",
-  "servings": "Servings",
-  "cookTime": "Cook time"
+  "title": "מתכונים",
+  "addRecipe": "הוסף מתכון",
+  "servings": "מנות",
+  "cookTime": "זמן בישול",
+  "screen": {
+    "headerTitle": "מתכוני הבית",
+    "addActionLabel": "הוסף פריט",
+    "emptyTitle": "עדיין אין מתכונים",
+    "emptyDescription": "התחל לבנות את האוסף על ידי הוספת המתכונים האהובים עליך",
+    "emptyAction": "הוסף את המתכון הראשון שלך",
+    "searchPlaceholder": "חיפוש לפי שם...",
+    "hideCategoryFilter": "הסתר מסנן קטגוריות",
+    "showCategoryFilter": "הצג מסנן קטגוריות",
+    "hide": "הסתר",
+    "showCategoryFilterButton": "הצג מסנן קטגוריות",
+    "noMatchingRecipes": "לא נמצאו מתכונים תואמים",
+    "noRecipesInCategory": "אין מתכונים בקטגוריה זו",
+    "noRecipesMatchSearch": "לא נמצאו מתכונים התואמים ל-\"{{query}}\". נסה שם אחר או אפס מסננים.",
+    "tryDifferentCategory": "נסה קטגוריה אחרת או אפס מסננים.",
+    "resetFilters": "איפוס מסננים",
+    "loadingDetails": "טוען פרטי מתכון..."
+  },
+  "detail": {
+    "shareTitle": "שתף מתכון",
+    "editActionLabel": "ערוך מתכון",
+    "shareActionLabel": "שתף מתכון",
+    "toasts": {
+      "recipeDetailsLoading": "פרטי המתכון עדיין נטענים. נסה שוב.",
+      "recipeDetailsLoadFailed": "טעינת פרטי המתכון נכשלה.",
+      "recipeUpdateFailed": "עדכון המתכון נכשל",
+      "noMainList": "לא נמצאה רשימת קניות ראשית. צור אחת קודם.",
+      "ingredientAdded": "{{name}} נוסף ל-{{listName}}",
+      "ingredientAddFailed": "הוספת המרכיב נכשלה",
+      "ingredientUpdated": "הכמות של {{name}} עודכנה",
+      "ingredientUpdateFailed": "עדכון המרכיב נכשל",
+      "noIngredients": "אין מרכיבים להוספה",
+      "allIngredientsAdded": "כל {{count}} המרכיבים נוספו ל-{{listName}}",
+      "addIngredientsFailed": "הוספת המרכיבים נכשלה"
+    }
+  },
+  "share": {
+    "notAvailable": "המתכון אינו זמין",
+    "untitledRecipe": "מתכון ללא שם",
+    "header": "מתכון: {{name}}",
+    "cookTime": "זמן בישול",
+    "prepTime": "זמן הכנה",
+    "servings": "מנות",
+    "ingredients": "מרכיבים",
+    "instructions": "הוראות הכנה",
+    "notAvailableValue": "לא זמין",
+    "emptyIngredients": "אין מרכיבים."
+  }
 }

@@ -13,7 +13,7 @@ import { ChoresScreen } from '../features/chores/screens/ChoresScreen';
 import { SettingsScreen } from '../features/settings/screens/SettingsScreen';
 import { BottomPillNav, TabKey } from '../common/components/BottomPillNav';
 import { ShoppingQuickActionModal } from '../features/shopping/components/ShoppingQuickActionModal';
-import { ChoresQuickActionModal } from '../features/chores/components/ChoresQuickActionModal';
+import { ChoreDetailsModal } from '../features/chores/components/ChoreDetailsModal';
 import { RecipeDetailScreen } from '../features/recipes/screens/RecipeDetailScreen';
 import type { Recipe } from '../mocks/recipes';
 import { OfflineBanner } from '../common/components/OfflineBanner';
@@ -205,8 +205,9 @@ export function MainTabsScreen() {
         onClose={handleCloseShoppingModal}
         buttonPosition={shoppingButtonPosition}
       />
-      <ChoresQuickActionModal
+      <ChoreDetailsModal
         visible={choresModalVisible}
+        mode="add"
         onClose={handleCloseChoresModal}
         onAddChore={handleAddChore}
       />

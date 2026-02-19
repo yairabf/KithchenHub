@@ -5,3 +5,11 @@ export {
   type UnitCode,
   type UnitType,
 } from './units.constants';
+export {
+  RECIPE_CATEGORIES,
+  RECIPE_FILTER_CATEGORIES,
+  normalizeRecipeCategory,
+  getRecipeCategoryIcon,
+  type RecipeCategory,
+  type RecipeFilterCategory,
+} from './recipe-categories.constants';

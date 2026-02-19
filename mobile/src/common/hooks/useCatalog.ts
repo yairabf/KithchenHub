@@ -29,6 +29,8 @@ export interface UseCatalogReturn {
   refresh: () => Promise<void>;
   /** Search groceries on demand (server-side) */
   searchGroceries: (query: string) => Promise<GroceryItem[]>;
+  /** Fetch groceries by category on demand (server-side) */
+  getGroceriesByCategory: (categoryName: string) => Promise<GroceryItem[]>;
 }
 
 /**
@@ -103,6 +105,13 @@ export function useCatalog(): UseCatalogReturn {
     return catalogService.searchGroceries(query);
   }, []);
 
+  /**
+   * Fetch groceries by category on demand
+   */
+  const getGroceriesByCategory = useCallback(async (categoryName: string) => {
+    return catalogService.getGroceriesByCategory(categoryName);
+  }, []);
+
   // Load catalog data on mount
   useEffect(() => {
     loadCatalogData();
@@ -116,5 +125,6 @@ export function useCatalog(): UseCatalogReturn {
     error,
     refresh,
     searchGroceries,
+    getGroceriesByCategory,
   };
 }

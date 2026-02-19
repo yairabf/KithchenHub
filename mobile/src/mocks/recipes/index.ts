@@ -239,4 +239,4 @@ export const mockRecipes: Recipe[] = mockRecipesRaw.map((recipe) => ({
   instructions: normalizeMockInstructions(recipe.instructions),
 }));
 
-export const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner'];
+export const recipeCategories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Dessert', 'Other'];
