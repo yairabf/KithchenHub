@@ -7,4 +7,7 @@ export interface ChoresProgressCardProps {
   isWideScreen: boolean;
   /** Apply explicit RTL text alignment on web */
   isWebRtl?: boolean;
+
+  /** Explicit RTL layout override */
+  isRtl?: boolean;
 }

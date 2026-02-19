@@ -51,6 +51,7 @@ export const styles = StyleSheet.create({
   },
   progressDetailsPhone: {
     alignItems: 'center',
+    width: '100%',
     maxWidth: '100%',
     paddingHorizontal: spacing.sm,
   },
@@ -66,6 +67,11 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: spacing.md,
   },
+  progressBodyRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
+  },
   progressBodyPhone: {
     textAlign: 'center',
     marginBottom: 0,
@@ -73,5 +79,12 @@ export const styles = StyleSheet.create({
   progressTextRtl: {
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  progressTextRowRtl: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    width: '100%',
+    direction: 'rtl',
   },
 });

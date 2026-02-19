@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, GestureResponderEvent } from 'react-native';
+import { View, Text, TouchableOpacity, GestureResponderEvent, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
 import { ListItemCardWrapper } from '../../../../common/components/ListItemCardWrapper';
@@ -38,13 +39,22 @@ import type { ChoreCardProps } from './types';
 export const ChoreCard = React.memo(function ChoreCard({
   chore,
   bgColor,
-  isWebRtl = false,
+  isRtl,
   onToggle,
   onEdit,
   onDelete,
 }: ChoreCardProps) {
+  const { t, i18n } = useTranslation('chores');
+  const isRtlAppLanguage = isRtl ?? (i18n.dir() === 'rtl' || I18nManager.isRTL);
+  const assigneeLabel = chore.assignee ?? t('modal.assigneeUnassigned');
+  const recurrenceLabel = chore.recurrencePattern
+    ? t(`modal.recurrence.${chore.recurrencePattern}`)
+    : chore.isRecurring
+      ? t('modal.recurrence.daily')
+      : t('card.oneTime');
+
   const handleEditPress = (e: GestureResponderEvent) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     onEdit(chore);
   };
 
@@ -57,47 +67,61 @@ export const ChoreCard = React.memo(function ChoreCard({
       <ListItemCardWrapper
         backgroundColor={bgColor}
         onPress={() => onToggle(chore.id)}
+        style={styles.cardContainer}
         testID={`chore-card-${chore.id}`}
+        accessibilityRole="button"
+        accessibilityLabel={`${chore.title}, ${chore.isCompleted ? t('status.done') : t('status.pending')}, ${assigneeLabel}`}
+        accessibilityHint={chore.isCompleted ? t('card.toggleDoneHint') : t('card.togglePendingHint')}
       >
         <View style={styles.choreCard}>
-          {/* Left side: Icon and content */}
           <View style={styles.choreCardLeft}>
-            <View style={styles.choreCardIconRow}>
-              <View style={styles.choreCardIcon}>
-                <Text style={styles.choreCardIconText}>{chore.icon ?? '📋'}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.choreCardEditButton}
-                onPress={handleEditPress}
-                activeOpacity={0.6}
-              >
-                <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
+            <View style={styles.choreCardIcon}>
+              <Text style={styles.choreCardIconText}>{chore.icon ?? '📋'}</Text>
             </View>
             <View style={styles.choreCardContent}>
-              <Text
-                style={[styles.choreCardName, isWebRtl && styles.choreCardTextRtl, chore.isCompleted && styles.choreCompleted]}
-                numberOfLines={1}
-              >
-                {chore.title}
-              </Text>
-              <View style={styles.choreCardMeta}>
-                {chore.assignee ? (
-                  <View style={styles.choreCardAssignee}>
-                    <Text style={[styles.choreCardAssigneeText, isWebRtl && styles.choreCardTextRtl]} numberOfLines={1}>
-                      {chore.assignee}
-                    </Text>
-                  </View>
-                ) : null}
-                <Text style={[styles.choreCardTime, isWebRtl && styles.choreCardTextRtl]} numberOfLines={1}>
-                  {formatChoreDueDateTime(chore.dueDate, chore.dueTime)}
+              <View style={isRtlAppLanguage ? styles.choreCardNameRowRtl : styles.choreCardNameRowLtr}>
+                <Text
+                  style={[
+                    styles.choreCardName,
+                    isRtlAppLanguage ? styles.choreCardNameRtl : styles.choreCardNameLtr,
+                    chore.isCompleted && styles.choreCompleted,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {chore.title}
                 </Text>
+              </View>
+              <View style={styles.choreCardMeta}>
+                <View style={[styles.choreTag, styles.choreTagPrimary]}>
+                  <Text style={styles.choreTagText} numberOfLines={1}>
+                    {recurrenceLabel}
+                  </Text>
+                </View>
+                <View style={[styles.choreTag, styles.choreTagSecondary]}>
+                  <Text style={styles.choreTagText} numberOfLines={1}>
+                    {assigneeLabel}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
 
-          {/* Right side: Checkbox */}
-          <View style={styles.choreCardCheck}>
+          <View style={styles.choreCardRight}>
+            <Text style={styles.choreCardTime} numberOfLines={1}>
+              {t('card.dueBy')} {formatChoreDueDateTime(chore.dueDate, chore.dueTime)}
+            </Text>
+            <TouchableOpacity
+              style={styles.choreCardEditButton}
+              onPress={handleEditPress}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel={t('card.editLabel', { title: chore.title })}
+              accessibilityHint={t('card.editHint')}
+            >
+              <Ionicons name="create-outline" size={15} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <View style={styles.choreCardCheck}>
             {chore.isCompleted ? (
               <View style={styles.checkmark}>
                 <Ionicons name="checkmark" size={18} color={colors.success} />
@@ -105,6 +129,7 @@ export const ChoreCard = React.memo(function ChoreCard({
             ) : (
               <View style={styles.uncheckmark} />
             )}
+            </View>
           </View>
         </View>
       </ListItemCardWrapper>

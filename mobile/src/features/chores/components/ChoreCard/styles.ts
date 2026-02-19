@@ -4,46 +4,73 @@ import {
   spacing,
   borderRadius,
   typography,
-  shadows,
-  componentSize,
 } from '../../../../theme';
 
 export const styles = StyleSheet.create({
+  cardContainer: {
+    borderRadius: borderRadius.xxxl,
+    borderColor: colors.divider,
+    backgroundColor: colors.background,
+    paddingVertical: spacing.md,
+  },
   choreCard: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  choreCardRtl: {
+    flexDirection: 'row-reverse',
   },
   choreCardLeft: {
     flex: 1,
-    marginEnd: spacing.md,
-  },
-  choreCardIconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    gap: spacing.md,
+    minWidth: 0,
   },
   choreCardIcon: {
-    marginEnd: spacing.sm,
-  },
-  choreCardIconText: {
-    fontSize: 26,
-  },
-  choreCardEditButton: {
-    width: componentSize.button.sm,
-    height: componentSize.button.sm,
-    borderRadius: componentSize.button.sm / 2,
-    backgroundColor: colors.transparent.white70,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.iconBg.amber,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.sm,
+    flexShrink: 0,
+  },
+  choreCardIconText: {
+    fontSize: 22,
   },
   choreCardContent: {
     flex: 1,
+    minWidth: 0,
+  },
+  choreCardNameRowLtr: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    direction: 'ltr',
+    width: '100%',
+  },
+  choreCardNameRowRtl: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    direction: 'rtl',
+    width: '100%',
   },
   choreCardName: {
-    ...typography.labelBold,
-    marginBottom: spacing.xs,
+    ...typography.body,
+    fontWeight: '700',
+    marginBottom: spacing.xxs,
+    color: colors.textPrimary,
+    maxWidth: '100%',
+  },
+  choreCardNameLtr: {
+    writingDirection: 'ltr',
+  },
+  choreCardNameRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   choreCardTextRtl: {
     textAlign: 'right',
@@ -52,57 +79,82 @@ export const styles = StyleSheet.create({
   choreCardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
     gap: spacing.xs,
+    minWidth: 0,
+  },
+  choreCardMetaRtl: {
+    flexDirection: 'row-reverse',
+  },
+  choreTag: {
+    borderRadius: borderRadius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    maxWidth: 120,
+  },
+  choreTagPrimary: {
+    backgroundColor: colors.pastel.yellow,
+  },
+  choreTagSecondary: {
+    backgroundColor: colors.divider,
+  },
+  choreTagText: {
+    ...typography.tiny,
+    color: colors.textSecondary,
+    fontSize: 9,
+    lineHeight: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+  },
+  choreCardRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginStart: spacing.sm,
+  },
+  choreCardRightRtl: {
+    flexDirection: 'row-reverse',
+    marginStart: 0,
+    marginEnd: spacing.sm,
   },
   choreCardTime: {
-    ...typography.tinyMuted,
+    ...typography.caption,
+    color: colors.textSecondary,
+    fontWeight: '600',
     flexShrink: 1,
   },
-  choreCardCheck: {
-    width: componentSize.checkbox + spacing.xxs,
-    height: componentSize.checkbox + spacing.xxs,
+  choreCardEditButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: spacing.xxs,
+  },
+  choreCardCheck: {
+    width: 34,
+    height: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   checkmark: {
-    width: componentSize.checkbox,
-    height: componentSize.checkbox,
-    borderRadius: componentSize.checkbox / 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.success,
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.sm,
   },
   uncheckmark: {
-    width: componentSize.checkbox,
-    height: componentSize.checkbox,
-    borderRadius: componentSize.checkbox / 2,
-    backgroundColor: colors.transparent.white50,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: colors.transparent.white80,
+    borderColor: colors.border,
   },
   choreCompleted: {
     textDecorationLine: 'line-through',
     opacity: 0.6,
-  },
-  choreCardAssignee: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexShrink: 0,
-    // Removed maxWidth/minWidth constraints to allow natural sizing based on content
-    // Text will wrap to next line if needed via choreCardMeta flexWrap
-  },
-  choreCardAssigneeText: {
-    ...typography.tiny,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    // Removed textAlign: 'center' as assignee badge now aligns left with meta row
-    // This provides better visual consistency with the date/time text
   },
 });

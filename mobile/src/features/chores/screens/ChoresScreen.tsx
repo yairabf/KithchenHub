@@ -9,6 +9,7 @@ import {
   useWindowDimensions,
   RefreshControl,
   Platform,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../theme';
@@ -37,6 +38,7 @@ import { useTranslation } from 'react-i18next';
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
   const { t, i18n } = useTranslation('chores');
   const isWebRtl = Platform.OS === 'web' && i18n.dir() === 'rtl';
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -284,6 +286,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
                 totalCount={todayChores.length}
                 isWideScreen={true}
                 isWebRtl={isWebRtl}
+                isRtl={isRtlLayout}
               />
               <View style={styles.searchContainer}>
                 <Text style={[styles.searchPlaceholder, isWebRtl && styles.searchPlaceholderRtl]}>{t('screen.searchPlaceholder')}</Text>
@@ -315,6 +318,7 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
               totalCount={todayChores.length}
               isWideScreen={false}
               isWebRtl={isWebRtl}
+              isRtl={isRtlLayout}
             />
             <View style={styles.searchContainer}>
               <Text style={[styles.searchPlaceholder, isWebRtl && styles.searchPlaceholderRtl]}>{t('screen.searchPlaceholder')}</Text>
