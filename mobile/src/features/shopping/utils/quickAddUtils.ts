@@ -53,7 +53,7 @@ export interface QuickAddDependencies {
   /**
    * Error logging function
    */
-  logShoppingError: (message: string, error: unknown) => void;
+  logError: (message: string, error: unknown) => void;
 }
 
 /**
@@ -76,7 +76,7 @@ export interface QuickAddDependencies {
  *     createItem,
  *     updateItem,
  *     executeWithOptimisticUpdate,
- *     logShoppingError,
+ *     logError,
  *   }
  * );
  * ```
@@ -92,7 +92,7 @@ export async function quickAddItem(
     createItem,
     updateItem,
     executeWithOptimisticUpdate,
-    logShoppingError,
+    logError,
   } = dependencies;
 
   const quantity = 1;
@@ -119,30 +119,21 @@ export async function quickAddItem(
     const itemLocalId = existingItem.localId;
     const baseQuantity = existingItem.quantity;
     
+    // nextQuantity computed from the snapshot at call-time; reused in both
+    // the optimistic update and the API call to avoid stale closure reads.
+    const nextQuantity = baseQuantity + quantity;
+
     await executeWithOptimisticUpdate(
-      async () => {
-        // Read current state to get latest quantity (handles rapid clicks)
-        const currentItems = allItems;
-        const currentItem = currentItems.find(
-          item => item.id === itemId || item.localId === itemLocalId
-        );
-        const currentQuantity = currentItem?.quantity ?? baseQuantity;
-        const nextQuantity = currentQuantity + quantity;
-        
-        return await updateItem(itemId, { quantity: nextQuantity });
-      },
+      () => updateItem(itemId, { quantity: nextQuantity }),
       () => {
-        // Optimistic update for all modes - read latest state using functional update
         setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
           if (item.id === itemId || item.localId === itemLocalId) {
-            const currentQuantity = item.quantity;
-            return { ...item, quantity: currentQuantity + quantity };
+            return { ...item, quantity: nextQuantity };
           }
           return item;
         }));
       },
       () => {
-        // Revert - restore previous quantity
         setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
           if (item.id === itemId || item.localId === itemLocalId) {
             return { ...item, quantity: baseQuantity };
@@ -150,7 +141,7 @@ export async function quickAddItem(
           return item;
         }));
       },
-      'Failed to update shopping item quantity:'
+      'Failed to update shopping item quantity:',
     );
   } else {
     // Create new item with optimistic UI update (all modes)
@@ -174,7 +165,7 @@ export async function quickAddItem(
     } catch (error) {
       // Remove temp item on error
       setAllItems((prev: ShoppingItem[]) => prev.filter((item) => item.localId !== tempItem.localId));
-      logShoppingError('Failed to create shopping item:', error);
+      logError('Failed to create shopping item:', error);
     }
   }
 

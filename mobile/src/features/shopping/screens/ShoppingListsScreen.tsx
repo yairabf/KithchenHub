@@ -31,6 +31,16 @@ import {
 import { colors } from '../../../theme';
 import { styles } from './styles';
 import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
+
+/**
+ * Extends ShoppingItem with optional catalog metadata needed when creating
+ * items from the grocery catalog. These fields are not stored on the local
+ * ShoppingItem model but are forwarded to the API for deduplication/linking.
+ */
+type ShoppingItemCreationPayload = Partial<ShoppingItem> & {
+  catalogItemId?: string;
+  masterItemId?: string;
+};
 import { createShoppingItem, createShoppingList } from '../utils/shoppingFactory';
 import { createShoppingService } from '../services/shoppingService';
 import { config } from '../../../config';
@@ -91,7 +101,7 @@ interface ShoppingListsScreenProps {
 }
 
 export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
-  const { t } = useTranslation('shopping');
+  const { t, i18n } = useTranslation('shopping');
   const { isActive = true } = props;
   const { isTablet } = useResponsive();
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -129,13 +139,19 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [selectedGroceryItem, setSelectedGroceryItem] = useState<GroceryItem | null>(null);
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [quantityInput, setQuantityInput] = useState('1');
+  const [customItemName, setCustomItemName] = useState('');
   const [selectedItemCategory, setSelectedItemCategory] = useState<string>(DEFAULT_CATEGORY.toLowerCase());
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   /**
-   * Load categories for custom item selection.
+   * Load categories for custom item selection (runs once on mount).
    * Performs one-time migration to clear deprecated categories from cache.
-   * 
+   *
+   * The default-category guard was removed from this effect to prevent an
+   * infinite loop: the old code depended on `selectedItemCategory` AND wrote
+   * to it, causing the effect to re-run on every selection change.
+   * Default selection is now handled as a derived value via `useMemo`.
+   *
    * Migration runs only once per app installation using AsyncStorage flag.
    * After migration, loads categories normally without clearing cache.
    */
@@ -158,25 +174,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         // Load categories from API or cache
         const cats = await catalogService.getShoppingCategories();
 
-        // Prevent state updates if component unmounted during async operation
         if (cancelled) return;
 
         const mergedCategories = Array.from(
           new Set([...SHOPPING_CATEGORIES, ...cats].map((category) => normalizeCategoryKey(category))),
         );
         setAvailableCategories(mergedCategories);
-
-        // Set default category if current selection is not in the list
-        const normalizedSelected = normalizeCategoryKey(selectedItemCategory);
-        if (mergedCategories.length > 0 && !mergedCategories.includes(normalizedSelected)) {
-          setSelectedItemCategory(normalizeCategoryKey(mergedCategories[0]));
-        }
       } catch (error) {
         if (!cancelled) {
           if (__DEV__) {
             console.error('[CategoryMigration] Failed to load categories:', error);
           }
-          // Fallback to static categories on error (convert readonly to mutable array)
           setAvailableCategories([...SHOPPING_CATEGORIES]);
         }
       }
@@ -184,11 +192,26 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
     loadCategoriesWithMigration();
 
-    // Cleanup: prevent state updates after unmount
     return () => {
       cancelled = true;
     };
-  }, [selectedItemCategory]);
+  }, []); // Empty deps: runs once on mount only
+
+  /**
+   * Derives the effective category selection.
+   * If the user's current selection is not present in the loaded categories
+   * (e.g. first load, migration cleared cache) fall back to the first available
+   * category. Keeps the category-loading effect dependency-free.
+   */
+  const effectiveItemCategory = useMemo(() => {
+    if (
+      availableCategories.length > 0 &&
+      !availableCategories.includes(normalizeCategoryKey(selectedItemCategory))
+    ) {
+      return normalizeCategoryKey(availableCategories[0]);
+    }
+    return selectedItemCategory;
+  }, [availableCategories, selectedItemCategory]);
   const [showCreateListModal, setShowCreateListModal] = useState(false);
   const [editingList, setEditingList] = useState<ShoppingList | null>(null);
   const [newListName, setNewListName] = useState('');
@@ -301,23 +324,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   /**
    * Handles manual refresh of shopping data (pull-to-refresh).
-   * Fetches latest data from the service and updates state.
+   * Delegates the actual fetch to `loadShoppingData` so there is a
+   * single source of truth for the fetch-sort-setState sequence.
    */
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const data = await shoppingService.getShoppingData();
-      // Sort lists so main list is always first
-      const sortedLists = sortListsWithMainFirst(data.shoppingLists);
-      setShoppingLists(sortedLists);
-      setAllItems(data.shoppingItems);
-      setSelectedList((current) => getSelectedList(sortedLists, current?.id));
-    } catch (error) {
-      console.error('Failed to refresh shopping data:', error);
+      await loadShoppingData();
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [loadShoppingData]);
 
   // Update list item counts when items change
   useEffect(() => {
@@ -366,51 +383,42 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     }
   }, [realtimeError]);
 
-  // Filter items based on selected list
-  const filteredItems = allItems.filter(item => item.listId === activeList.id);
+  const filteredItems = useMemo(
+    () => allItems.filter((item) => item.listId === activeList.id),
+    [allItems, activeList.id],
+  );
 
-  const logShoppingError = (message: string, error: unknown) => {
-    console.error(message, error);
-  };
+  const createItem = useCallback(
+    (item: ShoppingItemCreationPayload) => shoppingService.createItem(item),
+    [shoppingService],
+  );
 
-  // Use service directly for all operations (no cache)
-  // Accepts ShoppingItemWithCatalog to support catalogItemId/masterItemId for API requests
-  type ShoppingItemWithCatalog = Partial<ShoppingItem> & {
-    catalogItemId?: string;
-    masterItemId?: string;
-  };
+  const updateItem = useCallback(
+    (itemId: string, updates: Partial<ShoppingItem>) => shoppingService.updateItem(itemId, updates),
+    [shoppingService],
+  );
 
-  const createItem = async (item: ShoppingItemWithCatalog) => {
-    // Optimistic update handles UI, realtime will sync the actual creation
-    return await shoppingService.createItem(item);
-  };
+  const deleteItem = useCallback(
+    (itemId: string) => shoppingService.deleteItem(itemId),
+    [shoppingService],
+  );
 
-  const updateItem = async (itemId: string, updates: Partial<ShoppingItem>) => {
-    // Optimistic update handles UI, realtime will sync the actual update
-    return await shoppingService.updateItem(itemId, updates);
-  };
+  const toggleItem = useCallback(
+    (itemId: string) => shoppingService.toggleItem(itemId),
+    [shoppingService],
+  );
 
-  const deleteItem = async (itemId: string) => {
-    // Optimistic update handles UI, realtime will sync the actual deletion
-    await shoppingService.deleteItem(itemId);
-  };
-
-  const toggleItem = async (itemId: string) => {
-    // Optimistic update handles UI, realtime will sync the actual toggle
-    return await shoppingService.toggleItem(itemId);
-  };
-
-  const createList = async (list: Partial<ShoppingList>) => {
+  const createList = useCallback(async (list: Partial<ShoppingList>) => {
     const created = await shoppingService.createList(list);
-    // For list creation, we need to update the lists state since realtime might not catch it immediately
+    // Realtime may not catch list creation immediately — fetch fresh data.
     const data = await shoppingService.getShoppingData();
     const sortedLists = sortListsWithMainFirst(data.shoppingLists);
     setShoppingLists(sortedLists);
     setSelectedList((current) => getSelectedList(sortedLists, current?.id));
     return created;
-  };
+  }, [shoppingService, sortListsWithMainFirst]);
 
-  const updateList = async (listId: string, updates: Partial<ShoppingList>) => {
+  const updateList = useCallback(async (listId: string, updates: Partial<ShoppingList>) => {
     const updated = await shoppingService.updateList(listId, updates);
     setShoppingLists((currentLists) =>
       sortListsWithMainFirst(
@@ -425,9 +433,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         : currentSelected,
     );
     return updated;
-  };
+  }, [shoppingService, sortListsWithMainFirst]);
 
-  const deleteList = async (listId: string) => {
+  const deleteList = useCallback(async (listId: string) => {
     await shoppingService.deleteList(listId);
     setShoppingLists((currentLists) => {
       const nextLists = currentLists.filter((list) => list.id !== listId);
@@ -440,69 +448,41 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     setAllItems((currentItems) =>
       currentItems.filter((item) => item.listId !== listId),
     );
-  };
+  }, [shoppingService, sortListsWithMainFirst]);
 
   /**
    * Executes a service operation with optimistic UI updates and automatic revert on error.
    * This helper eliminates code duplication across handlers while maintaining responsive UX.
-   * 
+   *
    * @param operation - Async function that performs the service call
    * @param optimisticUpdate - Function to apply optimistic state change
    * @param revertUpdate - Function to revert state on error
-   * @param errorMessage - Error message for logging
+   * @param errorMessage - Message logged on failure
    * @returns The result of the operation, or null if it failed
-   * 
-   * @example
-   * ```typescript
-   * await executeWithOptimisticUpdate(
-   *   () => toggleItem(itemId),
-   *   () => {
-   *     if (!isSignedIn) {
-   *       setAllItems(prev => prev.map(item => 
-   *         item.id === itemId ? {...item, isChecked: true} : item
-   *       ));
-   *     }
-   *   },
-   *   () => {
-   *     if (!isSignedIn) {
-   *       setAllItems(prev => prev.map(item => 
-   *         item.id === itemId ? {...item, isChecked: false} : item
-   *       ));
-   *     }
-   *   },
-   *   'Failed to toggle item:'
-   * );
-   * ```
    */
-  const executeWithOptimisticUpdate = async <T,>(
+  const executeWithOptimisticUpdate = useCallback(async <T,>(
     operation: () => Promise<T>,
     optimisticUpdate: () => void,
     revertUpdate: () => void,
-    errorMessage: string
+    errorMessage: string,
   ): Promise<T | null> => {
-    // Apply optimistic updates for all modes
     optimisticUpdate();
     try {
       return await operation();
     } catch (error) {
       revertUpdate();
-      logShoppingError(errorMessage, error);
+      console.error(errorMessage, error);
       return null;
     }
-  };
+  }, []);
 
-
-  const handleQuantityChange = async (itemId: string, delta: number) => {
+  const handleQuantityChange = useCallback(async (itemId: string, delta: number) => {
     const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
-    if (!targetItem) {
-      return;
-    }
+    if (!targetItem) return;
 
     const previousQuantity = targetItem.quantity;
     const nextQuantity = Math.max(1, previousQuantity + delta);
-    if (nextQuantity === previousQuantity) {
-      return;
-    }
+    if (nextQuantity === previousQuantity) return;
 
     await executeWithOptimisticUpdate(
       () => updateItem(itemId, { quantity: nextQuantity }),
@@ -520,30 +500,25 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             : item,
         ));
       },
-      'Failed to update shopping item quantity:'
+      'Failed to update shopping item quantity:',
     );
-  };
+  }, [allItems, executeWithOptimisticUpdate, updateItem]);
 
-  const handleDeleteItem = async (itemId: string) => {
+  const handleDeleteItem = useCallback(async (itemId: string) => {
     const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
-    if (!targetItem) {
-      return;
-    }
+    if (!targetItem) return;
 
     const deleteById = targetItem.id;
-    if (deletingItemIdsRef.current.has(deleteById)) {
-      return;
-    }
+    if (deletingItemIdsRef.current.has(deleteById)) return;
 
     deletingItemIdsRef.current.add(deleteById);
 
-     // Item exists only locally (optimistic create not yet confirmed by server).
+    // Item exists only locally (optimistic create not yet confirmed by server).
     // Remove it from UI and skip DELETE API call to avoid 404/API errors.
     if (isLocalOnlyItem(targetItem, isSignedIn)) {
       setAllItems((prev: ShoppingItem[]) =>
         prev.filter(
-          (item) =>
-            item.id !== targetItem.id && item.localId !== targetItem.localId,
+          (item) => item.id !== targetItem.id && item.localId !== targetItem.localId,
         ),
       );
       deletingItemIdsRef.current.delete(deleteById);
@@ -554,23 +529,23 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       await executeWithOptimisticUpdate(
         () => deleteItem(deleteById),
         () => {
-          setAllItems((prev: ShoppingItem[]) => prev.filter((item) => item.id !== targetItem.id && item.localId !== targetItem.localId));
+          setAllItems((prev: ShoppingItem[]) =>
+            prev.filter((item) => item.id !== targetItem.id && item.localId !== targetItem.localId),
+          );
         },
         () => {
           setAllItems((prev: ShoppingItem[]) => [...prev, targetItem]);
         },
-        'Failed to delete shopping item:'
+        'Failed to delete shopping item:',
       );
     } finally {
       deletingItemIdsRef.current.delete(deleteById);
     }
-  };
+  }, [allItems, isSignedIn, executeWithOptimisticUpdate, deleteItem]);
 
-  const handleToggleItemChecked = async (itemId: string) => {
+  const handleToggleItemChecked = useCallback(async (itemId: string) => {
     const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
-    if (!targetItem) {
-      return;
-    }
+    if (!targetItem) return;
 
     const previousChecked = targetItem.isChecked;
     const nextChecked = !previousChecked;
@@ -591,73 +566,70 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             : item,
         ));
       },
-      'Failed to toggle shopping item:'
+      'Failed to toggle shopping item:',
     );
-  };
+  }, [allItems, executeWithOptimisticUpdate, toggleItem]);
 
-  const handleSelectGroceryItem = (groceryItem: GroceryItem) => {
+  const handleSelectGroceryItem = useCallback((groceryItem: GroceryItem) => {
     setSelectedGroceryItem(groceryItem);
     setQuantityInput('1');
-    // Reset category to default for custom items
     if (groceryItem.id.startsWith('custom-')) {
       setSelectedItemCategory(DEFAULT_CATEGORY.toLowerCase());
+      setCustomItemName(groceryItem.name);
+    } else {
+      setCustomItemName('');
     }
     setShowQuantityModal(true);
-    // Keep dropdown open so user can continue adding items after modal closes
-  };
+  }, []);
 
-  const handleQuickAddItem = async (groceryItem: GroceryItem) => {
+  const handleQuickAddItem = useCallback(async (groceryItem: GroceryItem) => {
     await quickAddItem(groceryItem, activeList, {
       allItems,
       setAllItems,
       createItem,
       updateItem,
       executeWithOptimisticUpdate,
-      logShoppingError,
+      logError: (msg, err) => console.error(msg, err),
     });
-  };
+  }, [activeList, allItems, createItem, updateItem, executeWithOptimisticUpdate]);
 
-  const handleAddToList = async () => {
+  const handleAddToList = useCallback(async () => {
     if (!selectedGroceryItem) return;
 
     const quantity = parseInt(quantityInput, 10);
     if (isNaN(quantity) || quantity <= 0) return;
 
-    // Check if item already exists in the selected list
+    const itemName = selectedGroceryItem.id.startsWith('custom-')
+      ? customItemName.trim()
+      : selectedGroceryItem.name;
+
+    if (!itemName) return;
+
     const existingItem = allItems.find(
-      item => item.name === selectedGroceryItem.name && item.listId === activeList.id
+      (item) => item.name === itemName && item.listId === activeList.id,
     );
 
     if (existingItem) {
-      // Update existing item quantity - use functional update to read latest state (handles rapid clicks)
       const itemId = existingItem.id;
       const itemLocalId = existingItem.localId;
       const baseQuantity = existingItem.quantity;
 
-      await executeWithOptimisticUpdate(
-        async () => {
-          // Read current state to get latest quantity (handles rapid clicks)
-          const currentItems = allItems;
-          const currentItem = currentItems.find(
-            item => item.id === itemId || item.localId === itemLocalId
-          );
-          const currentQuantity = currentItem?.quantity ?? baseQuantity;
-          const nextQuantity = currentQuantity + quantity;
+      // nextQuantity is computed once from the snapshot at click-time and
+      // reused in both the optimistic update and the API call.  Using the
+      // same value avoids reading stale `allItems` inside an async closure.
+      const nextQuantity = baseQuantity + quantity;
 
-          return await updateItem(itemId, { quantity: nextQuantity });
-        },
+      await executeWithOptimisticUpdate(
+        () => updateItem(itemId, { quantity: nextQuantity }),
         () => {
-          // Optimistic update for all modes - read latest state using functional update
           setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
             if (item.id === itemId || item.localId === itemLocalId) {
-              const currentQuantity = item.quantity;
-              return { ...item, quantity: currentQuantity + quantity };
+              return { ...item, quantity: nextQuantity };
             }
             return item;
           }));
         },
         () => {
-          // Revert - restore previous quantity
           setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
             if (item.id === itemId || item.localId === itemLocalId) {
               return { ...item, quantity: baseQuantity };
@@ -665,89 +637,91 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             return item;
           }));
         },
-        'Failed to update shopping item quantity:'
+        'Failed to update shopping item quantity:',
       );
     } else {
-      // Create new item with optimistic UI update
-      const tempItem = createShoppingItem(selectedGroceryItem, activeList.id, quantity);
+      const tempItem = createShoppingItem(
+        { ...selectedGroceryItem, name: itemName },
+        activeList.id,
+        quantity,
+      );
       setAllItems((prev: ShoppingItem[]) => [...prev, tempItem]);
 
       try {
-        // Use selected category for custom items, otherwise use item's category
         const categoryToUse = selectedGroceryItem.id.startsWith('custom-')
-          ? normalizeCategoryKey(selectedItemCategory)
+          ? normalizeCategoryKey(effectiveItemCategory)
           : selectedGroceryItem.category;
 
-        const newItem = await createItem({
-          name: selectedGroceryItem.name,
+        const payload: ShoppingItemCreationPayload = {
+          name: itemName,
           listId: activeList.id,
           quantity,
           category: categoryToUse,
           image: selectedGroceryItem.image,
           catalogItemId: selectedGroceryItem.id.startsWith('custom-') ? undefined : selectedGroceryItem.id,
-        } as any); // Type assertion needed because ShoppingItem doesn't have catalogItemId
+        };
+        const newItem = await createItem(payload);
 
-        // Replace temp item with real item from service
         setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
-          item.localId === tempItem.localId ? newItem : item
+          item.localId === tempItem.localId ? newItem : item,
         ));
       } catch (error) {
-        // Remove temp item on error
         setAllItems((prev: ShoppingItem[]) => prev.filter((item) => item.localId !== tempItem.localId));
-        logShoppingError('Failed to create shopping item:', error);
+        console.error('Failed to create shopping item:', error);
       }
     }
 
-    // Reset and close
     setShowQuantityModal(false);
     setSelectedGroceryItem(null);
+    setCustomItemName('');
     setQuantityInput('1');
-  };
+  }, [
+    selectedGroceryItem, quantityInput, customItemName, allItems, activeList,
+    effectiveItemCategory, executeWithOptimisticUpdate, updateItem, createItem,
+  ]);
 
-  const handleCancelQuantityModal = () => {
+  const handleCancelQuantityModal = useCallback(() => {
     setShowQuantityModal(false);
     setSelectedGroceryItem(null);
+    setCustomItemName('');
     setQuantityInput('1');
     setSelectedItemCategory(DEFAULT_CATEGORY.toLowerCase());
-  };
+  }, []);
 
-  const handleQuantityInputChange = (delta: number) => {
+  const handleQuantityInputChange = useCallback((delta: number) => {
     const current = parseInt(quantityInput, 10) || 0;
     const newValue = Math.max(1, current + delta);
     setQuantityInput(newValue.toString());
-  };
+  }, [quantityInput]);
 
-  const handleOpenCreateListModal = () => {
+  const handleOpenCreateListModal = useCallback(() => {
     setEditingList(null);
     setShowCreateListModal(true);
     setNewListName('');
     setNewListIcon('cart-outline');
     setNewListColor('#10B981');
-  };
+  }, []);
 
-  const handleOpenEditListModal = (list: ShoppingList) => {
+  const handleOpenEditListModal = useCallback((list: ShoppingList) => {
     setEditingList(list);
     setShowCreateListModal(true);
     setNewListName(list.name);
     setNewListIcon(list.icon);
     setNewListColor(list.color);
-  };
+  }, []);
 
-  const handleCancelCreateListModal = () => {
+  const handleCancelCreateListModal = useCallback(() => {
     setShowCreateListModal(false);
     setEditingList(null);
     setNewListName('');
     setNewListIcon('cart-outline');
     setNewListColor('#10B981');
-  };
+  }, []);
 
-  const handleCreateList = async () => {
+  const handleCreateList = useCallback(async () => {
     const trimmedName = newListName.trim();
-    if (!trimmedName) {
-      return;
-    }
+    if (!trimmedName) return;
 
-    // Use service directly
     try {
       if (editingList) {
         await updateList(editingList.id, {
@@ -765,32 +739,27 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       }
       handleCancelCreateListModal();
     } catch (error) {
-      logShoppingError('Failed to save shopping list:', error);
+      console.error('Failed to save shopping list:', error);
     }
-  };
+  }, [newListName, editingList, newListIcon, newListColor, updateList, createList, handleCancelCreateListModal]);
 
-  const confirmDeleteList = (list: ShoppingList) => {
-    if (list.isMain) {
-      return;
-    }
-
+  const confirmDeleteList = useCallback((list: ShoppingList) => {
+    if (list.isMain) return;
     setPendingDeleteList(list);
-  };
+  }, []);
 
-  const handleConfirmDeleteList = async () => {
-    if (!pendingDeleteList) {
-      return;
-    }
+  const handleConfirmDeleteList = useCallback(async () => {
+    if (!pendingDeleteList) return;
 
     try {
       await deleteList(pendingDeleteList.id);
       setPendingDeleteList(null);
     } catch (error) {
-      logShoppingError('Failed to delete shopping list:', error);
+      console.error('Failed to delete shopping list:', error);
     }
-  };
+  }, [pendingDeleteList, deleteList]);
 
-  const handleCategoryClick = async (categoryName: string) => {
+  const handleCategoryClick = useCallback(async (categoryName: string) => {
     const requestId = categoryRequestIdRef.current + 1;
     categoryRequestIdRef.current = requestId;
 
@@ -815,25 +784,27 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         setIsCategoryItemsLoading(false);
       }
     }
-  };
+  }, [getGroceriesByCategory, t]);
 
-  const handleCloseCategoryModal = () => {
+  const handleCloseCategoryModal = useCallback(() => {
     setShowCategoryModal(false);
     setSelectedCategory('');
     setCategoryItems([]);
     setCategoryItemsError(null);
     setIsCategoryItemsLoading(false);
-  };
+  }, []);
 
-  const handleSelectItemFromCategory = (groceryItem: GroceryItem) => {
+  const handleSelectItemFromCategory = useCallback((groceryItem: GroceryItem) => {
     setShowCategoryModal(false);
     handleSelectGroceryItem(groceryItem);
-  };
+  }, [handleSelectGroceryItem]);
 
-  // Format shopping list for sharing
+  // Format shopping list for sharing.
+  // `t` already gets a new reference on language change (via useTranslation),
+  // so listing i18n.language explicitly as a dep is redundant.
   const shareText = useMemo(
-    () => formatShoppingListText(activeList.name, filteredItems),
-    [activeList.name, filteredItems]
+    () => formatShoppingListText(activeList.name, filteredItems, t),
+    [activeList.name, filteredItems, t],
   );
 
   return (
@@ -897,8 +868,10 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         listName={activeList.name}
         confirmColor={activeList.color}
         selectedGroceryItem={selectedGroceryItem}
-        selectedItemCategory={selectedItemCategory}
+        selectedItemCategory={effectiveItemCategory}
+        customItemName={customItemName}
         onSelectCategory={setSelectedItemCategory}
+        onChangeCustomItemName={setCustomItemName}
         availableCategories={availableCategories}
         quantityInput={quantityInput}
         onChangeQuantity={setQuantityInput}

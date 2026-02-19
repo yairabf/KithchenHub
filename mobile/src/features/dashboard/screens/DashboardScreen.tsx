@@ -46,6 +46,7 @@ import {
   normalizeShoppingCategory,
 } from "../../shopping/constants/categories";
 import { quickAddItem } from "../../shopping/utils/quickAddUtils";
+import { getAssigneeAvatarUri } from "../../../common/utils/avatarUtils";
 import { config } from "../../../config";
 import { styles } from "./styles";
 import type { DashboardScreenProps } from "./types";
@@ -65,11 +66,6 @@ function getSafeGroceryCategory(item: GroceryItem): string {
   return normalizeShoppingCategory(rawCategory);
 }
 
-function getAvatarUri(assignee?: string): string {
-  const seed = assignee ?? "default";
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
-}
-
 export function DashboardScreen({
   onOpenShoppingModal,
   onOpenChoresModal,
@@ -77,7 +73,6 @@ export function DashboardScreen({
 }: DashboardScreenProps) {
   const { t, i18n } = useTranslation(["dashboard", "recipes", "chores"]);
   const isRtl = i18n.dir() === 'rtl';
-  const isWebRtl = isRtl && Platform.OS === 'web';
   const { user } = useAuth();
   const { isTablet } = useResponsive();
   const isMobile = Platform.OS !== "web" && !isTablet;
@@ -315,11 +310,6 @@ export function DashboardScreen({
     }
   };
 
-  const logShoppingError = (message: string, error: unknown) => {
-    console.error(message, error);
-    showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
-  };
-
   const handleQuickAddGroceryItem = async (item: GroceryItem) => {
     try {
       const data = await shoppingService.getShoppingData();
@@ -339,7 +329,10 @@ export function DashboardScreen({
         createItem,
         updateItem,
         executeWithOptimisticUpdate,
-        logShoppingError,
+        logError: (message, error) => {
+          console.error(message, error);
+          showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
+        },
       });
 
       // Refresh data after quick add to sync with server
@@ -468,7 +461,7 @@ export function DashboardScreen({
                   <SafeImage uri={user.avatarUrl} style={styles.avatar} />
                 ) : (
                   <SafeImage
-                    uri={getAvatarUri(user?.name ?? "user")}
+                    uri={getAssigneeAvatarUri(user?.name)}
                     style={styles.avatar}
                   />
                 )}

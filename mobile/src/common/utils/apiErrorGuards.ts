@@ -47,79 +47,82 @@ export function isNetworkError(error: unknown): error is NetworkError {
 /**
  * Checks if an error is a 404 Not Found error.
  * Commonly used for idempotent delete operations.
- * 
+ *
+ * Returns a type predicate so TypeScript narrows `error` to `ApiError`
+ * inside the `if` block, giving access to fields like `statusCode` and `message`.
+ *
  * @param error - Unknown error object to check
- * @returns True if error is ApiError with status 404
- * 
+ * @returns Type predicate: true if error is ApiError with status 404
+ *
  * @example
  * ```typescript
  * try {
  *   await api.delete('/item/123');
  * } catch (error) {
  *   if (is404Error(error)) {
- *     // Treat as already deleted (idempotent success)
- *     return;
+ *     // error is narrowed to ApiError here
+ *     return; // treat as already deleted (idempotent success)
  *   }
  *   throw error;
  * }
  * ```
  */
-export function is404Error(error: unknown): boolean {
+export function is404Error(error: unknown): error is ApiError {
   return isApiError(error) && error.statusCode === 404;
 }
 
 /**
  * Checks if an error is a 401 Unauthorized error.
  * Useful for triggering re-authentication flows.
- * 
+ *
  * @param error - Unknown error object to check
- * @returns True if error is ApiError with status 401
+ * @returns Type predicate: true if error is ApiError with status 401
  */
-export function is401Error(error: unknown): boolean {
+export function is401Error(error: unknown): error is ApiError {
   return isApiError(error) && error.statusCode === 401;
 }
 
 /**
  * Checks if an error is a 403 Forbidden error.
  * Indicates insufficient permissions.
- * 
+ *
  * @param error - Unknown error object to check
- * @returns True if error is ApiError with status 403
+ * @returns Type predicate: true if error is ApiError with status 403
  */
-export function is403Error(error: unknown): boolean {
+export function is403Error(error: unknown): error is ApiError {
   return isApiError(error) && error.statusCode === 403;
 }
 
 /**
  * Checks if an error is a 409 Conflict error.
  * Common in concurrent update scenarios.
- * 
+ *
  * @param error - Unknown error object to check
- * @returns True if error is ApiError with status 409
+ * @returns Type predicate: true if error is ApiError with status 409
  */
-export function is409Error(error: unknown): boolean {
+export function is409Error(error: unknown): error is ApiError {
   return isApiError(error) && error.statusCode === 409;
 }
 
 /**
  * Checks if an error is a 5xx server error.
  * Indicates backend system failure.
- * 
+ *
  * @param error - Unknown error object to check
- * @returns True if error is ApiError with status 500-599
+ * @returns Type predicate: true if error is ApiError with status 500-599
  */
-export function isServerError(error: unknown): boolean {
+export function isServerError(error: unknown): error is ApiError {
   return isApiError(error) && error.statusCode >= 500 && error.statusCode < 600;
 }
 
 /**
  * Checks if an error is a 4xx client error.
  * Indicates invalid request from client.
- * 
+ *
  * @param error - Unknown error object to check
- * @returns True if error is ApiError with status 400-499
+ * @returns Type predicate: true if error is ApiError with status 400-499
  */
-export function isClientError(error: unknown): boolean {
+export function isClientError(error: unknown): error is ApiError {
   return isApiError(error) && error.statusCode >= 400 && error.statusCode < 500;
 }
 

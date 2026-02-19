@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +39,8 @@ function getDueDateSection(date: Date, isRecurring: boolean): 'today' | 'thisWee
 
 export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
   const { visible, mode, onClose } = props;
-  const { t } = useTranslation('chores');
+  const { t, i18n } = useTranslation('chores');
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const { members } = useHousehold();
 
   const [choreName, setChoreName] = useState('');
@@ -62,7 +63,7 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
       setSelectedAssignee(props.chore.assignee);
       setSelectedIcon(props.chore.icon || '📋');
       setSelectedDateTime(props.chore.originalDate ?? null);
-      setRecurrencePattern(props.chore.isRecurring ? 'daily' : null);
+      setRecurrencePattern(props.chore.recurrencePattern ?? null);
       return;
     }
 
@@ -176,11 +177,11 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
       submitColor={colors.chores}
       submitDisabled={submitDisabled}
     >
-      <View style={styles.addFormContainer}>
-        <View style={styles.addForm}>
+      <View style={[styles.addFormContainer, isRtlLayout && styles.modalSectionRtl]}>
+        <View style={[styles.addForm, isRtlLayout && styles.addFormRtl]}>
           <TextInput
             ref={inputRef}
-            style={styles.input}
+            style={[styles.input, isRtlLayout && styles.inputRtl, isRtlLayout && styles.modalTextRtl]}
             placeholder={t('modal.choreNamePlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={choreName}
@@ -190,7 +191,7 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
           />
           {choreName.length > 0 && (
             <TouchableOpacity
-              style={styles.clearButton}
+              style={[styles.clearButton, isRtlLayout && styles.clearButtonRtl]}
               onPress={() => setChoreName('')}
             >
               <Ionicons name="close-circle" size={20} color={colors.textMuted} />
@@ -199,9 +200,11 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
         </View>
       </View>
 
-      <View style={styles.iconSelectionSection}>
-        <Text style={styles.assigneeLabel}>{t('modal.iconLabel')}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.iconList}>
+      <View style={[styles.iconSelectionSection, isRtlLayout && styles.modalSectionRtl]}>
+        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+          <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.iconLabel')}</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.iconList, isRtlLayout && styles.pickerContentRtl]}>
           {CHORE_ICONS.map((icon) => (
             <TouchableOpacity
               key={icon}
@@ -214,23 +217,28 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
         </ScrollView>
       </View>
 
-      <View style={styles.recurrenceSection}>
-        <Text style={styles.assigneeLabel}>{t('modal.repeatLabel')}</Text>
-        <View style={styles.recurrenceOptions}>
+      <View style={[styles.recurrenceSection, isRtlLayout && styles.modalSectionRtl]}>
+        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+          <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.repeatLabel')}</Text>
+        </View>
+        <View style={[styles.recurrenceOptions, isRtlLayout && styles.recurrenceOptionsRtl]}>
           {recurrenceOptions.map(({ value, labelKey }) => (
             <TouchableOpacity
               key={labelKey}
-              style={[styles.recurrenceOption, recurrencePattern === value && styles.recurrenceOptionSelected]}
+              style={[styles.recurrenceOption, isRtlLayout && styles.recurrenceOptionRtl, recurrencePattern === value && styles.recurrenceOptionSelected]}
               onPress={() => setRecurrencePattern(value)}
             >
-              <Text
-                style={[
-                  styles.recurrenceOptionText,
-                  recurrencePattern === value && styles.recurrenceOptionTextSelected,
-                ]}
-              >
-                {t(labelKey)}
-              </Text>
+              <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+                <Text
+                  style={[
+                    styles.recurrenceOptionText,
+                    isRtlLayout && styles.modalTextRtl,
+                    recurrencePattern === value && styles.recurrenceOptionTextSelected,
+                  ]}
+                >
+                  {t(labelKey)}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -248,19 +256,21 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
         />
       </View>
 
-      <View style={styles.assigneeSection}>
-        <Text style={styles.assigneeLabel}>{t('modal.assignLabel')}</Text>
+      <View style={[styles.assigneeSection, isRtlLayout && styles.modalSectionRtl]}>
+        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+          <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.assignLabel')}</Text>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.assigneeScroll}
-          contentContainerStyle={styles.assigneeScrollContent}
+          contentContainerStyle={[styles.assigneeScrollContent, isRtlLayout && styles.pickerContentRtl]}
         >
           <TouchableOpacity
             style={[styles.assigneeChip, !selectedAssignee && styles.assigneeChipSelected]}
             onPress={() => setSelectedAssignee(undefined)}
           >
-            <Text style={[styles.assigneeChipText, !selectedAssignee && styles.assigneeChipTextSelected]}>
+            <Text style={[styles.assigneeChipText, isRtlLayout && styles.modalTextRtl, !selectedAssignee && styles.assigneeChipTextSelected]}>
               {t('modal.assigneeUnassigned')}
             </Text>
           </TouchableOpacity>
@@ -277,6 +287,7 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
               <Text
                 style={[
                   styles.assigneeChipText,
+                  isRtlLayout && styles.modalTextRtl,
                   selectedAssignee === member.name && styles.assigneeChipTextSelected,
                 ]}
               >
@@ -289,7 +300,7 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
             onPress={() => setShowManageHousehold(true)}
           >
             <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.assigneeChipText}>{t('modal.assigneeManage')}</Text>
+            <Text style={[styles.assigneeChipText, isRtlLayout && styles.modalTextRtl]}>{t('modal.assigneeManage')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

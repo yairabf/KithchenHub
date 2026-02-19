@@ -83,6 +83,20 @@ export default function App() {
             <HouseholdProvider>
               <LegalConsentGate>
                 <StatusBar style="auto" />
+                {/*
+                 * key={treeKey} forces a full unmount+remount of the navigator
+                 * when the RTL direction changes (e.g. switching Hebrew ↔ English).
+                 * This is the simplest way to apply I18nManager.forceRTL across the
+                 * entire layout tree synchronously.
+                 *
+                 * Trade-off: navigation state (current screen, stack history) is
+                 * reset on language change. This is acceptable UX because language
+                 * switching is a rare, deliberate action, and preserving a deep
+                 * navigation stack across an RTL flip would be confusing.
+                 *
+                 * If preservation becomes a requirement, pass an `initialState`
+                 * prop sourced from react-navigation's persistence API.
+                 */}
                 <RootNavigator key={`root-nav-${treeKey}`} />
               </LegalConsentGate>
             </HouseholdProvider>
