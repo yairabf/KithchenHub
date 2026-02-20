@@ -43,10 +43,26 @@ export function DateTimePicker({
   const locale = (i18n.resolvedLanguage || i18n.language || 'en').split('-')[0];
   const placeholderText = placeholder ?? t('dateTimePicker.placeholder');
 
+  const normalizedValue = useMemo(() => {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value;
+    }
+
+    const rawValue = value as unknown;
+    if (typeof rawValue === 'string' || typeof rawValue === 'number') {
+      const parsed = new Date(rawValue);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }, [value]);
+
   const formattedValue = useMemo(() => {
-    if (!value) return null;
-    return dayjs(value).locale(locale).format(displayFormat);
-  }, [value, locale, displayFormat]);
+    if (!normalizedValue) return null;
+    return dayjs(normalizedValue).locale(locale).format(displayFormat);
+  }, [normalizedValue, locale, displayFormat]);
 
   return (
     <>
@@ -63,7 +79,7 @@ export function DateTimePicker({
         visible={modalVisible}
         onClose={handleClose}
         onConfirm={handleConfirm}
-        value={value}
+        value={normalizedValue}
         minDate={minDate}
         maxDate={maxDate}
         accentColor={accentColor}

@@ -19,9 +19,9 @@ const LIST_ICON_CATEGORIES: ReadonlyArray<{
 const LIST_ICON_OPTIONS = LIST_ICON_CATEGORIES.flatMap((category) => category.icons);
 
 const LIST_COLOR_CATEGORIES = [
-  ['#10B981', '#14B8A6', '#06B6D4'],
-  ['#F59E0B', '#F97316', '#EF4444'],
-  ['#8B5CF6', '#EC4899'],
+  ['#1B3C53', '#234C6A', '#456882'],
+  ['#5A7890', '#6D8797', '#8CA1AF'],
+  ['#A8B7C2', '#C7D1D8'],
 ] as const;
 
 const LIST_COLOR_OPTIONS = LIST_COLOR_CATEGORIES.flatMap((category) => category);

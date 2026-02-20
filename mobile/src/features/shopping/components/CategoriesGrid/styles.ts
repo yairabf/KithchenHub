@@ -46,6 +46,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'flex-end',
     position: 'relative',
   },
