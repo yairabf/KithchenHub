@@ -99,8 +99,48 @@ interface Recipe {
   instructions: RecipeInstruction[];
 }
 
+const RECIPE_UNIT_LABELS: Record<string, string> = {
+  g: 'gram',
+  kg: 'kilogram',
+  oz: 'ounce',
+  lb: 'pound',
+  ml: 'milliliter',
+  l: 'liter',
+  tsp: 'teaspoon',
+  tbsp: 'tablespoon',
+  cup: 'cup',
+  piece: 'piece',
+  clove: 'clove',
+  slice: 'slice',
+  bunch: 'bunch',
+  can: 'can',
+  bottle: 'bottle',
+  packet: 'packet',
+  stick: 'stick',
+};
+
+function getLocalizedRecipeUnit(unit: string, localize: ShareLocalize): string {
+  const normalized = unit.trim().toLowerCase();
+  if (!normalized) return '';
+
+  const unitKey = `recipes:form.units.${normalized}`;
+  const localized = localize(unitKey, { defaultValue: unit });
+
+  if (!localized || localized === unitKey) {
+    return RECIPE_UNIT_LABELS[normalized] ?? unit;
+  }
+
+  return localized;
+}
+
 function getDefaultLocalizer(): ShareLocalize {
   return (key, options) => {
+    if (key.startsWith('recipes:form.units.')) {
+      const code = key.replace('recipes:form.units.', '');
+      const fallback = typeof options?.defaultValue === 'string' ? options.defaultValue : code;
+      return RECIPE_UNIT_LABELS[code] ?? fallback;
+    }
+
     switch (key) {
       case 'shopping:share.shoppingListHeader':
         return `Shopping List: ${options?.listName ?? ''}`;
@@ -251,7 +291,8 @@ export function formatRecipeText(recipe: Recipe, t?: ShareLocalize): string {
   } else {
     ingredients.forEach(ing => {
       const quantity = ing.quantityAmount ?? ing.quantity ?? '';
-      const unit = ing.quantityUnit ?? ing.unit ?? '';
+      const rawUnit = ing.quantityUnit ?? ing.unit ?? '';
+      const unit = getLocalizedRecipeUnit(String(rawUnit), localize);
       const name = ing.name || '';
       lines.push(`  • ${quantity} ${unit} ${name}`.trim());
     });
