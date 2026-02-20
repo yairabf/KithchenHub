@@ -29,6 +29,17 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
   },
+  brandIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: colors.surface,
+  },
+  brandIcon: {
+    width: "100%",
+    height: "100%",
+  },
   dateTimeContainer: {
     alignItems: "flex-end",
     marginEnd: spacing.sm,

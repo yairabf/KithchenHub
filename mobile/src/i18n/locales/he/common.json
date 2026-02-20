@@ -1,5 +1,5 @@
 {
-  "appName": "מרכז המטבח",
+  "appName": "FullHouse",
   "buttons": {
     "save": "שמור",
     "cancel": "ביטול",
@@ -37,7 +37,7 @@
       "copied": "הועתק ללוח!",
       "failed": "לא ניתן לשתף. נסה אפשרות אחרת."
     },
-    "footer": "שותף מתוך Kitchen Hub"
+    "footer": "שותף מתוך FullHouse"
   },
   "dateTimePicker": {
     "title": "בחירת תאריך ושעה",

@@ -3,6 +3,7 @@
   "language": "اللغة",
   "household": "المنزل",
   "account": "الحساب",
+  "admin": "المشرف",
   "defaultUserName": "مستخدم",
   "member": "عضو",
   "signOut": "تسجيل الخروج",
@@ -20,6 +21,30 @@
   "privacyPolicy": "سياسة الخصوصية",
   "termsOfService": "شروط الخدمة",
   "opensExternalLink": "(يفتح في رابط خارجي)",
+  "householdMembers": {
+    "mom": "الأم",
+    "dad": "الأب",
+    "kids": "الأطفال",
+    "all": "الكل"
+  },
+  "manageHouseholdModal": {
+    "title": "إدارة المنزل",
+    "addMemberPlaceholder": "أضف عضوا جديدا...",
+    "membersSectionTitle": "أعضاء المنزل",
+    "defaultBadge": "افتراضي",
+    "defaultMembersCannotBeRemoved": "لا يمكن إزالة الأعضاء الافتراضيين"
+  },
+  "inviteMemberModal": {
+    "title": "دعوة إلى المنزل",
+    "description": "شارك هذا الرمز مع أفراد عائلتك. يمكنهم إدخاله أثناء التسجيل للانضمام إلى منزلك.",
+    "copyCode": "نسخ الرمز",
+    "copiedToClipboard": "تم النسخ إلى الحافظة!",
+    "shareViaApps": "مشاركة عبر واتساب / SMS",
+    "generateNewCode": "إنشاء رمز جديد",
+    "generateInviteCode": "إنشاء رمز دعوة",
+    "shareTitle": "دعوة FullHouse",
+    "shareMessage": "انضم إلى منزلنا على FullHouse!\n\nاستخدم رمز الدعوة هذا للانضمام: {{code}}\n\nنزّل التطبيق وأدخل الرمز للانضمام إلى مطبخ عائلتنا."
+  },
   "importData": {
     "title": "استيراد البيانات",
     "titleSuccess": "اكتمل الاستيراد",

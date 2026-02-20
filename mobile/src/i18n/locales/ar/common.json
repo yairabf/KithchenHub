@@ -1,5 +1,5 @@
 {
-  "appName": "Kitchen Hub",
+  "appName": "FullHouse",
   "buttons": {
     "save": "Save",
     "cancel": "Cancel",
@@ -37,7 +37,7 @@
       "copied": "تم النسخ إلى الحافظة!",
       "failed": "تعذر المشاركة. يرجى المحاولة بخيار آخر."
     },
-    "footer": "تمت المشاركة من Kitchen Hub"
+    "footer": "تمت المشاركة من FullHouse"
   },
   "dateTimePicker": {
     "title": "اختيار التاريخ والوقت",

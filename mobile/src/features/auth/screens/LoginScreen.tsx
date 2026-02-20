@@ -9,6 +9,7 @@ import {
   Animated,
   Dimensions,
   TextInput,
+  Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -223,7 +224,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           {/* Logo & Branding */}
           <View style={styles.brandingContainer}>
             <View style={styles.logoContainer}>
-              <Text style={styles.logoEmoji}>🍳</Text>
+              <Image
+                source={require('../../../../assets/fullhouse_icon.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+                accessibilityLabel="FullHouse icon"
+              />
             </View>
             <Text style={styles.appName}>{t('login.appName')}</Text>
             <Text style={styles.tagline}>{t('login.tagline')}</Text>
@@ -381,7 +387,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F0', // Match theme Warm Cream
+    backgroundColor: colors.background,
   },
   orb: {
     position: 'absolute',
@@ -419,11 +425,12 @@ const styles = StyleSheet.create({
   brandingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: spacing.lg,
     marginBottom: spacing.xxl,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
+    width: 300,
+    height: 300,
     borderRadius: borderRadius.xl,
     backgroundColor: colors.surface,
     justifyContent: 'center',
@@ -431,8 +438,9 @@ const styles = StyleSheet.create({
     ...boxShadow(4, 12, 'rgba(0, 0, 0, 0.1)'),
     marginBottom: spacing.lg,
   },
-  logoEmoji: {
-    fontSize: 50,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   appName: {
     ...typography.h1,
@@ -476,7 +484,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(96, 108, 56, 0.3)',
+    borderColor: 'rgba(35, 76, 106, 0.3)',
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
   },
   emailLoginToggleIcon: {
@@ -495,7 +503,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: 'rgba(96, 108, 56, 0.2)',
+    borderColor: 'rgba(35, 76, 106, 0.2)',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -506,7 +514,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: 'rgba(96, 108, 56, 0.2)',
+    borderColor: 'rgba(35, 76, 106, 0.2)',
     borderRadius: borderRadius.md,
   },
   passwordInput: {
@@ -525,7 +533,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
     marginTop: spacing.xs,
-    ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
+    ...boxShadow(4, 8, 'rgba(35, 76, 106, 0.3)'),
   },
   emailLoginButtonText: {
     ...typography.button,
@@ -553,7 +561,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(96, 108, 56, 0.2)',
+    borderColor: 'rgba(35, 76, 106, 0.2)',
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   joinButtonIcon: {
@@ -573,7 +581,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderRadius: borderRadius.lg,
     backgroundColor: colors.secondary,
-    ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
+    ...boxShadow(4, 8, 'rgba(35, 76, 106, 0.3)'),
   },
   createAccountButtonIcon: {
     marginEnd: spacing.sm,

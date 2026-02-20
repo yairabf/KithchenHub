@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -147,6 +148,14 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
           {/* Glass Card */}
           <View style={styles.glassCard}>
             <View style={styles.titleContainer}>
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('../../../../assets/fullhouse_icon.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                  accessibilityLabel="FullHouse icon"
+                />
+              </View>
               <Text style={styles.title}>{t('register.title')}</Text>
               <Text style={styles.subtitle}>{t('register.subtitle')}</Text>
             </View>
@@ -287,7 +296,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F0',
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -318,8 +327,23 @@ const styles = StyleSheet.create({
     ...boxShadow(10, 20, 'rgba(0, 0, 0, 0.1)'),
   },
   titleContainer: {
+    marginTop: spacing.lg,
     marginBottom: spacing.xl,
     alignItems: 'center',
+  },
+  logoContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    ...boxShadow(4, 12, 'rgba(0, 0, 0, 0.1)'),
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   title: {
     ...typography.h1,
@@ -349,7 +373,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: 'rgba(96, 108, 56, 0.2)',
+    borderColor: 'rgba(35, 76, 106, 0.2)',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -360,7 +384,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: 'rgba(96, 108, 56, 0.2)',
+    borderColor: 'rgba(35, 76, 106, 0.2)',
     borderRadius: borderRadius.md,
   },
   passwordInput: {
@@ -379,7 +403,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
     marginTop: spacing.md,
-    ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
+    ...boxShadow(4, 8, 'rgba(35, 76, 106, 0.3)'),
   },
   registerButtonText: {
     ...typography.button,

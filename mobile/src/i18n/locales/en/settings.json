@@ -3,6 +3,7 @@
   "language": "Language",
   "household": "Household",
   "account": "Account",
+  "admin": "Admin",
   "defaultUserName": "User",
   "member": "Member",
   "signOut": "Sign Out",
@@ -20,6 +21,30 @@
   "privacyPolicy": "Privacy Policy",
   "termsOfService": "Terms of Service",
   "opensExternalLink": "(opens external link)",
+  "householdMembers": {
+    "mom": "Mom",
+    "dad": "Dad",
+    "kids": "Kids",
+    "all": "All"
+  },
+  "manageHouseholdModal": {
+    "title": "Manage Household",
+    "addMemberPlaceholder": "Add new member...",
+    "membersSectionTitle": "Household Members",
+    "defaultBadge": "Default",
+    "defaultMembersCannotBeRemoved": "Default members cannot be removed"
+  },
+  "inviteMemberModal": {
+    "title": "Invite to Household",
+    "description": "Share this code with your family members. They can enter it during sign-up to join your household.",
+    "copyCode": "Copy Code",
+    "copiedToClipboard": "Copied to clipboard!",
+    "shareViaApps": "Share via WhatsApp / SMS",
+    "generateNewCode": "Generate new code",
+    "generateInviteCode": "Generate Invite Code",
+    "shareTitle": "FullHouse Invitation",
+    "shareMessage": "Join our household on FullHouse!\n\nUse this invite code to join: {{code}}\n\nDownload the app and enter the code to join our family kitchen."
+  },
   "importData": {
     "title": "Import Data",
     "titleSuccess": "Import Complete",

@@ -1,66 +1,66 @@
 export const colors = {
-  // Primary colors - Vibrant Teal palette from Stitch
-  primary: '#14B8A6',        // Vibrant Teal - main brand color
-  primaryLight: '#E6FFFA',   // Very light teal accent
-  primaryDark: '#0D9488',    // Darker teal for pressed states
-  secondary: '#F59E0B',      // Amber - highlights/accents
+  // Primary colors - FullHouse blue palette
+  primary: '#234C6A',
+  primaryLight: '#456882',
+  primaryDark: '#1B3C53',
+  secondary: '#456882',
 
   // Background colors
-  background: '#F8FAFC',     // Light slate - main app background
-  surface: '#FFFFFF',        // White - cards, modals
+  background: '#E3E3E3',
+  surface: '#FFFFFF',
   surfaceGlass: 'rgba(255, 255, 255, 0.8)', // Glassmorphism surfaces
 
   // Section accent colors
-  shopping: '#14B8A6',       // Teal
-  recipes: '#3B82F6',        // Blue
-  chores: '#F59E0B',         // Amber
+  shopping: '#234C6A',
+  recipes: '#456882',
+  chores: '#1B3C53',
 
   // Text colors
-  textPrimary: '#1E293B',    // Dark slate - main text
-  textSecondary: '#64748B',  // Slate-500 - subtitles, hints
-  textMuted: '#94A3B8',      // Slate-400 - muted text
+  textPrimary: '#1B3C53',
+  textSecondary: '#456882',
+  textMuted: '#6D8597',
   textLight: '#FFFFFF',      // Text on dark backgrounds
 
   // State colors
   success: '#10B981',        // Emerald-500
-  warning: '#F59E0B',        // Amber-500
+  warning: '#456882',
   error: '#EF4444',          // Red-500
 
   // Border & divider
-  border: '#E2E8F0',         // Slate-200 border
-  borderDashed: '#CBD5E1',   // Slate-300 for dashed borders
-  divider: '#F1F5F9',        // Slate-100
+  border: '#C8D0D7',
+  borderDashed: '#AFBDC8',
+  divider: '#D5DBE0',
 
   // UI elements
-  backdrop: 'rgba(15, 23, 42, 0.4)', // Slate-900/40 for modals
-  widgetBackground: '#F1F5F9',       // Slate-100 for widgets
-  buttonInactive: '#CBD5E1',         // Slate-300
-  quantityBg: '#F8FAFC',             // Slate-50 - quantity controls
-  addButton: '#14B8A6',              // Teal - add button
+  backdrop: 'rgba(27, 60, 83, 0.4)',
+  widgetBackground: '#DCE1E5',
+  buttonInactive: '#AFBDC8',
+  quantityBg: '#E9ECEF',
+  addButton: '#234C6A',
 
   // Google button
   google: '#4285F4',
 
   // Avatar fallback
-  avatarBackground: '#F5F5F0',       // Warm cream
+  avatarBackground: '#E3E3E3',
 
   // Icon background colors (Stitch style)
   iconBg: {
-    teal: '#F0FDFA',
-    orange: '#FFF7ED',
-    blue: '#EFF6FF',
-    purple: '#FAF5FF',
-    amber: '#FFFBEB',
+    teal: '#D9E1E8',
+    orange: '#E3E3E3',
+    blue: '#D2DCE4',
+    purple: '#DCE3E8',
+    amber: '#E8EBEE',
   },
 
-  // Pastel palette for cards/decorative elements (Slate/Teal compatible)
+  // Soft palette for cards/decorative elements
   pastel: {
-    cyan: '#F1F5F9',       // Slate-100
-    green: '#DCFCE7',      // Green-100
-    peach: '#FFEDD5',      // Orange-100
-    coral: '#FEE2E2',      // Red-100
-    lavender: '#F3E8FF',   // Purple-100
-    yellow: '#FEF9C3',     // Yellow-100
+    cyan: '#D8E0E7',
+    green: '#D4DEE6',
+    peach: '#E3E3E3',
+    coral: '#D9DDE1',
+    lavender: '#D1D9E0',
+    yellow: '#DEE3E7',
   },
 
   // Transparent variants

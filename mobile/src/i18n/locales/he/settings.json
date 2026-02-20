@@ -3,6 +3,7 @@
   "language": "שפה",
   "household": "משק בית",
   "account": "חשבון",
+  "admin": "מנהל",
   "defaultUserName": "משתמש",
   "member": "חבר",
   "signOut": "התנתק",
@@ -20,6 +21,30 @@
   "privacyPolicy": "מדיניות פרטיות",
   "termsOfService": "תנאי שירות",
   "opensExternalLink": "(נפתח בקישור חיצוני)",
+  "householdMembers": {
+    "mom": "אמא",
+    "dad": "אבא",
+    "kids": "ילדים",
+    "all": "כולם"
+  },
+  "manageHouseholdModal": {
+    "title": "ניהול משק בית",
+    "addMemberPlaceholder": "הוסף חבר חדש...",
+    "membersSectionTitle": "חברי משק בית",
+    "defaultBadge": "ברירת מחדל",
+    "defaultMembersCannotBeRemoved": "לא ניתן להסיר חברי ברירת מחדל"
+  },
+  "inviteMemberModal": {
+    "title": "הזמנה למשק בית",
+    "description": "שתפו את הקוד הזה עם בני המשפחה. הם יכולים להזין אותו בזמן ההרשמה כדי להצטרף למשק הבית שלכם.",
+    "copyCode": "העתק קוד",
+    "copiedToClipboard": "הועתק ללוח!",
+    "shareViaApps": "שתף ב-WhatsApp / SMS",
+    "generateNewCode": "צור קוד חדש",
+    "generateInviteCode": "צור קוד הזמנה",
+    "shareTitle": "הזמנה ל-FullHouse",
+    "shareMessage": "הצטרפו למשק הבית שלנו ב-FullHouse!\n\nהשתמשו בקוד ההזמנה הזה כדי להצטרף: {{code}}\n\nהורידו את האפליקציה והזינו את הקוד כדי להצטרף למטבח המשפחתי שלנו."
+  },
   "importData": {
     "title": "ייבוא נתונים",
     "titleSuccess": "הייבוא הושלם",

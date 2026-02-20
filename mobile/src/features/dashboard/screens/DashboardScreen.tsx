@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
+  Image,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -427,6 +428,14 @@ export function DashboardScreen({
         titleIcon="grid-outline"
         rightSlot={(
           <View style={styles.headerRight}>
+            <View style={styles.brandIconContainer}>
+              <Image
+                source={require("../../../../assets/fullhouse_icon.png")}
+                style={styles.brandIcon}
+                resizeMode="contain"
+                accessibilityLabel="FullHouse icon"
+              />
+            </View>
             {isTablet && (
               <View style={styles.dateTimeContainer}>
                 <Text style={[styles.timeText, isRtl && styles.rtlNativeText]}>{formattedTime}</Text>

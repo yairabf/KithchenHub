@@ -177,7 +177,7 @@ function getDefaultLocalizer(): ShareLocalize {
       case 'recipes:share.emptyIngredients':
         return SHARE_STRINGS.EMPTY_RECIPE_INGREDIENTS;
       case 'common:share.footer':
-        return 'Shared from Kitchen Hub';
+        return 'Shared from FullHouse';
       default:
         return '';
     }

@@ -18,7 +18,7 @@ test.describe('Grocery Search Bar Dropdown', () => {
     // Wait for app to load - look for dashboard or login screen
     try {
       // Try to find dashboard elements (if logged in)
-      await page.waitForSelector('text=Dashboard, text=Kitchen Hub, [data-testid="dashboard"], input[placeholder*="grocery"], input[placeholder*="milk"]', { timeout: 10000 });
+      await page.waitForSelector('text=Dashboard, text=FullHouse, [data-testid="dashboard"], input[placeholder*="grocery"], input[placeholder*="milk"]', { timeout: 10000 });
     } catch {
       // If not found, might be on login screen - that's ok for now
       console.log('App loaded (may be on login screen)');

@@ -48,7 +48,7 @@ test.describe('Email Auth (Non-Google) Flow', () => {
     const name = 'Playwright Email User';
 
     await page.goto(APP_URL);
-    await expect(page.getByText('Kitchen Hub')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('FullHouse')).toBeVisible({ timeout: 15000 });
 
     const acceptContinueButton = page.getByRole('button', {
       name: 'Accept & Continue',
@@ -84,7 +84,7 @@ test.describe('Email Auth (Non-Google) Flow', () => {
       await registerDialog.accept();
     }
 
-    await expect(page.getByText('Kitchen Hub')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('FullHouse')).toBeVisible({ timeout: 10000 });
 
     const openEmailLoginFormIfNeeded = async () => {
       const emailField = page.getByLabel('Email', { exact: true });

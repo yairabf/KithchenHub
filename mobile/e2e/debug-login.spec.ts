@@ -31,7 +31,7 @@ test.describe('OAuth Login Debug', () => {
     await page.waitForLoadState('networkidle');
     
     // Wait for login screen to appear
-    await expect(page.locator('text=Kitchen Hub')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=FullHouse')).toBeVisible({ timeout: 10000 });
     console.log('✅ Login page loaded');
     
     // Pause for approval
@@ -129,7 +129,7 @@ test.describe('OAuth Login Debug', () => {
     console.log(`Final URL: ${finalUrl}`);
     
     // Check if we're still on login page or moved to main app
-    const isOnLoginPage = await page.locator('text=Kitchen Hub').isVisible().catch(() => false);
+    const isOnLoginPage = await page.locator('text=FullHouse').isVisible().catch(() => false);
     const isOnMainApp = await page.locator('text=Dashboard, text=Shopping, text=Recipes').first().isVisible().catch(() => false);
     
     console.log('Still on login page:', isOnLoginPage);

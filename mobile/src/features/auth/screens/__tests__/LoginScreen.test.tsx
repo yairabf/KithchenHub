@@ -56,7 +56,7 @@ describe('LoginScreen', () => {
 
   it('renders correctly in default mode', () => {
     const { getByText, getByTestId } = render(<LoginScreen navigation={navigation} />);
-    expect(getByText('Kitchen Hub')).toBeTruthy();
+    expect(getByText('FullHouse')).toBeTruthy();
     expect(getByText('Join household')).toBeTruthy();
     expect(getByTestId('google-sign-in-button')).toBeTruthy();
   });
