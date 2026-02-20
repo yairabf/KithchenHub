@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { CenteredModal } from '../../../common/components/CenteredModal';
 import { householdService } from '../../../services/householdService';
@@ -19,6 +20,7 @@ interface InviteMemberModalProps {
 }
 
 export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) {
+    const { t } = useTranslation('settings');
     const [inviteToken, setInviteToken] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -47,8 +49,8 @@ export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) 
         if (!inviteToken) return;
         try {
             await Share.share({
-                message: `Join our household on KitchenHub!\n\nUse this invite code to join: ${inviteToken}\n\nDownload the app and enter the code to join our family kitchen.`,
-                title: 'KitchenHub Invitation',
+                message: t('inviteMemberModal.shareMessage', { code: inviteToken }),
+                title: t('inviteMemberModal.shareTitle'),
             });
         } catch (error) {
             console.error('Error sharing:', error);
@@ -64,12 +66,12 @@ export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) 
         <CenteredModal
             visible={visible}
             onClose={handleClose}
-            title="Invite to Household"
+            title={t('inviteMemberModal.title')}
             showActions={false}
         >
             <View style={styles.container}>
                 <Text style={styles.description}>
-                    Share this code with your family members. They can enter it during sign-up to join your household.
+                    {t('inviteMemberModal.description')}
                 </Text>
 
                 {inviteToken ? (
@@ -87,17 +89,17 @@ export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) 
                                 color="#fff"
                             />
                             <Text style={styles.copyButtonText}>
-                                {copied ? "Copied to clipboard!" : "Copy Code"}
+                                {copied ? t('inviteMemberModal.copiedToClipboard') : t('inviteMemberModal.copyCode')}
                             </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
                             <Ionicons name="share-social-outline" size={24} color={colors.primary} />
-                            <Text style={styles.shareButtonText}>Share via WhatsApp / SMS</Text>
+                            <Text style={styles.shareButtonText}>{t('inviteMemberModal.shareViaApps')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.refreshButton} onPress={handleGenerateInvite} disabled={isGenerating}>
-                            <Text style={styles.refreshButtonText}>Generate new code</Text>
+                            <Text style={styles.refreshButtonText}>{t('inviteMemberModal.generateNewCode')}</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
@@ -111,7 +113,7 @@ export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) 
                         ) : (
                             <>
                                 <Ionicons name="person-add-outline" size={24} color="#fff" />
-                                <Text style={styles.generateButtonText}>Generate Invite Code</Text>
+                                <Text style={styles.generateButtonText}>{t('inviteMemberModal.generateInviteCode')}</Text>
                             </>
                         )}
                     </TouchableOpacity>

@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.lg,
         paddingVertical: spacing.md,
         alignItems: 'center',
-        ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
+        ...boxShadow(4, 8, 'rgba(35, 76, 106, 0.3)'),
     },
     buttonDisabled: {
         backgroundColor: colors.border,
