@@ -123,20 +123,19 @@ export class ChoresRepository {
   }
 
   /**
-   * Soft-deletes a chore by setting deletedAt timestamp.
+   * Hard-deletes a chore from the database.
    *
-   * @param id - Chore ID to soft-delete
+   * @param id - Chore ID to delete permanently
    */
   async deleteChore(id: string): Promise<void> {
-    this.logger.log('Soft-deleting chore', {
-      action: 'SOFT_DELETE_CHORE',
+    this.logger.log('Hard-deleting chore', {
+      action: 'HARD_DELETE_CHORE',
       entityType: 'CHORE',
       entityId: id,
       timestamp: new Date().toISOString(),
     });
-    await this.prisma.chore.update({
+    await this.prisma.chore.delete({
       where: { id },
-      data: { deletedAt: new Date() },
     });
   }
 

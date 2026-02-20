@@ -1,7 +1,7 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsUUID } from 'class-validator';
 
 export class UpdateChoreDto {
-  @IsString()
+  @IsUUID()
   @IsOptional()
   assigneeId?: string;
 
