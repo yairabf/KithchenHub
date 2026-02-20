@@ -37,6 +37,21 @@ function getDueDateSection(date: Date, isRecurring: boolean): 'today' | 'thisWee
   return 'thisWeek';
 }
 
+function coerceDate(value: unknown): Date | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
 export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
   const { visible, mode, onClose } = props;
   const { t, i18n } = useTranslation('chores');
@@ -62,7 +77,7 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
       setChoreName(props.chore.title);
       setSelectedAssignee(props.chore.assignee);
       setSelectedIcon(props.chore.icon || '📋');
-      setSelectedDateTime(props.chore.originalDate ?? null);
+      setSelectedDateTime(coerceDate(props.chore.originalDate));
       setRecurrencePattern(props.chore.recurrencePattern ?? null);
       return;
     }

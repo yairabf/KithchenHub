@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import {
   View,
   Text,
@@ -34,6 +36,8 @@ import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareChoreRepository } from '../../../common/repositories/cacheAwareChoreRepository';
 import { logger } from '../../../common/utils/logger';
 import { useTranslation } from 'react-i18next';
+
+dayjs.extend(customParseFormat);
 
 export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: ChoresScreenProps) {
   const { t, i18n } = useTranslation('chores');
@@ -74,6 +78,63 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   const chores = (isSignedIn ? cachedChores : guestChores)
     .filter(c => !c.deletedAt);
+
+  const choresWithEffectiveSection = useMemo(() => {
+    const now = new Date();
+    const nowDay = now.toDateString();
+
+    return chores.map((chore) => {
+      const originalDateValue = chore.originalDate;
+      const parsedOriginalDate =
+        originalDateValue instanceof Date
+          ? originalDateValue
+          : typeof originalDateValue === 'string'
+            ? new Date(originalDateValue)
+            : null;
+      const hasValidOriginalDate =
+        parsedOriginalDate instanceof Date && !Number.isNaN(parsedOriginalDate.getTime());
+
+      const parsedDueDateLabel = (() => {
+        const label = chore.dueDate?.trim();
+        if (!label) return null;
+
+        const knownFormats = [
+          'MMM D, YYYY',
+          'MMMM D, YYYY',
+          'D/M/YYYY',
+          'DD/MM/YYYY',
+          'M/D/YYYY',
+          'MM/DD/YYYY',
+          'YYYY-MM-DD',
+        ];
+
+        let parsed = dayjs(label, knownFormats, true);
+        if (!parsed.isValid()) {
+          parsed = dayjs(label);
+        }
+
+        return parsed.isValid() ? parsed.toDate() : null;
+      })();
+
+      const hasValidDueDateLabel =
+        parsedDueDateLabel instanceof Date && !Number.isNaN(parsedDueDateLabel.getTime());
+
+      const isDueToday = hasValidOriginalDate
+        ? parsedOriginalDate.toDateString() === nowDay
+        : hasValidDueDateLabel
+          ? parsedDueDateLabel.toDateString() === nowDay
+          : chore.dueDate.trim().toLowerCase() === 'today';
+
+      if (!isDueToday || chore.section === 'today') {
+        return chore;
+      }
+
+      return {
+        ...chore,
+        section: 'today' as const,
+      };
+    });
+  }, [chores]);
 
   // For signed-in users, trigger initial fetch ONLY on first login (when cache is missing)
   // Subsequent navigations will use cache (no API calls)
@@ -206,8 +267,8 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
     }
   }, [onRegisterAddChoreHandler]);
 
-  const todayChores = chores.filter(c => c.section === 'today');
-  const upcomingChores = chores.filter(c => c.section === 'thisWeek' || c.section === 'recurring');
+  const todayChores = choresWithEffectiveSection.filter(c => c.section === 'today');
+  const upcomingChores = choresWithEffectiveSection.filter(c => c.section === 'thisWeek' || c.section === 'recurring');
   const remainingToday = todayChores.filter(c => !c.isCompleted).length;
   const completedToday = todayChores.filter(c => c.isCompleted).length;
 

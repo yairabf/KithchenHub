@@ -77,9 +77,15 @@ const formatTimeLabel = (date: Date | null): string | undefined => {
 const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
   const dueDate = parseDate(dto.dueDate);
   const isRecurring = Boolean(dto.repeat);
-  // CRITICAL FIX: If the chore is in the 'today' bucket from the backend, keep it there.
-  // Only use 'recurring' section if it's NOT today.
-  const resolvedSection: Chore['section'] = section === 'today' ? 'today' : (isRecurring ? 'recurring' : section);
+  const now = new Date();
+  const isDueTodayLocal =
+    dueDate !== null && dueDate.toDateString() === now.toDateString();
+  // Keep backend today bucket, and also treat local same-day due dates as today.
+  // This avoids timezone bucket drift where a chore due "today" appears as upcoming.
+  const resolvedSection: Chore['section'] =
+    section === 'today' || isDueTodayLocal
+      ? 'today'
+      : (isRecurring ? 'recurring' : section);
 
   return {
     id: dto.id,
@@ -93,6 +99,7 @@ const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
     isCompleted: dto.isCompleted,
     section: resolvedSection,
     icon: DEFAULT_CHORE_ICON,
+    originalDate: dueDate,
   };
 };
 
@@ -332,14 +339,25 @@ export class CacheAwareChoreRepository implements ICacheAwareRepository<Chore> {
     if (isOnline) {
       try {
         const updated = await this.service.updateChore(id, updates);
+        const reconciled: Chore = {
+          ...optimisticEntity,
+          ...updated,
+          assignee: updated.assignee ?? optimisticEntity.assignee,
+          icon: updated.icon ?? optimisticEntity.icon,
+          dueDate: updated.dueDate ?? optimisticEntity.dueDate,
+          dueTime: updated.dueTime ?? optimisticEntity.dueTime,
+          originalDate: updated.originalDate ?? optimisticEntity.originalDate,
+          section: updated.section ?? optimisticEntity.section,
+          recurrencePattern: updated.recurrencePattern ?? optimisticEntity.recurrencePattern,
+        };
         await updateEntityInCache(
           this.entityType,
-          updated,
+          reconciled,
           (c) => this.getId(c),
           (c) => c.id === id || c.localId === id
         );
         cacheEvents.emitCacheChange(this.entityType);
-        return updated;
+        return reconciled;
       } catch (error) {
         if (error instanceof NetworkError) {
           await this.enqueueWrite('update', optimisticEntity);
