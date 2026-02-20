@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+
 export const RECIPE_CATEGORIES = [
   'Breakfast',
   'Lunch',
@@ -48,4 +50,8 @@ export function getRecipeCategoryIcon(category: string): string {
 
   const normalizedCategory = normalizeRecipeCategory(category);
   return RECIPE_CATEGORY_ICONS[normalizedCategory];
+}
+
+export function getRecipeCategoryLabel(category: string, t: TFunction): string {
+  return t(`categories:${category}`, { defaultValue: category });
 }

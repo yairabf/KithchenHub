@@ -2,6 +2,24 @@ import { StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius, zIndex } from '../../../../theme';
 
 export const styles = StyleSheet.create({
+  modalSectionRtl: {
+    direction: 'rtl',
+    alignSelf: 'stretch',
+  },
+  modalTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
+  },
+  pickerContentRtl: {
+    direction: 'rtl',
+  },
+  rtlTextRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    width: '100%',
+  },
   scrollContent: {
     maxHeight: 400,
   },
@@ -31,6 +49,10 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
   },
+  inputRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   inputError: {
     borderColor: colors.error,
     borderWidth: 2,
@@ -48,6 +70,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  photoRowRtl: {
+    flexDirection: 'row-reverse',
   },
   photoPreview: {
     width: 72,
@@ -135,6 +160,9 @@ export const styles = StyleSheet.create({
     gap: spacing.xs,
     marginBottom: spacing.sm,
   },
+  ingredientRowRtl: {
+    flexDirection: 'row-reverse',
+  },
   qtyInput: {
     width: 50,
     textAlign: 'center',
@@ -147,6 +175,9 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  unitTriggerRtl: {
+    flexDirection: 'row-reverse',
   },
   unitTriggerText: {
     fontSize: 14,
@@ -169,6 +200,9 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
     marginBottom: spacing.sm,
+  },
+  stepRowRtl: {
+    flexDirection: 'row-reverse',
   },
   stepNumber: {
     width: 24,
@@ -204,6 +238,9 @@ export const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     gap: spacing.xs,
     marginTop: spacing.xs,
+  },
+  addRowButtonRtl: {
+    flexDirection: 'row-reverse',
   },
   addRowButtonText: {
     fontSize: 14,

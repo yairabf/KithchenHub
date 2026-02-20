@@ -9,13 +9,22 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  containerRtl: {
+    direction: 'rtl',
+  },
   scrollView: {
     flex: 1,
+  },
+  scrollViewRtl: {
+    direction: 'rtl',
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
     paddingBottom: SCROLL_CONTENT_BOTTOM_PADDING,
+  },
+  scrollContentRtl: {
+    direction: 'rtl',
   },
   headerSection: {
     width: '100%',
@@ -138,5 +147,21 @@ export const styles = StyleSheet.create({
   stickyHeaderSpacer: {
     backgroundColor: 'transparent',
     width: '100%',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingContainerRtl: {
+    alignItems: 'flex-end',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: colors.textSecondary,
+  },
+  loadingTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
 });

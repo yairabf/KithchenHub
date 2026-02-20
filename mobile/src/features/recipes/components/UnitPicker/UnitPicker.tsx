@@ -8,14 +8,9 @@ import {
 } from '../../constants';
 import { styles } from './styles';
 import type { UnitPickerProps } from './UnitPicker.types';
+import { useTranslation } from 'react-i18next';
 
 const UNIT_TYPE_ORDER: UnitType[] = ['weight', 'volume', 'count'];
-const UNIT_TYPE_LABELS: Record<UnitType, string> = {
-  weight: 'Weight',
-  volume: 'Volume',
-  count: 'Count',
-};
-
 /**
  * Modal unit picker with filter by type (Weight / Volume / Count).
  * Tapping a unit selects it and closes the picker. "None" clears the unit.
@@ -27,7 +22,14 @@ export function UnitPicker({
   onSelectUnit,
   initialFilter = 'weight',
 }: UnitPickerProps) {
+  const { t } = useTranslation('recipes');
   const [filter, setFilter] = useState<UnitType>(initialFilter);
+
+  const unitTypeLabels: Record<UnitType, string> = {
+    weight: t('form.unitPicker.filters.weight'),
+    volume: t('form.unitPicker.filters.volume'),
+    count: t('form.unitPicker.filters.count'),
+  };
 
   useEffect(() => {
     if (visible) {
@@ -46,7 +48,7 @@ export function UnitPicker({
     <CenteredModal
       visible={visible}
       onClose={onClose}
-      title="Choose unit"
+      title={t('form.unitPicker.title')}
       showActions={false}
     >
       <View style={styles.filterRow}>
@@ -56,7 +58,9 @@ export function UnitPicker({
             style={[styles.filterChip, filter === type && styles.filterChipSelected]}
             onPress={() => setFilter(type)}
             accessibilityRole="button"
-            accessibilityLabel={`Filter by ${UNIT_TYPE_LABELS[type]}`}
+            accessibilityLabel={t('form.unitPicker.filterByTypeAccessibilityLabel', {
+              type: unitTypeLabels[type],
+            })}
             accessibilityState={{ selected: filter === type }}
           >
             <Text
@@ -65,7 +69,7 @@ export function UnitPicker({
                 filter === type && styles.filterChipTextSelected,
               ]}
             >
-              {UNIT_TYPE_LABELS[type]}
+              {unitTypeLabels[type]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -84,7 +88,7 @@ export function UnitPicker({
               onPress={() => handleSelect(code)}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel={getUnitLabel(code)}
+              accessibilityLabel={getUnitLabel(code, t)}
               accessibilityState={{ selected: isSelected }}
             >
               <Text
@@ -93,7 +97,7 @@ export function UnitPicker({
                   isSelected && styles.unitRowTextSelected,
                 ]}
               >
-                {getUnitLabel(code)}
+                {getUnitLabel(code, t)}
               </Text>
             </TouchableOpacity>
           );
@@ -103,7 +107,7 @@ export function UnitPicker({
           onPress={() => handleSelect('')}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="None"
+          accessibilityLabel={t('form.unitPicker.none')}
           accessibilityState={{ selected: !selectedUnit }}
         >
           <Text
@@ -112,7 +116,7 @@ export function UnitPicker({
               !selectedUnit && styles.unitRowTextSelected,
             ]}
           >
-            None
+            {t('form.unitPicker.none')}
           </Text>
         </TouchableOpacity>
       </ScrollView>

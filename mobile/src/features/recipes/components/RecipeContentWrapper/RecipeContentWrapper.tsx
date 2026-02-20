@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, useWindowDimensions, LayoutChangeEvent } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, useWindowDimensions, LayoutChangeEvent, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '../../../../common/hooks';
 import { colors } from '../../../../theme/colors';
@@ -8,6 +8,7 @@ import { RecipeSteps } from '../RecipeSteps';
 import { styles } from './styles';
 import type { RecipeContentWrapperProps } from './types';
 import { SCROLL_VIEW_CONFIG } from '../../screens/RecipeDetailScreen.constants';
+import { useTranslation } from 'react-i18next';
 
 /**
  * RecipeContentWrapper component displays recipe ingredients and steps
@@ -44,6 +45,8 @@ export function RecipeContentWrapper({
   onTabChange: controlledOnTabChange,
   onHeaderLayout,
 }: RecipeContentWrapperProps) {
+  const { t, i18n } = useTranslation('recipes');
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const { isTablet } = useResponsive();
   const { height: windowHeight } = useWindowDimensions();
   const [internalActiveTab, setInternalActiveTab] = useState<'ingredients' | 'steps'>('ingredients');
@@ -88,8 +91,16 @@ export function RecipeContentWrapper({
         <View style={styles.stickyHeaderContainer}>
           <View style={styles.tabletHeader}>
             <View style={styles.tabletHeaderRow}>
-              <Text style={[styles.tabletTitle, styles.tabletTitleLeft]}>Ingredients</Text>
-              <Text style={[styles.tabletTitle, styles.tabletTitleRight]}>Steps</Text>
+              <View style={styles.tabletTitleLeft}>
+                <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+                  <Text style={[styles.tabletTitle, isRtlLayout && styles.tabletTitleRtl]}>{t('detail.ingredients')}</Text>
+                </View>
+              </View>
+              <View style={styles.tabletTitleRight}>
+                <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+                  <Text style={[styles.tabletTitle, isRtlLayout && styles.tabletTitleRtl]}>{t('detail.steps')}</Text>
+                </View>
+              </View>
             </View>
           </View>
         </View>
@@ -105,21 +116,24 @@ export function RecipeContentWrapper({
               activeOpacity={0.7}
               accessibilityRole="tab"
               accessibilityState={{ selected: activeTab === 'ingredients' }}
-              accessibilityLabel="Ingredients tab"
+              accessibilityLabel={t('detail.ingredientsTabAccessibilityLabel')}
             >
               <Ionicons
                 name={activeTab === 'ingredients' ? 'list' : 'list-outline'}
                 size={20}
                 color={activeTab === 'ingredients' ? colors.recipes : colors.textMuted}
               />
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'ingredients' && styles.tabTextActive,
-                ]}
-              >
-                Ingredients
-              </Text>
+              <View style={isRtlLayout ? styles.tabTextWrapperRtl : undefined}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    isRtlLayout && styles.tabTextRtl,
+                    activeTab === 'ingredients' && styles.tabTextActive,
+                  ]}
+                >
+                  {t('detail.ingredients')}
+                </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -128,21 +142,24 @@ export function RecipeContentWrapper({
               activeOpacity={0.7}
               accessibilityRole="tab"
               accessibilityState={{ selected: activeTab === 'steps' }}
-              accessibilityLabel="Steps tab"
+              accessibilityLabel={t('detail.stepsTabAccessibilityLabel')}
             >
               <Ionicons
                 name={activeTab === 'steps' ? 'checkmark-circle' : 'checkmark-circle-outline'}
                 size={20}
                 color={activeTab === 'steps' ? colors.recipes : colors.textMuted}
               />
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'steps' && styles.tabTextActive,
-                ]}
-              >
-                Steps
-              </Text>
+              <View style={isRtlLayout ? styles.tabTextWrapperRtl : undefined}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    isRtlLayout && styles.tabTextRtl,
+                    activeTab === 'steps' && styles.tabTextActive,
+                  ]}
+                >
+                  {t('detail.steps')}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -162,8 +179,16 @@ export function RecipeContentWrapper({
               onLayout={handleHeaderLayoutMeasurement}
             >
               <View style={styles.tabletHeaderRow}>
-                <Text style={[styles.tabletTitle, styles.tabletTitleLeft]}>Ingredients</Text>
-                <Text style={[styles.tabletTitle, styles.tabletTitleRight]}>Steps</Text>
+                <View style={styles.tabletTitleLeft}>
+                  <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+                    <Text style={[styles.tabletTitle, isRtlLayout && styles.tabletTitleRtl]}>{t('detail.ingredients')}</Text>
+                  </View>
+                </View>
+                <View style={styles.tabletTitleRight}>
+                  <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+                    <Text style={[styles.tabletTitle, isRtlLayout && styles.tabletTitleRtl]}>{t('detail.steps')}</Text>
+                  </View>
+                </View>
               </View>
             </View>
           ) : (
@@ -178,21 +203,24 @@ export function RecipeContentWrapper({
                 activeOpacity={0.7}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: activeTab === 'ingredients' }}
-                accessibilityLabel="Ingredients tab"
+                accessibilityLabel={t('detail.ingredientsTabAccessibilityLabel')}
               >
                 <Ionicons
                   name={activeTab === 'ingredients' ? 'list' : 'list-outline'}
                   size={20}
                   color={activeTab === 'ingredients' ? colors.recipes : colors.textMuted}
                 />
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === 'ingredients' && styles.tabTextActive,
-                  ]}
-                >
-                  Ingredients
-                </Text>
+                <View style={isRtlLayout ? styles.tabTextWrapperRtl : undefined}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      isRtlLayout && styles.tabTextRtl,
+                      activeTab === 'ingredients' && styles.tabTextActive,
+                    ]}
+                  >
+                    {t('detail.ingredients')}
+                  </Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -201,21 +229,24 @@ export function RecipeContentWrapper({
                 activeOpacity={0.7}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: activeTab === 'steps' }}
-                accessibilityLabel="Steps tab"
+                accessibilityLabel={t('detail.stepsTabAccessibilityLabel')}
               >
                 <Ionicons
                   name={activeTab === 'steps' ? 'checkmark-circle' : 'checkmark-circle-outline'}
                   size={20}
                   color={activeTab === 'steps' ? colors.recipes : colors.textMuted}
                 />
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === 'steps' && styles.tabTextActive,
-                  ]}
-                >
-                  Steps
-                </Text>
+                <View style={isRtlLayout ? styles.tabTextWrapperRtl : undefined}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      isRtlLayout && styles.tabTextRtl,
+                      activeTab === 'steps' && styles.tabTextActive,
+                    ]}
+                  >
+                    {t('detail.steps')}
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
           )}
@@ -345,4 +376,3 @@ function MobileRecipeContent({
     </View>
   );
 }
-

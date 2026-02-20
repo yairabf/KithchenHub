@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+
 /**
  * Unit catalog for recipe ingredients. Codes align with backend UnitCode
  * so submitted unit values are valid. Used by UnitPicker and display.
@@ -31,30 +33,32 @@ export const UNITS_BY_TYPE: Record<UnitType, readonly UnitCode[]> = {
   count: ['piece', 'clove', 'slice', 'bunch', 'can', 'bottle', 'packet', 'stick'],
 };
 
-/** Optional display labels; fallback to code if missing. */
-export const UNIT_LABELS: Partial<Record<UnitCode, string>> = {
-  g: 'gram',
-  kg: 'kilogram',
-  oz: 'ounce',
-  lb: 'pound',
-  ml: 'milliliter',
-  l: 'liter',
-  tsp: 'teaspoon',
-  tbsp: 'tablespoon',
-  cup: 'cup',
-  piece: 'piece',
-  clove: 'clove',
-  slice: 'slice',
-  bunch: 'bunch',
-  can: 'can',
-  bottle: 'bottle',
-  packet: 'packet',
-  stick: 'stick',
+/** i18n keys for unit labels. */
+export const UNIT_LABEL_KEYS: Record<UnitCode, string> = {
+  g: 'form.units.g',
+  kg: 'form.units.kg',
+  oz: 'form.units.oz',
+  lb: 'form.units.lb',
+  ml: 'form.units.ml',
+  l: 'form.units.l',
+  tsp: 'form.units.tsp',
+  tbsp: 'form.units.tbsp',
+  cup: 'form.units.cup',
+  piece: 'form.units.piece',
+  clove: 'form.units.clove',
+  slice: 'form.units.slice',
+  bunch: 'form.units.bunch',
+  can: 'form.units.can',
+  bottle: 'form.units.bottle',
+  packet: 'form.units.packet',
+  stick: 'form.units.stick',
 };
 
 /**
- * Returns display label for a unit code, or the code itself if no label.
+ * Returns localized label for a unit code, or the code itself if no translation helper is provided.
  */
-export function getUnitLabel(code: string): string {
-  return UNIT_LABELS[code as UnitCode] ?? code;
+export function getUnitLabel(code: string, t?: TFunction<'recipes'>): string {
+  const key = UNIT_LABEL_KEYS[code as UnitCode];
+  if (!key) return code;
+  return t ? t(key) : code;
 }

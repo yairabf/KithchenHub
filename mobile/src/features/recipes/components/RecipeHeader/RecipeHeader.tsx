@@ -1,10 +1,13 @@
 import React from 'react';
-import { View, Text, ImageBackground } from 'react-native';
+import { View, Text, ImageBackground, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from './styles';
 import { colors } from '../../../../theme/colors';
 import type { RecipeHeaderProps } from './types';
 import { useRecipeImage } from '../../../../common/hooks/useRecipeImage';
+import { useTranslation } from 'react-i18next';
+import { getRecipeCategoryLabel, normalizeRecipeCategory } from '../../constants';
+import { TextBlock } from '../../../../common/components/TextBlock';
 
 /**
  * RecipeHeader component displays recipe metadata including category badges,
@@ -21,6 +24,8 @@ import { useRecipeImage } from '../../../../common/hooks/useRecipeImage';
  * ```
  */
 export function RecipeHeader({ recipe }: RecipeHeaderProps) {
+  const { t, i18n } = useTranslation('recipes');
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const { uri: cachedImageUri } = useRecipeImage({
     recipeId: recipe.id,
     variant: 'image',
@@ -28,6 +33,16 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
     remoteUrl: recipe.imageUrl ?? null,
   });
   const imageUri = cachedImageUri ?? undefined;
+  const categoryLabel = getRecipeCategoryLabel(normalizeRecipeCategory(recipe.category), t);
+  const recipeDescription = recipe.description?.trim() ?? '';
+  const prepTimeValue = (() => {
+    const raw = recipe.prepTime;
+    const num = raw != null ? Number(raw) : NaN;
+    return Number.isFinite(num) ? num : null;
+  })();
+  const prepTimeText = prepTimeValue !== null
+    ? `${t('detail.preparationTime')}: ${prepTimeValue} ${t('detail.minutesLabel')}`
+    : `${t('detail.preparationTime')}: —`;
 
   return (
     <View style={styles.container}>
@@ -42,10 +57,10 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
             {/* Dark overlay for text readability */}
             <View style={styles.imageOverlay}>
               {/* Category badges positioned at top */}
-              <View style={styles.badgesRow}>
+              <View style={[styles.badgesRow, isRtlLayout && styles.badgesRowRtl]}>
                 <View style={[styles.badge, styles.categoryBadge]}>
                   <Text style={[styles.badgeText, styles.categoryBadgeText]}>
-                    {recipe.category}
+                    {categoryLabel}
                   </Text>
                 </View>
                 {recipe.calories && recipe.calories > 300 && (
@@ -58,14 +73,17 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
               </View>
 
               {/* Title and Description at bottom (inside image) */}
-              <View style={styles.textOverlay}>
-                <Text style={styles.title}>{recipe.title}</Text>
-                {recipe.description?.trim() ? (
-                  <Text style={styles.description} numberOfLines={4}>
-                    {recipe.description}
-                  </Text>
-                ) : null}
-              </View>
+              <TextBlock
+                title={recipe.title}
+                subtitle={recipeDescription}
+                isRtl={isRtlLayout}
+                containerStyle={styles.textOverlay}
+                containerRtlStyle={styles.textOverlayRtl}
+                titleStyle={styles.title}
+                titleRtlStyle={styles.titleRtl}
+                subtitleStyle={styles.description}
+                subtitleRtlStyle={styles.descriptionRtl}
+              />
             </View>
           </ImageBackground>
         ) : (
@@ -75,10 +93,10 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
             </View>
             <View style={styles.placeholderOverlay}>
               {/* Category badges */}
-              <View style={styles.badgesRow}>
+              <View style={[styles.badgesRow, isRtlLayout && styles.badgesRowRtl]}>
                 <View style={[styles.badge, styles.categoryBadge]}>
                   <Text style={[styles.badgeText, styles.categoryBadgeText]}>
-                    {recipe.category}
+                    {categoryLabel}
                   </Text>
                 </View>
                 {recipe.calories && recipe.calories > 300 && (
@@ -90,40 +108,34 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
                 )}
               </View>
               {/* Title and Description (inside image area) */}
-              <View style={styles.textOverlay}>
-                <Text style={styles.titlePlaceholder}>{recipe.title}</Text>
-                {recipe.description?.trim() ? (
-                  <Text style={styles.descriptionPlaceholder} numberOfLines={4}>
-                    {recipe.description}
-                  </Text>
-                ) : null}
-              </View>
+              <TextBlock
+                title={recipe.title}
+                subtitle={recipeDescription}
+                isRtl={isRtlLayout}
+                containerStyle={styles.textOverlay}
+                containerRtlStyle={styles.textOverlayRtl}
+                titleStyle={styles.titlePlaceholder}
+                titleRtlStyle={styles.titleRtl}
+                subtitleStyle={styles.descriptionPlaceholder}
+                subtitleRtlStyle={styles.descriptionRtl}
+              />
             </View>
           </View>
         )}
       </View>
 
       {/* Quick stats below image */}
-      <View style={styles.statsGrid}>
+      <View style={[styles.statsGrid, isRtlLayout && styles.statsGridRtl]}>
         <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Time</Text>
-          <View style={styles.statValue}>
-            <Ionicons name="time-outline" size={18} color={colors.recipes} />
-            <Text style={styles.statText}>
-            {(() => {
-              const time = recipe.prepTime;
-              const num = time != null ? Number(time) : NaN;
-              return Number.isFinite(num) ? `${num} min` : '—';
-            })()}
-          </Text>
+          <View style={isRtlLayout ? styles.prepTimeRowRtl : undefined}>
+            <Text style={[styles.prepTimeText, isRtlLayout && styles.prepTimeTextRtl]}>{prepTimeText}</Text>
           </View>
         </View>
         {recipe.calories && (
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Energy</Text>
-            <View style={styles.statValue}>
+            <View style={[styles.statValue, isRtlLayout && styles.statValueRtl]}>
               <Ionicons name="flash" size={18} color="#EAB308" />
-              <Text style={styles.statText}>{recipe.calories}</Text>
+              <Text style={[styles.statText, isRtlLayout && styles.statTextRtl]}>{recipe.calories}</Text>
             </View>
           </View>
         )}

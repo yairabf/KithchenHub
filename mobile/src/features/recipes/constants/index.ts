@@ -1,6 +1,6 @@
 export {
   UNITS_BY_TYPE,
-  UNIT_LABELS,
+  UNIT_LABEL_KEYS,
   getUnitLabel,
   type UnitCode,
   type UnitType,
@@ -10,6 +10,7 @@ export {
   RECIPE_FILTER_CATEGORIES,
   normalizeRecipeCategory,
   getRecipeCategoryIcon,
+  getRecipeCategoryLabel,
   type RecipeCategory,
   type RecipeFilterCategory,
 } from './recipe-categories.constants';

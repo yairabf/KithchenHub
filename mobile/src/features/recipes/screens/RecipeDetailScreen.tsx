@@ -9,6 +9,7 @@ import {
   Animated,
   Text,
   ActivityIndicator,
+  I18nManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecipeHeader } from '../components/RecipeHeader';
@@ -47,6 +48,7 @@ export function RecipeDetailScreen({
   onAddToShoppingList,
 }: RecipeDetailScreenProps) {
   const { t, i18n } = useTranslation('recipes');
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const { isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -484,7 +486,7 @@ export function RecipeDetailScreen({
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isRtlLayout && styles.containerRtl]}>
       <View onLayout={handleScreenHeaderLayout}>
         <ScreenHeader
           title={t('screen.headerTitle')}
@@ -526,8 +528,8 @@ export function RecipeDetailScreen({
       )}
 
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        style={[styles.scrollView, isRtlLayout && styles.scrollViewRtl]}
+        contentContainerStyle={[styles.scrollContent, isRtlLayout && styles.scrollContentRtl]}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={SCROLL_CONFIG.EVENT_THROTTLE}
@@ -544,9 +546,9 @@ export function RecipeDetailScreen({
         <View style={[styles.stickyHeaderSpacer, { height: spacerHeight }]} />
 
         {isLoadingDetails ? (
-          <View style={{ padding: 20, alignItems: 'center' }}>
+          <View style={[styles.loadingContainer, isRtlLayout && styles.loadingContainerRtl]}>
             <ActivityIndicator size="large" color={colors.recipes} />
-            <Text style={{ marginTop: 10, color: colors.textSecondary }}>{t('screen.loadingDetails')}</Text>
+            <Text style={[styles.loadingText, isRtlLayout && styles.loadingTextRtl]}>{t('screen.loadingDetails')}</Text>
           </View>
         ) : (
           <RecipeContentWrapper
