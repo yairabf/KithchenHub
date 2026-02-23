@@ -24,6 +24,13 @@
     "success": "Success!",
     "error": "Error occurred"
   },
+  "navigation": {
+    "home": "الرئيسية",
+    "shop": "التسوق",
+    "chores": "المهام",
+    "recipes": "الوصفات",
+    "profile": "الملف الشخصي"
+  },
   "share": {
     "previewLabel": "معاينة",
     "optionAccessibility": "مشاركة عبر {{option}}",

@@ -24,6 +24,13 @@
     "success": "הפעולה הצליחה!",
     "error": "אירעה שגיאה"
   },
+  "navigation": {
+    "home": "בית",
+    "shop": "קניות",
+    "chores": "מטלות",
+    "recipes": "מתכונים",
+    "profile": "פרופיל"
+  },
   "share": {
     "previewLabel": "תצוגה מקדימה",
     "optionAccessibility": "שתף אל {{option}}",

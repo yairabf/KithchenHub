@@ -9,6 +9,8 @@ import {
   Switch,
   Image,
   I18nManager,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +26,8 @@ import { getNativeNameForCode } from '../../../i18n/constants';
 import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../../../common/constants/legal';
 import { openLegalUrl } from '../../../common/utils/legalLinks';
+import { accountService } from '../services/accountService';
+import { getDeleteAccountErrorMessage } from '../utils/errorMessages';
 
 /** Set to true when push notifications are implemented. */
 const SHOW_PUSH_NOTIFICATIONS_SETTING = false;
@@ -38,6 +42,7 @@ export function SettingsScreen() {
   const [showLanguageSelector, setShowLanguageSelector] = React.useState(false);
   const [showManageHousehold, setShowManageHousehold] = React.useState(false);
   const [showInviteModal, setShowInviteModal] = React.useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
   const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
 
   const isAdmin = user?.role?.toLowerCase() === 'admin';
@@ -49,6 +54,62 @@ export function SettingsScreen() {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleDeleteAccount = async () => {
+    if (isDeletingAccount) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      await accountService.deleteMyAccount();
+      await signOut();
+    } catch (error) {
+      Alert.alert(
+        t('deleteAccountErrorTitle'),
+        getDeleteAccountErrorMessage(error, t),
+        [
+          {
+            text: t('deleteAccountRetry'),
+            onPress: () => {
+              void handleDeleteAccount();
+            },
+          },
+          {
+            text: t('deleteAccountCancel'),
+            style: 'cancel',
+          },
+        ]
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  const handleDeleteAccountPress = () => {
+    if (isDeletingAccount) {
+      return;
+    }
+
+    Alert.alert(
+      t('deleteAccountConfirmTitle'),
+      t('deleteAccountConfirmMessage'),
+      [
+        {
+          text: t('deleteAccountCancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('deleteAccountConfirmButton'),
+          style: 'destructive',
+          onPress: () => {
+            void handleDeleteAccount();
+          },
+        },
+      ]
+    );
   };
 
   const textWrapper = (children: React.ReactNode) => {
@@ -206,9 +267,12 @@ export function SettingsScreen() {
           )}
           <TouchableOpacity
             style={styles.settingRow}
+            onPress={handleDeleteAccountPress}
+            disabled={isDeletingAccount}
             accessibilityLabel={t('deleteAccountAccessibilityLabel')}
             accessibilityRole="button"
             accessibilityHint={t('deleteAccountAccessibilityHint')}
+            accessibilityState={{ disabled: isDeletingAccount, busy: isDeletingAccount }}
           >
             <View style={styles.settingInfo}>
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
@@ -218,7 +282,11 @@ export function SettingsScreen() {
                 <Text style={[styles.settingLabel, { color: colors.error }, isRtlLayout ? styles.rtlText : undefined]}>{t('deleteAccount')}</Text>
               )}
             </View>
-            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
+            {isDeletingAccount ? (
+              <ActivityIndicator size="small" color={colors.error} />
+            ) : (
+              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
+            )}
           </TouchableOpacity>
         </View>
 
