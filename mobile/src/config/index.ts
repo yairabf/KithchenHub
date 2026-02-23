@@ -1,12 +1,9 @@
 import { Platform } from 'react-native';
 import { isMockDataEnabled } from '../common/utils/mockDataToggle';
 
-// Default base URL when EXPO_PUBLIC_API_URL is not set: 10.0.2.2 for Android Emulator, localhost for iOS
-const DEFAULT_API_BASE_URL = Platform.select({
-    android: 'http://10.0.2.2:3000',
-    ios: 'http://localhost:3000',
-    default: 'http://localhost:3000',
-});
+// Default base URL when EXPO_PUBLIC_API_URL is not set
+// Using localhost for both platforms because adb reverse forwards Android emulator port to host
+const DEFAULT_API_BASE_URL = 'http://localhost:3000';
 
 const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const API_BASE_URL = rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/, '') : DEFAULT_API_BASE_URL;
