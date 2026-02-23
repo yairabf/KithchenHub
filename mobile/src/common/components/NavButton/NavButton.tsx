@@ -16,7 +16,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 // Note: withOpacity removed to avoid worklet serialization issues
 const COLORS = {
   primary: colors.primary,
-  primaryLight: 'rgba(96, 108, 56, 0.1)', // colors.primary with 0.1 opacity (hardcoded)
+  primaryLight: 'rgba(35, 76, 106, 0.1)',
   textLight: colors.textLight,
   buttonInactive: colors.buttonInactive,
 } as const;

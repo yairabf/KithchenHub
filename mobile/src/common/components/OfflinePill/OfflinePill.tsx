@@ -10,6 +10,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, FadeIn, FadeOut } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { useNetwork } from '../../../contexts/NetworkContext';
 import { useSyncQueueStatus } from '../../hooks/useSyncStatus';
 import { colors } from '../../../theme';
@@ -29,6 +30,7 @@ export function OfflinePill({
   dismissible = false,
   showPendingCount = true,
 }: OfflinePillProps) {
+  const { t } = useTranslation('common');
   const { isOffline } = useNetwork();
   const { totalPending, isProcessing, failedCount } = useSyncQueueStatus();
   const [isDismissed, setIsDismissed] = useState(false);
@@ -90,7 +92,7 @@ export function OfflinePill({
     if (isOffline) {
       return {
         icon: 'wifi-outline',
-        text: 'Offline',
+        text: t('offline.label'),
         color: colors.error,
       };
     }
@@ -98,7 +100,7 @@ export function OfflinePill({
     if (isProcessing) {
       return {
         icon: null,
-        text: 'Syncing...',
+        text: t('offline.syncing'),
         color: colors.primary,
         showSpinner: true,
       };
@@ -107,7 +109,7 @@ export function OfflinePill({
     if (failedCount > 0) {
       return {
         icon: 'warning-outline' as const,
-        text: showPendingCount ? `${failedCount} failed` : 'Failed',
+        text: showPendingCount ? t('offline.failedCount', { count: failedCount }) : t('offline.failed'),
         color: colors.error,
       };
     }
@@ -115,7 +117,7 @@ export function OfflinePill({
     if (totalPending > 0) {
       return {
         icon: 'sync-outline' as const,
-        text: showPendingCount ? `${totalPending} pending` : 'Pending',
+        text: showPendingCount ? t('offline.pendingCount', { count: totalPending }) : t('offline.pending'),
         color: colors.warning,
       };
     }

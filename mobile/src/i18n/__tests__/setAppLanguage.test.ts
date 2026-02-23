@@ -90,7 +90,7 @@ describe('setAppLanguage', () => {
     });
 
     it('allows any normalized locale when supportedLngs is true', async () => {
-      i18n.options.supportedLngs = true;
+      i18n.options.supportedLngs = true as unknown as readonly string[];
       const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
 
       await setAppLanguage('fr');
@@ -99,48 +99,59 @@ describe('setAppLanguage', () => {
       expect(changeLanguageSpy).toHaveBeenCalledWith('fr');
       changeLanguageSpy.mockRestore();
     });
-  });
 
-  describe('RTL direction change', () => {
-    beforeEach(() => {
-      i18n.options.supportedLngs = ['en', 'he', 'ar', 'es'];
-    });
-
-    it('calls forceRTL(true) when switching from en to he', async () => {
-      const RN = getRN();
+    it('changes language even when persistence fails', async () => {
       const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
+      mockSetStoredLanguage.mockRejectedValueOnce(new Error('storage unavailable'));
 
-      await setAppLanguage('he');
+      await expect(setAppLanguage('en')).resolves.toBeUndefined();
 
-      expect(mockSetStoredLanguage).toHaveBeenCalledWith('he');
-      expect(changeLanguageSpy).toHaveBeenCalledWith('he');
-      expect(RN.I18nManager.forceRTL).toHaveBeenCalledWith(true);
-      changeLanguageSpy.mockRestore();
-    });
-
-    it('calls forceRTL(false) when switching from he to en', async () => {
-      const RN = getRN();
-      RN.I18nManager.__testSetIsRTL(true);
-      const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
-
-      await setAppLanguage('en');
-
-      expect(mockSetStoredLanguage).toHaveBeenCalledWith('en');
       expect(changeLanguageSpy).toHaveBeenCalledWith('en');
-      expect(RN.I18nManager.forceRTL).toHaveBeenCalledWith(false);
+      expect(mockSetStoredLanguage).toHaveBeenCalledWith('en');
       changeLanguageSpy.mockRestore();
     });
 
-    it('does not call forceRTL when switching between LTR languages (en to es)', async () => {
-      const RN = getRN();
-      const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
+    describe('RTL direction change', () => {
+      beforeEach(() => {
+        i18n.options.supportedLngs = ['en', 'he', 'ar', 'es'];
+      });
 
-      await setAppLanguage('es');
+      it('calls forceRTL(true) when switching from en to he', async () => {
+        const RN = getRN();
+        const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
 
-      expect(mockSetStoredLanguage).toHaveBeenCalledWith('es');
-      expect(changeLanguageSpy).toHaveBeenCalledWith('es');
-      expect(RN.I18nManager.forceRTL).not.toHaveBeenCalled();
-      changeLanguageSpy.mockRestore();
+        await setAppLanguage('he');
+
+        expect(mockSetStoredLanguage).toHaveBeenCalledWith('he');
+        expect(changeLanguageSpy).toHaveBeenCalledWith('he');
+        expect(RN.I18nManager.forceRTL).toHaveBeenCalledWith(true);
+        changeLanguageSpy.mockRestore();
+      });
+
+      it('calls forceRTL(false) when switching from he to en', async () => {
+        const RN = getRN();
+        RN.I18nManager.__testSetIsRTL(true);
+        const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
+
+        await setAppLanguage('en');
+
+        expect(mockSetStoredLanguage).toHaveBeenCalledWith('en');
+        expect(changeLanguageSpy).toHaveBeenCalledWith('en');
+        expect(RN.I18nManager.forceRTL).toHaveBeenCalledWith(false);
+        changeLanguageSpy.mockRestore();
+      });
+
+      it('does not call forceRTL when switching between LTR languages (en to es)', async () => {
+        const RN = getRN();
+        const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
+
+        await setAppLanguage('es');
+
+        expect(mockSetStoredLanguage).toHaveBeenCalledWith('es');
+        expect(changeLanguageSpy).toHaveBeenCalledWith('es');
+        expect(RN.I18nManager.forceRTL).not.toHaveBeenCalled();
+        changeLanguageSpy.mockRestore();
+      });
     });
   });
 });

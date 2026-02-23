@@ -12,12 +12,12 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { householdApi } from '../../households/services/householdApi';
 import { authApi } from '../../auth/services/authApi';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logger } from '../../../common/utils/logger';
-import { useTranslation } from 'react-i18next';
 
 type AuthStackParamList = {
   Login: undefined;

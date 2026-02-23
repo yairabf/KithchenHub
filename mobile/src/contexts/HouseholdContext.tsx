@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { i18n } from '../i18n';
 
 export interface HouseholdMember {
   id: string;
@@ -20,28 +21,54 @@ const HouseholdContext = createContext<HouseholdContextType | undefined>(undefin
 
 export const STORAGE_KEY = '@kitchen_hub_household_members';
 
-const DEFAULT_MEMBERS: HouseholdMember[] = [
-  { id: 'default-mom', name: 'Mom', isDefault: true, color: '#FFB5A7' },
-  { id: 'default-dad', name: 'Dad', isDefault: true, color: '#B8E6E1' },
-  { id: 'default-kids', name: 'Kids', isDefault: true, color: '#FFD4A3' },
-  { id: 'default-all', name: 'All', isDefault: true, color: '#D4C5F9' },
+const DEFAULT_MEMBER_TEMPLATES = [
+  { id: 'default-mom', nameKey: 'mom', fallback: 'Mom', color: '#FFB5A7' },
+  { id: 'default-dad', nameKey: 'dad', fallback: 'Dad', color: '#B8E6E1' },
+  { id: 'default-kids', nameKey: 'kids', fallback: 'Kids', color: '#FFD4A3' },
+  { id: 'default-all', nameKey: 'all', fallback: 'All', color: '#D4C5F9' },
 ];
 
+function getDefaultMembers(): HouseholdMember[] {
+  return DEFAULT_MEMBER_TEMPLATES.map(member => ({
+    id: member.id,
+    name: i18n.t(`settings:householdMembers.${member.nameKey}`, { defaultValue: member.fallback }),
+    isDefault: true,
+    color: member.color,
+  }));
+}
+
 export function HouseholdProvider({ children }: { children: ReactNode }) {
-  const [members, setMembers] = useState<HouseholdMember[]>(DEFAULT_MEMBERS);
+  const [members, setMembers] = useState<HouseholdMember[]>(() => getDefaultMembers());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadMembers();
   }, []);
 
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setMembers(prevMembers => {
+        const customMembers = prevMembers.filter(member => !member.isDefault);
+        return [...getDefaultMembers(), ...customMembers];
+      });
+    };
+
+    i18n.on('languageChanged', handleLanguageChange);
+    return () => {
+      i18n.off('languageChanged', handleLanguageChange);
+    };
+  }, []);
+
   const loadMembers = async () => {
     try {
+      const defaultMembers = getDefaultMembers();
       const storedMembers = await AsyncStorage.getItem(STORAGE_KEY);
       if (storedMembers) {
         const customMembers: HouseholdMember[] = JSON.parse(storedMembers);
         // Combine default members with custom members
-        setMembers([...DEFAULT_MEMBERS, ...customMembers]);
+        setMembers([...defaultMembers, ...customMembers]);
+      } else {
+        setMembers(defaultMembers);
       }
     } catch (error) {
       console.error('Error loading household members:', error);

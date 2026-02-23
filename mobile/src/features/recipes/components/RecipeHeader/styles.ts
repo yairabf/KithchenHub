@@ -65,6 +65,9 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
     flexWrap: 'wrap',
   },
+  badgesRowRtl: {
+    flexDirection: 'row-reverse',
+  },
   badge: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -91,23 +94,43 @@ export const styles = StyleSheet.create({
   textOverlay: {
     gap: spacing.sm,
   },
+  textOverlayRtl: {
+    alignItems: 'flex-end',
+  },
   title: {
     fontSize: 36,
     fontWeight: '800',
     lineHeight: 44,
     color: colors.textLight,
     letterSpacing: -1,
-    textShadow: '0px 2px 4px rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  titleRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
   description: {
     fontSize: 14,
     lineHeight: 22,
     color: colors.textLight,
-    textShadow: '0px 1px 3px rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  descriptionRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
   statsGrid: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  statsGridRtl: {
+    flexDirection: 'row-reverse',
   },
   statCard: {
     flex: 1,
@@ -125,14 +148,42 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: spacing.xxs,
   },
+  statLabelRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
+  },
   statValue: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
+  statValueRtl: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'flex-end',
+  },
   statText: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  statTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  prepTimeText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  prepTimeRowRtl: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    width: '100%',
+  },
+  prepTimeTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
 });

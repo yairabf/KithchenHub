@@ -1,5 +1,5 @@
 {
-  "appName": "מרכז המטבח",
+  "appName": "FullHouse",
   "buttons": {
     "save": "שמור",
     "cancel": "ביטול",
@@ -24,6 +24,13 @@
     "success": "הפעולה הצליחה!",
     "error": "אירעה שגיאה"
   },
+  "navigation": {
+    "home": "בית",
+    "shop": "קניות",
+    "chores": "מטלות",
+    "recipes": "מתכונים",
+    "profile": "פרופיל"
+  },
   "share": {
     "previewLabel": "תצוגה מקדימה",
     "optionAccessibility": "שתף אל {{option}}",
@@ -37,7 +44,7 @@
       "copied": "הועתק ללוח!",
       "failed": "לא ניתן לשתף. נסה אפשרות אחרת."
     },
-    "footer": "שותף מתוך Kitchen Hub"
+    "footer": "שותף מתוך FullHouse"
   },
   "dateTimePicker": {
     "title": "בחירת תאריך ושעה",

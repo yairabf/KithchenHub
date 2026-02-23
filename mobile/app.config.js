@@ -39,6 +39,11 @@ const updatesUrl =
     ? `https://u.expo.dev/${projectId.trim()}`
     : appJson.expo?.updates?.url;
 
+/** Disable OTA updates in development to avoid "failed to download remote update" on emulator when no update exists or network fails. */
+const isDevelopment = process.env.NODE_ENV === 'development';
+const updatesEnabled =
+  isDevelopment === true ? false : appJson.expo?.updates?.enabled !== false;
+
 module.exports = {
   ...appJson,
   expo: {
@@ -46,7 +51,7 @@ module.exports = {
     version,
     updates:
       appJson.expo?.updates != null
-        ? { ...appJson.expo.updates, url: updatesUrl }
-        : { url: updatesUrl },
+        ? { ...appJson.expo.updates, url: updatesUrl, enabled: updatesEnabled }
+        : { url: updatesUrl, enabled: updatesEnabled },
   },
 };

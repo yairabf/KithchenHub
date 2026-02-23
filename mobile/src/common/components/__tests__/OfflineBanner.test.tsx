@@ -23,15 +23,15 @@ describe('OfflineBanner', () => {
       const { getByText, queryByText } = render(<OfflineBanner />);
 
       if (shouldRender) {
-        expect(getByText("You're offline. Some features may be unavailable.")).toBeTruthy();
+        expect(getByText('offline.banner')).toBeTruthy();
       } else {
-        expect(queryByText("You're offline. Some features may be unavailable.")).toBeNull();
+        expect(queryByText('offline.banner')).toBeNull();
       }
 
       if (shouldShowConnection) {
-        expect(getByText('Connection: wifi')).toBeTruthy();
+        expect(getByText('offline.connectionType')).toBeTruthy();
       } else {
-        expect(queryByText('Connection: wifi')).toBeNull();
+        expect(queryByText('offline.connectionType')).toBeNull();
       }
     });
   });

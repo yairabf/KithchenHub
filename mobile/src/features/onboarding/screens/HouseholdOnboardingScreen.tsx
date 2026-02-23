@@ -13,6 +13,7 @@ import {
     SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius } from '../../../theme';
 import { typography } from '../../../theme/typography';
 import { boxShadow } from '../../../theme/shadows';
@@ -20,11 +21,10 @@ import { householdService } from '../../../services/householdService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { Toast } from '../../../common/components/Toast';
-import { useTranslation } from 'react-i18next';
 
 export function HouseholdOnboardingScreen() {
     const { t } = useTranslation('auth');
-    const { user, refreshUser } = useAuth(); // Assuming refreshUser exists, or we need to implement it
+    const { user, refreshUser } = useAuth();
     const [mode, setMode] = useState<'create' | 'join'>('create');
     const [name, setName] = useState('');
     const [inviteCode, setInviteCode] = useState('');
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.lg,
         paddingVertical: spacing.md,
         alignItems: 'center',
-        ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
+        ...boxShadow(4, 8, 'rgba(35, 76, 106, 0.3)'),
     },
     buttonDisabled: {
         backgroundColor: colors.border,

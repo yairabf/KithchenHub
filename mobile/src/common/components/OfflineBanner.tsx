@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useNetwork } from '../../contexts/NetworkContext';
 import { colors, spacing, borderRadius, zIndex } from '../../theme';
 
 export function OfflineBanner() {
   const { top } = useSafeAreaInsets();
   const { isOffline, connectionType } = useNetwork();
+  const { t } = useTranslation('common');
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
@@ -26,16 +28,16 @@ export function OfflineBanner() {
     <View style={[styles.container, { paddingTop: top + spacing.xs }]}>
       <View style={styles.content}>
         <View style={styles.textContainer}>
-          <Text style={styles.title}>You're offline. Some features may be unavailable.</Text>
+          <Text style={styles.title}>{t('offline.banner')}</Text>
           {connectionType && connectionType !== 'unknown' && connectionType !== 'none' ? (
-            <Text style={styles.subtitle}>Connection: {connectionType}</Text>
+            <Text style={styles.subtitle}>{t('offline.connectionType', { type: connectionType })}</Text>
           ) : null}
         </View>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={handleDismiss}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel="Dismiss offline banner"
+          accessibilityLabel={t('accessibility.dismissBanner')}
         >
           <Ionicons name="close" size={20} color={colors.textLight} />
         </TouchableOpacity>

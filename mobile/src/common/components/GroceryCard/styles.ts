@@ -8,9 +8,21 @@ export const styles = StyleSheet.create({
 
   // Content row layout
   contentRow: {
+    direction: 'ltr',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  mainContentRow: {
+    direction: 'ltr',
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  contentRowRtl: {
+    direction: 'rtl',
+    flexDirection: 'row',
   },
 
   // Item image
@@ -36,17 +48,34 @@ export const styles = StyleSheet.create({
     flex: 1,
     minWidth: 80,
   },
+  itemDetailsRtl: {
+    alignItems: 'flex-end',
+  },
 
   itemName: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.textPrimary,
   },
+  itemNameRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
+  },
 
   itemSubtitle: {
     fontSize: 11,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  itemSubtitleRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
+  },
+  subtitleNodeRtl: {
+    alignSelf: 'stretch',
+    alignItems: 'flex-end',
   },
 
   // Right element container

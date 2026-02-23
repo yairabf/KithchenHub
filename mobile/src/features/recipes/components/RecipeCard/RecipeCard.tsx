@@ -9,9 +9,10 @@ import { determineIndicatorStatus } from '../../../../common/utils/syncStatusUti
 import { styles } from './styles';
 import { RecipeCardProps } from './types';
 import { useRecipeImage } from '../../../../common/hooks/useRecipeImage';
+import { getRecipeCategoryLabel, normalizeRecipeCategory } from '../../constants';
 
 export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onEdit }: RecipeCardProps) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('recipes');
   const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
 
   // Check sync status for signed-in users
@@ -29,14 +30,19 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
 
   const formatMinutes = (value?: number | string): string => {
     if (typeof value === 'number') {
-      return Number.isFinite(value) ? `${value} MIN` : '—';
+      return Number.isFinite(value) ? `${value} ${t('detail.minuteAbbreviation')}` : '—';
     }
     if (typeof value === 'string') {
       const parsed = parseFloat(value);
-      return Number.isFinite(parsed) ? `${parsed} MIN` : '—';
+      return Number.isFinite(parsed) ? `${parsed} ${t('detail.minuteAbbreviation')}` : '—';
     }
     return '—';
   };
+
+  const categoryLabel = getRecipeCategoryLabel(
+    normalizeRecipeCategory(recipe.category),
+    t
+  );
 
   const prepTimeLabel = formatMinutes(recipe.prepTime);
   const TextWrapper = isRtlLayout
@@ -64,12 +70,12 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
         )}
 
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>{recipe.category || 'HEALTHY'}</Text>
+          <Text style={styles.categoryBadgeText}>{categoryLabel}</Text>
         </View>
 
         {prepTimeLabel !== '—' ? (
           <View style={styles.timeBadge}>
-            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+            <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
             <Text style={styles.timeBadgeText}>{prepTimeLabel}</Text>
           </View>
         ) : null}

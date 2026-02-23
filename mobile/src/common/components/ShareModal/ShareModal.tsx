@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CenteredModal } from '../CenteredModal';
 import { executeShare, SHARE_OPTIONS, type ShareTarget } from '../../utils/shareUtils';
 import { styles } from './styles';
-import { useTranslation } from 'react-i18next';
 import type { ShareModalProps } from './types';
 
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];

@@ -216,7 +216,7 @@ describe('ScreenHeader', () => {
         />
       );
       
-      expect(getByLabelText('Go back')).toBeTruthy();
+      expect(getByLabelText('accessibility.goBack')).toBeTruthy();
     });
 
     it('should render home icon when specified', () => {
@@ -228,7 +228,7 @@ describe('ScreenHeader', () => {
         />
       );
       
-      expect(getByLabelText('Go to home')).toBeTruthy();
+      expect(getByLabelText('accessibility.goToHome')).toBeTruthy();
     });
 
     it('should not render icon when leftIcon is none', () => {
@@ -240,8 +240,8 @@ describe('ScreenHeader', () => {
         />
       );
       
-      expect(queryByLabelText('Go back')).toBeNull();
-      expect(queryByLabelText('Go to home')).toBeNull();
+      expect(queryByLabelText('accessibility.goBack')).toBeNull();
+      expect(queryByLabelText('accessibility.goToHome')).toBeNull();
     });
 
     it('should not render icon when onLeftPress is not provided', () => {
@@ -249,7 +249,7 @@ describe('ScreenHeader', () => {
         <ScreenHeader title="Test" leftIcon="back" />
       );
       
-      expect(queryByLabelText('Go back')).toBeNull();
+      expect(queryByLabelText('accessibility.goBack')).toBeNull();
     });
   });
 
@@ -275,7 +275,7 @@ describe('ScreenHeader', () => {
       // All elements should be present
       expect(getByText('House Recipes')).toBeTruthy();
       expect(getByText('KITCHEN COLLECTIONS')).toBeTruthy();
-      expect(getByLabelText('Go back')).toBeTruthy();
+      expect(getByLabelText('accessibility.goBack')).toBeTruthy();
       expect(getByLabelText('Add recipe')).toBeTruthy();
       expect(getByTestId('recipe-stats')).toBeTruthy();
       expect(getByText('5 Recipes')).toBeTruthy();

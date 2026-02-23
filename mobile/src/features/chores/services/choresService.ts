@@ -1,4 +1,6 @@
 import { api } from '../../../services/api';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { mockChores, type Chore } from '../../../mocks/chores';
 import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
@@ -7,6 +9,8 @@ import { findEntityIndex, updateEntityInStorage } from '../../../common/utils/en
 import { guestStorage } from '../../../common/utils/guestStorage';
 import { createChore } from '../utils/choreFactory';
 import { addEntityToCache, updateEntityInCache } from '../../../common/repositories/cacheAwareRepository';
+
+dayjs.extend(customParseFormat);
 
 /**
  * Provides chore data sources (mock vs remote) for the chores feature.
@@ -23,6 +27,7 @@ export interface IChoresService {
 type ChoreDto = {
   id: string;
   title: string;
+  icon?: string | null;
   assigneeId?: string | null;
   assigneeName?: string | null;
   dueDate?: string | Date | null;
@@ -37,6 +42,13 @@ type ChoreListResponseDto = {
 };
 
 const DEFAULT_CHORE_ICON = '🧹';
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const toValidUuid = (value?: string | null): string | undefined => {
+  if (!value) return undefined;
+  const normalized = value.trim();
+  return UUID_REGEX.test(normalized) ? normalized : undefined;
+};
 
 const parseDate = (value?: string | Date | null): Date | null => {
   if (!value) return null;
@@ -52,7 +64,8 @@ const parseDueDateString = (dueDate?: string, dueTime?: string): string | undefi
   if (!dueDate) return undefined;
 
   try {
-    const dueDateLower = dueDate.toLowerCase();
+    const normalizedDueDate = dueDate.trim();
+    const dueDateLower = normalizedDueDate.toLowerCase();
     let baseDate = new Date();
 
     if (dueDateLower === 'today') {
@@ -63,9 +76,23 @@ const parseDueDateString = (dueDate?: string, dueTime?: string): string | undefi
       baseDate.setDate(baseDate.getDate() + 1);
       baseDate.setHours(0, 0, 0, 0);
     } else {
-      // Try to parse as a date string
-      const parsed = new Date(dueDate);
-      if (Number.isNaN(parsed.getTime())) {
+      // Parse known frontend formats first (Hermes-safe), then fallback to flexible parsing.
+      const knownFormats = [
+        'MMM D, YYYY',
+        'MMMM D, YYYY',
+        'M/D/YYYY',
+        'MM/DD/YYYY',
+        'D/M/YYYY',
+        'DD/MM/YYYY',
+        'YYYY-MM-DD',
+      ];
+
+      let parsed = dayjs(normalizedDueDate, knownFormats, 'en', true);
+      if (!parsed.isValid()) {
+        parsed = dayjs(normalizedDueDate);
+      }
+
+      if (!parsed.isValid()) {
         // If it's a weekday name, find the next occurrence
         const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const targetDay = weekdays.indexOf(dueDateLower);
@@ -79,7 +106,7 @@ const parseDueDateString = (dueDate?: string, dueTime?: string): string | undefi
           return undefined;
         }
       } else {
-        baseDate = parsed;
+        baseDate = parsed.toDate();
       }
     }
 
@@ -130,9 +157,15 @@ const formatTimeLabel = (date: Date | null): string | undefined => {
 const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
   const dueDate = parseDate(dto.dueDate);
   const isRecurring = Boolean(dto.repeat);
-  // CRITICAL FIX: If the chore is in the 'today' bucket from the backend, keep it there.
-  // Only use 'recurring' section if it's NOT today.
-  const resolvedSection: Chore['section'] = section === 'today' ? 'today' : (isRecurring ? 'recurring' : section);
+  const now = new Date();
+  const isDueTodayLocal =
+    dueDate !== null && dueDate.toDateString() === now.toDateString();
+  // Keep backend today bucket, and also treat local same-day due dates as today.
+  // This avoids timezone bucket drift where a chore due "today" appears as upcoming.
+  const resolvedSection: Chore['section'] =
+    section === 'today' || isDueTodayLocal
+      ? 'today'
+      : (isRecurring ? 'recurring' : section);
 
   return {
     id: dto.id,
@@ -145,9 +178,25 @@ const mapChoreDto = (dto: ChoreDto, section: Chore['section']): Chore => {
     isRecurring,
     isCompleted: dto.isCompleted,
     section: resolvedSection,
-    icon: DEFAULT_CHORE_ICON,
+    icon: dto.icon ?? DEFAULT_CHORE_ICON,
     originalDate: dueDate,
   };
+};
+
+const resolveSectionFromDto = (dto: ChoreDto): Chore['section'] => {
+  const dueDate = parseDate(dto.dueDate);
+  const isRecurring = Boolean(dto.repeat);
+
+  if (isRecurring) {
+    return 'recurring';
+  }
+
+  if (!dueDate) {
+    return 'thisWeek';
+  }
+
+  const today = new Date();
+  return dueDate.toDateString() === today.toDateString() ? 'today' : 'thisWeek';
 };
 
 export class LocalChoresService implements IChoresService {
@@ -245,7 +294,7 @@ export class RemoteChoresService implements IChoresService {
     const dto = {
       title: payload.title || chore.title,
       icon: chore.icon || DEFAULT_CHORE_ICON,
-      assigneeId: undefined, // Would need to map assignee name to ID
+      assigneeId: toValidUuid((chore as Chore & { assigneeId?: string }).assigneeId),
       dueDate: parseDueDateString(chore.dueDate || 'Today', chore.dueTime), // CRITICAL FIX: Parse due date
       repeat: undefined,
     };
@@ -266,18 +315,6 @@ export class RemoteChoresService implements IChoresService {
   }
 
   async updateChore(choreId: string, updates: Partial<Chore>): Promise<Chore> {
-    // Get existing chore first
-    const existing = await this.getChores().then(chores =>
-      chores.find(c => c.id === choreId)
-    );
-    if (!existing) {
-      throw new Error(`Chore not found: ${choreId}`);
-    }
-
-    // Apply timestamp for optimistic UI and offline queue
-    const updated = { ...existing, ...updates };
-    const withTimestamps = withUpdatedAt(updated);
-    const payload = toSupabaseTimestamps(withTimestamps);
     // Map to backend DTO format
     const dto: {
       title?: string;
@@ -290,25 +327,26 @@ export class RemoteChoresService implements IChoresService {
       dto.title = updates.title;
     }
     if ((updates as any).assigneeId !== undefined) {
-      dto.assigneeId = (updates as any).assigneeId;
+      const validAssigneeId = toValidUuid((updates as any).assigneeId);
+      if (validAssigneeId) {
+        dto.assigneeId = validAssigneeId;
+      }
     }
     if ((updates as any).icon !== undefined) {
       dto.icon = (updates as any).icon;
     }
     if (updates.dueDate !== undefined || updates.dueTime !== undefined) {
-      dto.dueDate = parseDueDateString(updates.dueDate ?? updated.dueDate, updates.dueTime ?? updated.dueTime);
+      dto.dueDate = parseDueDateString(updates.dueDate, updates.dueTime);
     }
 
     if (Object.keys(dto).length === 0) {
-      return existing;
+      throw new Error('No valid updates provided for chore update');
     }
 
-    await api.patch(`/chores/${choreId}`, dto);
-    // Server is authority: fetch the updated chore to get server timestamps
-    const updatedChore = await this.getChores().then(chores => chores.find(c => c.id === choreId));
-    if (!updatedChore) {
-      throw new Error(`Failed to retrieve updated chore with id: ${choreId}`);
-    }
+    const response = await api.patch<ChoreDto>(`/chores/${choreId}`, dto);
+    const updatedChore = normalizeTimestampsFromApi<Chore>(
+      mapChoreDto(response, resolveSectionFromDto(response))
+    );
 
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw

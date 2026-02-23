@@ -5,24 +5,20 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
 import { useHousehold } from '../../../../contexts/HouseholdContext';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { styles } from './styles';
 import { ManageHouseholdModalProps } from './types';
-import { useAuth } from '../../../../contexts/AuthContext';
 
 export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalProps) {
+  const { t } = useTranslation('settings');
   const { members, addMember, removeMember } = useHousehold();
-  const { user } = useAuth();
   const [newMemberName, setNewMemberName] = useState('');
   const inputRef = useRef<TextInput>(null);
-
-  const isAdmin = user?.role === 'Admin';
 
   const handleAddMember = async () => {
     if (!newMemberName.trim()) return;
@@ -38,7 +34,7 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
     <CenteredModal
       visible={visible}
       onClose={onClose}
-      title="Manage Household"
+      title={t('manageHouseholdModal.title')}
       showActions={false}
     >
       <View style={styles.contentContainer}>
@@ -47,7 +43,7 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder="Add new member..."
+            placeholder={t('manageHouseholdModal.addMemberPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={newMemberName}
             onChangeText={setNewMemberName}
@@ -64,14 +60,14 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
 
         {/* Members List */}
         <ScrollView style={styles.membersList} showsVerticalScrollIndicator={false}>
-          <Text style={styles.sectionTitle}>Household Members</Text>
+          <Text style={styles.sectionTitle}>{t('manageHouseholdModal.membersSectionTitle')}</Text>
           {members.map(member => (
             <View key={member.id} style={styles.memberRow}>
               <View style={[styles.memberColorDot, { backgroundColor: member.color || colors.textMuted }]} />
               <Text style={styles.memberName}>{member.name}</Text>
               {member.isDefault && (
                 <View style={styles.defaultBadge}>
-                  <Text style={styles.defaultBadgeText}>Default</Text>
+                  <Text style={styles.defaultBadgeText}>{t('manageHouseholdModal.defaultBadge')}</Text>
                 </View>
               )}
               <TouchableOpacity
@@ -91,7 +87,7 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Default members cannot be removed
+            {t('manageHouseholdModal.defaultMembersCannotBeRemoved')}
           </Text>
         </View>
 

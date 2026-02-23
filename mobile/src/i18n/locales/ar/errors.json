@@ -1,9 +1,9 @@
 {
   "network": {
-    "offline": "You're offline"
+    "offline": "أنت غير متصل"
   },
   "auth": {
-    "signInFailed": "Sign in failed"
+    "signInFailed": "فشل تسجيل الدخول"
   },
   "directionChangeTitle": "تم تحديث الاتجاه",
   "directionChangeMessage": "تم تحديث اتجاه النص."

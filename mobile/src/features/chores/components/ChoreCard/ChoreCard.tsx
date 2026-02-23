@@ -38,7 +38,6 @@ import type { ChoreCardProps } from './types';
  */
 export const ChoreCard = React.memo(function ChoreCard({
   chore,
-  bgColor,
   isRtl,
   onToggle,
   onEdit,
@@ -65,7 +64,7 @@ export const ChoreCard = React.memo(function ChoreCard({
       borderRadius={borderRadius.xxl}
     >
       <ListItemCardWrapper
-        backgroundColor={bgColor}
+        backgroundColor={colors.surface}
         onPress={() => onToggle(chore.id)}
         style={styles.cardContainer}
         testID={`chore-card-${chore.id}`}

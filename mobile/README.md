@@ -484,10 +484,10 @@ Centralized design tokens in `src/theme/`:
 ```typescript
 // src/theme/colors.ts
 export const colors = {
-  primary: '#FF6B35',      // Warm orange
-  shopping: '#4CAF50',     // Green
-  recipes: '#FF6B35',      // Orange
-  chores: '#9C27B0',       // Purple
+  primary: '#234C6A',      // Brand blue
+  shopping: '#234C6A',     // Shopping accent
+  recipes: '#456882',      // Recipes accent
+  chores: '#1B3C53',       // Chores accent
   // ... more colors
 };
 

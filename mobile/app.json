@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Kitchen Hub",
+    "name": "FullHouse",
     "slug": "kitchen-hub",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -17,13 +17,13 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FF6B35"
+      "backgroundColor": "#1B3C53"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kitchenhub.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Kitchen Hub uses your photo library to add images to recipes."
+        "NSPhotoLibraryUsageDescription": "FullHouse uses your photo library to add images to recipes."
       },
       "privacyManifests": {
         "NSPrivacyCollectedDataTypes": [
@@ -64,7 +64,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FF6B35"
+        "backgroundColor": "#1B3C53"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.kitchenhub.app"

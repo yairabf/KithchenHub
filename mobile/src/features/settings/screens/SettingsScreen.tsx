@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   Switch,
   Image,
+  I18nManager,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +26,8 @@ import { getNativeNameForCode } from '../../../i18n/constants';
 import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../../../common/constants/legal';
 import { openLegalUrl } from '../../../common/utils/legalLinks';
+import { accountService } from '../services/accountService';
+import { getDeleteAccountErrorMessage } from '../utils/errorMessages';
 
 /** Set to true when push notifications are implemented. */
 const SHOW_PUSH_NOTIFICATIONS_SETTING = false;
@@ -31,20 +36,85 @@ const SHOW_PUSH_NOTIFICATIONS_SETTING = false;
 const SHOW_EXPORT_DATA_SETTING = false;
 
 export function SettingsScreen() {
-  const { t } = useTranslation('settings');
+  const { t, i18n } = useTranslation('settings');
   const { user, signOut } = useAuth();
   const [pushNotifications, setPushNotifications] = React.useState(true);
   const [showLanguageSelector, setShowLanguageSelector] = React.useState(false);
   const [showManageHousehold, setShowManageHousehold] = React.useState(false);
   const [showInviteModal, setShowInviteModal] = React.useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
 
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   const currentLanguageCode = normalizeLocale(i18n.language ?? '');
   const currentLanguageDisplayName = getNativeNameForCode(currentLanguageCode);
+  const normalizedRole = user?.role?.toLowerCase();
+  const roleLabel = normalizedRole === 'admin' ? t('admin') : t('member');
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleDeleteAccount = async () => {
+    if (isDeletingAccount) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      await accountService.deleteMyAccount();
+      await signOut();
+    } catch (error) {
+      Alert.alert(
+        t('deleteAccountErrorTitle'),
+        getDeleteAccountErrorMessage(error, t),
+        [
+          {
+            text: t('deleteAccountRetry'),
+            onPress: () => {
+              void handleDeleteAccount();
+            },
+          },
+          {
+            text: t('deleteAccountCancel'),
+            style: 'cancel',
+          },
+        ]
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  const handleDeleteAccountPress = () => {
+    if (isDeletingAccount) {
+      return;
+    }
+
+    Alert.alert(
+      t('deleteAccountConfirmTitle'),
+      t('deleteAccountConfirmMessage'),
+      [
+        {
+          text: t('deleteAccountCancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('deleteAccountConfirmButton'),
+          style: 'destructive',
+          onPress: () => {
+            void handleDeleteAccount();
+          },
+        },
+      ]
+    );
+  };
+
+  const textWrapper = (children: React.ReactNode) => {
+    if (!isRtlLayout) return children;
+    return <View style={styles.rtlTextRow}>{children}</View>;
   };
 
   return (
@@ -54,7 +124,9 @@ export function SettingsScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* Language Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('language')}</Text>
+          {textWrapper(
+            <Text style={[styles.sectionTitle, isRtlLayout ? styles.rtlText : undefined]}>{t('language')}</Text>
+          )}
           <TouchableOpacity
             style={styles.settingRow}
             onPress={() => setShowLanguageSelector(true)}
@@ -63,16 +135,22 @@ export function SettingsScreen() {
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.yellow }]}>
                 <Ionicons name="language-outline" size={20} color={colors.secondary} />
               </View>
-              <Text style={styles.settingLabel}>{t('language')}</Text>
+              {textWrapper(
+                <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('language')}</Text>
+              )}
             </View>
-            <Text style={styles.settingValue}>{currentLanguageDisplayName}</Text>
+            {textWrapper(
+              <Text style={[styles.settingValue, isRtlLayout ? styles.rtlText : undefined]}>{currentLanguageDisplayName}</Text>
+            )}
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* Account Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('account')}</Text>
+          {textWrapper(
+            <Text style={[styles.sectionTitle, isRtlLayout ? styles.rtlText : undefined]}>{t('account')}</Text>
+          )}
           <View style={styles.profileCard}>
             <View style={styles.avatarContainer}>
               {user?.avatarUrl ? (
@@ -84,32 +162,44 @@ export function SettingsScreen() {
               )}
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name ?? t('defaultUserName')}</Text>
+              {textWrapper(
+                <Text style={[styles.profileName, isRtlLayout ? styles.rtlText : undefined]}>{user?.name ?? t('defaultUserName')}</Text>
+              )}
               {user?.id ? (
                 <View style={styles.roleBadge}>
-                  <Text style={styles.roleText}>{user?.role ?? t('member')}</Text>
+                  {textWrapper(
+                    <Text style={[styles.roleText, isRtlLayout ? styles.rtlText : undefined]}>{roleLabel}</Text>
+                  )}
                 </View>
               ) : null}
               {user?.email ? (
-                <Text style={styles.profileEmail}>{user.email}</Text>
+                textWrapper(
+                  <Text style={[styles.profileEmail, isRtlLayout ? styles.rtlText : undefined]}>{user.email}</Text>
+                )
               ) : null}
             </View>
           </View>
 
           <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
             <Ionicons name="log-out-outline" size={20} color={colors.error} />
-            <Text style={styles.signOutText}>{t('signOut')}</Text>
+            {textWrapper(
+              <Text style={[styles.signOutText, isRtlLayout ? styles.rtlText : undefined]}>{t('signOut')}</Text>
+            )}
           </TouchableOpacity>
         </View>
 
         {/* Notifications Section - hidden until push notifications are implemented */}
         {SHOW_PUSH_NOTIFICATIONS_SETTING && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('notifications')}</Text>
+            {textWrapper(
+              <Text style={[styles.sectionTitle, isRtlLayout ? styles.rtlText : undefined]}>{t('notifications')}</Text>
+            )}
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
-                <Text style={styles.settingLabel}>{t('pushNotifications')}</Text>
+                {textWrapper(
+                  <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('pushNotifications')}</Text>
+                )}
               </View>
               <Switch
                 value={pushNotifications}
@@ -123,7 +213,9 @@ export function SettingsScreen() {
 
         {/* Household Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('household')}</Text>
+          {textWrapper(
+            <Text style={[styles.sectionTitle, isRtlLayout ? styles.rtlText : undefined]}>{t('household')}</Text>
+          )}
           <TouchableOpacity
             style={styles.settingRow}
             onPress={() => setShowManageHousehold(true)}
@@ -132,7 +224,9 @@ export function SettingsScreen() {
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.cyan }]}>
                 <Ionicons name="people-outline" size={20} color={colors.primary} />
               </View>
-              <Text style={styles.settingLabel}>{t('manageHouseholdMembers')}</Text>
+              {textWrapper(
+                <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('manageHouseholdMembers')}</Text>
+              )}
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -146,7 +240,9 @@ export function SettingsScreen() {
                 <View style={[styles.iconContainer, { backgroundColor: colors.pastel.peach }]}>
                   <Ionicons name="person-add-outline" size={20} color={colors.secondary} />
                 </View>
-                <Text style={styles.settingLabel}>{t('inviteMemberToHousehold')}</Text>
+                {textWrapper(
+                  <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('inviteMemberToHousehold')}</Text>
+                )}
               </View>
               <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -155,35 +251,50 @@ export function SettingsScreen() {
 
         {/* Data Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('data')}</Text>
+          {textWrapper(
+            <Text style={[styles.sectionTitle, isRtlLayout ? styles.rtlText : undefined]}>{t('data')}</Text>
+          )}
           {SHOW_EXPORT_DATA_SETTING && (
             <TouchableOpacity style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <Ionicons name="download-outline" size={22} color={colors.textPrimary} />
-                <Text style={styles.settingLabel}>{t('exportMyData')}</Text>
+                {textWrapper(
+                  <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('exportMyData')}</Text>
+                )}
               </View>
               <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.settingRow}
+            onPress={handleDeleteAccountPress}
+            disabled={isDeletingAccount}
             accessibilityLabel={t('deleteAccountAccessibilityLabel')}
             accessibilityRole="button"
             accessibilityHint={t('deleteAccountAccessibilityHint')}
+            accessibilityState={{ disabled: isDeletingAccount, busy: isDeletingAccount }}
           >
             <View style={styles.settingInfo}>
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
                 <Ionicons name="trash-outline" size={20} color={colors.error} />
               </View>
-              <Text style={[styles.settingLabel, { color: colors.error }]}>{t('deleteAccount')}</Text>
+              {textWrapper(
+                <Text style={[styles.settingLabel, { color: colors.error }, isRtlLayout ? styles.rtlText : undefined]}>{t('deleteAccount')}</Text>
+              )}
             </View>
-            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
+            {isDeletingAccount ? (
+              <ActivityIndicator size="small" color={colors.error} />
+            ) : (
+              <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
+            )}
           </TouchableOpacity>
         </View>
 
         {/* About Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('about')}</Text>
+          {textWrapper(
+            <Text style={[styles.sectionTitle, isRtlLayout ? styles.rtlText : undefined]}>{t('about')}</Text>
+          )}
           <TouchableOpacity
             style={styles.settingRow}
             onPress={() => openLegalUrl(PRIVACY_POLICY_URL)}
@@ -194,7 +305,9 @@ export function SettingsScreen() {
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
                 <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
               </View>
-              <Text style={styles.settingLabel}>{t('privacyPolicy')}</Text>
+              {textWrapper(
+                <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('privacyPolicy')}</Text>
+              )}
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -208,16 +321,22 @@ export function SettingsScreen() {
               <View style={[styles.iconContainer, { backgroundColor: colors.pastel.lavender }]}>
                 <Ionicons name="document-text-outline" size={20} color={colors.primary} />
               </View>
-              <Text style={styles.settingLabel}>{t('termsOfService')}</Text>
+              {textWrapper(
+                <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('termsOfService')}</Text>
+              )}
             </View>
             <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
               <Ionicons name="information-circle-outline" size={22} color={colors.textPrimary} />
-              <Text style={styles.settingLabel}>{t('appVersion')}</Text>
+              {textWrapper(
+                <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('appVersion')}</Text>
+              )}
             </View>
-            <Text style={styles.versionText}>1.0.0</Text>
+            {textWrapper(
+              <Text style={[styles.versionText, isRtlLayout ? styles.rtlText : undefined]}>1.0.0</Text>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -299,7 +418,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   profileProvider: {
-    ...typography.tinyMuted,
+    ...typography.tiny,
+    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   signOutButton: {
@@ -357,7 +477,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   roleBadge: {
-    backgroundColor: 'rgba(96, 108, 56, 0.1)',
+    backgroundColor: 'rgba(35, 76, 106, 0.1)',
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
@@ -369,5 +489,15 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
     textTransform: 'uppercase',
+  },
+  rtlTextRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+  },
+  rtlText: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
 });

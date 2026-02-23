@@ -10,7 +10,7 @@ export const styles = StyleSheet.create({
   cardContainer: {
     borderRadius: borderRadius.xxxl,
     borderColor: colors.divider,
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
     paddingVertical: spacing.md,
   },
   choreCard: {

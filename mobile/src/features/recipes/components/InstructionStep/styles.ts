@@ -5,6 +5,7 @@ import { shadows } from '../../../../theme/shadows';
 
 export const styles = StyleSheet.create({
   card: {
+    direction: 'ltr',
     backgroundColor: colors.surface,
     padding: spacing.lg,
     borderRadius: borderRadius.xxl,
@@ -54,6 +55,10 @@ export const styles = StyleSheet.create({
     lineHeight: 24,
     color: colors.textPrimary,
   },
+  stepTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   stepTextCompleted: {
     textDecorationLine: 'line-through',
     color: colors.textMuted,
@@ -65,6 +70,11 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginTop: spacing.sm,
+  },
+  markAsFinishedRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
   checkContainer: {
     justifyContent: 'center',

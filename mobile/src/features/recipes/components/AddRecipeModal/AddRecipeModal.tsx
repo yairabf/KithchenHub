@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,9 +17,10 @@ import { stripToDigitsOnly, stripToNumeric } from '../../../../common/utils';
 import { useDebouncedRemoteSearch } from '../../../../common/hooks';
 import { GrocerySearchBar, GroceryItem } from '../../../shopping/components/GrocerySearchBar';
 import { UnitPicker } from '../UnitPicker';
-import { getUnitLabel, RECIPE_CATEGORIES } from '../../constants';
+import { getRecipeCategoryLabel, getUnitLabel, RECIPE_CATEGORIES } from '../../constants';
 import { styles } from './styles';
 import { AddRecipeModalProps, NewRecipeData, Ingredient } from './types';
+import { useTranslation } from 'react-i18next';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -42,6 +44,8 @@ export function AddRecipeModal({
   initialRecipe,
   searchGroceries,
 }: AddRecipeModalProps) {
+  const { t, i18n } = useTranslation('recipes');
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const [recipe, setRecipe] = useState<NewRecipeData>(createEmptyRecipe());
   const [searchQuery, setSearchQuery] = useState('');
   const { results: searchResults } = useDebouncedRemoteSearch<GroceryItem>({
@@ -92,10 +96,10 @@ export function AddRecipeModal({
   const validateTitle = (value: string): string | null => {
     const trimmed = value.trim();
     if (trimmed.length === 0) {
-      return 'Recipe title is required';
+      return t('form.validation.titleRequired');
     }
     if (trimmed.length < 2) {
-      return 'Title must be at least 2 characters';
+      return t('form.validation.titleMinLength');
     }
     return null;
   };
@@ -135,7 +139,7 @@ export function AddRecipeModal({
   const handleSelectImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'Permission to access photos is required.');
+      Alert.alert(t('form.permissionRequiredTitle'), t('form.permissionRequiredMessage'));
       return;
     }
 
@@ -228,8 +232,8 @@ export function AddRecipeModal({
     <EntityFormModal
       visible={visible}
       onClose={onClose}
-      title={mode === 'edit' ? 'Edit Recipe' : 'Add Recipe'}
-      submitText={mode === 'edit' ? 'Save' : 'Add'}
+      title={mode === 'edit' ? t('form.modalTitleEdit') : t('form.modalTitleCreate')}
+      submitText={mode === 'edit' ? t('form.submitEdit') : t('form.submitCreate')}
       onSubmit={handleSave}
       submitColor={colors.recipes}
       submitDisabled={!isValid || isSaving}
@@ -241,14 +245,18 @@ export function AddRecipeModal({
         keyboardShouldPersistTaps="handled"
       >
         {/* Recipe Title */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Recipe Title</Text>
+        <View style={[styles.section, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.label, isRtlLayout && styles.modalTextRtl]}>{t('form.recipeTitleLabel')}</Text>
+          </View>
           <TextInput
             style={[
               styles.input,
+              isRtlLayout && styles.inputRtl,
+              isRtlLayout && styles.modalTextRtl,
               titleError && titleTouched && styles.inputError
             ]}
-            placeholder="e.g. Thai Green Curry"
+            placeholder={t('form.recipeTitlePlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={recipe.title}
             onChangeText={(text) => {
@@ -262,17 +270,19 @@ export function AddRecipeModal({
             onBlur={handleTitleBlur}
           />
           {titleError && titleTouched && (
-            <Text style={styles.errorText}>{titleError}</Text>
+            <Text style={[styles.errorText, isRtlLayout && styles.modalTextRtl]}>{titleError}</Text>
           )}
         </View>
 
         {/* Category Selection */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Category</Text>
+        <View style={[styles.section, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.label, isRtlLayout && styles.modalTextRtl]}>{t('form.categoryLabel')}</Text>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryScrollContent}
+            contentContainerStyle={[styles.categoryScrollContent, isRtlLayout && styles.pickerContentRtl]}
           >
             {categories.map((cat) => (
               <TouchableOpacity
@@ -286,10 +296,11 @@ export function AddRecipeModal({
                 <Text
                   style={[
                     styles.categoryChipText,
+                    isRtlLayout && styles.modalTextRtl,
                     recipe.category === cat && styles.categoryChipTextSelected,
                   ]}
                 >
-                  {cat}
+                  {getRecipeCategoryLabel(cat, t)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -297,11 +308,13 @@ export function AddRecipeModal({
         </View>
 
         {/* Prep Time */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Prep Time</Text>
+        <View style={[styles.section, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.label, isRtlLayout && styles.modalTextRtl]}>{t('form.prepTime')}</Text>
+          </View>
           <TextInput
-            style={styles.input}
-            placeholder="30 mins"
+            style={[styles.input, isRtlLayout && styles.inputRtl, isRtlLayout && styles.modalTextRtl]}
+            placeholder={t('form.prepTimePlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={recipe.prepTime}
             onChangeText={(text) =>
@@ -312,11 +325,13 @@ export function AddRecipeModal({
         </View>
 
         {/* Description */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Description</Text>
+        <View style={[styles.section, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.label, isRtlLayout && styles.modalTextRtl]}>{t('form.descriptionLabel')}</Text>
+          </View>
           <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Tell us about your dish..."
+            style={[styles.input, styles.textArea, isRtlLayout && styles.inputRtl, isRtlLayout && styles.modalTextRtl]}
+            placeholder={t('form.descriptionPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={recipe.description}
             onChangeText={(text) => setRecipe({ ...recipe, description: text })}
@@ -326,9 +341,11 @@ export function AddRecipeModal({
         </View>
 
         {/* Photo */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Photo</Text>
-          <View style={styles.photoRow}>
+        <View style={[styles.section, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.label, isRtlLayout && styles.modalTextRtl]}>{t('form.photoLabel')}</Text>
+          </View>
+          <View style={[styles.photoRow, isRtlLayout && styles.photoRowRtl]}>
             <View style={styles.photoPreview}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.photoImage} />
@@ -345,14 +362,14 @@ export function AddRecipeModal({
                   size={16}
                   color={colors.textLight}
                 />
-                <Text style={styles.photoButtonText}>
-                  {imageUri ? 'Change Photo' : 'Add Photo'}
+                <Text style={[styles.photoButtonText, isRtlLayout && styles.modalTextRtl]}>
+                  {imageUri ? t('form.changePhoto') : t('form.addPhoto')}
                 </Text>
               </TouchableOpacity>
               {imageUri && (
                 <TouchableOpacity style={styles.photoButtonSecondary} onPress={handleRemoveImage}>
                   <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.photoButtonSecondaryText}>Remove</Text>
+                  <Text style={[styles.photoButtonSecondaryText, isRtlLayout && styles.modalTextRtl]}>{t('form.removePhoto')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -360,15 +377,17 @@ export function AddRecipeModal({
         </View>
 
         {/* Ingredients Section */}
-        <View style={[styles.section, styles.ingredientsSection]}>
-          <Text style={styles.sectionTitle}>Ingredients</Text>
+        <View style={[styles.section, styles.ingredientsSection, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.sectionTitle, isRtlLayout && styles.modalTextRtl]}>{t('detail.ingredients')}</Text>
+          </View>
 
           {/* Grocery Search Bar */}
           <GrocerySearchBar
             items={searchGroceries ? (searchQuery ? searchResults : []) : groceryItems}
             onSelectItem={handleAddIngredientFromSearch}
             onQuickAddItem={handleAddIngredientFromSearch}
-            placeholder="Search ingredients to add..."
+            placeholder={t('form.searchIngredientsPlaceholder')}
             variant="background"
             showShadow={false}
             value={searchQuery}
@@ -381,10 +400,10 @@ export function AddRecipeModal({
           {(recipe.ingredients || []).map((ing) => {
             const isNameLocked = committedIngredientIds.has(ing.id);
             return (
-              <View key={ing.id} style={styles.ingredientRow}>
+              <View key={ing.id} style={[styles.ingredientRow, isRtlLayout && styles.ingredientRowRtl]}>
                 <TextInput
-                  style={[styles.input, styles.qtyInput]}
-                  placeholder="Qty"
+                  style={[styles.input, styles.qtyInput, isRtlLayout && styles.inputRtl, isRtlLayout && styles.modalTextRtl]}
+                  placeholder={t('form.quantityPlaceholder')}
                   placeholderTextColor={colors.textMuted}
                   value={ing.quantityAmount}
                   onChangeText={(text) =>
@@ -397,16 +416,21 @@ export function AddRecipeModal({
                   keyboardType="decimal-pad"
                 />
                 <TouchableOpacity
-                  style={[styles.input, styles.unitTrigger]}
+                  style={[styles.input, styles.unitTrigger, isRtlLayout && styles.unitTriggerRtl]}
                   onPress={() => setUnitPickerIngredientId(ing.id)}
                   accessibilityRole="button"
-                  accessibilityLabel={ing.quantityUnit ? `Unit: ${getUnitLabel(ing.quantityUnit)}` : 'Select unit'}
+                  accessibilityLabel={ing.quantityUnit
+                    ? t('form.unitWithValueAccessibilityLabel', { unit: getUnitLabel(ing.quantityUnit, t) })
+                    : t('form.selectUnitAccessibilityLabel')}
                 >
                   <Text
-                    style={ing.quantityUnit ? styles.unitTriggerText : styles.unitTriggerPlaceholder}
+                    style={[
+                      ing.quantityUnit ? styles.unitTriggerText : styles.unitTriggerPlaceholder,
+                      isRtlLayout && styles.modalTextRtl,
+                    ]}
                     numberOfLines={1}
                   >
-                    {ing.quantityUnit ? getUnitLabel(ing.quantityUnit) : 'Unit'}
+                    {ing.quantityUnit ? getUnitLabel(ing.quantityUnit, t) : t('form.unitPlaceholder')}
                   </Text>
                   <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
                 </TouchableOpacity>
@@ -414,9 +438,11 @@ export function AddRecipeModal({
                   style={[
                     styles.input,
                     styles.nameInput,
+                    isRtlLayout && styles.inputRtl,
+                    isRtlLayout && styles.modalTextRtl,
                     isNameLocked && styles.nameInputReadOnly,
                   ]}
-                  placeholder="Ingredient"
+                  placeholder={t('form.ingredientPlaceholder')}
                   placeholderTextColor={colors.textMuted}
                   value={ing.name}
                   onChangeText={(text) =>
@@ -428,8 +454,8 @@ export function AddRecipeModal({
                   editable={!isNameLocked}
                   accessibilityLabel={
                     isNameLocked
-                      ? `Ingredient: ${ing.name} (name cannot be changed)`
-                      : 'Ingredient name'
+                      ? t('form.ingredientReadonlyAccessibilityLabel', { name: ing.name })
+                      : t('form.ingredientNameAccessibilityLabel')
                   }
                 />
                 <TouchableOpacity
@@ -448,16 +474,18 @@ export function AddRecipeModal({
         </View>
 
         {/* Steps Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Steps</Text>
+        <View style={[styles.section, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.sectionTitle, isRtlLayout && styles.modalTextRtl]}>{t('detail.steps')}</Text>
+          </View>
           {(recipe.instructions || []).map((step, idx) => (
-            <View key={step.id} style={styles.stepRow}>
+            <View key={step.id} style={[styles.stepRow, isRtlLayout && styles.stepRowRtl]}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>{idx + 1}</Text>
               </View>
               <TextInput
-                style={[styles.input, styles.stepInput]}
-                placeholder="Describe this step..."
+                style={[styles.input, styles.stepInput, isRtlLayout && styles.inputRtl, isRtlLayout && styles.modalTextRtl]}
+                placeholder={t('form.stepPlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 value={step.instruction}
                 onChangeText={(text) => handleUpdateStep(step.id, text)}
@@ -477,9 +505,9 @@ export function AddRecipeModal({
               )}
             </View>
           ))}
-          <TouchableOpacity style={styles.addRowButton} onPress={handleAddStep}>
+          <TouchableOpacity style={[styles.addRowButton, isRtlLayout && styles.addRowButtonRtl]} onPress={handleAddStep}>
             <Ionicons name="add" size={18} color={colors.textSecondary} />
-            <Text style={styles.addRowButtonText}>Add Step</Text>
+            <Text style={[styles.addRowButtonText, isRtlLayout && styles.modalTextRtl]}>{t('form.addStepButton')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -24,7 +24,6 @@ const generateId = () => Crypto.randomUUID();
 
 export const createRecipe = (data: NewRecipeData): Recipe => {
     const prepTime = parseNumber(data.prepTime);
-    const cookTime = parseNumber((data as { cookTime?: unknown }).cookTime);
     const ingredients = (data.ingredients || []).map((ing) => {
         const quantityAmount = parseNumber(ing.quantityAmount);
         const quantityUnitType = findQuantityUnitType(ing.quantityUnit);
@@ -44,7 +43,6 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
         id: String(Date.now()),
         localId: Crypto.randomUUID(),
         title: data.title.trim(),
-        cookTime,
         prepTime,
         category: data.category,
         description: data.description?.trim() || undefined,
@@ -83,7 +81,6 @@ export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
 
 export const mapFormDataToRecipeUpdates = (data: NewRecipeData): Partial<Recipe> => {
     const prepTime = parseNumber(data.prepTime);
-    const cookTime = parseNumber((data as { cookTime?: unknown }).cookTime);
     const ingredients = (data.ingredients || []).map((ing) => {
         const quantityAmount = parseNumber(ing.quantityAmount);
         const quantityUnitType = findQuantityUnitType(ing.quantityUnit);
@@ -104,7 +101,6 @@ export const mapFormDataToRecipeUpdates = (data: NewRecipeData): Partial<Recipe>
         title: data.title.trim(),
         category: data.category || undefined,
         prepTime,
-        cookTime,
         description: data.description?.trim() || undefined,
         ingredients,
         instructions,

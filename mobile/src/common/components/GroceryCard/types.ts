@@ -63,6 +63,9 @@ export interface GroceryCardContentProps {
    * Makes the card tappable for navigation or selection.
    */
   onPress?: () => void;
+
+  /** Force RTL/LTR layout for content alignment. Defaults to device RTL setting. */
+  isRtl?: boolean;
 }
 
 /**

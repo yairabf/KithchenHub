@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, I18nManager } from 'react-native';
 import { SafeImage } from '../SafeImage';
 import { styles } from './styles';
 import type { GroceryCardContentProps } from './types';
@@ -17,39 +17,44 @@ export function GroceryCardContent({
   rightElement,
   imagePosition = 'left',
   onPress,
+  isRtl,
 }: GroceryCardContentProps) {
-  const content = (
-    <>
-      {/* Left side: Image or custom icon */}
-      {imagePosition === 'left' && (
-        <>
-          {image ? (
-            <SafeImage
-              uri={image}
-              style={styles.itemImage}
-              fallbackIcon={customIcon}
-            />
-          ) : customIcon ? (
-            <View style={styles.iconContainer}>{customIcon}</View>
-          ) : null}
-        </>
+  const isRtlLayout = isRtl ?? I18nManager.isRTL;
+
+  const imageNode = imagePosition === 'left'
+    ? (image ? (
+      <SafeImage
+        uri={image}
+        style={styles.itemImage}
+        fallbackIcon={customIcon}
+      />
+    ) : customIcon ? (
+      <View style={styles.iconContainer}>{customIcon}</View>
+    ) : null)
+    : null;
+
+  const detailsNode = (
+    <View style={[styles.itemDetails, isRtlLayout && styles.itemDetailsRtl]}>
+      <Text style={[styles.itemName, isRtlLayout && styles.itemNameRtl, titleStyle]}>{title}</Text>
+      {subtitle && (
+        typeof subtitle === 'string' ? (
+          <Text style={[styles.itemSubtitle, isRtlLayout && styles.itemSubtitleRtl]}>{subtitle}</Text>
+        ) : (
+          <View style={isRtlLayout ? styles.subtitleNodeRtl : undefined}>{subtitle}</View>
+        )
       )}
+    </View>
+  );
 
-      {/* Middle content: Title and subtitle */}
-      <View style={styles.itemDetails}>
-        <Text style={[styles.itemName, titleStyle]}>{title}</Text>
-        {subtitle && (
-          typeof subtitle === 'string' ? (
-            <Text style={styles.itemSubtitle}>{subtitle}</Text>
-          ) : (
-            subtitle
-          )
-        )}
-      </View>
+  const rightNode = rightElement ? <View style={styles.rightElement}>{rightElement}</View> : null;
+  const mainContentNode = isRtlLayout
+    ? <View style={styles.mainContentRow}>{detailsNode}{imageNode}</View>
+    : <View style={styles.mainContentRow}>{imageNode}{detailsNode}</View>;
 
-      {/* Right action element */}
-      {rightElement && <View style={styles.rightElement}>{rightElement}</View>}
-    </>
+  const content = (
+    isRtlLayout
+      ? <>{rightNode}{mainContentNode}</>
+      : <>{mainContentNode}{rightNode}</>
   );
 
   if (onPress) {

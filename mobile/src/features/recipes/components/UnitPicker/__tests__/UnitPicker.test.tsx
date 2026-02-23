@@ -36,10 +36,10 @@ describe('UnitPicker', () => {
           onSelectUnit={onSelectUnit}
         />
       );
-      expect(getByText('Choose unit')).toBeTruthy();
-      expect(getByText('Weight')).toBeTruthy();
-      expect(getByText('Volume')).toBeTruthy();
-      expect(getByText('Count')).toBeTruthy();
+      expect(getByText('form.unitPicker.title')).toBeTruthy();
+      expect(getByText('form.unitPicker.filters.weight')).toBeTruthy();
+      expect(getByText('form.unitPicker.filters.volume')).toBeTruthy();
+      expect(getByText('form.unitPicker.filters.count')).toBeTruthy();
     });
 
     it('should not show modal content when not visible', () => {
@@ -51,7 +51,7 @@ describe('UnitPicker', () => {
           onSelectUnit={onSelectUnit}
         />
       );
-      expect(queryByText('Choose unit')).toBeNull();
+      expect(queryByText('form.unitPicker.title')).toBeNull();
     });
   });
 
@@ -66,10 +66,10 @@ describe('UnitPicker', () => {
           initialFilter="weight"
         />
       );
-      expect(getByText('gram')).toBeTruthy();
-      expect(getByText('kilogram')).toBeTruthy();
-      expect(getByText('ounce')).toBeTruthy();
-      expect(getByText('pound')).toBeTruthy();
+      expect(getByText('form.units.g')).toBeTruthy();
+      expect(getByText('form.units.kg')).toBeTruthy();
+      expect(getByText('form.units.oz')).toBeTruthy();
+      expect(getByText('form.units.lb')).toBeTruthy();
     });
 
     it('should show volume units when Volume filter is selected', () => {
@@ -82,11 +82,11 @@ describe('UnitPicker', () => {
           initialFilter="volume"
         />
       );
-      expect(getByText('milliliter')).toBeTruthy();
-      expect(getByText('liter')).toBeTruthy();
-      expect(getByText('teaspoon')).toBeTruthy();
-      expect(getByText('tablespoon')).toBeTruthy();
-      expect(getByText('cup')).toBeTruthy();
+      expect(getByText('form.units.ml')).toBeTruthy();
+      expect(getByText('form.units.l')).toBeTruthy();
+      expect(getByText('form.units.tsp')).toBeTruthy();
+      expect(getByText('form.units.tbsp')).toBeTruthy();
+      expect(getByText('form.units.cup')).toBeTruthy();
     });
 
     it('should show count units when Count filter is selected', () => {
@@ -99,14 +99,14 @@ describe('UnitPicker', () => {
           initialFilter="count"
         />
       );
-      expect(getByText('piece')).toBeTruthy();
-      expect(getByText('clove')).toBeTruthy();
-      expect(getByText('slice')).toBeTruthy();
-      expect(getByText('bunch')).toBeTruthy();
-      expect(getByText('can')).toBeTruthy();
-      expect(getByText('bottle')).toBeTruthy();
-      expect(getByText('packet')).toBeTruthy();
-      expect(getByText('stick')).toBeTruthy();
+      expect(getByText('form.units.piece')).toBeTruthy();
+      expect(getByText('form.units.clove')).toBeTruthy();
+      expect(getByText('form.units.slice')).toBeTruthy();
+      expect(getByText('form.units.bunch')).toBeTruthy();
+      expect(getByText('form.units.can')).toBeTruthy();
+      expect(getByText('form.units.bottle')).toBeTruthy();
+      expect(getByText('form.units.packet')).toBeTruthy();
+      expect(getByText('form.units.stick')).toBeTruthy();
     });
 
     it('should switch list when filter chip is pressed', () => {
@@ -119,13 +119,13 @@ describe('UnitPicker', () => {
           initialFilter="weight"
         />
       );
-      expect(getByText('gram')).toBeTruthy();
-      fireEvent.press(getByText('Volume'));
-      expect(getByText('milliliter')).toBeTruthy();
-      expect(getByText('teaspoon')).toBeTruthy();
-      fireEvent.press(getByText('Count'));
-      expect(getByText('piece')).toBeTruthy();
-      expect(getByText('can')).toBeTruthy();
+      expect(getByText('form.units.g')).toBeTruthy();
+      fireEvent.press(getByText('form.unitPicker.filters.volume'));
+      expect(getByText('form.units.ml')).toBeTruthy();
+      expect(getByText('form.units.tsp')).toBeTruthy();
+      fireEvent.press(getByText('form.unitPicker.filters.count'));
+      expect(getByText('form.units.piece')).toBeTruthy();
+      expect(getByText('form.units.can')).toBeTruthy();
     });
   });
 
@@ -140,7 +140,7 @@ describe('UnitPicker', () => {
           initialFilter="volume"
         />
       );
-      fireEvent.press(getByText('tablespoon'));
+      fireEvent.press(getByText('form.units.tbsp'));
       expect(onSelectUnit).toHaveBeenCalledWith('tbsp');
       expect(onSelectUnit).toHaveBeenCalledTimes(1);
       expect(onClose).toHaveBeenCalledTimes(1);
@@ -156,7 +156,7 @@ describe('UnitPicker', () => {
           initialFilter="volume"
         />
       );
-      fireEvent.press(getByText('None'));
+      fireEvent.press(getByText('form.unitPicker.none'));
       expect(onSelectUnit).toHaveBeenCalledWith('');
       expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -172,7 +172,7 @@ describe('UnitPicker', () => {
           onSelectUnit={onSelectUnit}
         />
       );
-      expect(getByText('None')).toBeTruthy();
+      expect(getByText('form.unitPicker.none')).toBeTruthy();
     });
   });
 });

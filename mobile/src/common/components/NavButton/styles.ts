@@ -20,7 +20,7 @@ export const styles = StyleSheet.create({
     minWidth: 56,
   },
   buttonActive: {
-    ...boxShadow(4, 8, 'rgba(96, 108, 56, 0.3)'),
+    ...boxShadow(4, 8, 'rgba(35, 76, 106, 0.3)'),
   },
   icon: {
     marginBottom: 2,

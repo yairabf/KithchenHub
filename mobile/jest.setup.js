@@ -3,6 +3,30 @@
  * Mocks native and Expo modules so tests run in Node without a native runtime.
  */
 
+// react-i18next - mock useTranslation to return key paths as values for test assertions
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key, options) => {
+      if (options && typeof options === 'object') {
+        let result = key;
+        Object.entries(options).forEach(([k, v]) => {
+          if (k !== 'ns') {
+            result = result.replace(`{{${k}}}`, String(v));
+          }
+        });
+        return result;
+      }
+      return key;
+    },
+    i18n: {
+      language: 'en',
+      changeLanguage: jest.fn(() => Promise.resolve()),
+    },
+  }),
+  initReactI18next: { type: '3rdParty', init: jest.fn() },
+  Trans: ({ children }) => children,
+}));
+
 // AsyncStorage - required by cache layers and sync queue before any repo loads
 jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(() => Promise.resolve()),

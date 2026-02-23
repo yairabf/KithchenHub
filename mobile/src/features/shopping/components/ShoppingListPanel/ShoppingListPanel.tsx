@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   Pressable,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
@@ -33,6 +34,8 @@ function ShoppingItemCard({
   onQuantityChange,
   onToggleItemChecked,
 }: ShoppingItemCardProps) {
+  const { i18n } = useTranslation('shopping');
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const isChecked = item.isChecked;
   const fallbackCategoryImage = getCategoryImageSource(item.category);
 
@@ -67,6 +70,7 @@ function ShoppingItemCard({
               minQuantity={1}
             />
           }
+          isRtl={isRtlLayout}
         />
       </ListItemCardWrapper>
     </SwipeableWrapper>

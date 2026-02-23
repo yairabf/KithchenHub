@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { createStyles } from './styles';
 import type { SyncStatusIndicatorProps } from './types';
 
@@ -30,6 +31,7 @@ export function SyncStatusIndicator({
   size = 'small',
   showLabel = false,
 }: SyncStatusIndicatorProps) {
+  const { t } = useTranslation('common');
   const styles = createStyles(size);
   const iconSize = sizeConfig[size].icon;
 
@@ -43,7 +45,7 @@ export function SyncStatusIndicator({
         <View style={styles.iconContainer}>
           <Ionicons name="checkmark" size={iconSize} color={styles.confirmedIcon.color} />
         </View>
-        {showLabel && <Text style={[styles.label, styles.confirmedIcon]}>Synced</Text>}
+        {showLabel && <Text style={[styles.label, styles.confirmedIcon]}>{t('offline.synced')}</Text>}
       </View>
     );
   }
@@ -55,7 +57,7 @@ export function SyncStatusIndicator({
         <View style={styles.iconContainer}>
           <Ionicons name="time-outline" size={iconSize} color={styles.pendingIcon.color} />
         </View>
-        {showLabel && <Text style={[styles.label, styles.pendingLabel]}>Pending</Text>}
+        {showLabel && <Text style={[styles.label, styles.pendingLabel]}>{t('offline.pending')}</Text>}
       </View>
     );
   }
@@ -67,7 +69,7 @@ export function SyncStatusIndicator({
         <View style={styles.iconContainer}>
           <Ionicons name="warning-outline" size={iconSize} color={styles.failedIcon.color} />
         </View>
-        {showLabel && <Text style={[styles.label, styles.failedLabel]}>Failed</Text>}
+        {showLabel && <Text style={[styles.label, styles.failedLabel]}>{t('offline.failed')}</Text>}
       </View>
     );
   }

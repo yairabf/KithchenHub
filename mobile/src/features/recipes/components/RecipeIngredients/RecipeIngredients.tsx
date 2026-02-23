@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from './styles';
 import { colors, pastelColors } from '../../../../theme/colors';
 import { ListItemCardWrapper } from '../../../../common/components/ListItemCardWrapper';
 import { GroceryCardContent, IngredientInfo } from '../../../../common/components/GroceryCard';
 import type { RecipeIngredientsProps } from './types';
+import { useTranslation } from 'react-i18next';
+import { getUnitLabel } from '../../constants';
 
 /**
  * RecipeIngredients component displays the ingredients list for a recipe.
@@ -30,6 +32,9 @@ export function RecipeIngredients({
   onAddIngredient,
   onAddAllIngredients,
 }: RecipeIngredientsProps) {
+  const { t, i18n } = useTranslation('recipes');
+  const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
+
   return (
     <View style={styles.container}>
       {/* Ingredients Section */}
@@ -42,10 +47,10 @@ export function RecipeIngredients({
                 onPress={onAddAllIngredients}
                 activeOpacity={0.7}
                 accessibilityRole="button"
-                accessibilityLabel="Add all ingredients to shopping list"
+                accessibilityLabel={t('detail.addAllIngredientsToShoppingListAccessibilityLabel')}
               >
                 <Ionicons name="add-circle" size={14} color={colors.recipes} />
-                <Text style={styles.addAllButtonText}>Add All</Text>
+                <Text style={styles.addAllButtonText}>{t('detail.addAll')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -62,7 +67,7 @@ export function RecipeIngredients({
                       subtitle={
                       <IngredientInfo
                         quantity={String(ingredient.quantityAmount ?? ingredient.quantity ?? '')}
-                        unit={ingredient.quantityUnit ?? ingredient.unit ?? ''}
+                        unit={getUnitLabel(ingredient.quantityUnit ?? ingredient.unit ?? '', t)}
                       />
                     }
                     rightElement={
@@ -71,7 +76,9 @@ export function RecipeIngredients({
                         onPress={() => onAddIngredient(ingredient)}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={`Add ${ingredient.name || 'ingredient'} to shopping list`}
+                        accessibilityLabel={t('detail.addIngredientToShoppingListAccessibilityLabel', {
+                          name: ingredient.name || t('detail.ingredientFallbackName'),
+                        })}
                       >
                         <Ionicons
                           name="cart-outline"
@@ -81,6 +88,7 @@ export function RecipeIngredients({
                       </TouchableOpacity>
                     }
                     imagePosition={ingredient.image ? 'left' : 'none'}
+                    isRtl={isRtlLayout}
                   />
                 </ListItemCardWrapper>
               </View>

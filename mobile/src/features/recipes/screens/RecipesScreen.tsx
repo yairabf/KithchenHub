@@ -37,6 +37,7 @@ import {
   RECIPE_CATEGORIES,
   RECIPE_FILTER_CATEGORIES,
   getRecipeCategoryIcon,
+  getRecipeCategoryLabel,
   normalizeRecipeCategory,
 } from '../constants';
 import { useTranslation } from 'react-i18next';
@@ -329,7 +330,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                           />
                         </View>
                         <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                          {t(`categories:${category}`, { defaultValue: category })}
+                          {getRecipeCategoryLabel(category, t)}
                         </Text>
                       </TouchableOpacity>
                     );

@@ -90,3 +90,42 @@ describe('LocalChoresService', () => {
     });
   });
 });
+
+describe('RemoteChoresService', () => {
+  let service: RemoteChoresService;
+
+  beforeEach(() => {
+    service = new RemoteChoresService();
+    jest.clearAllMocks();
+  });
+
+  describe('updateChore', () => {
+    it('uses PATCH response directly without refetching chores list', async () => {
+      const dueDateIso = '2050-02-21T10:00:00.000Z';
+      (api.patch as jest.Mock).mockResolvedValue({
+        id: 'chore-1',
+        title: 'Vacuum',
+        dueDate: dueDateIso,
+        isCompleted: false,
+        repeat: null,
+        assigneeName: 'Mom',
+        icon: '🧹',
+      });
+
+      const result = await service.updateChore('chore-1', {
+        dueDate: 'Feb 21, 2050',
+        dueTime: '10:00 AM',
+      });
+
+      expect(api.patch).toHaveBeenCalledWith(
+        '/chores/chore-1',
+        expect.objectContaining({
+          dueDate: expect.any(String),
+        })
+      );
+      expect(api.get).not.toHaveBeenCalled();
+      expect(result.id).toBe('chore-1');
+      expect(result.originalDate?.toISOString()).toBe(dueDateIso);
+    });
+  });
+});

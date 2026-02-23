@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius, typography } from '../../../theme';
 import { inviteApi, InviteValidationResponse } from '../../households/services/inviteApi';
 import { useOnboarding } from '../contexts/OnboardingContext';
-import { useTranslation } from 'react-i18next';
 
 type AuthStackParamList = {
   Login: undefined;

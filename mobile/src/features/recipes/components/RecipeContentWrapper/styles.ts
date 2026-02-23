@@ -7,6 +7,13 @@ export const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
   },
+  rtlTextRow: {
+    flexDirection: 'row',
+    direction: 'rtl',
+    justifyContent: 'flex-start',
+    alignSelf: 'stretch',
+    width: '100%',
+  },
   stickyHeaderContainer: {
     paddingHorizontal: spacing.lg,
     width: '100%',
@@ -29,6 +36,11 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.5,
+  },
+  tabletTitleRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    alignSelf: 'stretch',
   },
   tabletTitleLeft: {
     flex: 35,
@@ -96,6 +108,16 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textMuted,
+  },
+  tabTextRtl: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  tabTextWrapperRtl: {
+    flex: 1,
+    flexDirection: 'row',
+    direction: 'rtl',
+    justifyContent: 'flex-start',
   },
   tabTextActive: {
     color: colors.recipes,

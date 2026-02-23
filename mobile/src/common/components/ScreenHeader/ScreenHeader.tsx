@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { ScreenHeaderProps } from './types';
 import { styles } from './styles';
 import { colors } from '../../../theme';
@@ -60,12 +61,13 @@ export function ScreenHeader({
   variant = 'default',
   children,
 }: ScreenHeaderProps) {
+  const { t } = useTranslation('common');
+
   const renderLeftIcon = () => {
-    // Don't render icon if it's 'none' or if there's no press handler
     if (leftIcon === 'none' || !onLeftPress) return null;
 
     const iconName = leftIcon === 'back' ? getDirectionalIcon('arrow-back') : 'home-outline';
-    const accessibilityLabel = leftIcon === 'back' ? 'Go back' : 'Go to home';
+    const accessibilityLabel = leftIcon === 'back' ? t('accessibility.goBack') : t('accessibility.goToHome');
 
     return (
       <TouchableOpacity

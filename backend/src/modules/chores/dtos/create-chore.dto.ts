@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsDateString,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateChoreDto {
@@ -14,7 +15,7 @@ export class CreateChoreDto {
   @IsOptional()
   icon?: string;
 
-  @IsString()
+  @IsUUID()
   @IsOptional()
   assigneeId?: string;
 
