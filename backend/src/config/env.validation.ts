@@ -115,7 +115,7 @@ export type EnvConfig = z.infer<typeof envSchema>;
 export function validateEnv(): EnvConfig {
   const parsed = envSchema.safeParse(process.env);
 
-  if (!parsed.success) {
+  if ('error' in parsed) {
     console.error('❌ Invalid environment variables:');
     console.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2));
     throw new Error('Invalid environment variables');

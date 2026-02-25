@@ -142,6 +142,7 @@ model MasterGroceryCatalog {
   id              String   @id
   name            String
   category        String
+  icon            String?  @map("icon")
   defaultUnit     String?  @map("default_unit")
   imageUrl        String?  @map("image_url")
   defaultQuantity Int?     @map("default_quantity")
@@ -149,10 +150,77 @@ model MasterGroceryCatalog {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   shoppingItems ShoppingItem[]
+  aliases       CatalogItemAlias[]
+  translations  CatalogItemI18n[]
+  tags          CatalogItemTag[]
 
   @@index([name])
   @@index([category])
   @@map("master_grocery_catalog")
+}
+
+model CatalogItemI18n {
+  catalogItemId String   @map("catalog_item_id")
+  lang          String
+  name          String
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  catalogItem MasterGroceryCatalog @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  @@id([catalogItemId, lang])
+  @@index([lang, catalogItemId])
+  @@index([lang, name])
+  @@map("catalog_item_i18n")
+}
+
+model CatalogItemAlias {
+  id              String   @id @default(cuid())
+  catalogItemId   String   @map("catalog_item_id")
+  lang            String
+  alias           String
+  normalizedAlias String   @map("normalized_alias")
+  isPrimary       Boolean  @default(false) @map("is_primary")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  catalogItem MasterGroceryCatalog @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+
+  @@unique([catalogItemId, lang, normalizedAlias])
+  @@index([lang, normalizedAlias])
+  @@index([catalogItemId, lang])
+  @@map("catalog_item_aliases")
+}
+
+model CatalogTag {
+  id        String   @id @default(cuid())
+  key       String
+  kind      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  itemLinks CatalogItemTag[]
+
+  @@unique([kind, key])
+  @@index([kind])
+  @@map("catalog_tags")
+}
+
+model CatalogItemTag {
+  id            String   @id @default(cuid())
+  catalogItemId String   @map("catalog_item_id")
+  tagId         String   @map("tag_id")
+  isPrimary     Boolean  @default(false) @map("is_primary")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  catalogItem MasterGroceryCatalog @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  tag         CatalogTag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([catalogItemId, tagId])
+  @@index([tagId])
+  @@index([catalogItemId, isPrimary])
+  @@map("catalog_item_tags")
 }
 
 model CustomItem {
