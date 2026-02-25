@@ -160,7 +160,9 @@ export class ShoppingService {
       return requestedName;
     }
 
-    const baseName = translations.find((item) => item.lang === baseLang)?.name?.trim();
+    const baseName = translations
+      .find((item) => item.lang === baseLang)
+      ?.name?.trim();
     if (baseName) {
       return baseName;
     }
@@ -318,7 +320,11 @@ export class ShoppingService {
         defaultQuantity: true,
         translations: {
           where: {
-            OR: [...languageOrFilters, { lang: 'en' }, { lang: { startsWith: 'en-' } }],
+            OR: [
+              ...languageOrFilters,
+              { lang: 'en' },
+              { lang: { startsWith: 'en-' } },
+            ],
           },
           select: {
             lang: true,
@@ -415,7 +421,11 @@ export class ShoppingService {
         defaultQuantity: true,
         translations: {
           where: {
-            OR: [...languageOrFilters, { lang: 'en' }, { lang: { startsWith: 'en-' } }],
+            OR: [
+              ...languageOrFilters,
+              { lang: 'en' },
+              { lang: { startsWith: 'en-' } },
+            ],
           },
           select: {
             lang: true,

@@ -403,7 +403,10 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
         ]),
       );
       expect(args.select.aliases.where.OR).toEqual(
-        expect.arrayContaining([{ lang: 'he' }, { lang: { startsWith: 'he-' } }]),
+        expect.arrayContaining([
+          { lang: 'he' },
+          { lang: { startsWith: 'he-' } },
+        ]),
       );
     });
 
@@ -491,7 +494,9 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       const result = await service.searchGroceries('tomate', 'fr-CA');
 
       const args = findManySpy.mock.calls[0]?.[0] as {
-        select: { translations: { where: { OR: Array<Record<string, unknown>> } } };
+        select: {
+          translations: { where: { OR: Array<Record<string, unknown>> } };
+        };
       };
       expect(args.select.translations.where.OR).toEqual(
         expect.arrayContaining([
