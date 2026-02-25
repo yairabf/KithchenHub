@@ -823,7 +823,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         }
       }
     })();
-  }, [showCategoryModal, selectedCategory, getGroceriesByCategory, i18n.language, t]);
+    // Only run when language changes; modal/category are read to decide if we refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid refetch on modal open
+  }, [i18n.language, getGroceriesByCategory, t]);
 
   const handleCloseCategoryModal = useCallback(() => {
     setShowCategoryModal(false);
