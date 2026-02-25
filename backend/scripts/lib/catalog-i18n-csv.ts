@@ -1,8 +1,11 @@
 /**
  * Shared CSV utilities for catalog item i18n scripts.
  * Used by export template, import Hebrew, and auto-translate scripts.
- * Handles RFC 4180-style quoted fields and escaped double quotes.
+ * Handles RFC 4180-style quoted fields, escaped double quotes, and UTF-8 BOM.
  */
+
+/** UTF-8 BOM (Excel/Sheets often add this when saving CSV). */
+const UTF8_BOM = '\uFEFF';
 
 /** Standard row shape for catalog_item_i18n CSV (template and translated). */
 export type CatalogI18nCsvRow = {
@@ -23,20 +26,26 @@ const REQUIRED_COLUMNS: ReadonlyArray<keyof CatalogI18nCsvRow> = [
 
 /**
  * Parses CSV content into a matrix of string fields.
+ * Strips UTF-8 BOM if present so headers from Excel/Sheets exports validate.
  * Supports quoted fields, "" as escaped quote, and \r\n line endings.
  *
- * @param content - Raw CSV string
+ * @param content - Raw CSV string (may start with U+FEFF)
  * @returns Array of rows, each row an array of field values
  */
 export function parseCsv(content: string): string[][] {
+  const normalized =
+    content.length > 0 && content.startsWith(UTF8_BOM)
+      ? content.slice(UTF8_BOM.length)
+      : content;
+
   const rows: string[][] = [];
   let currentField = '';
   let currentRow: string[] = [];
   let inQuotes = false;
 
-  for (let i = 0; i < content.length; i += 1) {
-    const char = content[i];
-    const nextChar = content[i + 1];
+  for (let i = 0; i < normalized.length; i += 1) {
+    const char = normalized[i];
+    const nextChar = normalized[i + 1];
 
     if (char === '"') {
       if (inQuotes && nextChar === '"') {

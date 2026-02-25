@@ -39,6 +39,11 @@ describe('parseCsv', () => {
       ],
     ],
     ['quoted newline', '"a\nb",c', [['a\nb', 'c']]],
+    [
+      'UTF-8 BOM on first field',
+      '\uFEFFcatalog_item_id,lang,en_name,he_name,category',
+      [['catalog_item_id', 'lang', 'en_name', 'he_name', 'category']],
+    ],
   ])('%s', (_label, input, expected) => {
     it('returns expected rows', () => {
       expect(parseCsv(input)).toEqual(expected);
@@ -101,6 +106,21 @@ describe('rowsToCatalogI18nRows', () => {
         lang: '',
         en_name: 'Milk',
         he_name: '',
+        category: 'dairy',
+      },
+    ]);
+  });
+
+  it('accepts CSV content with UTF-8 BOM (Excel/Sheets export)', () => {
+    const content =
+      '\uFEFFcatalog_item_id,lang,en_name,he_name,category\nid1,he,Milk,חלב,dairy';
+    const rows = parseCsv(content);
+    expect(rowsToCatalogI18nRows(rows)).toEqual([
+      {
+        catalog_item_id: 'id1',
+        lang: 'he',
+        en_name: 'Milk',
+        he_name: 'חלב',
         category: 'dairy',
       },
     ]);
