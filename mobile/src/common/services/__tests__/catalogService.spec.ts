@@ -27,6 +27,12 @@ jest.mock('../../../services/api', () => ({
   },
 }));
 
+jest.mock('../../../i18n', () => ({
+  i18n: {
+    language: 'en',
+  },
+}));
+
 // Mock catalog utils. Inline structural types only (mock factory cannot reference out-of-scope vars).
 jest.mock('../../utils/catalogUtils', () => ({
   buildCategoriesFromGroceries: jest.fn(
@@ -73,6 +79,7 @@ jest.mock('../../../config', () => {
 });
 
 const mockApiGet = api.get as jest.MockedFunction<typeof api.get>;
+const mockedI18n = require('../../../i18n').i18n as { language: string };
 
 /** Custom items API shape (getGroceryItems calls /shopping-items/custom, not /groceries/search) */
 function customItemDto(name: string, category: string) {
@@ -99,6 +106,7 @@ describe('CatalogService', () => {
     (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
     // Reset mock data config to false by default
     mockConfigValue.mockData.enabled = false;
+    mockedI18n.language = 'en';
     // Reset internal memoization for test isolation (CatalogService does not expose this).
     (service as unknown as { groceryItemsPromise: Promise<GroceryItem[]> | null }).groceryItemsPromise = null;
   });
@@ -288,7 +296,41 @@ describe('CatalogService', () => {
     });
   });
 
+  describe('searchGroceries', () => {
+    it('should send full locale in language query parameter', async () => {
+      mockedI18n.language = 'fr-CA';
+      mockApiGet.mockImplementation((url: string) => {
+        if (url.startsWith('/groceries/search')) {
+          return Promise.resolve([
+            { id: '1', name: 'Pomme', imageUrl: '', category: 'Fruits', defaultQuantity: 1 },
+          ]);
+        }
+
+        if (url === '/shopping-items/custom') {
+          return Promise.resolve([]);
+        }
+
+        return Promise.resolve([]);
+      });
+
+      await service.searchGroceries('pom');
+
+      expect(mockApiGet).toHaveBeenCalledWith('/groceries/search?q=pom&lang=fr-ca');
+    });
+  });
+
   describe('getGroceriesByCategory', () => {
+    it('should send full locale in language query parameter', async () => {
+      mockedI18n.language = 'he-IL';
+      mockApiGet.mockResolvedValue([
+        { id: '1', name: 'Apple', imageUrl: 'apple.jpg', category: 'Fruits', defaultQuantity: 2 },
+      ]);
+
+      await service.getGroceriesByCategory('Fruits');
+
+      expect(mockApiGet).toHaveBeenCalledWith('/groceries/by-category?category=Fruits&lang=he-il');
+    });
+
     it('should return API category items when API request succeeds', async () => {
       mockApiGet.mockResolvedValue([
         { id: '1', name: 'Apple', imageUrl: 'apple.jpg', category: 'Fruits', defaultQuantity: 2 },
@@ -296,7 +338,7 @@ describe('CatalogService', () => {
 
       const items = await service.getGroceriesByCategory('Fruits');
 
-      expect(mockApiGet).toHaveBeenCalledWith('/groceries/by-category?category=Fruits');
+      expect(mockApiGet).toHaveBeenCalledWith('/groceries/by-category?category=Fruits&lang=en');
       expect(items).toEqual([
         {
           id: '1',
@@ -359,7 +401,7 @@ describe('CatalogService', () => {
           defaultQuantity: 1,
         },
       ]);
-      expect(mockApiGet).toHaveBeenCalledWith('/groceries/by-category?category=Fruits');
+      expect(mockApiGet).toHaveBeenCalledWith('/groceries/by-category?category=Fruits&lang=en');
       expect(mockApiGet).not.toHaveBeenCalledWith('/shopping-items/custom');
     });
 
@@ -451,10 +493,15 @@ describe('CatalogService', () => {
   });
 
   describe('clearCache', () => {
-    it('should clear grocery items cache', async () => {
+    it('should clear grocery, category, custom, and legacy cache keys', async () => {
       await service.clearCache();
 
-      expect(AsyncStorage.removeItem).toHaveBeenCalledTimes(3);
+      expect(AsyncStorage.removeItem).toHaveBeenCalledTimes(5);
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_catalog_grocery_catalog_en');
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_catalog_shopping_categories_en');
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_catalog_custom_grocery_items');
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_catalog_grocery_catalog');
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('@kitchen_hub_catalog_shopping_categories');
     });
 
     it('should handle cache clear failure gracefully', async () => {

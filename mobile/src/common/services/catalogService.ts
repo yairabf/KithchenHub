@@ -17,6 +17,7 @@ import { getPublicCatalogCacheKey } from '../storage/dataModeStorage';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems, buildCategoriesFromNames } from '../utils/catalogUtils';
 import { mockGroceriesDB } from '../../mocks/shopping/groceryDatabase';
 import { config } from '../../config';
+import { i18n } from '../../i18n';
 import { SHOPPING_CATEGORIES, DEFAULT_CATEGORY } from '../../features/shopping/constants/categories';
 import type { GroceryItem } from '../../features/shopping/components/GrocerySearchBar';
 import type { Category } from '../../mocks/shopping';
@@ -40,9 +41,21 @@ export enum CatalogSource {
 /**
  * Storage keys for catalog cache
  */
-const GROCERY_ITEMS_CACHE_KEY = getPublicCatalogCacheKey('grocery_catalog');
-const CATEGORIES_CACHE_KEY = getPublicCatalogCacheKey('shopping_categories');
+const GROCERY_ITEMS_CACHE_KEY_BASE = 'grocery_catalog';
+const CATEGORIES_CACHE_KEY_BASE = 'shopping_categories';
 const CUSTOM_ITEMS_CACHE_KEY = getPublicCatalogCacheKey('custom_grocery_items');
+
+function getGroceryItemsCacheKey(): string {
+  return getPublicCatalogCacheKey(
+    `${GROCERY_ITEMS_CACHE_KEY_BASE}_${getCatalogLanguageParam()}`,
+  );
+}
+
+function getCategoriesCacheKey(): string {
+  return getPublicCatalogCacheKey(
+    `${CATEGORIES_CACHE_KEY_BASE}_${getCatalogLanguageParam()}`,
+  );
+}
 
 /**
  * Required categories that must be present in catalog data.
@@ -76,6 +89,15 @@ function mapGroceryItem(item: GrocerySearchItemDto): GroceryItem {
     category: item.category,
     defaultQuantity: item.defaultQuantity ?? 1,
   };
+}
+
+function getCatalogLanguageParam(): string {
+  const normalized = i18n.language?.trim().toLowerCase();
+  if (!normalized) {
+    return 'en';
+  }
+
+  return normalized;
 }
 
 /**
@@ -196,8 +218,11 @@ export class CatalogService {
     }
 
     try {
+      const lang = getCatalogLanguageParam();
       // Fetch from API
-      const results = await api.get<GrocerySearchItemDto[] | undefined>(`/groceries/search?q=${encodeURIComponent(trimmedQuery)}`);
+      const results = await api.get<GrocerySearchItemDto[] | undefined>(
+        `/groceries/search?q=${encodeURIComponent(trimmedQuery)}&lang=${encodeURIComponent(lang)}`,
+      );
       const list = Array.isArray(results) ? results : [];
       const apiItems = list.map(mapGroceryItem);
 
@@ -234,8 +259,9 @@ export class CatalogService {
     }
 
     try {
+      const lang = getCatalogLanguageParam();
       const results = await api.get<GrocerySearchItemDto[] | undefined>(
-        `/groceries/by-category?category=${encodeURIComponent(trimmedCategory)}`,
+        `/groceries/by-category?category=${encodeURIComponent(trimmedCategory)}&lang=${encodeURIComponent(lang)}`,
       );
       const list = Array.isArray(results) ? results : [];
       return list.map(mapGroceryItem);
@@ -654,7 +680,7 @@ export class CatalogService {
    */
   private async cacheCategories(categories: string[]): Promise<void> {
     try {
-      await AsyncStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(categories));
+      await AsyncStorage.setItem(getCategoriesCacheKey(), JSON.stringify(categories));
     } catch (error) {
       console.error('Failed to cache categories:', error);
       // Don't throw - caching failure shouldn't break the app
@@ -670,7 +696,7 @@ export class CatalogService {
    */
   private async getCachedCategories(): Promise<string[]> {
     try {
-      const cached = await AsyncStorage.getItem(CATEGORIES_CACHE_KEY);
+      const cached = await AsyncStorage.getItem(getCategoriesCacheKey());
       if (!cached) {
         return [];
       }
@@ -678,7 +704,7 @@ export class CatalogService {
       const parsed = JSON.parse(cached);
       if (!Array.isArray(parsed)) {
         console.error('Invalid cached categories format: expected array');
-        await AsyncStorage.removeItem(CATEGORIES_CACHE_KEY);
+        await AsyncStorage.removeItem(getCategoriesCacheKey());
         return [];
       }
 
@@ -689,7 +715,7 @@ export class CatalogService {
 
       if (validCategories.length === 0) {
         console.error('Cached categories have invalid structure');
-        await AsyncStorage.removeItem(CATEGORIES_CACHE_KEY);
+        await AsyncStorage.removeItem(getCategoriesCacheKey());
         return [];
       }
 
@@ -697,7 +723,7 @@ export class CatalogService {
     } catch (error) {
       console.error('Failed to read cached categories:', error);
       // Clear corrupted cache on parse error
-      await AsyncStorage.removeItem(CATEGORIES_CACHE_KEY);
+      await AsyncStorage.removeItem(getCategoriesCacheKey());
       return [];
     }
   }
@@ -754,7 +780,7 @@ export class CatalogService {
    */
   private async cacheGroceryItems(items: GroceryItem[]): Promise<void> {
     try {
-      await AsyncStorage.setItem(GROCERY_ITEMS_CACHE_KEY, JSON.stringify(items));
+      await AsyncStorage.setItem(getGroceryItemsCacheKey(), JSON.stringify(items));
     } catch (error) {
       console.error('Failed to cache grocery items:', error);
       // Don't throw - caching failure shouldn't break the app
@@ -770,7 +796,7 @@ export class CatalogService {
    */
   private async getCachedGroceryItems(): Promise<GroceryItem[]> {
     try {
-      const cached = await AsyncStorage.getItem(GROCERY_ITEMS_CACHE_KEY);
+      const cached = await AsyncStorage.getItem(getGroceryItemsCacheKey());
       if (!cached) {
         return [];
       }
@@ -806,9 +832,12 @@ export class CatalogService {
    */
   async clearCache(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(GROCERY_ITEMS_CACHE_KEY);
-      await AsyncStorage.removeItem(CATEGORIES_CACHE_KEY);
+      await AsyncStorage.removeItem(getGroceryItemsCacheKey());
+      await AsyncStorage.removeItem(getCategoriesCacheKey());
       await AsyncStorage.removeItem(CUSTOM_ITEMS_CACHE_KEY);
+      // Backward-compat cleanup for pre-language-scoped cache keys
+      await AsyncStorage.removeItem(getPublicCatalogCacheKey(GROCERY_ITEMS_CACHE_KEY_BASE));
+      await AsyncStorage.removeItem(getPublicCatalogCacheKey(CATEGORIES_CACHE_KEY_BASE));
     } catch (error) {
       console.error('Failed to clear catalog cache:', error);
       // Don't throw - cache clearing failure shouldn't break the app

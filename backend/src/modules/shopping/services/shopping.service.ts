@@ -119,14 +119,124 @@ export class ShoppingService {
     return `${catalogIconsBaseUrl}/${path}`;
   }
 
+  private normalizeSearchLanguage(lang?: string): string {
+    const normalized = lang?.trim().toLowerCase();
+    if (!normalized || normalized.length === 0) {
+      return 'en';
+    }
+
+    return normalized;
+  }
+
+  private getBaseLanguage(lang: string): string {
+    const [baseLanguage] = lang.split(/[-_]/);
+    return baseLanguage && baseLanguage.length > 0 ? baseLanguage : 'en';
+  }
+
+  private buildLanguageOrFilters(
+    normalizedLang: string,
+    baseLang: string,
+  ): Array<Record<string, unknown>> {
+    const filters: Array<Record<string, unknown>> = [{ lang: normalizedLang }];
+
+    if (baseLang !== normalizedLang) {
+      filters.push({ lang: baseLang });
+    }
+
+    filters.push({ lang: { startsWith: `${baseLang}-` } });
+    return filters;
+  }
+
+  private resolveLocalizedCatalogName(
+    canonicalName: string,
+    translations: Array<{ lang: string; name: string }>,
+    normalizedLang: string,
+    baseLang: string,
+  ): string {
+    const requestedName = translations
+      .find((item) => item.lang === normalizedLang)
+      ?.name?.trim();
+    if (requestedName) {
+      return requestedName;
+    }
+
+    const baseName = translations.find((item) => item.lang === baseLang)?.name?.trim();
+    if (baseName) {
+      return baseName;
+    }
+
+    const baseVariantName = translations
+      .find((item) => item.lang.startsWith(`${baseLang}-`))
+      ?.name?.trim();
+    if (baseVariantName) {
+      return baseVariantName;
+    }
+
+    const englishName = translations
+      .find((item) => item.lang === 'en')
+      ?.name?.trim();
+    if (englishName) {
+      return englishName;
+    }
+
+    const englishVariantName = translations
+      .find((item) => item.lang.startsWith('en-'))
+      ?.name?.trim();
+    if (englishVariantName) {
+      return englishVariantName;
+    }
+
+    return canonicalName;
+  }
+
+  private scoreCatalogSearchMatch(
+    itemName: string,
+    aliases: string[],
+    searchTerm: string,
+  ): number {
+    const normalizedName = itemName.toLowerCase();
+    const normalizedAliases = aliases.map((alias) => alias.toLowerCase());
+
+    if (normalizedName === searchTerm) {
+      return 1000;
+    }
+    if (normalizedName.startsWith(searchTerm)) {
+      return 900;
+    }
+    if (normalizedAliases.includes(searchTerm)) {
+      return 800;
+    }
+    if (normalizedAliases.some((alias) => alias.startsWith(searchTerm))) {
+      return 700;
+    }
+    if (normalizedName.includes(searchTerm)) {
+      return 600;
+    }
+    if (normalizedAliases.some((alias) => alias.includes(searchTerm))) {
+      return 500;
+    }
+
+    return 0;
+  }
+
   /**
    * Searches groceries by name (case-insensitive).
    *
    * @param query - Search query string
    * @returns Array of matching grocery items
    */
-  async searchGroceries(query: string): Promise<GrocerySearchItemDto[]> {
+  async searchGroceries(
+    query: string,
+    lang?: string,
+  ): Promise<GrocerySearchItemDto[]> {
     const searchTerm = query?.trim() ?? '';
+    const normalizedSearchTerm = searchTerm.toLowerCase();
+    const normalizedLang = this.normalizeSearchLanguage(lang);
+    const baseLang = this.getBaseLanguage(normalizedLang);
+    const languageOrFilters = this.buildLanguageOrFilters(
+      normalizedLang,
+      baseLang,
+    );
 
     if (!searchTerm) {
       return [];
@@ -134,12 +244,71 @@ export class ShoppingService {
 
     const rows = await this.prisma.masterGroceryCatalog.findMany({
       where: {
-        name: {
-          contains: searchTerm,
-          mode: 'insensitive',
-        },
+        OR: [
+          {
+            translations: {
+              some: {
+                AND: [
+                  {
+                    OR: languageOrFilters,
+                  },
+                  {
+                    name: {
+                      contains: searchTerm,
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            AND: [
+              {
+                translations: {
+                  none: {
+                    OR: languageOrFilters,
+                  },
+                },
+              },
+              {
+                translations: {
+                  some: {
+                    lang: 'en',
+                    name: {
+                      contains: searchTerm,
+                      mode: 'insensitive',
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          {
+            aliases: {
+              some: {
+                AND: [
+                  {
+                    OR: languageOrFilters,
+                  },
+                  {
+                    alias: {
+                      contains: searchTerm,
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            name: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        ],
       },
-      orderBy: { name: 'asc' },
       select: {
         id: true,
         name: true,
@@ -147,16 +316,60 @@ export class ShoppingService {
         defaultUnit: true,
         imageUrl: true,
         defaultQuantity: true,
+        translations: {
+          where: {
+            OR: [...languageOrFilters, { lang: 'en' }, { lang: { startsWith: 'en-' } }],
+          },
+          select: {
+            lang: true,
+            name: true,
+          },
+        },
+        aliases: {
+          where: {
+            OR: languageOrFilters,
+          },
+          select: {
+            alias: true,
+          },
+        },
       },
     });
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      category: row.category,
-      defaultUnit: row.defaultUnit ?? undefined,
-      imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
-      defaultQuantity: row.defaultQuantity ?? 1,
-    }));
+
+    return rows
+      .map((row) => ({
+        resolvedName: this.resolveLocalizedCatalogName(
+          row.name,
+          row.translations,
+          normalizedLang,
+          baseLang,
+        ),
+        row,
+        score: this.scoreCatalogSearchMatch(
+          this.resolveLocalizedCatalogName(
+            row.name,
+            row.translations,
+            normalizedLang,
+            baseLang,
+          ),
+          row.aliases.map((alias) => alias.alias),
+          normalizedSearchTerm,
+        ),
+      }))
+      .sort((a, b) => {
+        if (a.score !== b.score) {
+          return b.score - a.score;
+        }
+        return a.resolvedName.localeCompare(b.resolvedName);
+      })
+      .map(({ row, resolvedName }) => ({
+        id: row.id,
+        name: resolvedName,
+        category: row.category,
+        defaultUnit: row.defaultUnit ?? undefined,
+        imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
+        defaultQuantity: row.defaultQuantity ?? 1,
+      }));
   }
 
   /**
@@ -168,9 +381,16 @@ export class ShoppingService {
    */
   async getGroceriesByCategory(
     category: string,
+    lang?: string,
     limit = 100,
   ): Promise<GrocerySearchItemDto[]> {
     const categoryTerm = category?.trim() ?? '';
+    const normalizedLang = this.normalizeSearchLanguage(lang);
+    const baseLang = this.getBaseLanguage(normalizedLang);
+    const languageOrFilters = this.buildLanguageOrFilters(
+      normalizedLang,
+      baseLang,
+    );
     if (!categoryTerm) {
       return [];
     }
@@ -193,17 +413,41 @@ export class ShoppingService {
         defaultUnit: true,
         imageUrl: true,
         defaultQuantity: true,
+        translations: {
+          where: {
+            OR: [...languageOrFilters, { lang: 'en' }, { lang: { startsWith: 'en-' } }],
+          },
+          select: {
+            lang: true,
+            name: true,
+          },
+        },
+        aliases: {
+          where: {
+            OR: languageOrFilters,
+          },
+          select: {
+            alias: true,
+          },
+        },
       },
     });
 
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      category: row.category,
-      defaultUnit: row.defaultUnit ?? undefined,
-      imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
-      defaultQuantity: row.defaultQuantity ?? 1,
-    }));
+    return rows
+      .map((row) => ({
+        id: row.id,
+        name: this.resolveLocalizedCatalogName(
+          row.name,
+          row.translations,
+          normalizedLang,
+          baseLang,
+        ),
+        category: row.category,
+        defaultUnit: row.defaultUnit ?? undefined,
+        imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
+        defaultQuantity: row.defaultQuantity ?? 1,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /**

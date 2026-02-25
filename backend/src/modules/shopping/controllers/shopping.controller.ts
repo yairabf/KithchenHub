@@ -33,19 +33,24 @@ export class GroceriesController {
 
   @Get('search')
   @Public()
-  async searchGroceries(@Query('q') query: string) {
-    return this.shoppingService.searchGroceries(query || '');
+  async searchGroceries(
+    @Query('q') query: string,
+    @Query('lang') lang?: string,
+  ) {
+    return this.shoppingService.searchGroceries(query || '', lang);
   }
 
   @Get('by-category')
   @Public()
   async getGroceriesByCategory(
     @Query('category') category: string,
+    @Query('lang') lang?: string,
     @Query('limit') limit?: string,
   ) {
     const parsedLimit = Number(limit);
     return this.shoppingService.getGroceriesByCategory(
       category || '',
+      lang,
       Number.isFinite(parsedLimit) ? parsedLimit : undefined,
     );
   }

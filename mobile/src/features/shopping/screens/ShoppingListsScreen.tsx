@@ -786,6 +786,35 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     }
   }, [getGroceriesByCategory, t]);
 
+  useEffect(() => {
+    if (!showCategoryModal || !selectedCategory) {
+      return;
+    }
+
+    const requestId = categoryRequestIdRef.current + 1;
+    categoryRequestIdRef.current = requestId;
+    setCategoryItemsError(null);
+    setIsCategoryItemsLoading(true);
+
+    void (async () => {
+      try {
+        const items = await getGroceriesByCategory(selectedCategory);
+        if (categoryRequestIdRef.current === requestId) {
+          setCategoryItems(items);
+        }
+      } catch (error) {
+        console.error('Failed to refresh category items after language change:', error);
+        if (categoryRequestIdRef.current === requestId) {
+          setCategoryItemsError(t('categoryModal.loadFailed'));
+        }
+      } finally {
+        if (categoryRequestIdRef.current === requestId) {
+          setIsCategoryItemsLoading(false);
+        }
+      }
+    })();
+  }, [showCategoryModal, selectedCategory, getGroceriesByCategory, i18n.language, t]);
+
   const handleCloseCategoryModal = useCallback(() => {
     setShowCategoryModal(false);
     setSelectedCategory('');
