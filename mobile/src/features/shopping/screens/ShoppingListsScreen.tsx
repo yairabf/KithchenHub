@@ -227,6 +227,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [pendingDeleteList, setPendingDeleteList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const categoryRequestIdRef = useRef(0);
+  const previousCategoryLanguageRef = useRef(i18n.language);
   const deletingItemIdsRef = useRef<Set<string>>(new Set());
 
   // Determine data mode based on user authentication state
@@ -787,6 +788,15 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, [getGroceriesByCategory, t]);
 
   useEffect(() => {
+    const previousLanguage = previousCategoryLanguageRef.current;
+    const currentLanguage = i18n.language;
+    const hasLanguageChanged = previousLanguage !== currentLanguage;
+    previousCategoryLanguageRef.current = currentLanguage;
+
+    if (!hasLanguageChanged) {
+      return;
+    }
+
     if (!showCategoryModal || !selectedCategory) {
       return;
     }

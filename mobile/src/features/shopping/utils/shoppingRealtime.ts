@@ -62,6 +62,7 @@ const mapListRowToList = (row: ShoppingListRow, existing?: ShoppingList): Shoppi
     itemCount: existing?.itemCount ?? 0,
     icon: existing?.icon ?? DEFAULT_LIST_ICON,
     color: normalizeListColor(row.color ?? existing?.color),
+    isMain: existing?.isMain ?? false,
   };
 
   // Normalize timestamps from snake_case to camelCase Date objects

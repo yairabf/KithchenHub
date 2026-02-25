@@ -6,7 +6,7 @@
  * local state for all dirty entities to `/auth/sync`, which resolves conflicts via timestamps.
  */
 
-import { api } from '../../../services/api';
+import { api, ApiError } from '../../../../services/api';
 import {
   syncQueueStorage,
   type QueuedWrite,
@@ -15,11 +15,11 @@ import {
 } from '../storage';
 import { getIsOnline } from '../../networkStatus';
 import { cacheEvents } from '../../cacheEvents';
-import { invalidateCache } from '../../repositories/cacheAwareRepository';
+import { invalidateCache } from '../../../repositories/cacheAwareRepository';
 import type { SyncEntityType } from '../../cacheMetadata';
-import type { Recipe } from '../../../mocks/recipes';
-import type { ShoppingList, ShoppingItem } from '../../../mocks/shopping';
-import type { Chore } from '../../../mocks/chores';
+import type { Recipe } from '../../../../mocks/recipes';
+import type { ShoppingList, ShoppingItem } from '../../../../mocks/shopping';
+import type { Chore } from '../../../../mocks/chores';
 import * as Crypto from 'expo-crypto';
 import {
   MAX_BATCH_SIZE,
@@ -374,23 +374,6 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         ];
         await syncQueueStorage.confirmCheckpointOperationIds(confirmedOperationIds);
       } catch (error) {
-        const maybeResult = error instanceof ApiError ? error.response?.data : undefined;
-        if (isValidSyncResult(maybeResult)) {
-          console.warn('Sync returned error response but with result body, processing...');
-          await this.handleSyncResult(batch, maybeResult);
-
-          const confirmedOperationIds = [
-            ...(maybeResult.succeeded?.map(s => s.operationId) ?? []),
-            ...maybeResult.conflicts.map(c => c.operationId),
-          ];
-          await syncQueueStorage.confirmCheckpointOperationIds(confirmedOperationIds);
-
-          for (const item of batch) {
-            await syncQueueStorage.updateLastAttempt(item.id);
-          }
-          return;
-        }
-
         throw error;
       }
 
@@ -1034,4 +1017,3 @@ export function getSyncQueueProcessor(): SyncQueueProcessor {
   }
   return processorInstance;
 }
-

@@ -1,4 +1,4 @@
-import { ApiError, NetworkError } from '../../../services/api';
+import { ApiError, NetworkError } from '../../../../services/api';
 import type { SyncResult, ErrorClassification } from './syncQueueProcessor.types';
 
 /**
@@ -97,4 +97,3 @@ export function classifySyncError(error: unknown): ErrorClassification {
 
   return { type: 'RETRY', shouldIncrement: true };
 }
-

@@ -9,8 +9,10 @@ type CachedImageParams = {
   remoteUrl?: string | null;
 };
 
-const CACHE_ROOT = FileSystem.documentDirectory
-  ? `${FileSystem.documentDirectory}recipe-images`
+const DOCUMENT_DIRECTORY = (FileSystem as { documentDirectory?: string }).documentDirectory;
+
+const CACHE_ROOT = DOCUMENT_DIRECTORY
+  ? `${DOCUMENT_DIRECTORY}recipe-images`
   : null;
 
 const ensureDirExists = async (dirPath: string): Promise<void> => {

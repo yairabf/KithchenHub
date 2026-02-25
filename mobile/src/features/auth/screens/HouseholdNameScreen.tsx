@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h1,
-    color: colors.text,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   mainContent: {
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    color: colors.text,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
   inputError: {

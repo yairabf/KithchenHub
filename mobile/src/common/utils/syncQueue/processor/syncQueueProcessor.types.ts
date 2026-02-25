@@ -1,8 +1,8 @@
 import type { SyncEntityType } from '../../cacheMetadata';
 import type { QueuedWrite } from '../storage';
-import type { Recipe } from '../../../mocks/recipes';
-import type { ShoppingList, ShoppingItem } from '../../../mocks/shopping';
-import type { Chore } from '../../../mocks/chores';
+import type { Recipe } from '../../../../mocks/recipes';
+import type { ShoppingList, ShoppingItem } from '../../../../mocks/shopping';
+import type { Chore } from '../../../../mocks/chores';
 
 /**
  * Sync result from backend.
@@ -104,4 +104,3 @@ export type ServerIdMappings = Map<
     entityType: SyncEntityType;
   }
 >;
-

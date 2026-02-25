@@ -51,7 +51,7 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
         imageUrl: data.imageUrl,
     };
     // Business rule: auto-populate createdAt and updatedAt on creation
-    return withCreatedAtAndUpdatedAt(recipe);
+    return withCreatedAtAndUpdatedAt<Recipe>(recipe as Recipe);
 };
 
 export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
@@ -69,13 +69,13 @@ export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
     }));
 
     return {
-        title: recipe.title ?? recipe.name ?? '',
+        title: recipe.title ?? '',
         category: recipe.category ?? '',
         prepTime: recipe.prepTime != null ? String(recipe.prepTime) : '',
         description: recipe.description ?? '',
         ingredients,
         instructions,
-        imageUrl: recipe.imageUrl,
+        imageUrl: recipe.imageUrl ?? undefined,
     };
 };
 

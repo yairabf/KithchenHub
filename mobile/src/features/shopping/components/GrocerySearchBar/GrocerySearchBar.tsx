@@ -9,6 +9,7 @@ import {
   Pressable,
   I18nManager,
 } from 'react-native';
+import type { ImageStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
@@ -122,9 +123,9 @@ export function GrocerySearchBar({
   useClickOutside({
     enabled: showDropdown,
     onOutsideClick: handleCloseDropdown,
-    containerRef: containerRef as React.RefObject<HTMLElement>,
+    containerRef: containerRef as unknown as React.RefObject<HTMLElement>,
     testId: 'grocery-search-container',
-    dropdownRef: dropdownRef as React.RefObject<HTMLElement>,
+    dropdownRef: dropdownRef as unknown as React.RefObject<HTMLElement>,
     dropdownTestId: 'grocery-search-dropdown',
   });
 
@@ -258,7 +259,7 @@ export function GrocerySearchBar({
                     style={styles.searchResultContent}
                     onPress={() => handleSelectItem(item)}
                   >
-                    <Image source={{ uri: item.image }} style={styles.searchResultImage} />
+                    <Image source={{ uri: item.image }} style={styles.searchResultImage as ImageStyle} />
                     <View style={styles.searchResultInfo}>
                       <Text style={styles.searchResultName}>{item.name}</Text>
                       <Text style={styles.searchResultCategory}>{item.category}</Text>

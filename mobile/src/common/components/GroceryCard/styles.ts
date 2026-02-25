@@ -4,6 +4,12 @@ import { spacing, borderRadius } from '../../../theme/spacing';
 import { shadows } from '../../../theme/shadows';
 
 export const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
 
 
   // Content row layout

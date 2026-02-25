@@ -399,7 +399,7 @@ export function ShoppingListPanel({
                   accessibilityRole="button"
                   accessibilityLabel={t('listPanel.categoryAccessibilityLabel', {
                     category: formatCategoryName(category),
-                    count: t('itemCount', { count: items.length }),
+                    count: items.length,
                   })}
                   accessibilityHint={
                     isCollapsed

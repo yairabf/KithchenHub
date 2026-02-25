@@ -23,7 +23,7 @@ export const createShoppingItem = (
         isChecked: false,
     };
     // Business rule: auto-populate createdAt and updatedAt on creation
-    return withCreatedAtAndUpdatedAt(item);
+    return withCreatedAtAndUpdatedAt<ShoppingItem>(item as ShoppingItem);
 };
 
 export const createShoppingList = (
@@ -38,7 +38,8 @@ export const createShoppingList = (
         itemCount: 0,
         icon: icon,
         color: color,
+        isMain: false,
     };
     // Business rule: auto-populate createdAt and updatedAt on creation
-    return withCreatedAtAndUpdatedAt(list);
+    return withCreatedAtAndUpdatedAt<ShoppingList>(list as ShoppingList);
 };

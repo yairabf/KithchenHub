@@ -649,9 +649,7 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         await this.handleSyncResult(readyItems, result);
       } catch (error) {
         // Check if we got a response body (even on non-2xx)
-        const maybeResult = (error instanceof ApiError) 
-          ? error.response?.data 
-          : undefined;
+        const maybeResult = undefined;
 
         // Validate it's a valid SyncResult object
         if (isValidSyncResult(maybeResult)) {
@@ -1182,8 +1180,9 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
     syncedTypes: Set<SyncEntityType>;
     serverIdMappings: Map<string, { serverId: string; entityType: SyncEntityType }>;
   }> {
+    const succeeded = result.succeeded ?? [];
     const succeededOperationIds = new Set(
-      result.succeeded.map(s => s.operationId)
+      succeeded.map((s) => s.operationId)
     );
     const failedOperationIds = new Set(
       result.conflicts.map(c => c.operationId)
@@ -1203,7 +1202,7 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         syncedTypes.add(item.entityType);
 
         // Track serverId mapping for creates
-        const successEntry = result.succeeded.find(s => s.operationId === item.operationId);
+        const successEntry = succeeded.find((s) => s.operationId === item.operationId);
         if (successEntry && successEntry.id !== item.target.localId) {
           // Server assigned new ID (create operation)
           serverIdMappings.set(item.target.localId, {
