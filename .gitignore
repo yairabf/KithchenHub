@@ -88,3 +88,7 @@ test-results/
 sandbox/*
 .claude/*
 .gemimi/*
+.opencode/*
+.venv/*
+.cursor/*
+_bmad/*
