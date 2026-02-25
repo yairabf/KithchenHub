@@ -21,6 +21,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest --testPathIgnorePatterns=\"rls\\\\.spec\\\\.ts$\"",
     "test:unit": "jest --testPathIgnorePatterns=\"rls\\\\.spec\\\\.ts$\"",
+    "test:scripts": "jest --rootDir=. --testPathPattern=scripts/lib/__tests --testPathIgnorePatterns=\"rls\\\\.spec\\\\.ts$\"",
     "test:rls": "jest --testPathPattern=rls\\.spec\\.ts",
     "test:all": "jest",
     "test:watch": "jest --watch",
@@ -35,7 +36,11 @@
     "db:stop": "docker-compose -f docker-compose.db.yml --env-file .env.db down",
     "db:logs": "docker-compose -f docker-compose.db.yml --env-file .env.db logs -f",
     "db:ps": "docker-compose -f docker-compose.db.yml --env-file .env.db ps",
-    "db:seed": "ts-node -r dotenv/config scripts/seed-grocery-catalog.ts"
+    "db:seed": "ts-node -r dotenv/config scripts/seed-grocery-catalog.ts",
+    "db:seed:i18n": "ts-node -r dotenv/config scripts/seed-catalog-item-i18n.ts",
+    "db:export:i18n-he-template": "ts-node -r dotenv/config scripts/export-catalog-item-i18n-he-template.ts",
+    "db:import:i18n-he": "ts-node -r dotenv/config scripts/import-catalog-item-i18n-he.ts",
+    "db:auto-translate:i18n-he": "ts-node -r dotenv/config scripts/auto-translate-catalog-item-i18n-he.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.985.0",
