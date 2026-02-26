@@ -75,6 +75,11 @@ interface CustomItemDto {
   updatedAt: string;
 }
 
+interface CatalogDisplayNameDto {
+  id: string;
+  name: string;
+}
+
 /**
  * Maps API DTO to GroceryItem format
  * 
@@ -238,6 +243,37 @@ export class CatalogService {
       console.error('Search failed:', error);
       // Fallback: try to search in cached items if we have any? 
       // For now, return empty on error effectively, or maybe custom items.
+      return [];
+    }
+  }
+
+  async getCatalogDisplayNames(
+    ids: string[],
+    lang?: string,
+  ): Promise<CatalogDisplayNameDto[]> {
+    const uniqueIds = Array.from(
+      new Set(ids.map((id) => id.trim()).filter((id) => id.length > 0)),
+    );
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const resolvedLang = lang?.trim().toLowerCase() || getCatalogLanguageParam();
+      const response = await api.get<CatalogDisplayNameDto[] | undefined>(
+        `/groceries/names?ids=${encodeURIComponent(uniqueIds.join(','))}&lang=${encodeURIComponent(resolvedLang)}`,
+      );
+
+      if (!Array.isArray(response)) {
+        return [];
+      }
+
+      return response.filter(
+        (item): item is CatalogDisplayNameDto =>
+          typeof item?.id === 'string' && typeof item?.name === 'string',
+      );
+    } catch (error) {
+      console.error('Catalog display names fetch failed:', error);
       return [];
     }
   }

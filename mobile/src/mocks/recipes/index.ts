@@ -6,6 +6,7 @@ import type { BaseEntity } from '../../common/types/entityMetadata';
  */
 export interface Ingredient {
   name: string;
+  catalogItemId?: string;
   quantityAmount?: number;
   quantityUnit?: string;
   quantityUnitType?: string;

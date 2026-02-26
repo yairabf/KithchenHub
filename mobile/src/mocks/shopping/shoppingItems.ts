@@ -6,6 +6,7 @@ type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 // Types
 export interface ShoppingItem extends BaseEntity {
+  catalogItemId?: string;
   name: string;
   image: string;
   quantity: number;

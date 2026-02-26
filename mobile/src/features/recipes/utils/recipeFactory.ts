@@ -29,6 +29,7 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
         const quantityUnitType = findQuantityUnitType(ing.quantityUnit);
         return {
             name: ing.name,
+            catalogItemId: ing.catalogItemId,
             quantityAmount: quantityAmount ?? 1,
             quantityUnit: ing.quantityUnit || undefined,
             quantityUnitType,
@@ -62,6 +63,7 @@ export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
         quantityUnitType: ing.quantityUnitType,
         quantityModifier: ing.quantityModifier,
         name: ing.name ?? '',
+        catalogItemId: ing.catalogItemId,
     }));
     const instructions = (recipe.instructions || []).map((inst: Instruction) => ({
         id: generateId(),
@@ -86,6 +88,7 @@ export const mapFormDataToRecipeUpdates = (data: NewRecipeData): Partial<Recipe>
         const quantityUnitType = findQuantityUnitType(ing.quantityUnit);
         return {
             name: ing.name,
+            catalogItemId: ing.catalogItemId,
             quantityAmount: quantityAmount ?? 1,
             quantityUnit: ing.quantityUnit || undefined,
             quantityUnitType,

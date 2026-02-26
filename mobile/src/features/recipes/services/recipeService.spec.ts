@@ -43,6 +43,14 @@ jest.mock('../../../common/utils/devMode', () => ({
     isDevMode: jest.fn(),
 }));
 
+jest.mock('../../../i18n', () => ({
+    i18n: {
+        language: 'en',
+    },
+}));
+
+const mockedI18n = require('../../../i18n').i18n as { language: string };
+
 describe('createRecipeService', () => {
   describe.each([
     ['guest mode', 'guest', LocalRecipeService],
@@ -329,9 +337,41 @@ describe('Recipe Services', () => {
         beforeEach(() => {
             service = new RemoteRecipeService();
             jest.clearAllMocks();
+            mockedI18n.language = 'en';
+        });
+
+        it('getRecipeById includes current language and maps catalogItemId', async () => {
+            mockedI18n.language = 'he-IL';
+            await invalidateCache('recipes');
+
+            (api.get as jest.Mock).mockResolvedValue({
+                id: 'recipe-1',
+                title: 'Localized Recipe',
+                prepTime: 10,
+                ingredients: [
+                    {
+                        name: 'עגבנייה',
+                        catalogItemId: 'catalog-1',
+                        quantityAmount: 1,
+                        quantityUnit: 'pcs',
+                    },
+                ],
+                instructions: [{ step: 1, instruction: 'Step 1' }],
+            });
+
+            const recipe = await service.getRecipeById('recipe-1');
+
+            expect(api.get).toHaveBeenCalledWith('/recipes/recipe-1?lang=he-il');
+            expect(recipe.ingredients[0]).toEqual(
+                expect.objectContaining({
+                    name: 'עגבנייה',
+                    catalogItemId: 'catalog-1',
+                }),
+            );
         });
 
         it('getRecipes calls api.get and normalizes timestamps', async () => {
+            await invalidateCache('recipes');
             const mockResult = [{ id: '1', title: 'Remote', created_at: '2026-01-25T10:00:00.000Z' }];
             (api.get as jest.Mock).mockResolvedValue(mockResult);
 
@@ -375,6 +415,52 @@ describe('Recipe Services', () => {
                 expect(api.put).toHaveBeenCalledWith(`/recipes/${recipeId}`, expect.objectContaining(updates));
                 expect(recipe).toEqual(expect.objectContaining({ id: recipeId, ...updates }));
             });
+        });
+
+        it('updateRecipe sends ingredient catalogItemId in payload', async () => {
+            const recipeId = 'remote-1';
+            const existingRecipe = {
+                id: recipeId,
+                title: 'Original',
+                prepTime: 30,
+                category: 'Dinner',
+                ingredients: [],
+                instructions: [],
+            };
+            const updates = {
+                ingredients: [
+                    {
+                        name: 'Tomato',
+                        catalogItemId: 'catalog-1',
+                        quantityAmount: 1,
+                        quantityUnit: 'pcs',
+                    },
+                ],
+            };
+
+            await invalidateCache('recipes');
+            (api.get as jest.Mock).mockResolvedValue([existingRecipe]);
+            (api.put as jest.Mock).mockResolvedValue({
+                id: recipeId,
+                title: 'Original',
+                prepTime: 30,
+                ingredients: updates.ingredients,
+                instructions: [],
+            });
+
+            await service.updateRecipe(recipeId, updates as any);
+
+            expect(api.put).toHaveBeenCalledWith(
+                `/recipes/${recipeId}`,
+                expect.objectContaining({
+                    ingredients: [
+                        expect.objectContaining({
+                            name: 'Tomato',
+                            catalogItemId: 'catalog-1',
+                        }),
+                    ],
+                }),
+            );
         });
     });
 });

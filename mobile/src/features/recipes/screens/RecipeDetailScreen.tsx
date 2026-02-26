@@ -40,6 +40,7 @@ import type { ShoppingItem } from '../../../mocks/shopping';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
 import { useTranslation } from 'react-i18next';
+import { useCatalog } from '../../../common/hooks/useCatalog';
 
 
 export function RecipeDetailScreen({
@@ -53,6 +54,7 @@ export function RecipeDetailScreen({
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { getRecipeById, updateRecipe } = useRecipes();
+  const { groceryItems, searchGroceries } = useCatalog();
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -605,6 +607,8 @@ export function RecipeDetailScreen({
         isSaving={isSavingEdit}
         mode="edit"
         initialRecipe={mapRecipeToFormData(displayRecipe)}
+        groceryItems={groceryItems}
+        searchGroceries={searchGroceries}
       />
 
     </SafeAreaView>
