@@ -59,7 +59,7 @@ describe('Import Contract Schemas', () => {
         chores: [{ localId: 'c1', title: 'C1' }],
       };
       const result = ImportRequestSchema.safeParse(payload);
-      if (!result.success) {
+      if ('error' in result) {
         console.error(result.error);
       }
       expect(result.success).toBe(true);

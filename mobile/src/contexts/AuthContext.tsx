@@ -7,6 +7,7 @@ import { api, setOnUnauthorizedHandler } from '../services/api';
 import { tokenStorage } from '../features/auth/services/tokenStorage';
 import { authApi } from '../features/auth/services/authApi';
 import { logger } from '../common/utils/logger';
+import { guestStorage } from '../common/utils/guestStorage';
 import {
   verifyHouseholdIsNewlyCreated,
   mapUserResponseToUser,
@@ -33,6 +34,7 @@ interface AuthContextType {
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  clearGuestData: () => Promise<void>;
   showHouseholdNameScreen: boolean;
   setShowHouseholdNameScreen: (show: boolean) => void;
   refreshUser: () => Promise<void>;
@@ -433,6 +435,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const handleClearGuestData = async () => {
+    await guestStorage.clearAll();
+  };
+
   // Set up handler for 401 errors to automatically sign out
   useEffect(() => {
     const handleUnauthorized = async () => {
@@ -464,6 +470,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUpWithEmail: handleSignUpWithEmail,
         signInWithEmail: handleSignInWithEmail,
         signOut: handleSignOut,
+        clearGuestData: handleClearGuestData,
         showHouseholdNameScreen,
         setShowHouseholdNameScreen,
         refreshUser: loadStoredUser,

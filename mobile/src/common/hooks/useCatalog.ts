@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { catalogService } from '../services/catalogService';
 import type { GroceryItem } from '../../features/shopping/components/GrocerySearchBar';
 import type { Category } from '../../mocks/shopping';
+import { i18n } from '../../i18n';
 
 /**
  * Hook return type
@@ -53,6 +54,18 @@ export function useCatalog(): UseCatalogReturn {
   const [frequentlyAddedItems, setFrequentlyAddedItems] = useState<GroceryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [languageVersion, setLanguageVersion] = useState(0);
+
+  useEffect(() => {
+    const handleLanguageChanged = () => {
+      setLanguageVersion((current) => current + 1);
+    };
+
+    i18n.on('languageChanged', handleLanguageChanged);
+    return () => {
+      i18n.off('languageChanged', handleLanguageChanged);
+    };
+  }, []);
 
   /**
    * Loads catalog data from service.
@@ -103,14 +116,14 @@ export function useCatalog(): UseCatalogReturn {
    */
   const searchGroceries = useCallback(async (query: string) => {
     return catalogService.searchGroceries(query);
-  }, []);
+  }, [languageVersion]);
 
   /**
    * Fetch groceries by category on demand
    */
   const getGroceriesByCategory = useCallback(async (categoryName: string) => {
     return catalogService.getGroceriesByCategory(categoryName);
-  }, []);
+  }, [languageVersion]);
 
   // Load catalog data on mount
   useEffect(() => {

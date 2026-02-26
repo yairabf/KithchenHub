@@ -29,6 +29,7 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
         const quantityUnitType = findQuantityUnitType(ing.quantityUnit);
         return {
             name: ing.name,
+            catalogItemId: ing.catalogItemId,
             quantityAmount: quantityAmount ?? 1,
             quantityUnit: ing.quantityUnit || undefined,
             quantityUnitType,
@@ -51,7 +52,7 @@ export const createRecipe = (data: NewRecipeData): Recipe => {
         imageUrl: data.imageUrl,
     };
     // Business rule: auto-populate createdAt and updatedAt on creation
-    return withCreatedAtAndUpdatedAt(recipe);
+    return withCreatedAtAndUpdatedAt<Recipe>(recipe as Recipe);
 };
 
 export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
@@ -62,6 +63,7 @@ export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
         quantityUnitType: ing.quantityUnitType,
         quantityModifier: ing.quantityModifier,
         name: ing.name ?? '',
+        catalogItemId: ing.catalogItemId,
     }));
     const instructions = (recipe.instructions || []).map((inst: Instruction) => ({
         id: generateId(),
@@ -69,13 +71,13 @@ export const mapRecipeToFormData = (recipe: Recipe): NewRecipeData => {
     }));
 
     return {
-        title: recipe.title ?? recipe.name ?? '',
+        title: recipe.title ?? '',
         category: recipe.category ?? '',
         prepTime: recipe.prepTime != null ? String(recipe.prepTime) : '',
         description: recipe.description ?? '',
         ingredients,
         instructions,
-        imageUrl: recipe.imageUrl,
+        imageUrl: recipe.imageUrl ?? undefined,
     };
 };
 
@@ -86,6 +88,7 @@ export const mapFormDataToRecipeUpdates = (data: NewRecipeData): Partial<Recipe>
         const quantityUnitType = findQuantityUnitType(ing.quantityUnit);
         return {
             name: ing.name,
+            catalogItemId: ing.catalogItemId,
             quantityAmount: quantityAmount ?? 1,
             quantityUnit: ing.quantityUnit || undefined,
             quantityUnitType,

@@ -78,7 +78,7 @@ async function readCachedEntities<T extends EntityTimestamps>(
  * @param getId - Function to extract entity ID (for validation)
  * @throws Error if storage write fails
  */
-async function writeCachedEntities<T extends EntityTimestamps>(
+async function writeCachedEntities<T extends EntityTimestamps & { id: string }>(
   entityType: SyncEntityType,
   entities: T[],
   getId: (entity: T) => string
@@ -116,7 +116,7 @@ async function writeCachedEntities<T extends EntityTimestamps>(
  * @param forceRefresh - If true, force fetch from API even if cache exists (default: false)
  * @returns Array of entities
  */
-export async function getCached<T extends EntityTimestamps>(
+export async function getCached<T extends EntityTimestamps & { id: string }>(
   entityType: SyncEntityType,
   fetchFn: () => Promise<T[]>,
   getId: (entity: T) => string,
@@ -226,7 +226,7 @@ export async function getCached<T extends EntityTimestamps>(
  * @param entities - Array of entities to cache
  * @param getId - Function to extract entity ID
  */
-export async function setCached<T extends EntityTimestamps>(
+export async function setCached<T extends EntityTimestamps & { id: string }>(
   entityType: SyncEntityType,
   entities: T[],
   getId: (entity: T) => string
@@ -274,7 +274,7 @@ export async function readCachedEntitiesForUpdate<T extends EntityTimestamps>(
  * @param getId - Function to extract entity ID
  * @throws Error if cache read fails (unexpected errors only)
  */
-export async function addEntityToCache<T extends EntityTimestamps>(
+export async function addEntityToCache<T extends EntityTimestamps & { id: string }>(
   entityType: SyncEntityType,
   newEntity: T,
   getId: (entity: T) => string
@@ -336,7 +336,7 @@ export async function addEntityToCache<T extends EntityTimestamps>(
  * @param matchFn - Function to match entity in cache
  * @throws Error if cache read fails (unexpected errors only)
  */
-export async function updateEntityInCache<T extends EntityTimestamps>(
+export async function updateEntityInCache<T extends EntityTimestamps & { id: string }>(
   entityType: SyncEntityType,
   updatedEntity: T,
   getId: (entity: T) => string,
@@ -465,7 +465,7 @@ export async function invalidateAllSignedInCaches(): Promise<void> {
  * @param getId - Function to extract entity ID
  * @throws Error if cache read fails (unexpected errors only)
  */
-export async function removeEntityFromCache<T extends EntityTimestamps>(
+export async function removeEntityFromCache<T extends EntityTimestamps & { id: string }>(
   entityType: SyncEntityType,
   entityId: string,
   getId: (entity: T) => string
@@ -491,4 +491,3 @@ export async function removeEntityFromCache<T extends EntityTimestamps>(
     // Don't throw - cache update is best-effort
   }
 }
-

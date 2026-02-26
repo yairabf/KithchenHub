@@ -227,6 +227,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [pendingDeleteList, setPendingDeleteList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const categoryRequestIdRef = useRef(0);
+  const previousCategoryLanguageRef = useRef(i18n.language);
   const deletingItemIdsRef = useRef<Set<string>>(new Set());
 
   // Determine data mode based on user authentication state
@@ -785,6 +786,46 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       }
     }
   }, [getGroceriesByCategory, t]);
+
+  useEffect(() => {
+    const previousLanguage = previousCategoryLanguageRef.current;
+    const currentLanguage = i18n.language;
+    const hasLanguageChanged = previousLanguage !== currentLanguage;
+    previousCategoryLanguageRef.current = currentLanguage;
+
+    if (!hasLanguageChanged) {
+      return;
+    }
+
+    if (!showCategoryModal || !selectedCategory) {
+      return;
+    }
+
+    const requestId = categoryRequestIdRef.current + 1;
+    categoryRequestIdRef.current = requestId;
+    setCategoryItemsError(null);
+    setIsCategoryItemsLoading(true);
+
+    void (async () => {
+      try {
+        const items = await getGroceriesByCategory(selectedCategory);
+        if (categoryRequestIdRef.current === requestId) {
+          setCategoryItems(items);
+        }
+      } catch (error) {
+        console.error('Failed to refresh category items after language change:', error);
+        if (categoryRequestIdRef.current === requestId) {
+          setCategoryItemsError(t('categoryModal.loadFailed'));
+        }
+      } finally {
+        if (categoryRequestIdRef.current === requestId) {
+          setIsCategoryItemsLoading(false);
+        }
+      }
+    })();
+    // Only run when language changes; modal/category are read to decide if we refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid refetch on modal open
+  }, [i18n.language, getGroceriesByCategory, t]);
 
   const handleCloseCategoryModal = useCallback(() => {
     setShowCategoryModal(false);

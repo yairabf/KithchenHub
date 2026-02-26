@@ -21,6 +21,7 @@ import {
 } from '../dtos/recipe-detail-response.dto';
 import { RecipeImagesService } from './recipe-images.service';
 import { normalizeRecipeCategory } from '../constants';
+import { ShoppingService } from '../../shopping/services/shopping.service';
 
 /**
  * Shape of recipe entity as returned by the repository (Prisma JSON columns are untyped).
@@ -42,6 +43,7 @@ type RecipeEntityShape = {
 
 type IngredientRow = {
   name: string;
+  catalogItemId?: string;
   quantityAmount?: number;
   quantityUnit?: string;
   quantityUnitType?: string;
@@ -62,6 +64,7 @@ function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
   const ingredients: RecipeIngredientDto[] = Array.isArray(recipe.ingredients)
     ? (recipe.ingredients as IngredientRow[]).map((ing) => ({
         name: ing.name,
+        catalogItemId: ing.catalogItemId,
         quantityAmount: ing.quantityAmount ?? ing.quantity,
         quantityUnit: ing.quantityUnit ?? ing.unit,
         quantityUnitType: ing.quantityUnitType,
@@ -107,6 +110,7 @@ export class RecipesService {
     private recipesRepository: RecipesRepository,
     private prisma: PrismaService,
     private recipeImagesService: RecipeImagesService,
+    private shoppingService: ShoppingService,
   ) {}
 
   /**
@@ -180,6 +184,7 @@ export class RecipesService {
    *
    * @param recipeId - The recipe ID
    * @param householdId - The household ID for authorization
+   * @param lang - Optional language for resolving catalog-linked ingredient names
    * @returns Recipe details with ingredients and instructions
    * @throws NotFoundException if recipe doesn't exist
    * @throws ForbiddenException if user doesn't have access
@@ -187,6 +192,7 @@ export class RecipesService {
   async getRecipe(
     recipeId: string,
     householdId: string,
+    lang?: string,
   ): Promise<RecipeDetailDto> {
     this.logger.log(`Getting recipe ${recipeId} for household ${householdId}`);
 
@@ -205,6 +211,33 @@ export class RecipesService {
     }
 
     const mapped = mapRecipeToDetailDto(recipe);
+
+    // When lang is provided, resolve localized names for ingredients that have catalogItemId
+    if (lang && typeof lang === 'string' && lang.trim() !== '') {
+      const catalogIds = mapped.ingredients
+        .map((ing) => ing.catalogItemId)
+        .filter(
+          (id): id is string => typeof id === 'string' && id.trim() !== '',
+        );
+      if (catalogIds.length > 0) {
+        const displayNames = await this.shoppingService.getCatalogDisplayNames(
+          catalogIds,
+          lang.trim(),
+        );
+        const nameByCatalogId = new Map(
+          displayNames.map((entry) => [entry.id, entry.name]),
+        );
+        mapped.ingredients = mapped.ingredients.map((ing) => {
+          if (ing.catalogItemId && nameByCatalogId.has(ing.catalogItemId)) {
+            return {
+              ...ing,
+              name: nameByCatalogId.get(ing.catalogItemId) ?? ing.name,
+            };
+          }
+          return ing;
+        });
+      }
+    }
 
     // Resolve new image URLs
     const { imageUrl, thumbUrl } =

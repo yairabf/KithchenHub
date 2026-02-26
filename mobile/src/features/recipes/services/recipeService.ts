@@ -10,6 +10,7 @@ import { EntityTimestamps } from '../../../common/types/entityMetadata';
 import { getIsOnline } from '../../../common/utils/networkStatus';
 import { resizeAndValidateImage, buildImageFormData } from '../../../common/utils';
 import { normalizeRecipeCategory } from '../constants';
+import { i18n } from '../../../i18n';
 
 /**
  * DTO types for API responses
@@ -25,6 +26,7 @@ type RecipeDetailDto = {
     prepTime?: number;
     ingredients: Array<{
         name: string;
+        catalogItemId?: string;
         quantityAmount?: number;
         quantityUnit?: string;
         quantityUnitType?: string;
@@ -95,6 +97,7 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
     // Map ingredients: backend RecipeIngredientDto[] -> frontend Ingredient[]
     const ingredients = (dto.ingredients ?? []).map((ing) => ({
         name: ing.name,
+        catalogItemId: ing.catalogItemId,
         quantityAmount: ing.quantityAmount ?? ing.quantity,
         quantityUnit: ing.quantityUnit ?? ing.unit,
         quantityUnitType: ing.quantityUnitType,
@@ -436,13 +439,30 @@ export class RemoteRecipeService implements IRecipeService {
         const cached = await readCachedEntitiesForUpdate<Recipe>('recipes');
         const cachedRecipe = cached.find(r => r.id === recipeId);
 
-        // If cached recipe has full details (ingredients/instructions), return it
-        if (cachedRecipe && cachedRecipe.ingredients && cachedRecipe.ingredients.length > 0) {
+        const hasCatalogLinkedIngredients = Boolean(
+            cachedRecipe?.ingredients?.some(
+                (ingredient) =>
+                    typeof ingredient.catalogItemId === 'string' &&
+                    ingredient.catalogItemId.trim() !== '',
+            ),
+        );
+
+        // If cached recipe has full details without catalog-linked ingredients, return it.
+        // Catalog-linked ingredient names are language-dependent, so those should refetch.
+        if (
+            cachedRecipe &&
+            cachedRecipe.ingredients &&
+            cachedRecipe.ingredients.length > 0 &&
+            !hasCatalogLinkedIngredients
+        ) {
             return cachedRecipe;
         }
 
         // Otherwise fetch from API
-        const response = await api.get<RecipeDetailDto>(`/recipes/${recipeId}`);
+        const lang = i18n.language?.trim().toLowerCase() || 'en';
+        const response = await api.get<RecipeDetailDto>(
+            `/recipes/${recipeId}?lang=${encodeURIComponent(lang)}`,
+        );
 
         // Map backend RecipeDetailDto to frontend Recipe format
         const mappedResponse = mapDetailDtoToRecipe(response);
@@ -493,6 +513,7 @@ export class RemoteRecipeService implements IRecipeService {
         prepTime?: number;
         ingredients: Array<{
             name: string;
+            catalogItemId?: string;
             quantityAmount?: number;
             quantityUnit?: string;
             quantityUnitType?: string;
@@ -511,6 +532,10 @@ export class RemoteRecipeService implements IRecipeService {
             const quantityUnit = ing.quantityUnit && ing.quantityUnit.trim().length > 0 ? ing.quantityUnit : undefined;
             return {
                 name: ing.name,
+                catalogItemId:
+                    typeof ing.catalogItemId === 'string' && ing.catalogItemId.trim().length > 0
+                        ? ing.catalogItemId
+                        : undefined,
                 quantityAmount,
                 quantityUnit,
                 quantityUnitType: ing.quantityUnitType,
@@ -548,6 +573,7 @@ export class RemoteRecipeService implements IRecipeService {
         prepTime?: number;
         ingredients?: Array<{
             name: string;
+            catalogItemId?: string;
             quantityAmount?: number;
             quantityUnit?: string;
             quantityUnitType?: string;
@@ -563,6 +589,7 @@ export class RemoteRecipeService implements IRecipeService {
             prepTime?: number;
             ingredients?: Array<{
                 name: string;
+                catalogItemId?: string;
                 quantityAmount?: number;
                 quantityUnit?: string;
                 quantityUnitType?: string;
@@ -594,6 +621,10 @@ export class RemoteRecipeService implements IRecipeService {
                 const quantityUnit = ing.quantityUnit && ing.quantityUnit.trim().length > 0 ? ing.quantityUnit : undefined;
                 return {
                     name: ing.name,
+                    catalogItemId:
+                        typeof ing.catalogItemId === 'string' && ing.catalogItemId.trim().length > 0
+                            ? ing.catalogItemId
+                            : undefined,
                     quantityAmount,
                     quantityUnit,
                     quantityUnitType: ing.quantityUnitType,

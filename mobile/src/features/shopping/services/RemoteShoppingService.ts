@@ -13,6 +13,7 @@ import type { ShoppingData, IShoppingService } from './shoppingService';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../../../common/utils/catalogUtils';
 import { catalogService } from '../../../common/services/catalogService';
 import { addEntityToCache, updateEntityInCache, removeEntityFromCache } from '../../../common/repositories/cacheAwareRepository';
+import { i18n } from '../../../i18n';
 
 /**
  * Extended ShoppingItem type that includes catalog identifiers for API requests.
@@ -57,6 +58,7 @@ type ShoppingListDetailDto = {
   icon?: string | null;
   items: {
     id: string;
+    catalogItemId?: string;
     name: string;
     quantity?: number | null;
     unit?: string | null;
@@ -69,6 +71,23 @@ type ShoppingListDetailDto = {
 const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
 const DEFAULT_LIST_COLOR = colors.shopping;
 const FREQUENTLY_ADDED_ITEMS_LIMIT = 8;
+
+const resolveCategory = (
+  category: string | null | undefined,
+  fallbackCategory?: string,
+): string => {
+  const normalizedCategory = category?.trim();
+  if (normalizedCategory) {
+    return normalizedCategory;
+  }
+
+  const normalizedFallback = fallbackCategory?.trim();
+  if (normalizedFallback) {
+    return normalizedFallback;
+  }
+
+  return 'Other';
+};
 
 // Note: Category building utilities moved to common/utils/catalogUtils.ts
 // Catalog data fetching is handled by catalogService
@@ -103,12 +122,13 @@ const buildShoppingItemsFromDetails = (
     return {
       id: item.id,
       localId: item.id,
+      catalogItemId: item.catalogItemId,
       name: item.name,
       image: item.image ?? matchingGrocery?.image ?? '',
       quantity: item.quantity ?? 1,
       unit: item.unit ?? undefined,
       isChecked: item.isChecked ?? false,
-      category: item.category ?? matchingGrocery?.category ?? 'Other',
+      category: resolveCategory(item.category, matchingGrocery?.category),
       listId,
     };
   });
@@ -128,16 +148,18 @@ const buildShoppingItemsFromDetails = (
 const mapItemResponseToShoppingItem = (
   response: ShoppingListDetailDto['items'][0],
   listId: string,
-  existingImage?: string
+  existingImage?: string,
+  fallbackCategory?: string,
 ): ShoppingItem => {
   return {
     id: response.id,
     localId: response.id,
+    catalogItemId: response.catalogItemId,
     name: response.name,
     quantity: response.quantity ?? 1,
     unit: response.unit ?? undefined,
     isChecked: response.isChecked ?? false,
-    category: response.category ?? 'Other',
+    category: resolveCategory(response.category, fallbackCategory),
     listId,
     image: response.image ?? existingImage ?? '',
   };
@@ -371,7 +393,12 @@ export class RemoteShoppingService implements IShoppingService {
     }
     
     // Map response to ShoppingItem format (createdItem matches ShoppingListDetailDto['items'][0] structure)
-    const mapped = mapItemResponseToShoppingItem(createdItem as ShoppingListDetailDto['items'][0], item.listId, item.image);
+    const mapped = mapItemResponseToShoppingItem(
+      createdItem as ShoppingListDetailDto['items'][0],
+      item.listId,
+      item.image,
+      item.category,
+    );
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
     const hasServerTimestamps = 'created_at' in createdItem || 'updated_at' in createdItem || 
@@ -412,7 +439,12 @@ export class RemoteShoppingService implements IShoppingService {
     // Extract the updatedItem from the response
     const updatedItemResponse = response.updatedItem || response;
     // Map response to ShoppingItem format
-    const mapped = mapItemResponseToShoppingItem(updatedItemResponse, existing.listId, existing.image);
+    const mapped = mapItemResponseToShoppingItem(
+      updatedItemResponse,
+      existing.listId,
+      existing.image,
+      existing.category,
+    );
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
     const hasServerTimestamps = 'created_at' in updatedItemResponse || 'updated_at' in updatedItemResponse || 
@@ -465,7 +497,12 @@ export class RemoteShoppingService implements IShoppingService {
     // Extract the updatedItem from the response
     const updatedItemResponse = response.updatedItem || response;
     // Map response to ShoppingItem format
-    const mapped = mapItemResponseToShoppingItem(updatedItemResponse, existing.listId, existing.image);
+    const mapped = mapItemResponseToShoppingItem(
+      updatedItemResponse,
+      existing.listId,
+      existing.image,
+      existing.category,
+    );
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
     const hasServerTimestamps = 'created_at' in updatedItemResponse || 'updated_at' in updatedItemResponse || 
@@ -504,9 +541,12 @@ export class RemoteShoppingService implements IShoppingService {
     shoppingLists: ShoppingList[],
     groceryItems: GroceryItem[],
   ): Promise<ShoppingItem[]> {
+    const lang = i18n.language?.trim().toLowerCase() || 'en';
     const listDetails = await Promise.all(
       shoppingLists.map((list) =>
-        api.get<ShoppingListDetailDto>(`/shopping-lists/${list.id}`)
+        api.get<ShoppingListDetailDto>(
+          `/shopping-lists/${list.id}?lang=${encodeURIComponent(lang)}`,
+        )
       )
     );
 

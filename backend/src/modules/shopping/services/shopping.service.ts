@@ -10,6 +10,7 @@ import { PrismaService } from '../../../infrastructure/database/prisma/prisma.se
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 import {
   GrocerySearchItemDto,
+  CatalogDisplayNameDto,
   ShoppingListSummaryDto,
   ShoppingListDetailDto,
   CreateListDto,
@@ -81,15 +82,21 @@ export class ShoppingService {
     } | null,
     catalogItemId?: string,
   ) {
-    const name = catalogItem?.name ?? input.name;
+    const normalizedCatalogName = catalogItem?.name?.trim();
+    const normalizedInputName = input.name?.trim();
+    const name = normalizedCatalogName || normalizedInputName;
     if (!name) {
       throw new BadRequestException('Shopping item name is required');
     }
 
+    const normalizedCatalogCategory = catalogItem?.category?.trim();
+    const normalizedInputCategory = input.category?.trim();
+    const category = normalizedCatalogCategory || normalizedInputCategory;
+
     return {
       catalogItemId,
       name,
-      category: catalogItem?.category ?? input.category,
+      category,
       unit: input.unit ?? catalogItem?.defaultUnit ?? undefined,
       quantity: input.quantity ?? catalogItem?.defaultQuantity ?? 1,
       image: input.image ?? this.resolveCatalogImageUrl(catalogItem?.imageUrl),
@@ -99,7 +106,7 @@ export class ShoppingService {
 
   /**
    * Rewrites relative catalog image URLs to the configured storage base URL
-   * (e.g. downloaded_icons/chicken.png → http://localhost:9000/catalog-icons/downloaded_icons/chicken.png).
+   * (e.g. items_images/chicken.png → http://localhost:9000/catalog-icons/items_images/chicken.png).
    */
   private resolveCatalogImageUrl(
     imageUrl: string | null | undefined,
@@ -119,14 +126,126 @@ export class ShoppingService {
     return `${catalogIconsBaseUrl}/${path}`;
   }
 
+  private normalizeSearchLanguage(lang?: string): string {
+    const normalized = lang?.trim().toLowerCase();
+    if (!normalized || normalized.length === 0) {
+      return 'en';
+    }
+
+    return normalized;
+  }
+
+  private getBaseLanguage(lang: string): string {
+    const [baseLanguage] = lang.split(/[-_]/);
+    return baseLanguage && baseLanguage.length > 0 ? baseLanguage : 'en';
+  }
+
+  private buildLanguageOrFilters(
+    normalizedLang: string,
+    baseLang: string,
+  ): Array<Record<string, unknown>> {
+    const filters: Array<Record<string, unknown>> = [{ lang: normalizedLang }];
+
+    if (baseLang !== normalizedLang) {
+      filters.push({ lang: baseLang });
+    }
+
+    filters.push({ lang: { startsWith: `${baseLang}-` } });
+    return filters;
+  }
+
+  private resolveLocalizedCatalogName(
+    canonicalName: string,
+    translations: Array<{ lang: string; name: string }>,
+    normalizedLang: string,
+    baseLang: string,
+  ): string {
+    const requestedName = translations
+      .find((item) => item.lang === normalizedLang)
+      ?.name?.trim();
+    if (requestedName) {
+      return requestedName;
+    }
+
+    const baseName = translations
+      .find((item) => item.lang === baseLang)
+      ?.name?.trim();
+    if (baseName) {
+      return baseName;
+    }
+
+    const baseVariantName = translations
+      .find((item) => item.lang.startsWith(`${baseLang}-`))
+      ?.name?.trim();
+    if (baseVariantName) {
+      return baseVariantName;
+    }
+
+    const englishName = translations
+      .find((item) => item.lang === 'en')
+      ?.name?.trim();
+    if (englishName) {
+      return englishName;
+    }
+
+    const englishVariantName = translations
+      .find((item) => item.lang.startsWith('en-'))
+      ?.name?.trim();
+    if (englishVariantName) {
+      return englishVariantName;
+    }
+
+    return canonicalName;
+  }
+
+  private scoreCatalogSearchMatch(
+    itemName: string,
+    aliases: string[],
+    searchTerm: string,
+  ): number {
+    const normalizedName = itemName.toLowerCase();
+    const normalizedAliases = aliases.map((alias) => alias.toLowerCase());
+
+    if (normalizedName === searchTerm) {
+      return 1000;
+    }
+    if (normalizedName.startsWith(searchTerm)) {
+      return 900;
+    }
+    if (normalizedAliases.includes(searchTerm)) {
+      return 800;
+    }
+    if (normalizedAliases.some((alias) => alias.startsWith(searchTerm))) {
+      return 700;
+    }
+    if (normalizedName.includes(searchTerm)) {
+      return 600;
+    }
+    if (normalizedAliases.some((alias) => alias.includes(searchTerm))) {
+      return 500;
+    }
+
+    return 0;
+  }
+
   /**
    * Searches groceries by name (case-insensitive).
    *
    * @param query - Search query string
    * @returns Array of matching grocery items
    */
-  async searchGroceries(query: string): Promise<GrocerySearchItemDto[]> {
+  async searchGroceries(
+    query: string,
+    lang?: string,
+  ): Promise<GrocerySearchItemDto[]> {
     const searchTerm = query?.trim() ?? '';
+    const normalizedSearchTerm = searchTerm.toLowerCase();
+    const normalizedLang = this.normalizeSearchLanguage(lang);
+    const baseLang = this.getBaseLanguage(normalizedLang);
+    const languageOrFilters = this.buildLanguageOrFilters(
+      normalizedLang,
+      baseLang,
+    );
 
     if (!searchTerm) {
       return [];
@@ -134,12 +253,71 @@ export class ShoppingService {
 
     const rows = await this.prisma.masterGroceryCatalog.findMany({
       where: {
-        name: {
-          contains: searchTerm,
-          mode: 'insensitive',
-        },
+        OR: [
+          {
+            translations: {
+              some: {
+                AND: [
+                  {
+                    OR: languageOrFilters,
+                  },
+                  {
+                    name: {
+                      contains: searchTerm,
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            AND: [
+              {
+                translations: {
+                  none: {
+                    OR: languageOrFilters,
+                  },
+                },
+              },
+              {
+                translations: {
+                  some: {
+                    lang: 'en',
+                    name: {
+                      contains: searchTerm,
+                      mode: 'insensitive',
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          {
+            aliases: {
+              some: {
+                AND: [
+                  {
+                    OR: languageOrFilters,
+                  },
+                  {
+                    alias: {
+                      contains: searchTerm,
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            name: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        ],
       },
-      orderBy: { name: 'asc' },
       select: {
         id: true,
         name: true,
@@ -147,16 +325,64 @@ export class ShoppingService {
         defaultUnit: true,
         imageUrl: true,
         defaultQuantity: true,
+        translations: {
+          where: {
+            OR: [
+              ...languageOrFilters,
+              { lang: 'en' },
+              { lang: { startsWith: 'en-' } },
+            ],
+          },
+          select: {
+            lang: true,
+            name: true,
+          },
+        },
+        aliases: {
+          where: {
+            OR: languageOrFilters,
+          },
+          select: {
+            alias: true,
+          },
+        },
       },
     });
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      category: row.category,
-      defaultUnit: row.defaultUnit ?? undefined,
-      imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
-      defaultQuantity: row.defaultQuantity ?? 1,
-    }));
+
+    return rows
+      .map((row) => ({
+        resolvedName: this.resolveLocalizedCatalogName(
+          row.name,
+          row.translations,
+          normalizedLang,
+          baseLang,
+        ),
+        row,
+        score: this.scoreCatalogSearchMatch(
+          this.resolveLocalizedCatalogName(
+            row.name,
+            row.translations,
+            normalizedLang,
+            baseLang,
+          ),
+          row.aliases.map((alias) => alias.alias),
+          normalizedSearchTerm,
+        ),
+      }))
+      .sort((a, b) => {
+        if (a.score !== b.score) {
+          return b.score - a.score;
+        }
+        return a.resolvedName.localeCompare(b.resolvedName);
+      })
+      .map(({ row, resolvedName }) => ({
+        id: row.id,
+        name: resolvedName,
+        category: row.category,
+        defaultUnit: row.defaultUnit ?? undefined,
+        imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
+        defaultQuantity: row.defaultQuantity ?? 1,
+      }));
   }
 
   /**
@@ -168,9 +394,16 @@ export class ShoppingService {
    */
   async getGroceriesByCategory(
     category: string,
+    lang?: string,
     limit = 100,
   ): Promise<GrocerySearchItemDto[]> {
     const categoryTerm = category?.trim() ?? '';
+    const normalizedLang = this.normalizeSearchLanguage(lang);
+    const baseLang = this.getBaseLanguage(normalizedLang);
+    const languageOrFilters = this.buildLanguageOrFilters(
+      normalizedLang,
+      baseLang,
+    );
     if (!categoryTerm) {
       return [];
     }
@@ -193,16 +426,103 @@ export class ShoppingService {
         defaultUnit: true,
         imageUrl: true,
         defaultQuantity: true,
+        translations: {
+          where: {
+            OR: [
+              ...languageOrFilters,
+              { lang: 'en' },
+              { lang: { startsWith: 'en-' } },
+            ],
+          },
+          select: {
+            lang: true,
+            name: true,
+          },
+        },
+        aliases: {
+          where: {
+            OR: languageOrFilters,
+          },
+          select: {
+            alias: true,
+          },
+        },
+      },
+    });
+
+    return rows
+      .map((row) => ({
+        id: row.id,
+        name: this.resolveLocalizedCatalogName(
+          row.name,
+          row.translations,
+          normalizedLang,
+          baseLang,
+        ),
+        category: row.category,
+        defaultUnit: row.defaultUnit ?? undefined,
+        imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
+        defaultQuantity: row.defaultQuantity ?? 1,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /**
+   * Returns display names for catalog IDs in the requested language.
+   * Uses the same resolution order as search/category: requested lang → base lang → en → canonical.
+   * IDs not found in the catalog are omitted from the result.
+   *
+   * @param ids - Catalog item IDs to resolve
+   * @param lang - Optional language code (e.g. 'he', 'en')
+   * @returns Array of { id, name } for found catalog items
+   */
+  async getCatalogDisplayNames(
+    ids: string[],
+    lang?: string,
+  ): Promise<CatalogDisplayNameDto[]> {
+    const uniqueIds = [...new Set(ids)].filter(
+      (id) => id?.trim?.()?.length > 0,
+    );
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const normalizedLang = this.normalizeSearchLanguage(lang);
+    const baseLang = this.getBaseLanguage(normalizedLang);
+    const languageOrFilters = this.buildLanguageOrFilters(
+      normalizedLang,
+      baseLang,
+    );
+
+    const rows = await this.prisma.masterGroceryCatalog.findMany({
+      where: { id: { in: uniqueIds } },
+      select: {
+        id: true,
+        name: true,
+        translations: {
+          where: {
+            OR: [
+              ...languageOrFilters,
+              { lang: 'en' },
+              { lang: { startsWith: 'en-' } },
+            ],
+          },
+          select: {
+            lang: true,
+            name: true,
+          },
+        },
       },
     });
 
     return rows.map((row) => ({
       id: row.id,
-      name: row.name,
-      category: row.category,
-      defaultUnit: row.defaultUnit ?? undefined,
-      imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
-      defaultQuantity: row.defaultQuantity ?? 1,
+      name: this.resolveLocalizedCatalogName(
+        row.name,
+        row.translations,
+        normalizedLang,
+        baseLang,
+      ),
     }));
   }
 
@@ -292,6 +612,7 @@ export class ShoppingService {
    *
    * @param listId - The shopping list ID
    * @param householdId - The household ID for authorization
+   * @param lang - Optional language code to resolve catalog item names (e.g. 'he', 'en')
    * @returns Shopping list details with items
    * @throws NotFoundException if list doesn't exist
    * @throws ForbiddenException if user doesn't have access
@@ -299,6 +620,7 @@ export class ShoppingService {
   async getListDetails(
     listId: string,
     householdId: string,
+    lang?: string,
   ): Promise<ShoppingListDetailDto> {
     const list = await this.shoppingRepository.findListWithItems(listId);
 
@@ -310,21 +632,38 @@ export class ShoppingService {
       throw new ForbiddenException('Access denied');
     }
 
+    let nameByCatalogId: Map<string, string> = new Map();
+    if (lang != null && lang.trim() !== '') {
+      const catalogIds = list.items
+        .map((item) => item.catalogItemId)
+        .filter((id): id is string => id != null && id.trim() !== '');
+      if (catalogIds.length > 0) {
+        const resolved = await this.getCatalogDisplayNames(catalogIds, lang);
+        nameByCatalogId = new Map(resolved.map((r) => [r.id, r.name]));
+      }
+    }
+
     return {
       id: list.id,
       name: list.name,
       color: list.color,
       icon: list.icon ?? undefined,
-      items: list.items.map((item) => ({
-        id: item.id,
-        catalogItemId: item.catalogItemId ?? undefined,
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        isChecked: item.isChecked,
-        category: item.category,
-        image: item.image ?? undefined,
-      })),
+      items: list.items.map((item) => {
+        const displayName =
+          item.catalogItemId != null
+            ? nameByCatalogId.get(item.catalogItemId)
+            : undefined;
+        return {
+          id: item.id,
+          catalogItemId: item.catalogItemId ?? undefined,
+          name: displayName ?? item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          isChecked: item.isChecked,
+          category: item.category,
+          image: item.image ?? undefined,
+        };
+      }),
     };
   }
 

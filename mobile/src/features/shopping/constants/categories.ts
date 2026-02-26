@@ -63,7 +63,7 @@ export function normalizeShoppingCategory(category: string | null | undefined): 
     return DEFAULT_CATEGORY.toLowerCase() as ShoppingCategory;
   }
   
-  const normalized = category.toLowerCase();
+  const normalized = category.trim().toLowerCase();
   return isValidShoppingCategory(normalized) 
     ? normalized 
     : (DEFAULT_CATEGORY.toLowerCase() as ShoppingCategory);

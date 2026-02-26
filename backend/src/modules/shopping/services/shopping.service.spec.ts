@@ -307,6 +307,134 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0].name).toBe('Active Item');
     });
+
+    it('should return localized catalog item names when lang is provided', async () => {
+      const mockList = {
+        id: mockListId,
+        name: 'Test List',
+        color: null,
+        icon: null,
+        isMain: false,
+        householdId: mockHouseholdId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        items: [
+          {
+            id: 'item-1',
+            listId: mockListId,
+            catalogItemId: 'g1',
+            customItemId: null,
+            name: 'Canonical Tomato',
+            quantity: 1,
+            unit: null,
+            isChecked: false,
+            category: null,
+            image: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(repository, 'findListWithItems')
+        .mockResolvedValue(mockList as any);
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Canonical Tomato',
+          translations: [
+            { lang: 'he', name: 'עגבנייה' },
+            { lang: 'en', name: 'Tomato' },
+          ],
+        },
+      ] as any);
+
+      const result = await service.getListDetails(
+        mockListId,
+        mockHouseholdId,
+        'he',
+      );
+
+      expect(result.items[0]?.name).toBe('עגבנייה');
+    });
+
+    it('should fallback to english and canonical names in list details', async () => {
+      const mockList = {
+        id: mockListId,
+        name: 'Test List',
+        color: null,
+        icon: null,
+        isMain: false,
+        householdId: mockHouseholdId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        items: [
+          {
+            id: 'item-1',
+            listId: mockListId,
+            catalogItemId: 'g1',
+            customItemId: null,
+            name: 'Canonical Tomato',
+            quantity: 1,
+            unit: null,
+            isChecked: false,
+            category: null,
+            image: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          },
+          {
+            id: 'item-2',
+            listId: mockListId,
+            catalogItemId: 'g2',
+            customItemId: null,
+            name: 'Canonical Onion',
+            quantity: 1,
+            unit: null,
+            isChecked: false,
+            category: null,
+            image: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(repository, 'findListWithItems')
+        .mockResolvedValue(mockList as any);
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Canonical Tomato',
+          translations: [{ lang: 'en', name: 'Tomato' }],
+        },
+        {
+          id: 'g2',
+          name: 'Canonical Onion',
+          translations: [],
+        },
+      ] as any);
+
+      const result = await service.getListDetails(
+        mockListId,
+        mockHouseholdId,
+        'he',
+      );
+
+      expect(
+        result.items.find((item) => item.catalogItemId === 'g1')?.name,
+      ).toBe('Tomato');
+      expect(
+        result.items.find((item) => item.catalogItemId === 'g2')?.name,
+      ).toBe('Canonical Onion');
+    });
   });
 
   describe('getCustomItems', () => {
@@ -331,6 +459,388 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       expect(repository.findCustomItems).toHaveBeenCalledWith(mockHouseholdId);
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Custom Item');
+    });
+  });
+
+  describe('searchGroceries', () => {
+    it('should return empty array for blank query', async () => {
+      const result = await service.searchGroceries('   ');
+
+      expect(result).toEqual([]);
+      expect(prisma.masterGroceryCatalog.findMany).not.toHaveBeenCalled();
+    });
+
+    it('should rank exact name matches above alias and partial matches', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g3',
+          name: 'Appetizer Mix',
+          category: 'Snacks',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [{ lang: 'en', name: 'Appetizer Mix' }],
+          aliases: [{ alias: 'app' }],
+        },
+        {
+          id: 'g1',
+          name: 'Apple',
+          category: 'Fruits',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [{ lang: 'en', name: 'Apple' }],
+          aliases: [{ alias: 'Malus domestica' }],
+        },
+        {
+          id: 'g2',
+          name: 'Red Fruit',
+          category: 'Fruits',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [{ lang: 'en', name: 'Red Fruit' }],
+          aliases: [{ alias: 'Apple' }],
+        },
+      ] as any);
+
+      const result = await service.searchGroceries('apple');
+
+      expect(result.map((item) => item.id)).toEqual(['g1', 'g2', 'g3']);
+    });
+
+    it('should query requested language translations with english fallback', async () => {
+      const findManySpy = jest
+        .spyOn(prisma.masterGroceryCatalog, 'findMany')
+        .mockResolvedValue([] as any);
+
+      await service.searchGroceries('עגבניה', 'he');
+
+      const args = findManySpy.mock.calls[0]?.[0] as {
+        select: {
+          translations: { where: { OR: Array<Record<string, unknown>> } };
+          aliases: { where: { OR: Array<Record<string, unknown>> } };
+        };
+      };
+      expect(args.select.translations.where.OR).toEqual(
+        expect.arrayContaining([
+          { lang: 'he' },
+          { lang: { startsWith: 'he-' } },
+          { lang: 'en' },
+          { lang: { startsWith: 'en-' } },
+        ]),
+      );
+      expect(args.select.aliases.where.OR).toEqual(
+        expect.arrayContaining([
+          { lang: 'he' },
+          { lang: { startsWith: 'he-' } },
+        ]),
+      );
+    });
+
+    it('should return requested language translation when available', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Tomato',
+          category: 'Vegetables',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [
+            { lang: 'he', name: 'עגבנייה' },
+            { lang: 'en', name: 'Tomato' },
+          ],
+          aliases: [],
+        },
+      ] as any);
+
+      const result = await service.searchGroceries('עגב', 'he');
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'g1',
+          name: 'עגבנייה',
+        }),
+      ]);
+    });
+
+    it('should fallback to english translation when requested language is missing', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Tomato Canonical',
+          category: 'Vegetables',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [{ lang: 'en', name: 'Tomato' }],
+          aliases: [],
+        },
+      ] as any);
+
+      const result = await service.searchGroceries('tomato', 'he');
+
+      expect(result[0]?.name).toBe('Tomato');
+    });
+
+    it('should fallback to canonical name when no translations exist', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Tomato Canonical',
+          category: 'Vegetables',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [],
+          aliases: [],
+        },
+      ] as any);
+
+      const result = await service.searchGroceries('tomato', 'he');
+
+      expect(result[0]?.name).toBe('Tomato Canonical');
+    });
+
+    it('should support locale variants for search queries', async () => {
+      const findManySpy = jest
+        .spyOn(prisma.masterGroceryCatalog, 'findMany')
+        .mockResolvedValue([
+          {
+            id: 'g1',
+            name: 'Tomato Canonical',
+            category: 'Vegetables',
+            defaultUnit: null,
+            imageUrl: null,
+            defaultQuantity: 1,
+            translations: [{ lang: 'en', name: 'Tomato' }],
+            aliases: [],
+          },
+        ] as any);
+
+      const result = await service.searchGroceries('tomate', 'fr-CA');
+
+      const args = findManySpy.mock.calls[0]?.[0] as {
+        select: {
+          translations: { where: { OR: Array<Record<string, unknown>> } };
+        };
+      };
+      expect(args.select.translations.where.OR).toEqual(
+        expect.arrayContaining([
+          { lang: 'fr-ca' },
+          { lang: 'fr' },
+          { lang: { startsWith: 'fr-' } },
+          { lang: 'en' },
+        ]),
+      );
+      expect(result[0]?.name).toBe('Tomato');
+    });
+  });
+
+  describe('getGroceriesByCategory', () => {
+    it('should support locale variants for category queries', async () => {
+      const findManySpy = jest
+        .spyOn(prisma.masterGroceryCatalog, 'findMany')
+        .mockResolvedValue([
+          {
+            id: 'g1',
+            name: 'Tomato',
+            category: 'Vegetables',
+            defaultUnit: null,
+            imageUrl: null,
+            defaultQuantity: 1,
+            translations: [{ lang: 'en', name: 'Tomato' }],
+            aliases: [],
+          },
+        ] as any);
+
+      await service.getGroceriesByCategory('Vegetables', 'he-IL', 20);
+
+      const args = findManySpy.mock.calls[0]?.[0] as {
+        select: {
+          translations: { where: { OR: Array<Record<string, unknown>> } };
+          aliases: { where: { OR: Array<Record<string, unknown>> } };
+        };
+      };
+      expect(args.select.translations.where.OR).toEqual(
+        expect.arrayContaining([
+          { lang: 'he-il' },
+          { lang: 'he' },
+          { lang: { startsWith: 'he-' } },
+          { lang: 'en' },
+        ]),
+      );
+      expect(args.select.aliases.where.OR).toEqual(
+        expect.arrayContaining([
+          { lang: 'he-il' },
+          { lang: 'he' },
+          { lang: { startsWith: 'he-' } },
+        ]),
+      );
+    });
+
+    it('should return localized item names using requested language translations', async () => {
+      const findManySpy = jest
+        .spyOn(prisma.masterGroceryCatalog, 'findMany')
+        .mockResolvedValue([
+          {
+            id: 'g1',
+            name: 'Tomato',
+            category: 'Vegetables',
+            defaultUnit: null,
+            imageUrl: null,
+            defaultQuantity: 1,
+            translations: [
+              { lang: 'he', name: 'עגבנייה' },
+              { lang: 'en', name: 'Tomato' },
+            ],
+            aliases: [],
+          },
+        ] as any);
+
+      const result = await service.getGroceriesByCategory(
+        'Vegetables',
+        'he',
+        20,
+      );
+
+      expect(findManySpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 20,
+          select: expect.objectContaining({
+            translations: {
+              where: {
+                OR: expect.arrayContaining([
+                  { lang: 'he' },
+                  { lang: { startsWith: 'he-' } },
+                  { lang: 'en' },
+                  { lang: { startsWith: 'en-' } },
+                ]),
+              },
+              select: { lang: true, name: true },
+            },
+          }),
+        }),
+      );
+      expect(result[0]?.name).toBe('עגבנייה');
+    });
+
+    it('should fallback to english translation in category browse when requested language is missing', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Tomato Canonical',
+          category: 'Vegetables',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [{ lang: 'en', name: 'Tomato' }],
+          aliases: [],
+        },
+      ] as any);
+
+      const result = await service.getGroceriesByCategory(
+        'Vegetables',
+        'he',
+        20,
+      );
+
+      expect(result[0]?.name).toBe('Tomato');
+    });
+
+    it('should fallback to canonical name in category browse when translations are missing', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Tomato Canonical',
+          category: 'Vegetables',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [],
+          aliases: [],
+        },
+      ] as any);
+
+      const result = await service.getGroceriesByCategory(
+        'Vegetables',
+        'he',
+        20,
+      );
+
+      expect(result[0]?.name).toBe('Tomato Canonical');
+    });
+  });
+
+  describe('getCatalogDisplayNames', () => {
+    it('should return localized names for catalog IDs', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Milk',
+          category: 'dairy',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [
+            { lang: 'he', name: 'חלב' },
+            { lang: 'en', name: 'Milk' },
+          ],
+        },
+        {
+          id: 'g2',
+          name: 'Bread',
+          category: 'bakery',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [
+            { lang: 'he', name: 'לחם' },
+            { lang: 'en', name: 'Bread' },
+          ],
+        },
+      ] as any);
+
+      const result = await service.getCatalogDisplayNames(['g1', 'g2'], 'he');
+
+      expect(prisma.masterGroceryCatalog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: { in: ['g1', 'g2'] } },
+          select: expect.objectContaining({
+            id: true,
+            name: true,
+            translations: expect.any(Object),
+          }),
+        }),
+      );
+      expect(result).toHaveLength(2);
+      expect(result.find((r) => r.id === 'g1')?.name).toBe('חלב');
+      expect(result.find((r) => r.id === 'g2')?.name).toBe('לחם');
+    });
+
+    it('should return empty array for empty ids', async () => {
+      const result = await service.getCatalogDisplayNames([], 'he');
+      expect(result).toEqual([]);
+      expect(prisma.masterGroceryCatalog.findMany).not.toHaveBeenCalled();
+    });
+
+    it('should fallback to English when requested lang has no translation', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Tomato Canonical',
+          category: 'Vegetables',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [{ lang: 'en', name: 'Tomato' }],
+        },
+      ] as any);
+
+      const result = await service.getCatalogDisplayNames(['g1'], 'he');
+
+      expect(result[0]).toEqual({ id: 'g1', name: 'Tomato' });
     });
   });
 });

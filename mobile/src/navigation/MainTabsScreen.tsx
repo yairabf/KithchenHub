@@ -6,6 +6,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
 import { ShoppingListsScreen } from '../features/shopping/screens/ShoppingListsScreen';
 import { RecipesScreen } from '../features/recipes/screens/RecipesScreen';
@@ -50,7 +51,7 @@ export function MainTabsScreen() {
   const recipesPosition = useSharedValue(SCREEN_WIDTH);
   const settingsPosition = useSharedValue(SCREEN_WIDTH);
 
-  const screenPositions: Record<TabKey, Animated.SharedValue<number>> = {
+  const screenPositions: Record<TabKey, SharedValue<number>> = {
     Dashboard: dashboardPosition,
     Shopping: shoppingPosition,
     Chores: choresPosition,

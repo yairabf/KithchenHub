@@ -115,6 +115,7 @@ const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => (
   itemCount: list.itemCount ?? 0,
   icon: DEFAULT_LIST_ICON,
   color: list.color ?? DEFAULT_LIST_COLOR,
+  isMain: false,
 });
 
 const buildShoppingItemsFromDetails = (
@@ -234,6 +235,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       itemCount: data.itemCount ?? 0,
       icon: data.icon ?? DEFAULT_LIST_ICON,
       color: data.color ?? DEFAULT_LIST_COLOR,
+      isMain: data.isMain ?? false,
       createdAt: now,
       updatedAt: now,
     } as ShoppingList);
@@ -397,6 +399,16 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       () => this.fetchListsFromApi(),
       (list) => this.getListId(list),
       getIsOnline()
+    );
+  }
+
+  async refreshLists(): Promise<ShoppingList[]> {
+    return getCached<ShoppingList>(
+      'shoppingLists',
+      () => this.fetchListsFromApi(),
+      (list) => this.getListId(list),
+      getIsOnline(),
+      true,
     );
   }
   

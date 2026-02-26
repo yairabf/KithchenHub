@@ -53,7 +53,7 @@ export class ImportService {
         
         // Validate all recipes are in guest mode
         if (recipes.length > 0) {
-            validateEntitiesMode(recipes, 'guest');
+            validateEntitiesMode(recipes as Array<{ mode?: string }>, 'guest');
         }
 
         const importRecipes: ImportRecipeDto[] = recipes.map(recipe => ({
@@ -87,12 +87,18 @@ export class ImportService {
         
         // Validate all shopping lists are in guest mode
         if (shoppingData.shoppingLists.length > 0) {
-            validateEntitiesMode(shoppingData.shoppingLists, 'guest');
+            validateEntitiesMode(
+                shoppingData.shoppingLists as Array<{ mode?: string }>,
+                'guest'
+            );
         }
         
         // Validate all shopping items are in guest mode
         if (shoppingData.shoppingItems.length > 0) {
-            validateEntitiesMode(shoppingData.shoppingItems, 'guest');
+            validateEntitiesMode(
+                shoppingData.shoppingItems as Array<{ mode?: string }>,
+                'guest'
+            );
         }
         
         const importShoppingLists: ImportShoppingListDto[] = shoppingData.shoppingLists.map(list => {

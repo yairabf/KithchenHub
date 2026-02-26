@@ -27,6 +27,10 @@ export class IngredientInputDto {
   name: string;
 
   @IsOptional()
+  @IsString()
+  catalogItemId?: string;
+
+  @IsOptional()
   @IsNumber()
   @ValidateIf(
     (obj) =>

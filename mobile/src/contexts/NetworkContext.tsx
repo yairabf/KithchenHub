@@ -17,7 +17,7 @@ const NetworkContext = createContext<NetworkContextValue | undefined>(undefined)
 /** Default reachability config (native): Google's endpoint; blocked by CORS on web. */
 const NETINFO_CONFIG_NATIVE = {
   reachabilityUrl: 'https://clients3.google.com/generate_204',
-  reachabilityTest: (response: Response) => response.status === 204,
+  reachabilityTest: async (response: Response) => response.status === 204,
   reachabilityShortTimeout: 5_000,
   reachabilityLongTimeout: 60_000,
   reachabilityRequestTimeout: 15_000,
@@ -29,7 +29,7 @@ function getNetInfoConfig() {
     return {
       ...NETINFO_CONFIG_NATIVE,
       reachabilityUrl: `${API_BASE_URL}/api/v1/health`,
-      reachabilityTest: (response: Response) => response.ok,
+      reachabilityTest: async (response: Response) => response.ok,
     };
   }
   return NETINFO_CONFIG_NATIVE;

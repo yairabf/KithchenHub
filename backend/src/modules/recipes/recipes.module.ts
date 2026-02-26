@@ -10,9 +10,10 @@ import { RecipeImageRateLimitGuard } from './guards/recipe-image-rate-limit.guar
 import { RecipesRepository } from './repositories/recipes.repository';
 import { PrismaModule } from '../../infrastructure/database/prisma/prisma.module';
 import { StorageModule } from '../../infrastructure/storage/storage.module';
+import { ShoppingModule } from '../shopping/shopping.module';
 
 @Module({
-  imports: [PrismaModule, StorageModule, ConfigModule],
+  imports: [PrismaModule, StorageModule, ConfigModule, ShoppingModule],
   controllers: [RecipesController, RecipeImagesController],
   providers: [
     RecipesService,

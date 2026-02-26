@@ -19,7 +19,7 @@
 const isDev = __DEV__;
 
 /** Values that can be passed to logger methods (primitives, Error, plain objects). */
-export type Loggable = string | number | boolean | null | undefined | Error | object;
+export type Loggable = unknown;
 
 export const logger = {
   /**

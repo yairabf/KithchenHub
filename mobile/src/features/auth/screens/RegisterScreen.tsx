@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.caption,
-    color: colors.text,
+    color: colors.textPrimary,
     marginBottom: spacing.xs,
     fontWeight: '600',
   },
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    color: colors.text,
+    color: colors.textPrimary,
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    color: colors.text,
+    color: colors.textPrimary,
   },
   eyeButton: {
     paddingHorizontal: spacing.md,

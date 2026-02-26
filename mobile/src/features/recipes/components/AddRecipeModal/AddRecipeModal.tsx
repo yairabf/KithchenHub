@@ -171,9 +171,22 @@ export function AddRecipeModal({
     const currentIngredients = recipe.ingredients || [];
     setRecipe({
       ...recipe,
-      ingredients: currentIngredients.map((ing) =>
-        ing.id === id ? { ...ing, [field]: value } : ing
-      ),
+      ingredients: currentIngredients.map((ing) => {
+        if (ing.id !== id) {
+          return ing;
+        }
+
+        const nextIngredient = { ...ing, [field]: value };
+        if (
+          field === 'name' &&
+          ing.catalogItemId &&
+          ing.name.trim() !== value.trim()
+        ) {
+          nextIngredient.catalogItemId = undefined;
+        }
+
+        return nextIngredient;
+      }),
     });
   };
 
@@ -221,7 +234,13 @@ export function AddRecipeModal({
       ...recipe,
       ingredients: [
         ...currentIngredients,
-        { id: newId, quantityAmount: '', quantityUnit: '', name: item.name },
+        {
+          id: newId,
+          quantityAmount: '',
+          quantityUnit: '',
+          name: item.name,
+          catalogItemId: item.id.startsWith('custom-') ? undefined : item.id,
+        },
       ],
     });
     setCommittedIngredientIds((prev) => new Set(prev).add(newId));

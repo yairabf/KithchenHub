@@ -88,3 +88,16 @@ test-results/
 sandbox/*
 .claude/*
 .gemimi/*
+.opencode/*
+.venv/*
+.cursor/*
+_bmad/*
+_bmad-output/
+
+# Local / generated artifacts (unstaged)
+backend/output/
+output/
+backend/scripts/seed-catalog-item-aliases.ts
+backend/scripts/seed-catalog-item-tags.ts
+backend/scripts/upload-items-images.ts
+wikidata_ai_catalog_to_csv.js

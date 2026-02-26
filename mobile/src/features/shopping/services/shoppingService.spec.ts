@@ -35,11 +35,18 @@ jest.mock('../../../config', () => ({
 // Mock catalogService (LocalShoppingService now uses it)
 jest.mock('../../../common/services/catalogService', () => ({
   catalogService: {
+    getGroceryItems: jest.fn().mockResolvedValue([]),
     getCatalogData: jest.fn().mockResolvedValue({
       groceryItems: [],
       categories: [],
       frequentlyAddedItems: [],
     }),
+  },
+}));
+
+jest.mock('../../../i18n', () => ({
+  i18n: {
+    language: 'en',
   },
 }));
 
@@ -62,6 +69,9 @@ import { RemoteShoppingService } from './RemoteShoppingService';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import { mockShoppingLists, mockItems } from '../../../mocks/shopping';
 import { api } from '../../../services/api';
+import { catalogService } from '../../../common/services/catalogService';
+
+const mockedI18n = require('../../../i18n').i18n as { language: string };
 
 describe('createShoppingService', () => {
   describe.each([
@@ -118,6 +128,55 @@ describe('Shopping Services', () => {
             expect(data.categories).toBeDefined();
             expect(data.groceryItems).toBeDefined();
             expect(data.frequentlyAddedItems).toBeDefined();
+        });
+    });
+
+    describe('RemoteShoppingService', () => {
+        let service: RemoteShoppingService;
+
+        beforeEach(() => {
+            service = new RemoteShoppingService();
+            jest.clearAllMocks();
+            mockedI18n.language = 'en';
+            (catalogService.getGroceryItems as jest.Mock).mockResolvedValue([]);
+        });
+
+        it('getShoppingData includes current language in list details request', async () => {
+            mockedI18n.language = 'he-IL';
+            (api.get as jest.Mock).mockImplementation((url: string) => {
+                if (url === '/shopping-lists') {
+                    return Promise.resolve([
+                        {
+                            id: 'list-1',
+                            name: 'Main',
+                            isMain: true,
+                            itemCount: 1,
+                        },
+                    ]);
+                }
+
+                if (url === '/shopping-lists/list-1?lang=he-il') {
+                    return Promise.resolve({
+                        id: 'list-1',
+                        name: 'Main',
+                        items: [
+                            {
+                                id: 'item-1',
+                                name: 'עגבנייה',
+                                quantity: 1,
+                                isChecked: false,
+                            },
+                        ],
+                    });
+                }
+
+                return Promise.resolve([]);
+            });
+
+            const data = await service.getShoppingData();
+
+            expect(api.get).toHaveBeenCalledWith('/shopping-lists/list-1?lang=he-il');
+            expect(data.shoppingItems[0]?.name).toBe('עגבנייה');
         });
     });
 });

@@ -123,7 +123,15 @@ export function useShoppingRealtime(
               void repository.applyRealtimeListChange(typedPayload);
             } else if (!isSignedIn && onListChange) {
               // Guest: update local state via callback
-              guestListsRef.current = applyShoppingListChange(guestListsRef.current, typedPayload);
+              guestListsRef.current = applyShoppingListChange(
+                guestListsRef.current,
+                typedPayload as RealtimePostgresChangesPayload<{
+                  id: string;
+                  name?: string;
+                  color?: string | null;
+                  household_id?: string | null;
+                }>,
+              );
               onListChange(guestListsRef.current);
 
               // If list was deleted, also remove associated items

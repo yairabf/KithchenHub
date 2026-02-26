@@ -7,6 +7,7 @@ export interface Ingredient {
   quantityUnitType?: string;
   quantityModifier?: string;
   name: string;
+  catalogItemId?: string;
 }
 
 export interface Instruction {

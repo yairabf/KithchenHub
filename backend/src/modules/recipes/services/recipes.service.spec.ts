@@ -5,6 +5,7 @@ import { RecipesRepository } from '../repositories/recipes.repository';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { RecipeImagesService } from './recipe-images.service';
+import { ShoppingService } from '../../shopping/services/shopping.service';
 
 /**
  * Recipes Service Unit Tests
@@ -16,6 +17,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
   let repository: RecipesRepository;
   let prisma: PrismaService;
   let recipeImagesService: RecipeImagesService;
+  let shoppingService: ShoppingService;
   let module: TestingModule;
 
   const mockHouseholdId = 'household-123';
@@ -55,6 +57,12 @@ describe('RecipesService - Soft-Delete Behavior', () => {
             },
           },
         },
+        {
+          provide: ShoppingService,
+          useValue: {
+            getCatalogDisplayNames: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -62,6 +70,7 @@ describe('RecipesService - Soft-Delete Behavior', () => {
     repository = module.get<RecipesRepository>(RecipesRepository);
     prisma = module.get<PrismaService>(PrismaService);
     recipeImagesService = module.get<RecipeImagesService>(RecipeImagesService);
+    shoppingService = module.get<ShoppingService>(ShoppingService);
   });
 
   describe('getRecipes', () => {
@@ -302,6 +311,100 @@ describe('RecipesService - Soft-Delete Behavior', () => {
         }
       },
     );
+
+    it('should localize catalog-linked ingredient names when lang is provided', async () => {
+      const mockRecipe = {
+        id: mockRecipeId,
+        householdId: mockHouseholdId,
+        title: 'Recipe',
+        prepTime: 10,
+        ingredients: [
+          {
+            name: 'Canonical Tomato',
+            catalogItemId: 'g1',
+            quantityAmount: 1,
+            quantityUnit: 'pcs',
+          },
+          {
+            name: 'Salt',
+            quantityAmount: 1,
+            quantityUnit: 'tsp',
+          },
+        ],
+        instructions: [],
+        imageUrl: null,
+        imageKey: null,
+        thumbKey: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest
+        .spyOn(repository, 'findRecipeById')
+        .mockResolvedValue(mockRecipe as unknown as Recipe);
+      jest
+        .spyOn(recipeImagesService, 'getRecipeImageUrls')
+        .mockResolvedValue({ imageUrl: null, thumbUrl: null });
+      jest
+        .spyOn(shoppingService, 'getCatalogDisplayNames')
+        .mockResolvedValue([{ id: 'g1', name: 'עגבנייה' }]);
+
+      const result = await service.getRecipe(
+        mockRecipeId,
+        mockHouseholdId,
+        'he',
+      );
+
+      expect(shoppingService.getCatalogDisplayNames).toHaveBeenCalledWith(
+        ['g1'],
+        'he',
+      );
+      expect(result.ingredients[0]?.name).toBe('עגבנייה');
+      expect(result.ingredients[1]?.name).toBe('Salt');
+    });
+
+    it('should keep ingredient names unchanged without catalog mappings', async () => {
+      const mockRecipe = {
+        id: mockRecipeId,
+        householdId: mockHouseholdId,
+        title: 'Recipe',
+        prepTime: 10,
+        ingredients: [
+          {
+            name: 'Canonical Tomato',
+            catalogItemId: 'g1',
+            quantityAmount: 1,
+            quantityUnit: 'pcs',
+          },
+        ],
+        instructions: [],
+        imageUrl: null,
+        imageKey: null,
+        thumbKey: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest
+        .spyOn(repository, 'findRecipeById')
+        .mockResolvedValue(mockRecipe as unknown as Recipe);
+      jest
+        .spyOn(recipeImagesService, 'getRecipeImageUrls')
+        .mockResolvedValue({ imageUrl: null, thumbUrl: null });
+      jest
+        .spyOn(shoppingService, 'getCatalogDisplayNames')
+        .mockResolvedValue([]);
+
+      const result = await service.getRecipe(
+        mockRecipeId,
+        mockHouseholdId,
+        'he',
+      );
+
+      expect(result.ingredients[0]?.name).toBe('Canonical Tomato');
+    });
   });
 
   describe('createRecipe', () => {
