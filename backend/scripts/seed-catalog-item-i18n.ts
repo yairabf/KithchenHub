@@ -12,11 +12,29 @@
  */
 
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaClient } from '@prisma/client';
+import { parseCsv, rowsToCatalogI18nRows } from './lib/catalog-i18n-csv';
 
 dotenv.config();
 
 const prisma = new PrismaClient();
+const IMPORT_CHUNK_SIZE = 250;
+
+const HEBREW_TRANSLATED_CSV_PATH = path.join(
+  __dirname,
+  '..',
+  'output',
+  'catalog_item_i18n_he_translated.csv',
+);
+
+const HEBREW_TEMPLATE_CSV_PATH = path.join(
+  __dirname,
+  '..',
+  'output',
+  'catalog_item_i18n_he_template.csv',
+);
 
 type CountRow = { count: bigint };
 
@@ -101,6 +119,61 @@ async function seedHebrewFromAliases(): Promise<void> {
   `);
 }
 
+function getHebrewCsvPath(): string | null {
+  if (fs.existsSync(HEBREW_TRANSLATED_CSV_PATH)) {
+    return HEBREW_TRANSLATED_CSV_PATH;
+  }
+
+  if (fs.existsSync(HEBREW_TEMPLATE_CSV_PATH)) {
+    return HEBREW_TEMPLATE_CSV_PATH;
+  }
+
+  return null;
+}
+
+async function seedHebrewFromCsv(filePath: string): Promise<number> {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const parsed = rowsToCatalogI18nRows(parseCsv(content));
+
+  const rows = parsed
+    .map((row) => ({
+      catalogItemId: row.catalog_item_id.trim(),
+      name: row.he_name.trim(),
+    }))
+    .filter((row) => row.catalogItemId.length > 0 && row.name.length > 0);
+
+  if (rows.length === 0) {
+    return 0;
+  }
+
+  let processed = 0;
+  for (let i = 0; i < rows.length; i += IMPORT_CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + IMPORT_CHUNK_SIZE);
+    await prisma.$transaction(
+      chunk.map((row) =>
+        prisma.catalogItemI18n.upsert({
+          where: {
+            catalogItemId_lang: {
+              catalogItemId: row.catalogItemId,
+              lang: 'he',
+            },
+          },
+          update: { name: row.name },
+          create: {
+            catalogItemId: row.catalogItemId,
+            lang: 'he',
+            name: row.name,
+          },
+        }),
+      ),
+    );
+
+    processed += chunk.length;
+  }
+
+  return processed;
+}
+
 /**
  * Logs catalog item count and en/he translation counts and Hebrew coverage.
  */
@@ -147,6 +220,17 @@ async function main(): Promise<void> {
   } else {
     console.warn(
       'catalog_item_aliases table not found; skipped Hebrew seed from aliases.',
+    );
+  }
+
+  const heCsvPath = getHebrewCsvPath();
+  if (heCsvPath) {
+    const imported = await seedHebrewFromCsv(heCsvPath);
+    console.log(`Imported he translations from CSV: ${imported}`);
+    console.log(`- source: ${heCsvPath}`);
+  } else {
+    console.warn(
+      'No Hebrew CSV found in backend/output; skipped Hebrew seed from CSV.',
     );
   }
 

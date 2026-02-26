@@ -1,5 +1,7 @@
 export class RecipeIngredientDto {
   name: string;
+  /** Optional catalog item ID for resolving localized name when lang is provided on detail request */
+  catalogItemId?: string;
   quantityAmount?: number;
   quantityUnit?: string;
   quantityUnitType?: string;

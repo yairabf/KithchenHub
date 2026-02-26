@@ -60,6 +60,27 @@ export class GroceriesController {
   async getCategories() {
     return this.shoppingService.getCategories();
   }
+
+  @Get('names')
+  @Public()
+  async getCatalogDisplayNames(
+    @Query('ids') idsParam: string,
+    @Query('lang') lang?: string,
+  ) {
+    const ids = idsParam
+      ? idsParam
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+      : [];
+    const MAX_IDS = 200;
+    if (ids.length > MAX_IDS) {
+      throw new BadRequestException(
+        `Too many catalog IDs (max ${MAX_IDS}). Requested: ${ids.length}.`,
+      );
+    }
+    return this.shoppingService.getCatalogDisplayNames(ids, lang);
+  }
 }
 
 /**
@@ -125,11 +146,12 @@ export class ShoppingListsController {
   async getListDetails(
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') listId: string,
+    @Query('lang') lang?: string,
   ) {
     if (!user.householdId) {
       throw new BadRequestException('User must belong to a household');
     }
-    return this.shoppingService.getListDetails(listId, user.householdId);
+    return this.shoppingService.getListDetails(listId, user.householdId, lang);
   }
 
   @Patch(':id')

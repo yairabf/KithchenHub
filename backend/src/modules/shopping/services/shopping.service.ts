@@ -10,6 +10,7 @@ import { PrismaService } from '../../../infrastructure/database/prisma/prisma.se
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 import {
   GrocerySearchItemDto,
+  CatalogDisplayNameDto,
   ShoppingListSummaryDto,
   ShoppingListDetailDto,
   CreateListDto,
@@ -81,15 +82,21 @@ export class ShoppingService {
     } | null,
     catalogItemId?: string,
   ) {
-    const name = catalogItem?.name ?? input.name;
+    const normalizedCatalogName = catalogItem?.name?.trim();
+    const normalizedInputName = input.name?.trim();
+    const name = normalizedCatalogName || normalizedInputName;
     if (!name) {
       throw new BadRequestException('Shopping item name is required');
     }
 
+    const normalizedCatalogCategory = catalogItem?.category?.trim();
+    const normalizedInputCategory = input.category?.trim();
+    const category = normalizedCatalogCategory || normalizedInputCategory;
+
     return {
       catalogItemId,
       name,
-      category: catalogItem?.category ?? input.category,
+      category,
       unit: input.unit ?? catalogItem?.defaultUnit ?? undefined,
       quantity: input.quantity ?? catalogItem?.defaultQuantity ?? 1,
       image: input.image ?? this.resolveCatalogImageUrl(catalogItem?.imageUrl),
@@ -99,7 +106,7 @@ export class ShoppingService {
 
   /**
    * Rewrites relative catalog image URLs to the configured storage base URL
-   * (e.g. downloaded_icons/chicken.png → http://localhost:9000/catalog-icons/downloaded_icons/chicken.png).
+   * (e.g. items_images/chicken.png → http://localhost:9000/catalog-icons/items_images/chicken.png).
    */
   private resolveCatalogImageUrl(
     imageUrl: string | null | undefined,
@@ -461,6 +468,65 @@ export class ShoppingService {
   }
 
   /**
+   * Returns display names for catalog IDs in the requested language.
+   * Uses the same resolution order as search/category: requested lang → base lang → en → canonical.
+   * IDs not found in the catalog are omitted from the result.
+   *
+   * @param ids - Catalog item IDs to resolve
+   * @param lang - Optional language code (e.g. 'he', 'en')
+   * @returns Array of { id, name } for found catalog items
+   */
+  async getCatalogDisplayNames(
+    ids: string[],
+    lang?: string,
+  ): Promise<CatalogDisplayNameDto[]> {
+    const uniqueIds = [...new Set(ids)].filter(
+      (id) => id?.trim?.()?.length > 0,
+    );
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const normalizedLang = this.normalizeSearchLanguage(lang);
+    const baseLang = this.getBaseLanguage(normalizedLang);
+    const languageOrFilters = this.buildLanguageOrFilters(
+      normalizedLang,
+      baseLang,
+    );
+
+    const rows = await this.prisma.masterGroceryCatalog.findMany({
+      where: { id: { in: uniqueIds } },
+      select: {
+        id: true,
+        name: true,
+        translations: {
+          where: {
+            OR: [
+              ...languageOrFilters,
+              { lang: 'en' },
+              { lang: { startsWith: 'en-' } },
+            ],
+          },
+          select: {
+            lang: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: this.resolveLocalizedCatalogName(
+        row.name,
+        row.translations,
+        normalizedLang,
+        baseLang,
+      ),
+    }));
+  }
+
+  /**
    * Gets all unique grocery categories.
    *
    * @returns Sorted array of category names
@@ -546,6 +612,7 @@ export class ShoppingService {
    *
    * @param listId - The shopping list ID
    * @param householdId - The household ID for authorization
+   * @param lang - Optional language code to resolve catalog item names (e.g. 'he', 'en')
    * @returns Shopping list details with items
    * @throws NotFoundException if list doesn't exist
    * @throws ForbiddenException if user doesn't have access
@@ -553,6 +620,7 @@ export class ShoppingService {
   async getListDetails(
     listId: string,
     householdId: string,
+    lang?: string,
   ): Promise<ShoppingListDetailDto> {
     const list = await this.shoppingRepository.findListWithItems(listId);
 
@@ -564,21 +632,38 @@ export class ShoppingService {
       throw new ForbiddenException('Access denied');
     }
 
+    let nameByCatalogId: Map<string, string> = new Map();
+    if (lang != null && lang.trim() !== '') {
+      const catalogIds = list.items
+        .map((item) => item.catalogItemId)
+        .filter((id): id is string => id != null && id.trim() !== '');
+      if (catalogIds.length > 0) {
+        const resolved = await this.getCatalogDisplayNames(catalogIds, lang);
+        nameByCatalogId = new Map(resolved.map((r) => [r.id, r.name]));
+      }
+    }
+
     return {
       id: list.id,
       name: list.name,
       color: list.color,
       icon: list.icon ?? undefined,
-      items: list.items.map((item) => ({
-        id: item.id,
-        catalogItemId: item.catalogItemId ?? undefined,
-        name: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        isChecked: item.isChecked,
-        category: item.category,
-        image: item.image ?? undefined,
-      })),
+      items: list.items.map((item) => {
+        const displayName =
+          item.catalogItemId != null
+            ? nameByCatalogId.get(item.catalogItemId)
+            : undefined;
+        return {
+          id: item.id,
+          catalogItemId: item.catalogItemId ?? undefined,
+          name: displayName ?? item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          isChecked: item.isChecked,
+          category: item.category,
+          image: item.image ?? undefined,
+        };
+      }),
     };
   }
 

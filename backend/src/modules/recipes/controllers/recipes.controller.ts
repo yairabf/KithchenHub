@@ -64,13 +64,14 @@ export class RecipesController {
   async getRecipe(
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') recipeId: string,
+    @Query('lang') lang?: string,
   ) {
     if (!user.householdId) {
       this.logger.warn('getRecipe called without householdId');
       throw new BadRequestException('User must belong to a household');
     }
 
-    return this.recipesService.getRecipe(recipeId, user.householdId);
+    return this.recipesService.getRecipe(recipeId, user.householdId, lang);
   }
 
   @Put(':id')

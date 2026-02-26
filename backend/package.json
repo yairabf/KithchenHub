@@ -36,11 +36,14 @@
     "db:stop": "docker-compose -f docker-compose.db.yml --env-file .env.db down",
     "db:logs": "docker-compose -f docker-compose.db.yml --env-file .env.db logs -f",
     "db:ps": "docker-compose -f docker-compose.db.yml --env-file .env.db ps",
-    "db:seed": "ts-node -r dotenv/config scripts/seed-grocery-catalog.ts",
+    "db:seed": "ts-node -r dotenv/config scripts/seed-grocery-catalog.ts && npm run db:seed:tags && npm run db:seed:aliases && npm run db:seed:i18n",
+    "db:seed:tags": "ts-node -r dotenv/config scripts/seed-catalog-item-tags.ts",
+    "db:seed:aliases": "ts-node -r dotenv/config scripts/seed-catalog-item-aliases.ts",
     "db:seed:i18n": "ts-node -r dotenv/config scripts/seed-catalog-item-i18n.ts",
     "db:export:i18n-he-template": "ts-node -r dotenv/config scripts/export-catalog-item-i18n-he-template.ts",
     "db:import:i18n-he": "ts-node -r dotenv/config scripts/import-catalog-item-i18n-he.ts",
-    "db:auto-translate:i18n-he": "ts-node -r dotenv/config scripts/auto-translate-catalog-item-i18n-he.ts"
+    "db:auto-translate:i18n-he": "ts-node -r dotenv/config scripts/auto-translate-catalog-item-i18n-he.ts",
+    "upload:items-images": "ts-node -r dotenv/config scripts/upload-items-images.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.985.0",

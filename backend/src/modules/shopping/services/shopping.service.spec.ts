@@ -307,6 +307,134 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0].name).toBe('Active Item');
     });
+
+    it('should return localized catalog item names when lang is provided', async () => {
+      const mockList = {
+        id: mockListId,
+        name: 'Test List',
+        color: null,
+        icon: null,
+        isMain: false,
+        householdId: mockHouseholdId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        items: [
+          {
+            id: 'item-1',
+            listId: mockListId,
+            catalogItemId: 'g1',
+            customItemId: null,
+            name: 'Canonical Tomato',
+            quantity: 1,
+            unit: null,
+            isChecked: false,
+            category: null,
+            image: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(repository, 'findListWithItems')
+        .mockResolvedValue(mockList as any);
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Canonical Tomato',
+          translations: [
+            { lang: 'he', name: 'עגבנייה' },
+            { lang: 'en', name: 'Tomato' },
+          ],
+        },
+      ] as any);
+
+      const result = await service.getListDetails(
+        mockListId,
+        mockHouseholdId,
+        'he',
+      );
+
+      expect(result.items[0]?.name).toBe('עגבנייה');
+    });
+
+    it('should fallback to english and canonical names in list details', async () => {
+      const mockList = {
+        id: mockListId,
+        name: 'Test List',
+        color: null,
+        icon: null,
+        isMain: false,
+        householdId: mockHouseholdId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+        items: [
+          {
+            id: 'item-1',
+            listId: mockListId,
+            catalogItemId: 'g1',
+            customItemId: null,
+            name: 'Canonical Tomato',
+            quantity: 1,
+            unit: null,
+            isChecked: false,
+            category: null,
+            image: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          },
+          {
+            id: 'item-2',
+            listId: mockListId,
+            catalogItemId: 'g2',
+            customItemId: null,
+            name: 'Canonical Onion',
+            quantity: 1,
+            unit: null,
+            isChecked: false,
+            category: null,
+            image: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(repository, 'findListWithItems')
+        .mockResolvedValue(mockList as any);
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Canonical Tomato',
+          translations: [{ lang: 'en', name: 'Tomato' }],
+        },
+        {
+          id: 'g2',
+          name: 'Canonical Onion',
+          translations: [],
+        },
+      ] as any);
+
+      const result = await service.getListDetails(
+        mockListId,
+        mockHouseholdId,
+        'he',
+      );
+
+      expect(
+        result.items.find((item) => item.catalogItemId === 'g1')?.name,
+      ).toBe('Tomato');
+      expect(
+        result.items.find((item) => item.catalogItemId === 'g2')?.name,
+      ).toBe('Canonical Onion');
+    });
   });
 
   describe('getCustomItems', () => {
@@ -642,6 +770,77 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       );
 
       expect(result[0]?.name).toBe('Tomato Canonical');
+    });
+  });
+
+  describe('getCatalogDisplayNames', () => {
+    it('should return localized names for catalog IDs', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Milk',
+          category: 'dairy',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [
+            { lang: 'he', name: 'חלב' },
+            { lang: 'en', name: 'Milk' },
+          ],
+        },
+        {
+          id: 'g2',
+          name: 'Bread',
+          category: 'bakery',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [
+            { lang: 'he', name: 'לחם' },
+            { lang: 'en', name: 'Bread' },
+          ],
+        },
+      ] as any);
+
+      const result = await service.getCatalogDisplayNames(['g1', 'g2'], 'he');
+
+      expect(prisma.masterGroceryCatalog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: { in: ['g1', 'g2'] } },
+          select: expect.objectContaining({
+            id: true,
+            name: true,
+            translations: expect.any(Object),
+          }),
+        }),
+      );
+      expect(result).toHaveLength(2);
+      expect(result.find((r) => r.id === 'g1')?.name).toBe('חלב');
+      expect(result.find((r) => r.id === 'g2')?.name).toBe('לחם');
+    });
+
+    it('should return empty array for empty ids', async () => {
+      const result = await service.getCatalogDisplayNames([], 'he');
+      expect(result).toEqual([]);
+      expect(prisma.masterGroceryCatalog.findMany).not.toHaveBeenCalled();
+    });
+
+    it('should fallback to English when requested lang has no translation', async () => {
+      jest.spyOn(prisma.masterGroceryCatalog, 'findMany').mockResolvedValue([
+        {
+          id: 'g1',
+          name: 'Tomato Canonical',
+          category: 'Vegetables',
+          defaultUnit: null,
+          imageUrl: null,
+          defaultQuantity: 1,
+          translations: [{ lang: 'en', name: 'Tomato' }],
+        },
+      ] as any);
+
+      const result = await service.getCatalogDisplayNames(['g1'], 'he');
+
+      expect(result[0]).toEqual({ id: 'g1', name: 'Tomato' });
     });
   });
 });
