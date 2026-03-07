@@ -360,8 +360,7 @@ mobile/
 │   │   └── chores/
 │   ├── config/                   # Configuration
 │   │   └── index.ts              # App configuration
-│   └── hooks/                    # Root-level hooks
-│       └── useSupabaseAuth.ts    # Supabase auth hook
+│   └── hooks/                    # Root-level hooks (if any)
 ├── assets/                       # Static assets
 │   ├── icon.png                  # App icon
 │   ├── splash-icon.png           # Splash screen

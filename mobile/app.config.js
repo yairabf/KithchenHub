@@ -8,26 +8,21 @@ const fs = require('fs');
 
 const versionJsonPath = path.resolve(__dirname, '..', 'version.json');
 
-if (!fs.existsSync(versionJsonPath)) {
-  throw new Error(
-    `version.json not found at ${versionJsonPath}. Product version must be defined at repo root.`
-  );
+/** When building from repo root (local/CI), use version.json. When only mobile is deployed (e.g. Vercel), fall back to env or default. */
+let version = process.env.APP_VERSION || null;
+if (fs.existsSync(versionJsonPath)) {
+  let versionData;
+  try {
+    versionData = JSON.parse(fs.readFileSync(versionJsonPath, 'utf8'));
+    version = versionData?.version ?? version;
+  } catch (err) {
+    throw new Error(
+      `Invalid or unreadable version.json at ${versionJsonPath}: ${err.message}`
+    );
+  }
 }
-
-let versionData;
-try {
-  versionData = JSON.parse(fs.readFileSync(versionJsonPath, 'utf8'));
-} catch (err) {
-  throw new Error(
-    `Invalid or unreadable version.json at ${versionJsonPath}: ${err.message}`
-  );
-}
-
-const version = versionData?.version;
 if (typeof version !== 'string' || !version.trim()) {
-  throw new Error(
-    `version.json must contain a non-empty "version" string. Got: ${JSON.stringify(versionData)}`
-  );
+  version = '1.0.0';
 }
 
 const appJson = require('./app.json');
