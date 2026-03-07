@@ -2,6 +2,9 @@
   "buildCommand": "npm run vercel-build",
   "framework": null,
   "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/", "destination": "/api/v1/health" }
+  ],
   "functions": {
     "api/[...path].ts": {
       "maxDuration": 30
