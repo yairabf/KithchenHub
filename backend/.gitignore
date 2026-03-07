@@ -49,3 +49,6 @@ Thumbs.db
 
 # Prisma (if migrations folder is used for generated files)
 # Note: Prisma client is generated in node_modules, so already ignored
+.vercel
+.env*.local
+.local.env
