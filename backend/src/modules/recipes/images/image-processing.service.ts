@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 import {
   RECIPE_IMAGE_MAIN_MAX_DIMENSION,
   RECIPE_IMAGE_THUMB_SIZE,
