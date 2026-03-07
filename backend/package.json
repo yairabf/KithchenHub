@@ -32,7 +32,7 @@
     "prisma:migrate": "prisma migrate dev --schema=src/infrastructure/database/prisma/schema.prisma",
     "prisma:deploy": "node scripts/run-prisma-with-env.js",
     "prisma:studio": "prisma studio --schema=src/infrastructure/database/prisma/schema.prisma",
-    "vercel-build": "npm run prisma:generate",
+    "vercel-build": "npm run prisma:generate && node -e \"require('fs').mkdirSync('public',{recursive:true}); require('fs').writeFileSync('public/.keep','')\"",
     "db:start": "docker-compose -f docker-compose.db.yml --env-file .env.db up -d",
     "db:stop": "docker-compose -f docker-compose.db.yml --env-file .env.db down",
     "db:logs": "docker-compose -f docker-compose.db.yml --env-file .env.db logs -f",

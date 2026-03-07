@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run vercel-build",
   "framework": null,
-  "outputDirectory": ".",
+  "outputDirectory": "public",
   "rewrites": [
     { "source": "/", "destination": "/api/v1/health" }
   ],
