@@ -26,37 +26,3 @@ export function isValidImageUrl(url: string): boolean {
     return false;
   }
 }
-
-/**
- * Validates multiple URLs at once
- *
- * @param urls - Array of URL strings to validate
- * @returns Object mapping each URL to its validation result
- *
- * @example
- * validateImageUrls(['https://example.com/img1.jpg', 'invalid'])
- * // Returns: { 'https://example.com/img1.jpg': true, 'invalid': false }
- */
-export function validateImageUrls(urls: string[]): Record<string, boolean> {
-  const result: Record<string, boolean> = {};
-
-  for (const url of urls) {
-    result[url] = isValidImageUrl(url);
-  }
-
-  return result;
-}
-
-/**
- * Filters an array of URLs to only include valid ones
- *
- * @param urls - Array of URL strings
- * @returns Array containing only valid HTTP/HTTPS URLs
- *
- * @example
- * filterValidImageUrls(['https://example.com/img.jpg', 'invalid', 'javascript:alert(1)'])
- * // Returns: ['https://example.com/img.jpg']
- */
-export function filterValidImageUrls(urls: string[]): string[] {
-  return urls.filter(isValidImageUrl);
-}

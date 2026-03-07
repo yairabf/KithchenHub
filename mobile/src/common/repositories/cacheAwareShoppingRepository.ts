@@ -28,8 +28,11 @@ import { getSyncQueueProcessor } from '../utils/syncQueueProcessor';
 import * as Crypto from 'expo-crypto';
 import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../utils/catalogUtils';
 import { catalogService } from '../services/catalogService';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { applyShoppingListChange, applyShoppingItemChange } from '../../features/shopping/utils/shoppingRealtime';
+import {
+  type RealtimePostgresChangesPayload,
+  applyShoppingListChange,
+  applyShoppingItemChange,
+} from '../../features/shopping/utils/shoppingRealtime';
 
 type ShoppingListSummaryDto = {
   id: string;

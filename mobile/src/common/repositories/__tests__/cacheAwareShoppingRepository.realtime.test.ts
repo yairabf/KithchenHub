@@ -15,7 +15,7 @@ jest.mock('expo-crypto', () => ({
   randomUUID: jest.fn(() => `uuid-${Math.random().toString(36).substr(2, 9)}`),
 }));
 
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { RealtimePostgresChangesPayload } from '../../../../features/shopping/utils/shoppingRealtime';
 import { CacheAwareShoppingRepository } from '../cacheAwareShoppingRepository';
 import { RemoteShoppingService } from '../../../features/shopping/services/RemoteShoppingService';
 import type { ShoppingList, ShoppingItem } from '../../../mocks/shopping';

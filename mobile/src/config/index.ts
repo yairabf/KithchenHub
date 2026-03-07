@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import { isMockDataEnabled } from '../common/utils/mockDataToggle';
 
 // Default base URL when EXPO_PUBLIC_API_URL is not set
@@ -13,10 +12,6 @@ const API_BASE_URL = rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/
  * Centralizes environment variables and application-wide settings.
  */
 export const config = {
-    supabase: {
-        url: process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://dpjcavnhkifatwzezwgo.supabase.co',
-        anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-    },
     auth: {
         redirectScheme: 'kitchen-hub',
     },

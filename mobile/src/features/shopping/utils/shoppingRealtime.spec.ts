@@ -1,4 +1,4 @@
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { RealtimePostgresChangesPayload } from './shoppingRealtime';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping';
 import {

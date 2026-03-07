@@ -45,26 +45,6 @@ jest.mock('../../features/auth/services/authApi', () => ({
   },
 }));
 
-/** Minimal shape for useSupabaseAuth callback in tests; matches AuthContext usage */
-type MockAuthUser = { id: string; email: string; name: string; avatarUrl?: string; householdId?: string } | null;
-
-jest.mock('../../hooks/useSupabaseAuth', () => ({
-  useSupabaseAuth: (onUserChange: (user: MockAuthUser) => void) => ({
-    signInWithGoogle: jest.fn(async () => {
-      onUserChange({
-        id: 'supabase-id',
-        email: 'test@example.com',
-        name: 'Test User',
-        avatarUrl: undefined,
-        householdId: 'house-1',
-      });
-    }),
-    signOut: jest.fn(async () => {
-      onUserChange(null);
-    }),
-  }),
-}));
-
 jest.mock('../../features/auth/services/tokenStorage', () => ({
   tokenStorage: {
     saveAccessToken: jest.fn().mockResolvedValue(undefined),

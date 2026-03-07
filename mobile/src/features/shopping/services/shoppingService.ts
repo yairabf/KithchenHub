@@ -53,11 +53,3 @@ export const createShoppingService = (
   return mode === 'guest' ? new LocalShoppingService() : new RemoteShoppingService();
 };
 
-/**
- * Legacy factory function for backward compatibility
- * @deprecated Use createShoppingService with mode parameter instead
- */
-export const createShoppingServiceLegacy = (isMockEnabled: boolean): IShoppingService => {
-  const mode = isMockEnabled ? 'guest' : 'signed-in';
-  return createShoppingService(mode);
-};

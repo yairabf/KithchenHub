@@ -8,15 +8,12 @@ jest.mock('expo-clipboard', () => ({
 import { config } from '../index';
 
 describe('MobileConfig', () => {
-    it('should have supabase configuration', () => {
-        expect(config.supabase.url).toBeDefined();
-        expect(config.supabase.anonKey).toBeDefined();
+    it('should have api configuration', () => {
+        expect(config.api.baseUrl).toBeDefined();
+        expect(config.api.version).toBeDefined();
     });
 
-    it('should use environment variables when available', () => {
-        // This is a bit hard to test directly without mocking process.env
-        // but we can at least check if the structure is correct
-        expect(typeof config.supabase.url).toBe('string');
-        expect(typeof config.supabase.anonKey).toBe('string');
+    it('should have auth redirect scheme', () => {
+        expect(config.auth.redirectScheme).toBe('kitchen-hub');
     });
 });

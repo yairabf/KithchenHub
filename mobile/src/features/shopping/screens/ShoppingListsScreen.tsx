@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { CategoryModal } from '../components/CategoryModal';
 import { ShoppingListPanel } from '../components/ShoppingListPanel';
 import { CategoriesGrid } from '../components/CategoriesGrid';

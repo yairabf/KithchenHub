@@ -1,4 +1,13 @@
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+/**
+ * Local type for Postgres change payloads (e.g. from a realtime subscription).
+ * Replaces @supabase/supabase-js type so mobile can work without Supabase client.
+ */
+export type RealtimePostgresChangesPayload<T = Record<string, unknown>> = {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new: T | null;
+  old: T | null;
+};
+
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping';
 import { colors } from '../../../theme';

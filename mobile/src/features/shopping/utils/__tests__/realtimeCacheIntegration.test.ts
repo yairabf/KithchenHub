@@ -20,7 +20,7 @@ import { RemoteShoppingService } from '../../services/RemoteShoppingService';
 import { cacheEvents } from '../../../../common/utils/cacheEvents';
 import type { ShoppingItem, ShoppingList } from '../../../../mocks/shopping';
 import type { GroceryItem } from '../../components/GrocerySearchBar';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { RealtimePostgresChangesPayload } from '../shoppingRealtime';
 import { readCacheArray } from '../../../../common/utils/cacheStorage';
 
 // Mock dependencies

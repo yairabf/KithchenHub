@@ -1,14 +1,8 @@
-import { Platform } from 'react-native';
+import { config } from '../config';
 
-// Default base URL when EXPO_PUBLIC_API_URL is not set
-// Using localhost for both platforms because adb reverse forwards Android emulator port to host
-const DEFAULT_API_BASE_URL = 'http://localhost:3000';
+export const API_BASE_URL = config.api.baseUrl;
 
-const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-export const API_BASE_URL =
-    rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/, '') : DEFAULT_API_BASE_URL;
-
-const API_VERSION = process.env.EXPO_PUBLIC_API_VERSION || '1';
+const API_VERSION = config.api.version;
 
 const BASE_URL = `${API_BASE_URL}/api`;
 
