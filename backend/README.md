@@ -1267,6 +1267,23 @@ const recipes = await prisma.recipe.findMany({
 - Keep services focused on business logic
 - Use parameterized tests for comprehensive coverage
 
+## Vercel Deployment
+
+The backend can be deployed to Vercel as serverless functions. To avoid build errors and see runtime logs:
+
+1. **Set Root Directory to `backend`**  
+   In the [Vercel project settings](https://vercel.com/docs/projects/overview#root-directory), set **Root Directory** to `backend`. If this is not set, Vercel may build the repo root or the mobile app (Expo), which will fail with errors like "No platforms are configured to use the Metro bundler" and you will not see backend logs.
+
+2. **Deploy**  
+   From the repo root: `vercel` (with the project linked and root directory `backend`), or from `backend/`: `npx vercel`.
+
+3. **Viewing logs**  
+   - **Build logs**: Vercel Dashboard → your project → **Deployments** → select a deployment → **Building** tab.  
+   - **Runtime logs**: Vercel Dashboard → your project → **Deployments** → select a deployment → **Functions** (or **Logs**). Runtime logs appear when a request hits the API; if no requests are made, the log stream will be empty. Trigger a request (e.g. `GET /api/v1/health`) and refresh the logs to see output.
+
+4. **Environment variables**  
+   Add all required env vars (e.g. `DATABASE_URL`, `JWT_SECRET`, Supabase keys) in Project Settings → Environment Variables.
+
 ## Docker Deployment
 
 The backend includes a production-ready multi-stage Dockerfile optimized for NestJS + Prisma. Docker images are automatically built and pushed to GitHub Container Registry (GHCR) via GitHub Actions workflows:
