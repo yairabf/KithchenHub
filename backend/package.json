@@ -32,7 +32,7 @@
     "prisma:migrate": "prisma migrate dev --schema=src/infrastructure/database/prisma/schema.prisma",
     "prisma:deploy": "node scripts/run-prisma-with-env.js",
     "prisma:studio": "prisma studio --schema=src/infrastructure/database/prisma/schema.prisma",
-    "vercel-build": "npm run prisma:generate && node -e \"require('fs').mkdirSync('public',{recursive:true}); require('fs').writeFileSync('public/.keep','')\"",
+    "vercel-build": "npm run prisma:generate && node scripts/create-vercel-output-dir.js",
     "db:start": "docker-compose -f docker-compose.db.yml --env-file .env.db up -d",
     "db:stop": "docker-compose -f docker-compose.db.yml --env-file .env.db down",
     "db:logs": "docker-compose -f docker-compose.db.yml --env-file .env.db logs -f",
@@ -44,7 +44,8 @@
     "db:export:i18n-he-template": "ts-node -r dotenv/config scripts/export-catalog-item-i18n-he-template.ts",
     "db:import:i18n-he": "ts-node -r dotenv/config scripts/import-catalog-item-i18n-he.ts",
     "db:auto-translate:i18n-he": "ts-node -r dotenv/config scripts/auto-translate-catalog-item-i18n-he.ts",
-    "upload:items-images": "ts-node -r dotenv/config scripts/upload-items-images.ts"
+    "upload:items-images": "ts-node -r dotenv/config scripts/upload-items-images.ts",
+    "migrate:catalog-images": "ts-node -r dotenv/config scripts/migrate-catalog-images-to-public-assets.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.985.0",
