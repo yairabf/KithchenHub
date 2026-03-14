@@ -40,7 +40,7 @@ type ShoppingItemCreationPayload = Partial<ShoppingItem> & {
   catalogItemId?: string;
   masterItemId?: string;
 };
-import { createShoppingItem, createShoppingList } from '../utils/shoppingFactory';
+import { createShoppingItem, createShoppingList, preserveLocalizedName } from '../utils/shoppingFactory';
 import { createShoppingService } from '../services/shoppingService';
 import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -662,8 +662,10 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         };
         const newItem = await createItem(payload);
 
+        const confirmedItem = preserveLocalizedName(newItem, tempItem.name);
+
         setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
-          item.localId === tempItem.localId ? newItem : item,
+          item.localId === tempItem.localId ? confirmedItem : item,
         ));
       } catch (error) {
         setAllItems((prev: ShoppingItem[]) => prev.filter((item) => item.localId !== tempItem.localId));

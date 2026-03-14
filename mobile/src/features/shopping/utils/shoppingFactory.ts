@@ -5,6 +5,22 @@ import type { ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { withCreatedAtAndUpdatedAt } from '../../../common/utils/timestamps';
 
+/**
+ * Returns a copy of `serverItem` with the `name` replaced by `localName`.
+ *
+ * The server always returns the English catalog name. This helper ensures the
+ * UI keeps whatever translated name the client set when the item was created
+ * or last edited.
+ *
+ * @param serverItem - The item returned by the server (English name)
+ * @param localName  - The locally-translated name to preserve
+ * @returns A new ShoppingItem with the local name applied
+ */
+export const preserveLocalizedName = (
+  serverItem: ShoppingItem,
+  localName: string,
+): ShoppingItem => ({ ...serverItem, name: localName });
+
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export const createShoppingItem = (

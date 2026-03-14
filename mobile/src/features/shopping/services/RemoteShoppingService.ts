@@ -14,6 +14,7 @@ import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../../.
 import { catalogService } from '../../../common/services/catalogService';
 import { addEntityToCache, updateEntityInCache, removeEntityFromCache } from '../../../common/repositories/cacheAwareRepository';
 import { i18n } from '../../../i18n';
+import { preserveLocalizedName } from '../utils/shoppingFactory';
 
 /**
  * Extended ShoppingItem type that includes catalog identifiers for API requests.
@@ -445,14 +446,9 @@ export class RemoteShoppingService implements IShoppingService {
       existing.image,
       existing.category,
     );
-    // Server is authority: overwrite with server timestamps (if available in response)
-    // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
-    const hasServerTimestamps = 'created_at' in updatedItemResponse || 'updated_at' in updatedItemResponse || 
-                                 'createdAt' in updatedItemResponse || 'updatedAt' in updatedItemResponse;
-    const updatedItem = hasServerTimestamps
-      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...updatedItemResponse })
-      : { ...mapped, createdAt: existing.createdAt, updatedAt: new Date() };
-    
+    const baseItem = this.resolveItemWithTimestamps(mapped, updatedItemResponse, existing.createdAt);
+    const updatedItem = preserveLocalizedName(baseItem, existing.name);
+
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
     await updateEntityInCache('shoppingItems', updatedItem, (i) => i.id, (i) => i.id === itemId);
@@ -503,19 +499,44 @@ export class RemoteShoppingService implements IShoppingService {
       existing.image,
       existing.category,
     );
-    // Server is authority: overwrite with server timestamps (if available in response)
-    // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
-    const hasServerTimestamps = 'created_at' in updatedItemResponse || 'updated_at' in updatedItemResponse || 
-                                 'createdAt' in updatedItemResponse || 'updatedAt' in updatedItemResponse;
-    const toggledItem = hasServerTimestamps
-      ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...updatedItemResponse })
-      : { ...mapped, createdAt: existing.createdAt, updatedAt: new Date() };
+    const baseToggled = this.resolveItemWithTimestamps(mapped, updatedItemResponse, existing.createdAt);
+    const toggledItem = preserveLocalizedName(baseToggled, existing.name);
     
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
     await updateEntityInCache('shoppingItems', toggledItem, (i) => i.id, (i) => i.id === itemId);
     
     return toggledItem;
+  }
+
+  /**
+   * Normalizes timestamps on a mapped item, preferring server-provided values
+   * when the API response contains timestamp fields and falling back to the
+   * caller-supplied creation date with `updatedAt = now()` otherwise.
+   *
+   * Extracted to avoid duplicating the same `hasServerTimestamps` branching
+   * across `updateItem` and `toggleItem`.
+   */
+  private resolveItemWithTimestamps(
+    mapped: ShoppingItem,
+    apiResponse: Record<string, unknown>,
+    fallbackCreatedAt: Date | string | undefined,
+  ): ShoppingItem {
+    const hasServerTimestamps =
+      'created_at' in apiResponse ||
+      'updated_at' in apiResponse ||
+      'createdAt' in apiResponse ||
+      'updatedAt' in apiResponse;
+
+    if (hasServerTimestamps) {
+      return normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...apiResponse });
+    }
+
+    const createdAt = fallbackCreatedAt instanceof Date
+      ? fallbackCreatedAt
+      : fallbackCreatedAt != null ? new Date(fallbackCreatedAt) : new Date();
+
+    return { ...mapped, createdAt, updatedAt: new Date() };
   }
 
   /**
