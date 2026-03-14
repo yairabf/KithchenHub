@@ -78,12 +78,21 @@ async function getApp(): Promise<NestFastifyApplication> {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const app = await getApp();
-    // Use fastify.routing() directly instead of server.emit('request').
-    // Fastify only registers its 'request' event listener when listen() is
-    // called (which we never call in serverless). Calling routing() bypasses
-    // the event emitter and invokes Fastify's router directly.
     const fastifyInstance = app.getHttpAdapter().getInstance();
-    fastifyInstance.routing(req, res);
+
+    // fastifyInstance.routing() is synchronous from the caller's perspective but
+    // drives an async pipeline internally.  We wrap it in a Promise that resolves
+    // once Node.js finishes writing the response so the Vercel function container
+    // is not recycled before the reply is fully sent.
+    await new Promise<void>((resolve, reject) => {
+      res.on('finish', resolve);
+      res.on('error', reject);
+      // Use fastify.routing() directly instead of server.emit('request').
+      // Fastify only registers its 'request' event listener when listen() is
+      // called (which we never call in serverless). routing() bypasses the
+      // event emitter and invokes Fastify's router directly.
+      fastifyInstance.routing(req, res);
+    });
   } catch (err) {
     // eslint-disable-next-line no-console -- serverless runtime logs to stdout
     console.error('Vercel handler error:', err);
