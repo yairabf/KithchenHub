@@ -27,3 +27,12 @@ export class ShoppingListDetailDto {
   icon?: string;
   items: ShoppingItemDto[];
 }
+
+export class ShoppingDataItemDto extends ShoppingItemDto {
+  listId: string;
+}
+
+export class ShoppingDataDto {
+  lists: ShoppingListSummaryDto[];
+  items: ShoppingDataItemDto[];
+}

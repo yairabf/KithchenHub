@@ -11,6 +11,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ShoppingService } from '../services/shopping.service';
 import {
   CreateListDto,
@@ -18,6 +19,7 @@ import {
   UpdateItemDto,
   UpdateListDto,
 } from '../dtos';
+import { ShoppingDataDto } from '../dtos/shopping-list-response.dto';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators';
 import { Public } from '../../../common/decorators/public.decorator';
@@ -88,9 +90,12 @@ export class GroceriesController {
  * API Version: 1
  * All endpoints require authentication and household membership.
  */
+@ApiTags('shopping-lists')
 @Controller({ path: 'shopping-lists', version: '1' })
 @UseGuards(JwtAuthGuard, HouseholdGuard)
 export class ShoppingListsController {
+  private readonly logger = new Logger(ShoppingListsController.name);
+
   constructor(private shoppingService: ShoppingService) {}
 
   @Get()
@@ -109,36 +114,51 @@ export class ShoppingListsController {
     return this.shoppingService.getMainList(user.householdId);
   }
 
+  @ApiOperation({
+    summary: 'Get all shopping lists and items in a single request',
+  })
+  @ApiQuery({
+    name: 'lang',
+    required: false,
+    description:
+      'Language code for catalog item name localization (e.g. "en", "he")',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Aggregated shopping data',
+    type: ShoppingDataDto,
+  })
+  @Get('aggregate')
+  async getShoppingData(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('lang') lang?: string,
+  ): Promise<ShoppingDataDto> {
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+
+    return this.shoppingService.getShoppingData(user.householdId, lang);
+  }
+
   @Post()
   async createList(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: CreateListDto,
   ) {
-    console.log(
-      '[ShoppingListsController] POST /shopping-lists - createList called',
-    );
-    console.log(
-      '[ShoppingListsController] User:',
-      JSON.stringify({
-        id: user.userId,
-        email: user.email,
-        householdId: user.householdId,
-      }),
-    );
-    console.log('[ShoppingListsController] DTO:', JSON.stringify(dto, null, 2));
-
     if (!user.householdId) {
-      console.error(
-        '[ShoppingListsController] Error: User must belong to a household',
-      );
       throw new BadRequestException('User must belong to a household');
     }
 
+    this.logger.debug('POST /shopping-lists - createList called', {
+      userId: user.userId,
+      householdId: user.householdId,
+    });
+
     const result = await this.shoppingService.createList(user.householdId, dto);
-    console.log(
-      '[ShoppingListsController] List created successfully:',
-      JSON.stringify(result, null, 2),
-    );
+    this.logger.debug('Shopping list created successfully', {
+      userId: user.userId,
+      listId: result.id,
+    });
     return result;
   }
 
