@@ -11,6 +11,7 @@ import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/
 import {
   GrocerySearchItemDto,
   CatalogDisplayNameDto,
+  ShoppingDataDto,
   ShoppingListSummaryDto,
   ShoppingListDetailDto,
   CreateListDto,
@@ -583,6 +584,86 @@ export class ShoppingService {
       if (!a.isMain && b.isMain) return 1;
       return 0;
     });
+  }
+
+  async getShoppingData(
+    householdId: string,
+    lang?: string,
+  ): Promise<ShoppingDataDto> {
+    const lists = await this.prisma.shoppingList.findMany({
+      where: {
+        householdId,
+        ...ACTIVE_RECORDS_FILTER,
+      },
+      include: {
+        items: {
+          where: ACTIVE_RECORDS_FILTER,
+          orderBy: { createdAt: 'asc' },
+        },
+        _count: {
+          select: {
+            items: {
+              where: ACTIVE_RECORDS_FILTER,
+            },
+          },
+        },
+      },
+      orderBy: [{ isMain: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    const mappedLists = lists.map((list) => ({
+      id: list.id,
+      name: list.name,
+      color: list.color ?? undefined,
+      icon: list.icon ?? undefined,
+      isMain: list.isMain,
+      itemCount: list._count.items,
+      createdAt: list.createdAt,
+      updatedAt: list.updatedAt,
+    }));
+
+    const allItems = lists.flatMap((list) =>
+      list.items.map((item) => ({
+        listId: list.id,
+        ...item,
+      })),
+    );
+
+    let nameByCatalogId: Map<string, string> = new Map();
+    if (lang != null && lang.trim() !== '') {
+      const catalogIds = allItems
+        .map((item) => item.catalogItemId)
+        .filter((id): id is string => id != null && id.trim() !== '');
+
+      if (catalogIds.length > 0) {
+        const resolved = await this.getCatalogDisplayNames(catalogIds, lang);
+        nameByCatalogId = new Map(
+          resolved.map((entry) => [entry.id, entry.name]),
+        );
+      }
+    }
+
+    return {
+      lists: mappedLists,
+      items: allItems.map((item) => {
+        const displayName =
+          item.catalogItemId != null
+            ? nameByCatalogId.get(item.catalogItemId)
+            : undefined;
+
+        return {
+          listId: item.listId,
+          id: item.id,
+          catalogItemId: item.catalogItemId ?? undefined,
+          name: displayName ?? item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          isChecked: item.isChecked,
+          category: item.category,
+          image: item.image ?? undefined,
+        };
+      }),
+    };
   }
 
   /**

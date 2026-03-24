@@ -1,24 +1,36 @@
-import { api } from '../../../services/api';
-import { is404Error } from '../../../common/utils/apiErrorGuards';
-import { colors } from '../../../theme';
+import { api } from "../../../services/api";
+import { is404Error } from "../../../common/utils/apiErrorGuards";
+import { colors } from "../../../theme";
 import {
   withUpdatedAt,
   markDeleted,
   withCreatedAtAndUpdatedAt,
   normalizeTimestampsFromApi,
-} from '../../../common/utils/timestamps';
-import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
-import type { GroceryItem } from '../components/GrocerySearchBar';
-import type { ShoppingData, IShoppingService } from './shoppingService';
-import { buildCategoriesFromGroceries, buildFrequentlyAddedItems } from '../../../common/utils/catalogUtils';
-import { catalogService } from '../../../common/services/catalogService';
-import { addEntityToCache, updateEntityInCache, removeEntityFromCache } from '../../../common/repositories/cacheAwareRepository';
-import { i18n } from '../../../i18n';
-import { preserveLocalizedName } from '../utils/shoppingFactory';
+} from "../../../common/utils/timestamps";
+import type {
+  ShoppingItem,
+  ShoppingList,
+  Category,
+} from "../../../mocks/shopping";
+import type { GroceryItem } from "../components/GrocerySearchBar";
+import type { ShoppingData, IShoppingService } from "./shoppingService";
+import {
+  buildCategoriesFromGroceries,
+  buildFrequentlyAddedItems,
+} from "../../../common/utils/catalogUtils";
+import { catalogService } from "../../../common/services/catalogService";
+import {
+  addEntityToCache,
+  updateEntityInCache,
+  removeEntityFromCache,
+} from "../../../common/repositories/cacheAwareRepository";
+import { i18n } from "../../../i18n";
+import { preserveLocalizedName } from "../utils/shoppingFactory";
+import { logger } from "../../../common/utils/logger";
 
 /**
  * Extended ShoppingItem type that includes catalog identifiers for API requests.
- * 
+ *
  * Used when creating items from grocery catalog - the catalogItemId/masterItemId
  * are passed but not part of the base ShoppingItem type.
  */
@@ -69,7 +81,12 @@ type ShoppingListDetailDto = {
   }[];
 };
 
-const DEFAULT_LIST_ICON: ShoppingList['icon'] = 'cart-outline';
+type ShoppingDataDto = {
+  lists: ShoppingListSummaryDto[];
+  items: Array<ShoppingListDetailDto["items"][0] & { listId: string }>;
+};
+
+const DEFAULT_LIST_ICON: ShoppingList["icon"] = "cart-outline";
 const DEFAULT_LIST_COLOR = colors.shopping;
 const FREQUENTLY_ADDED_ITEMS_LIMIT = 8;
 
@@ -87,18 +104,20 @@ const resolveCategory = (
     return normalizedFallback;
   }
 
-  return 'Other';
+  return "Other";
 };
 
 // Note: Category building utilities moved to common/utils/catalogUtils.ts
 // Catalog data fetching is handled by catalogService
 
-const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => ({
+const mapShoppingListSummary = (
+  list: ShoppingListSummaryDto,
+): ShoppingList => ({
   id: list.id,
   localId: list.id,
   name: list.name,
   itemCount: list.itemCount ?? 0,
-  icon: (list.icon as ShoppingList['icon']) ?? DEFAULT_LIST_ICON,
+  icon: (list.icon as ShoppingList["icon"]) ?? DEFAULT_LIST_ICON,
   color: list.color ?? DEFAULT_LIST_COLOR,
   isMain: list.isMain ?? false,
 });
@@ -110,22 +129,32 @@ type UpdateListDto = {
   isMain?: boolean;
 };
 
+const createGroceryLookup = (
+  groceries: GroceryItem[],
+): Map<string, GroceryItem> => {
+  return new Map(
+    groceries
+      .filter(
+        (item) => typeof item.name === "string" && item.name.trim().length > 0,
+      )
+      .map((item) => [item.name.trim().toLowerCase(), item]),
+  );
+};
+
 const buildShoppingItemsFromDetails = (
   listId: string,
-  items: ShoppingListDetailDto['items'],
-  groceries: GroceryItem[],
+  items: ShoppingListDetailDto["items"],
+  groceriesByName: Map<string, GroceryItem>,
 ): ShoppingItem[] => {
   return items.map((item) => {
-    const matchingGrocery = groceries.find(
-      (grocery) => grocery.name.toLowerCase() === item.name.toLowerCase()
-    );
+    const matchingGrocery = groceriesByName.get(item.name.trim().toLowerCase());
 
     return {
       id: item.id,
       localId: item.id,
       catalogItemId: item.catalogItemId,
       name: item.name,
-      image: item.image ?? matchingGrocery?.image ?? '',
+      image: item.image ?? matchingGrocery?.image ?? "",
       quantity: item.quantity ?? 1,
       unit: item.unit ?? undefined,
       isChecked: item.isChecked ?? false,
@@ -137,17 +166,17 @@ const buildShoppingItemsFromDetails = (
 
 /**
  * Maps API response item to ShoppingItem format.
- * 
+ *
  * Centralizes the mapping logic used in createItem, updateItem, and toggleItem
  * to ensure consistency and reduce duplication.
- * 
+ *
  * @param response - API response item from ShoppingListDetailDto
  * @param listId - The shopping list ID this item belongs to
  * @param existingImage - Optional existing image URL to preserve
  * @returns Mapped ShoppingItem
  */
 const mapItemResponseToShoppingItem = (
-  response: ShoppingListDetailDto['items'][0],
+  response: ShoppingListDetailDto["items"][0],
   listId: string,
   existingImage?: string,
   fallbackCategory?: string,
@@ -162,24 +191,68 @@ const mapItemResponseToShoppingItem = (
     isChecked: response.isChecked ?? false,
     category: resolveCategory(response.category, fallbackCategory),
     listId,
-    image: response.image ?? existingImage ?? '',
+    image: response.image ?? existingImage ?? "",
   };
 };
 
 /**
  * Remote shopping service for signed-in users.
- * 
+ *
  * This service should only be instantiated for signed-in users.
  * Service factory (createShoppingService) prevents guest mode from creating this service.
- * 
+ *
  * Defense-in-depth: All methods make API calls which require authentication.
  * Guest users cannot provide valid JWT tokens, so API calls will fail at the backend.
  */
 export class RemoteShoppingService implements IShoppingService {
   async getShoppingData(): Promise<ShoppingData> {
     const groceryItems = await this.getGroceryItems();
-    const shoppingLists = await this.getShoppingLists();
-    const shoppingItems = await this.getShoppingItems(shoppingLists, groceryItems);
+    const groceryLookup = createGroceryLookup(groceryItems);
+
+    const lang = i18n.language?.trim().toLowerCase() || "en";
+    const encodedLang = encodeURIComponent(lang);
+
+    let shoppingLists: ShoppingList[];
+    let shoppingItems: ShoppingItem[];
+
+    try {
+      const aggregate = await api.get<ShoppingDataDto>(
+        `/shopping-lists/aggregate?lang=${encodedLang}`,
+      );
+      const aggregateLists = Array.isArray(aggregate?.lists)
+        ? aggregate.lists
+        : [];
+      const aggregateItems = Array.isArray(aggregate?.items)
+        ? aggregate.items
+        : [];
+
+      shoppingLists = aggregateLists.map(mapShoppingListSummary);
+      shoppingItems = aggregateItems.map((item) => {
+        const matchingGrocery = groceryLookup.get(
+          item.name.trim().toLowerCase(),
+        );
+        return mapItemResponseToShoppingItem(
+          item,
+          item.listId,
+          matchingGrocery?.image,
+          matchingGrocery?.category,
+        );
+      });
+    } catch (error) {
+      if (!is404Error(error)) {
+        throw error;
+      }
+
+      logger.warn(
+        "[RemoteShoppingService] Aggregate endpoint unavailable; using legacy list-detail fetch path",
+      );
+      shoppingLists = await this.getShoppingLists();
+      shoppingItems = await this.getShoppingItems(
+        shoppingLists,
+        groceryLookup,
+        encodedLang,
+      );
+    }
 
     const categories = buildCategoriesFromGroceries(groceryItems);
     const frequentlyAddedItems = buildFrequentlyAddedItems(groceryItems);
@@ -196,9 +269,13 @@ export class RemoteShoppingService implements IShoppingService {
   /**
    * Maps frontend ShoppingList to backend CreateListDto format
    */
-  private mapListToCreateDto(list: Partial<ShoppingList>): { name: string; color?: string; icon?: string } {
+  private mapListToCreateDto(list: Partial<ShoppingList>): {
+    name: string;
+    color?: string;
+    icon?: string;
+  } {
     return {
-      name: list.name || 'New List',
+      name: list.name || "New List",
       color: list.color,
       icon: list.icon,
     };
@@ -206,7 +283,7 @@ export class RemoteShoppingService implements IShoppingService {
 
   /**
    * Maps frontend ShoppingItem to backend ShoppingItemInputDto
-   * 
+   *
    * The API expects AddItemsDto with items array containing ShoppingItemInputDto.
    * ShoppingItemInputDto has:
    * - catalogItemId?: string (if item comes from catalog)
@@ -217,17 +294,19 @@ export class RemoteShoppingService implements IShoppingService {
    * - category?: string
    * - image?: string
    * - isChecked?: boolean
-   * 
+   *
    * Note: Timestamps, id, listId are not sent - backend generates these.
-   * 
+   *
    * @param item - Shopping item with optional catalog identifiers
    * @returns ShoppingItemInputDto matching backend API contract
    * @throws Error if name is required but missing or invalid
    */
-  private mapItemToInputDto(item: ShoppingItemWithCatalog): ShoppingItemInputDto {
+  private mapItemToInputDto(
+    item: ShoppingItemWithCatalog,
+  ): ShoppingItemInputDto {
     const catalogItemId = item.catalogItemId;
     const masterItemId = item.masterItemId;
-    
+
     const itemInputDto: ShoppingItemInputDto = {
       quantity: item.quantity ?? 1,
       unit: item.unit,
@@ -238,7 +317,7 @@ export class RemoteShoppingService implements IShoppingService {
 
     // Validate quantity is non-negative
     if (itemInputDto.quantity !== undefined && itemInputDto.quantity < 0) {
-      throw new Error('Item quantity cannot be negative');
+      throw new Error("Item quantity cannot be negative");
     }
 
     // Only include name if no catalog identifiers
@@ -250,7 +329,9 @@ export class RemoteShoppingService implements IShoppingService {
       // No catalog identifier - name is required
       const itemName = item.name?.trim();
       if (!itemName || itemName.length === 0) {
-        throw new Error('Item name is required when catalogItemId/masterItemId is not provided');
+        throw new Error(
+          "Item name is required when catalogItemId/masterItemId is not provided",
+        );
       }
       itemInputDto.name = itemName;
     }
@@ -259,61 +340,64 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   async createList(list: Partial<ShoppingList>): Promise<ShoppingList> {
-    console.log('[RemoteShoppingService] createList() called with list:', JSON.stringify(list, null, 2));
-    
     // Map frontend ShoppingList format to backend CreateListDto format
     const dto = this.mapListToCreateDto(list);
-    console.log('[RemoteShoppingService] Mapped to CreateListDto:', JSON.stringify(dto, null, 2));
-    
-    console.log('[RemoteShoppingService] Making POST request to /shopping-lists...');
-    const response = await api.post<ShoppingListSummaryDto>('/shopping-lists', dto);
-    console.log('[RemoteShoppingService] API response received:', JSON.stringify(response, null, 2));
-    
+    logger.debug("[RemoteShoppingService] Creating shopping list");
+    const response = await api.post<ShoppingListSummaryDto>(
+      "/shopping-lists",
+      dto,
+    );
     const mapped = mapShoppingListSummary(response);
-    console.log('[RemoteShoppingService] Mapped response to ShoppingList:', JSON.stringify(mapped, null, 2));
-    
+
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
-    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
-                                 'createdAt' in response || 'updatedAt' in response;
+    const hasServerTimestamps =
+      "created_at" in response ||
+      "updated_at" in response ||
+      "createdAt" in response ||
+      "updatedAt" in response;
     const created = hasServerTimestamps
       ? normalizeTimestampsFromApi<ShoppingList>({ ...mapped, ...response })
-      : { ...mapped, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-    
-    console.log('[RemoteShoppingService] Final created list:', JSON.stringify(created, null, 2));
-    
+      : {
+          ...mapped,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
     // Write-through cache update: add new entity to cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
-    await addEntityToCache('shoppingLists', created, (l) => l.id);
-    console.log('[RemoteShoppingService] Added to cache');
-    
+    await addEntityToCache("shoppingLists", created, (l) => l.id);
+
     return created;
   }
 
-  async updateList(listId: string, updates: Partial<ShoppingList>): Promise<ShoppingList> {
+  async updateList(
+    listId: string,
+    updates: Partial<ShoppingList>,
+  ): Promise<ShoppingList> {
     // Get existing list first
-    const existing = await this.getShoppingLists().then(lists => 
-      lists.find(l => l.id === listId)
+    const existing = await this.getShoppingLists().then((lists) =>
+      lists.find((l) => l.id === listId),
     );
     if (!existing) {
       throw new Error(`Shopping list not found: ${listId}`);
     }
-    
+
     // Apply timestamp for optimistic UI and offline queue
     const updated = { ...existing, ...updates };
     const withTimestamps = withUpdatedAt(updated);
     const payload: UpdateListDto = {};
 
-    if (typeof updates.name === 'string') {
+    if (typeof updates.name === "string") {
       payload.name = updates.name;
     }
-    if (typeof updates.color === 'string') {
+    if (typeof updates.color === "string") {
       payload.color = updates.color;
     }
-    if (typeof updates.icon === 'string') {
+    if (typeof updates.icon === "string") {
       payload.icon = updates.icon;
     }
-    if (typeof updates.isMain === 'boolean') {
+    if (typeof updates.isMain === "boolean") {
       payload.isMain = updates.isMain;
     }
 
@@ -324,49 +408,64 @@ export class RemoteShoppingService implements IShoppingService {
     const mapped = mapShoppingListSummary(response);
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
-    const hasServerTimestamps = 'created_at' in response || 'updated_at' in response || 
-                                 'createdAt' in response || 'updatedAt' in response;
+    const hasServerTimestamps =
+      "created_at" in response ||
+      "updated_at" in response ||
+      "createdAt" in response ||
+      "updatedAt" in response;
     const updatedList = hasServerTimestamps
       ? normalizeTimestampsFromApi<ShoppingList>({ ...mapped, ...response })
-      : { ...mapped, createdAt: existing.createdAt, updatedAt: withTimestamps.updatedAt };
-    
+      : {
+          ...mapped,
+          createdAt: existing.createdAt,
+          updatedAt: withTimestamps.updatedAt,
+        };
+
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
-    await updateEntityInCache('shoppingLists', updatedList, (l) => l.id, (l) => l.id === listId);
-    
+    await updateEntityInCache(
+      "shoppingLists",
+      updatedList,
+      (l) => l.id,
+      (l) => l.id === listId,
+    );
+
     return updatedList;
   }
 
   async deleteList(listId: string): Promise<void> {
     // Get existing list
-    const existing = await this.getShoppingLists().then(lists => 
-      lists.find(l => l.id === listId)
+    const existing = await this.getShoppingLists().then((lists) =>
+      lists.find((l) => l.id === listId),
     );
     if (!existing) {
       throw new Error(`Shopping list not found: ${listId}`);
     }
-    
+
     // Apply timestamp for optimistic UI and offline queue
     const deleted = markDeleted(existing);
     const withTimestamps = withUpdatedAt(deleted);
     await api.delete<{ success: boolean }>(`/shopping-lists/${listId}`);
-    
+
     // Write-through cache update: update entity in cache with deleted timestamp
     // Note: Cache updates are best-effort; failures are logged but don't throw
-    await updateEntityInCache('shoppingLists', withTimestamps, (l) => l.id, (l) => l.id === listId);
+    await updateEntityInCache(
+      "shoppingLists",
+      withTimestamps,
+      (l) => l.id,
+      (l) => l.id === listId,
+    );
   }
 
   async createItem(item: ShoppingItemWithCatalog): Promise<ShoppingItem> {
     if (!item.listId) {
-      throw new Error('Shopping item must have a listId');
+      throw new Error("Shopping item must have a listId");
     }
-    
+
     // Map to backend DTO format: { items: [ShoppingItemInputDto] }
     const itemInputDto = this.mapItemToInputDto(item);
     const payload = { items: [itemInputDto] };
-    
-    console.log('[RemoteShoppingService] createItem() payload:', JSON.stringify(payload, null, 2));
-    
+
     // API returns { addedItems: [...] }, we take the first item
     type AddItemsResponse = {
       addedItems: Array<{
@@ -379,64 +478,76 @@ export class RemoteShoppingService implements IShoppingService {
         category?: string;
       }>;
     };
-    const response = await api.post<AddItemsResponse>(`/shopping-lists/${item.listId}/items`, payload);
-    
+    const response = await api.post<AddItemsResponse>(
+      `/shopping-lists/${item.listId}/items`,
+      payload,
+    );
+
     // Validate response structure
     if (!response.addedItems || response.addedItems.length === 0) {
-      console.error('[RemoteShoppingService] API returned empty addedItems array:', response);
-      throw new Error(`API did not return created item. Response: ${JSON.stringify(response)}`);
+      logger.error(
+        "[RemoteShoppingService] API returned empty addedItems array",
+      );
+      throw new Error("API did not return created item");
     }
-    
+
     const createdItem = response.addedItems[0];
     if (!createdItem || !createdItem.id) {
-      console.error('[RemoteShoppingService] Invalid item in response:', createdItem);
-      throw new Error('API returned invalid item structure');
+      logger.error("[RemoteShoppingService] Invalid item in response");
+      throw new Error("API returned invalid item structure");
     }
-    
+
     // Map response to ShoppingItem format (createdItem matches ShoppingListDetailDto['items'][0] structure)
     const mapped = mapItemResponseToShoppingItem(
-      createdItem as ShoppingListDetailDto['items'][0],
+      createdItem as ShoppingListDetailDto["items"][0],
       item.listId,
       item.image,
       item.category,
     );
     // Server is authority: overwrite with server timestamps (if available in response)
     // If API response includes timestamp fields, normalize them; otherwise use optimistic timestamps
-    const hasServerTimestamps = 'created_at' in createdItem || 'updated_at' in createdItem || 
-                                 'createdAt' in createdItem || 'updatedAt' in createdItem;
+    const hasServerTimestamps =
+      "created_at" in createdItem ||
+      "updated_at" in createdItem ||
+      "createdAt" in createdItem ||
+      "updatedAt" in createdItem;
     const withTimestamps = withCreatedAtAndUpdatedAt(item as ShoppingItem);
     const created = hasServerTimestamps
       ? normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...createdItem })
-      : { ...mapped, createdAt: withTimestamps.createdAt, updatedAt: withTimestamps.updatedAt };
-    
+      : {
+          ...mapped,
+          createdAt: withTimestamps.createdAt,
+          updatedAt: withTimestamps.updatedAt,
+        };
+
     // Write-through cache update: add new entity to cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
-    await addEntityToCache('shoppingItems', created, (i) => i.id);
-    
+    await addEntityToCache("shoppingItems", created, (i) => i.id);
+
     return created;
   }
 
-  async updateItem(itemId: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem> {
-    // Get existing item first
-    const allItems = await this.getShoppingItems(
-      await this.getShoppingLists(),
-      await this.getGroceryItems()
-    );
-    const existing = allItems.find(i => i.id === itemId || i.localId === itemId);
+  async updateItem(
+    itemId: string,
+    updates: Partial<ShoppingItem>,
+  ): Promise<ShoppingItem> {
+    const existing = await this.findItemById(itemId);
     if (!existing) {
       throw new Error(`Shopping item not found: ${itemId}`);
     }
-    
+
     // Build payload with only fields allowed by UpdateItemDto (isChecked, quantity)
     const payload: { isChecked?: boolean; quantity?: number } = {};
-    if ('isChecked' in updates && updates.isChecked !== undefined) {
+    if ("isChecked" in updates && updates.isChecked !== undefined) {
       payload.isChecked = updates.isChecked;
     }
-    if ('quantity' in updates && updates.quantity !== undefined) {
+    if ("quantity" in updates && updates.quantity !== undefined) {
       payload.quantity = updates.quantity;
     }
 
-    const response = await api.patch<{ updatedItem: ShoppingListDetailDto['items'][0] }>(`/shopping-items/${itemId}`, payload);
+    const response = await api.patch<{
+      updatedItem: ShoppingListDetailDto["items"][0];
+    }>(`/shopping-items/${itemId}`, payload);
     // Extract the updatedItem from the response
     const updatedItemResponse = response.updatedItem || response;
     // Map response to ShoppingItem format
@@ -446,13 +557,22 @@ export class RemoteShoppingService implements IShoppingService {
       existing.image,
       existing.category,
     );
-    const baseItem = this.resolveItemWithTimestamps(mapped, updatedItemResponse, existing.createdAt);
+    const baseItem = this.resolveItemWithTimestamps(
+      mapped,
+      updatedItemResponse,
+      existing.createdAt,
+    );
     const updatedItem = preserveLocalizedName(baseItem, existing.name);
 
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
-    await updateEntityInCache('shoppingItems', updatedItem, (i) => i.id, (i) => i.id === itemId);
-    
+    await updateEntityInCache(
+      "shoppingItems",
+      updatedItem,
+      (i) => i.id,
+      (i) => i.id === itemId,
+    );
+
     return updatedItem;
   }
 
@@ -463,33 +583,36 @@ export class RemoteShoppingService implements IShoppingService {
     } catch (error) {
       // Treat 404 as idempotent delete success (item already removed server-side).
       if (is404Error(error)) {
-        console.warn(`[RemoteShoppingService] deleteItem(${itemId}) returned 404; treating as already deleted`);
+        logger.warn(
+          `[RemoteShoppingService] deleteItem(${itemId}) returned 404; treating as already deleted`,
+        );
       } else {
         throw error;
       }
     }
 
     // Remove from cache (best-effort)
-    await removeEntityFromCache<ShoppingItem>('shoppingItems', itemId, (i) => i.id);
+    await removeEntityFromCache<ShoppingItem>(
+      "shoppingItems",
+      itemId,
+      (i) => i.id,
+    );
   }
 
   async toggleItem(itemId: string): Promise<ShoppingItem> {
-    // Get existing item first
-    const allItems = await this.getShoppingItems(
-      await this.getShoppingLists(),
-      await this.getGroceryItems()
-    );
-    const existing = allItems.find(i => i.id === itemId || i.localId === itemId);
+    const existing = await this.findItemById(itemId);
     if (!existing) {
       throw new Error(`Shopping item not found: ${itemId}`);
     }
-    
+
     // Build payload with only fields allowed by UpdateItemDto (isChecked, quantity)
     // Use camelCase isChecked (not snake_case is_checked) and don't send updated_at
     const payload: { isChecked: boolean } = {
-      isChecked: !existing.isChecked
+      isChecked: !existing.isChecked,
     };
-    const response = await api.patch<{ updatedItem: ShoppingListDetailDto['items'][0] }>(`/shopping-items/${itemId}`, payload);
+    const response = await api.patch<{
+      updatedItem: ShoppingListDetailDto["items"][0];
+    }>(`/shopping-items/${itemId}`, payload);
     // Extract the updatedItem from the response
     const updatedItemResponse = response.updatedItem || response;
     // Map response to ShoppingItem format
@@ -499,14 +622,42 @@ export class RemoteShoppingService implements IShoppingService {
       existing.image,
       existing.category,
     );
-    const baseToggled = this.resolveItemWithTimestamps(mapped, updatedItemResponse, existing.createdAt);
+    const baseToggled = this.resolveItemWithTimestamps(
+      mapped,
+      updatedItemResponse,
+      existing.createdAt,
+    );
     const toggledItem = preserveLocalizedName(baseToggled, existing.name);
-    
+
     // Write-through cache update: update entity in cache
     // Note: Cache updates are best-effort; failures are logged but don't throw
-    await updateEntityInCache('shoppingItems', toggledItem, (i) => i.id, (i) => i.id === itemId);
-    
+    await updateEntityInCache(
+      "shoppingItems",
+      toggledItem,
+      (i) => i.id,
+      (i) => i.id === itemId,
+    );
+
     return toggledItem;
+  }
+
+  /**
+   * Fetches all shopping items and returns the one matching the given ID.
+   *
+   * Centralizes the expensive multi-request lookup used by `updateItem` and
+   * `toggleItem`, ensuring both methods share a single fetch path that can be
+   * optimized (e.g. cache lookup) in one place later.
+   *
+   * @param itemId - The item's server ID or local ID
+   * @returns The matching ShoppingItem, or undefined if not found
+   */
+  private async findItemById(itemId: string): Promise<ShoppingItem | undefined> {
+    const groceryLookup = createGroceryLookup(await this.getGroceryItems());
+    const allItems = await this.getShoppingItems(
+      await this.getShoppingLists(),
+      groceryLookup,
+    );
+    return allItems.find((i) => i.id === itemId || i.localId === itemId);
   }
 
   /**
@@ -523,29 +674,35 @@ export class RemoteShoppingService implements IShoppingService {
     fallbackCreatedAt: Date | string | undefined,
   ): ShoppingItem {
     const hasServerTimestamps =
-      'created_at' in apiResponse ||
-      'updated_at' in apiResponse ||
-      'createdAt' in apiResponse ||
-      'updatedAt' in apiResponse;
+      "created_at" in apiResponse ||
+      "updated_at" in apiResponse ||
+      "createdAt" in apiResponse ||
+      "updatedAt" in apiResponse;
 
     if (hasServerTimestamps) {
-      return normalizeTimestampsFromApi<ShoppingItem>({ ...mapped, ...apiResponse });
+      return normalizeTimestampsFromApi<ShoppingItem>({
+        ...mapped,
+        ...apiResponse,
+      });
     }
 
-    const createdAt = fallbackCreatedAt instanceof Date
-      ? fallbackCreatedAt
-      : fallbackCreatedAt != null ? new Date(fallbackCreatedAt) : new Date();
+    const createdAt =
+      fallbackCreatedAt instanceof Date
+        ? fallbackCreatedAt
+        : fallbackCreatedAt != null
+          ? new Date(fallbackCreatedAt)
+          : new Date();
 
     return { ...mapped, createdAt, updatedAt: new Date() };
   }
 
   /**
    * Fetches grocery items using CatalogService with fallback strategy.
-   * 
+   *
    * Delegates to CatalogService which implements: API → Cache → Mock fallback.
    * This ensures consistent behavior across all services and always returns data
    * (never throws on network errors - always has mock fallback).
-   * 
+   *
    * @returns Array of grocery items (never empty - always has mock fallback)
    */
   private async getGroceryItems(): Promise<GroceryItem[]> {
@@ -553,30 +710,39 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   private async getShoppingLists(): Promise<ShoppingList[]> {
-    const raw = await api.get<ShoppingListSummaryDto[] | undefined>('/shopping-lists');
+    const raw = await api.get<ShoppingListSummaryDto[] | undefined>(
+      "/shopping-lists",
+    );
     const lists = Array.isArray(raw) ? raw : [];
     return lists.map(mapShoppingListSummary);
   }
 
   private async getShoppingItems(
     shoppingLists: ShoppingList[],
-    groceryItems: GroceryItem[],
+    groceryLookup: Map<string, GroceryItem>,
+    encodedLang?: string,
   ): Promise<ShoppingItem[]> {
-    const lang = i18n.language?.trim().toLowerCase() || 'en';
+    const lang =
+      encodedLang ??
+      encodeURIComponent(i18n.language?.trim().toLowerCase() || "en");
     const listDetails = await Promise.all(
       shoppingLists.map((list) =>
         api.get<ShoppingListDetailDto>(
-          `/shopping-lists/${list.id}?lang=${encodeURIComponent(lang)}`,
-        )
-      )
+          `/shopping-lists/${list.id}?lang=${lang}`,
+        ),
+      ),
     );
 
     return listDetails.flatMap((detail) => {
-      const listDetail = detail && typeof detail === 'object' && 'id' in detail && 'items' in detail
-        ? detail
-        : { id: '', items: [] as ShoppingListDetailDto['items'] };
+      const listDetail =
+        detail &&
+        typeof detail === "object" &&
+        "id" in detail &&
+        "items" in detail
+          ? detail
+          : { id: "", items: [] as ShoppingListDetailDto["items"] };
       const items = Array.isArray(listDetail.items) ? listDetail.items : [];
-      return buildShoppingItemsFromDetails(listDetail.id, items, groceryItems);
+      return buildShoppingItemsFromDetails(listDetail.id, items, groceryLookup);
     });
   }
 }
