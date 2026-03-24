@@ -1,0 +1,46 @@
+# Unrelated app directories
+/mobile/
+/catalog-seeder/
+/design-system/
+/sandbox/
+/docs/
+/scripts/
+/tasks/
+/temp/
+/output/
+/legal/
+/_bmad/
+/_bmad-output/
+/{output_folder}/
+
+# Root node_modules
+node_modules/
+
+# Hidden/tooling dirs not needed by Vercel
+.git/
+.github/
+.cursor/
+.agent/
+.agents/
+.claude/
+.codex/
+.gemini/
+.opencode/
+.playwright-mcp/
+.cache/
+.expo/
+.venv/
+.venv-skill-creator/
+
+# Root-level files not needed
+*.png
+wikidata_ai_catalog_to_csv.js
+/package.json
+/package-lock.json
+/version.json
+
+# Backend: skip built/installed artifacts (Vercel handles these)
+backend/node_modules/
+backend/dist/
+backend/output/
+backend/.env

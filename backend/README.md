@@ -1284,6 +1284,9 @@ The backend can be deployed to Vercel as serverless functions. To avoid build er
 4. **Environment variables**  
    Add all required env vars (e.g. `DATABASE_URL`, `JWT_SECRET`, Supabase keys) in Project Settings → Environment Variables.
 
+5. **Privacy policy (store listings)**  
+   The file `static-web/privacy.html` is copied into the Vercel `public/` output during `vercel-build`. After deploy, use **`https://<your-vercel-domain>/privacy`** (or `/privacy.html`) as the **Privacy Policy URL** in App Store Connect and Google Play. Keep it in sync with `legal/privacy-policy-v1.md` when operator or contact details change.
+
 ## Docker Deployment
 
 The backend includes a production-ready multi-stage Dockerfile optimized for NestJS + Prisma. Docker images are automatically built and pushed to GitHub Container Registry (GHCR) via GitHub Actions workflows:
