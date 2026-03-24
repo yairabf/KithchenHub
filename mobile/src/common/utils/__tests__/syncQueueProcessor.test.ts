@@ -41,8 +41,18 @@ jest.mock('expo-crypto', () => {
   };
 });
 
-// Mock dependencies
-jest.mock('../../../services/api');
+// Mock dependencies — keep real ApiError/NetworkError so instanceof checks in the processor work
+jest.mock('../../../services/api', () => {
+  const actual = jest.requireActual<typeof import('../../../services/api')>(
+    '../../../services/api',
+  );
+  return {
+    ...actual,
+    api: Object.assign(actual.api, {
+      post: jest.fn(),
+    }),
+  };
+});
 jest.mock('../networkStatus');
 jest.mock('../../repositories/cacheAwareRepository');
 jest.mock('../cacheEvents');
@@ -738,19 +748,15 @@ describe('SyncQueueProcessor', () => {
 
       (syncQueueStorage.getAll as jest.Mock).mockResolvedValue(mockQueue);
       
-      // Simulate error response with result body
-      const errorResponse = new ApiError('Partial failure', 400);
-      (errorResponse as any).response = {
-        data: {
-          status: 'partial',
-          conflicts: [
-            { type: 'recipe', id: 'recipe-2', operationId: 'op-2', reason: 'Validation failed' },
-          ],
-          succeeded: [
-            { operationId: 'op-1', entityType: 'recipe', id: 'recipe-1' },
-          ],
-        },
-      };
+      const errorResponse = new ApiError('Partial failure', 400, {
+        status: 'partial',
+        conflicts: [
+          { type: 'recipe', id: 'recipe-2', operationId: 'op-2', reason: 'Validation failed' },
+        ],
+        succeeded: [
+          { operationId: 'op-1', entityType: 'recipe', id: 'recipe-1' },
+        ],
+      });
       (api.post as jest.Mock).mockRejectedValue(errorResponse);
 
       await processor.processQueue();

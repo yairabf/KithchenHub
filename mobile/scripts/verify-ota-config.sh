@@ -53,10 +53,12 @@ if ! grep -q '"policy": "appVersion"' "$APP_JSON"; then
   FAILED=1
 fi
 
-# Check resolved config (app.config.js) so that when extra.eas.projectId is set, url is derived there and we don't fail
+# Check resolved config (app.config.js is a function; merge app.json like Expo does)
 if ! (cd "$MOBILE_DIR" && node -e "
-  const c = require('./app.config.js');
-  const url = c.expo?.updates?.url;
+  const appJson = require('./app.json');
+  const loadConfig = require('./app.config.js');
+  const resolved = typeof loadConfig === 'function' ? loadConfig({ config: appJson }) : loadConfig;
+  const url = resolved.expo?.updates?.url;
   if (typeof url !== 'string' || url.includes('$PLACEHOLDER')) {
     console.error('Warning: resolved updates.url still contains the placeholder \"$PLACEHOLDER\". Run \"eas init\" from the mobile directory and ensure app.json has extra.eas.projectId (or set updates.url) before shipping production builds.');
     process.exit(1);

@@ -174,7 +174,7 @@ The **production** profile is configured for App Store and Google Play submissio
 
 **App version source:** `cli.appVersionSource` is set to `remote` so EAS manages build numbers; the first build initializes with 1 if not set in app config. User-facing version remains in repo root **version.json** (see OTA Updates above).
 
-**Linking the project:** Run **`eas init`** from the `mobile` directory (after `eas login`). This adds `extra.eas.projectId` to `app.json`; `app.config.js` then sets `updates.url` from it so OTA and builds work. Verify project ownership, slug (`kitchen-hub`), and linked account with **`eas project:info`** and **`eas whoami`**.
+**Linking the project:** Run **`eas init`** from the `mobile` directory (after `eas login`). This adds `extra.eas.projectId` to `app.json`; `app.config.js` then sets `updates.url` from it so OTA and builds work. Verify project ownership, slug (`kitchen_hub` on EAS; deep link `scheme` remains `kitchen-hub`), and linked account with **`eas project:info`** and **`eas whoami`**.
 
 To verify EAS config locally (remote app version source; production store distribution, Android app-bundle, and auto-increment; preview internal distribution and Android APK; OTA channel names develop/main), run `npm run verify:eas` from the mobile directory.
 

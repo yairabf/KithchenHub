@@ -1,52 +1,84 @@
 /**
  * Expo app config. Reads product version from repo root version.json and merges
- * with app.json. expo.version is set only from version.json (store release version).
+ * with static config from app.json (passed as `config` by Expo).
  * Do not add a static version field back into app.json.
+ *
+ * EAS CLI (project:init, etc.) may invoke this with a minimal or differently
+ * shaped `config`. Fall back to app.json so `expo.extra.eas` always exists when
+ * defined there — otherwise EAS can throw (e.g. reading `extra.eas`).
  */
 const path = require('path');
 const fs = require('fs');
 
+const staticAppJson = require('./app.json');
+
 const versionJsonPath = path.resolve(__dirname, '..', 'version.json');
 
 /** When building from repo root (local/CI), use version.json. When only mobile is deployed (e.g. Vercel), fall back to env or default. */
-let version = process.env.APP_VERSION || null;
-if (fs.existsSync(versionJsonPath)) {
-  let versionData;
-  try {
-    versionData = JSON.parse(fs.readFileSync(versionJsonPath, 'utf8'));
-    version = versionData?.version ?? version;
-  } catch (err) {
-    throw new Error(
-      `Invalid or unreadable version.json at ${versionJsonPath}: ${err.message}`
-    );
+function resolveAppVersion() {
+  let version = process.env.APP_VERSION || null;
+  if (fs.existsSync(versionJsonPath)) {
+    try {
+      const versionData = JSON.parse(
+        fs.readFileSync(versionJsonPath, 'utf8'),
+      );
+      version = versionData?.version ?? version;
+    } catch (err) {
+      throw new Error(
+        `Invalid or unreadable version.json at ${versionJsonPath}: ${err.message}`,
+      );
+    }
   }
+  if (typeof version !== 'string' || !version.trim()) {
+    return '1.0.0';
+  }
+  return version;
 }
-if (typeof version !== 'string' || !version.trim()) {
-  version = '1.0.0';
+
+function resolveExpoSubtree(config) {
+  const root = config && typeof config === 'object' ? config : {};
+  const fromRoot = root.expo;
+  if (fromRoot && typeof fromRoot === 'object') {
+    return fromRoot;
+  }
+  const staticExpo = staticAppJson.expo;
+  if (staticExpo && typeof staticExpo === 'object') {
+    return staticExpo;
+  }
+  return {};
 }
 
-const appJson = require('./app.json');
+/**
+ * Expo merges `app.json` into `config` before calling this function (expo-doctor expects this pattern).
+ * @param {{ config?: Record<string, unknown> }} ctx
+ */
+module.exports = ({ config } = {}) => {
+  const version = resolveAppVersion();
+  const root = config && typeof config === 'object' ? config : {};
+  const expo = resolveExpoSubtree(config);
 
-/** Build updates.url from extra.eas.projectId when set (after eas init). Single source of truth for EAS project ID. Falls back to app.json expo.updates.url when projectId is unset or not a non-empty string. */
-const projectId = appJson.expo?.extra?.eas?.projectId ?? appJson.extra?.eas?.projectId;
-const updatesUrl =
-  typeof projectId === 'string' && projectId.trim()
-    ? `https://u.expo.dev/${projectId.trim()}`
-    : appJson.expo?.updates?.url;
+  const projectId =
+    expo.extra?.eas?.projectId ??
+    root.extra?.eas?.projectId ??
+    staticAppJson.expo?.extra?.eas?.projectId;
+  const updatesUrl =
+    typeof projectId === 'string' && projectId.trim()
+      ? `https://u.expo.dev/${projectId.trim()}`
+      : expo.updates?.url;
 
-/** Disable OTA updates in development to avoid "failed to download remote update" on emulator when no update exists or network fails. */
-const isDevelopment = process.env.NODE_ENV === 'development';
-const updatesEnabled =
-  isDevelopment === true ? false : appJson.expo?.updates?.enabled !== false;
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const updatesEnabled =
+    isDevelopment === true ? false : expo.updates?.enabled !== false;
 
-module.exports = {
-  ...appJson,
-  expo: {
-    ...appJson.expo,
-    version,
-    updates:
-      appJson.expo?.updates != null
-        ? { ...appJson.expo.updates, url: updatesUrl, enabled: updatesEnabled }
-        : { url: updatesUrl, enabled: updatesEnabled },
-  },
+  return {
+    ...root,
+    expo: {
+      ...expo,
+      version,
+      updates:
+        expo.updates != null
+          ? { ...expo.updates, url: updatesUrl, enabled: updatesEnabled }
+          : { url: updatesUrl, enabled: updatesEnabled },
+    },
+  };
 };

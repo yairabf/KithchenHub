@@ -196,6 +196,7 @@ export function createI18nMock(overrides: TranslationOverrides = {}) {
     t: createTranslationFunction(overrides),
     i18n: {
       language: 'en',
+      dir: jest.fn(() => 'ltr'),
       changeLanguage: jest.fn(),
     },
     ready: true,

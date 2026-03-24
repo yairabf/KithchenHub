@@ -197,6 +197,7 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
             </TouchableOpacity>
           )}
           <TouchableOpacity
+            testID="chores-quick-action-add"
             style={[styles.addButton, { backgroundColor: colors.chores }]}
             onPress={handleAddChore}
           >

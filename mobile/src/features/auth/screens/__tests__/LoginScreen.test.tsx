@@ -2,19 +2,50 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { LoginScreen } from '../LoginScreen';
-import { useAuth } from '../../../contexts/AuthContext';
-import { useOnboarding } from '../contexts/OnboardingContext';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { useOnboarding } from '../../contexts/OnboardingContext';
+
+jest.mock('react-i18next', () => {
+  const authJson = require('../../../../i18n/locales/en/auth.json');
+  const commonJson = require('../../../../i18n/locales/en/common.json');
+
+  const walk = (root: Record<string, unknown>, key: string): string | undefined => {
+    const parts = key.split('.');
+    let cur: unknown = root;
+    for (const p of parts) {
+      if (cur && typeof cur === 'object' && p in cur) {
+        cur = (cur as Record<string, unknown>)[p];
+      } else {
+        return undefined;
+      }
+    }
+    return typeof cur === 'string' ? cur : undefined;
+  };
+
+  const mockT = (key: string, options?: { ns?: string }) => {
+    const ns = options?.ns ?? 'auth';
+    const root = (ns === 'common' ? commonJson : authJson) as Record<string, unknown>;
+    return walk(root, key) ?? key;
+  };
+
+  return {
+    useTranslation: () => ({
+      t: mockT,
+      i18n: { language: 'en', dir: () => 'ltr' },
+    }),
+  };
+});
 
 // Mock dependencies
-jest.mock('../../../contexts/AuthContext', () => ({
+jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
-jest.mock('../contexts/OnboardingContext', () => ({
+jest.mock('../../contexts/OnboardingContext', () => ({
   useOnboarding: jest.fn(),
 }));
 
-jest.mock('../components/GoogleSignInButton', () => {
+jest.mock('../../components/GoogleSignInButton', () => {
   const { TouchableOpacity, Text } = require('react-native');
   return {
     GoogleSignInButton: ({ onPress, isLoading }: any) => (

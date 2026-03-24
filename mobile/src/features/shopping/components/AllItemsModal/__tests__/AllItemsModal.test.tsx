@@ -62,23 +62,25 @@ describe('AllItemsModal', () => {
 
   describe('category expand/collapse', () => {
     it('shows category header but hides items until expanded', () => {
-      const { getByText, queryByText } = render(<AllItemsModal {...defaultProps} />);
+      const { getByText, getAllByText, queryByText } = render(
+        <AllItemsModal {...defaultProps} />,
+      );
 
       expect(getByText('Dairy')).toBeTruthy();
       expect(queryByText('Milk')).toBeNull();
 
-      fireEvent.press(getByText('Dairy'));
+      fireEvent.press(getAllByText('Dairy')[0]);
       expect(queryByText('Milk')).toBeTruthy();
       expect(queryByText('Cheese')).toBeTruthy();
     });
 
     it('collapses category on second press', () => {
-      const { getByText, queryByText } = render(<AllItemsModal {...defaultProps} />);
+      const { getAllByText, queryByText } = render(<AllItemsModal {...defaultProps} />);
 
-      fireEvent.press(getByText('Dairy'));
+      fireEvent.press(getAllByText('Dairy')[0]);
       expect(queryByText('Milk')).toBeTruthy();
 
-      fireEvent.press(getByText('Dairy'));
+      fireEvent.press(getAllByText('Dairy')[0]);
       expect(queryByText('Milk')).toBeNull();
     });
   });

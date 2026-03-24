@@ -3,8 +3,11 @@
   "framework": null,
   "outputDirectory": "public",
   "rewrites": [
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/privacy/", "destination": "/privacy.html" },
     { "source": "/", "destination": "/api/v1/health" }
   ],
+  "routes": [{ "src": "/api/(.*)", "dest": "/api/[...path].ts" }],
   "functions": {
     "api/[...path].ts": {
       "maxDuration": 30

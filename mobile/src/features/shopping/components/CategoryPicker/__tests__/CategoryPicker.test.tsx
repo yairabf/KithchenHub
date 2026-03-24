@@ -6,6 +6,11 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, options?: { defaultValue?: string }) =>
       options?.defaultValue ?? _key,
+    i18n: {
+      language: 'en',
+      dir: () => 'ltr',
+      changeLanguage: jest.fn(() => Promise.resolve()),
+    },
   }),
 }));
 

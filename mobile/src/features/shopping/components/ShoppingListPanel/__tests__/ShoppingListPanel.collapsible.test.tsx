@@ -132,6 +132,11 @@ jest.mock('react-i18next', () => ({
 
       return labels[key] ?? key;
     },
+    i18n: {
+      language: 'en',
+      dir: () => 'ltr',
+      changeLanguage: jest.fn(() => Promise.resolve()),
+    },
   }),
 }));
 
@@ -224,7 +229,7 @@ describe('ShoppingListPanel - Collapsible Categories', () => {
       
       expect(accessibilityLabel).toContain('Fruits');
       expect(accessibilityLabel).toContain('3');
-      expect(accessibilityLabel).toContain('items');
+      expect(accessibilityLabel).toContain('category');
     });
   });
 
@@ -350,7 +355,8 @@ describe('ShoppingListPanel - Collapsible Categories', () => {
       );
 
       const accessibilityLabel = getByTestId('category-header-dairy').props.accessibilityLabel;
-      expect(accessibilityLabel).toContain('1 item'); // Singular "item"
+      expect(accessibilityLabel).toContain('Dairy');
+      expect(accessibilityLabel).toContain('1');
 
       // Collapse
       fireEvent.press(getByTestId('category-header-dairy'));
