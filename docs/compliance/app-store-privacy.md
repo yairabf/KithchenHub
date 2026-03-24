@@ -22,7 +22,7 @@ This document summarizes Kitchen Hub’s **App Store Connect App Privacy** decla
 ## Where to configure
 
 - **App Store Connect:** [App Privacy](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/) — complete the data types and the three questions above so the label matches this summary.
-- **Privacy policy:** [legal/privacy-policy-v1.md](../../legal/privacy-policy-v1.md) — single source of truth for store and in-app legal links.
+- **Privacy policy:** [legal/privacy-policy-v1.md](../../legal/privacy-policy-v1.md) — markdown source; **hosted URL for stores** is built from [backend/static-web/privacy.html](../../backend/static-web/privacy.html) (copied to Vercel `public/` on `vercel-build`, served at **`/privacy`** on the backend deployment).
 
 ## When to update
 

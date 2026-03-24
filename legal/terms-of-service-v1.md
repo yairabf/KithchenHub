@@ -2,12 +2,12 @@
 
 **Effective date:** February 15, 2026
 
-These Terms of Service ("Terms") govern your use of the Kitchen Hub mobile application and related services ("Service") provided by [Operator Name] ("we", "us", "our"). By using the Service, you agree to these Terms.
+These Terms of Service ("Terms") govern your use of the Kitchen Hub mobile application and related services ("Service") provided by **Yair Abramovitch** ("we", "us", "our"), an individual developer. By using the Service, you agree to these Terms.
 
 ## 1. Parties and Acceptance
 
 - **You** — the user of the Kitchen Hub app.  
-- **We** — [Operator Name], the operator of the Service.
+- **We** — **Yair Abramovitch**, the operator of the Service.
 
 By creating an account, signing in, or using the Service, you confirm that you have read, understood, and agree to be bound by these Terms and by our [Privacy Policy](privacy-policy-v1.md). If you do not agree, do not use the Service.
 
@@ -34,7 +34,7 @@ We may suspend or terminate access if we reasonably believe you have violated th
 
 ## 5. Intellectual Property and Content
 
-- The Service (including design, code, and branding) is owned by [Operator Name] or its licensors. You do not acquire any ownership rights by using the Service.
+- The Service (including design, code, and branding) is owned by **Yair Abramovitch** or its licensors. You do not acquire any ownership rights by using the Service.
 - You retain ownership of content you create (e.g. lists, recipes, chores). You grant us a limited license to store, process, and display that content as necessary to provide and improve the Service and as described in our Privacy Policy.
 - You represent that you have the right to provide any content you submit and that it does not infringe third-party rights.
 
@@ -53,17 +53,17 @@ Some jurisdictions do not allow certain limitations; in such cases our liability
 
 ## 8. Indemnity
 
-You agree to indemnify and hold harmless [Operator Name] and its officers, directors, employees, and agents from any claims, damages, losses, or expenses (including reasonable attorneys’ fees) arising from: (a) your use of the Service, (b) your content, or (c) your violation of these Terms or any applicable law.
+You agree to indemnify and hold harmless **Yair Abramovitch** from any claims, damages, losses, or expenses (including reasonable attorneys’ fees) arising from: (a) your use of the Service, (b) your content, or (c) your violation of these Terms or any applicable law.
 
 ## 9. Termination
 
-- You may stop using the Service at any time. You may request account deletion via the app or by contacting support@kitchenhub.com.
+- You may stop using the Service at any time. You may request account deletion via the app or by contacting yairabc@gmail.com.
 - We may suspend or terminate your access if you breach these Terms or for other operational or legal reasons, with notice where required.
 - Upon termination, your right to use the Service ceases. We may retain data as described in our Privacy Policy (e.g. for legal compliance).
 
 ## 10. Governing Law and Jurisdiction
 
-These Terms are governed by the laws of [Jurisdiction], without regard to conflict-of-law principles. Any dispute arising from or related to these Terms or the Service shall be subject to the exclusive jurisdiction of the courts of [Jurisdiction], except where prohibited by law.
+These Terms are governed by the laws of the **State of Israel**, without regard to conflict-of-law principles. Any dispute arising from or related to these Terms or the Service shall be subject to the exclusive jurisdiction of the competent courts located in **Israel**, except where prohibited by law.
 
 ## 11. Changes to the Terms
 
@@ -73,6 +73,6 @@ We may update these Terms from time to time. We will post the updated version wi
 
 For questions about these Terms:
 
-- **Email:** support@kitchenhub.com  
-- **Operator:** [Operator Name]  
-- **Jurisdiction:** [Jurisdiction]
+- **Email:** yairabc@gmail.com  
+- **Operator:** Yair Abramovitch (individual developer)  
+- **Jurisdiction:** Israel

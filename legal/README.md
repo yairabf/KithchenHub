@@ -2,16 +2,13 @@
 
 This folder contains versioned legal documents for the Kitchen Hub app (privacy policy and terms of service). They are the single source of truth for store listings and in-app legal links.
 
-## Placeholders to Replace Before Store Submission
+## Operator details (production)
 
-Before submitting to the App Store or Google Play, replace these placeholders in **both** `privacy-policy-v1.md` and `terms-of-service-v1.md`:
+**Privacy policy** (`privacy-policy-v1.md`) and **public HTML** (`backend/static-web/privacy.html`): **Yair Abramovitch** (individual developer, **Israel**), contact **yairabc@gmail.com**, app branding **FullHouse** / **Kitchen Hub**.
 
-| Placeholder        | Where it appears                    | What to use |
-|--------------------|-------------------------------------|-------------|
-| `[Operator Name]`  | "Who we are" / data controller; parties | Your registered legal entity name, or "Kitchen Hub" with your full legal name as operator, or your full legal name if solo developer. |
-| `[Jurisdiction]`   | Governing law; regulatory references    | Your country/state (e.g. California, United States or Israel). |
+**Terms of service** (`terms-of-service-v1.md`): Same operator, governing law **State of Israel**, courts in **Israel**, contact **yairabc@gmail.com**.
 
-Contact email and effective date are already set to `support@kitchenhub.com` and the publication date in the documents.
+If you incorporate a company or move jurisdiction, update these files, redeploy Vercel for the HTML, and bump legal version if the change is material.
 
 ## Versioning
 
