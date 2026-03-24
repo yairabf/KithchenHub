@@ -32,6 +32,8 @@ jest.mock('react-i18next', () => ({
     },
     i18n: { dir: () => 'ltr', language: 'en' },
   }),
+  initReactI18next: { type: '3rdParty', init: jest.fn() },
+  Trans: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('@react-navigation/native', () => ({

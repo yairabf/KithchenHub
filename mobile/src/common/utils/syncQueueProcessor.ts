@@ -197,6 +197,27 @@ function isValidSyncResult(data: unknown): data is SyncResult {
 }
 
 /**
+ * Non-2xx /auth/sync responses may still include a structured SyncResult body.
+ * ApiError carries the parsed JSON on {@link ApiError.responseData}.
+ */
+function tryGetSyncResultFromError(error: unknown): SyncResult | undefined {
+  if (!(error instanceof ApiError)) {
+    return undefined;
+  }
+  const raw = error.responseData;
+  if (isValidSyncResult(raw)) {
+    return raw;
+  }
+  if (raw && typeof raw === 'object' && 'data' in raw) {
+    const inner = (raw as { data: unknown }).data;
+    if (isValidSyncResult(inner)) {
+      return inner;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Error classification result
  */
 type ErrorClassification = 
@@ -648,17 +669,12 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
         // Success response: process results
         await this.handleSyncResult(readyItems, result);
       } catch (error) {
-        // Check if we got a response body (even on non-2xx)
-        const maybeResult = undefined;
+        const maybeResult = tryGetSyncResultFromError(error);
 
-        // Validate it's a valid SyncResult object
-        if (isValidSyncResult(maybeResult)) {
-          // We have server confirmation (partial or failed with details)
-          // Process it even though it's an error response
+        if (maybeResult !== undefined) {
           console.warn('Sync returned error response but with result body, processing...');
           await this.handleSyncResult(readyItems, maybeResult);
-          
-          // Update lastAttemptAt for all processed items
+
           for (const item of readyItems) {
             await syncQueueStorage.updateLastAttempt(item.id);
           }
@@ -667,7 +683,7 @@ class SyncQueueProcessorImpl implements SyncQueueProcessor {
 
         // No confirmation at all -> keep all items, retry later
         // Idempotency makes this safe (backend won't duplicate)
-        throw error; // Re-throw to trigger existing error classification logic
+        throw error;
       }
 
       // Update lastAttemptAt for all processed items (successful or not)

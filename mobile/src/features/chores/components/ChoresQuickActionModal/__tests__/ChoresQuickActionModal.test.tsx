@@ -70,21 +70,21 @@ describe('ChoresQuickActionModal', () => {
   describe('visibility', () => {
     it('renders modal title when visible', () => {
       const { getByText } = render(<ChoresQuickActionModal {...defaultProps} />);
-      expect(getByText('chores.quickActionModal.title')).toBeTruthy();
+      expect(getByText('quickActionModal.title')).toBeTruthy();
     });
 
     it('does not render content when not visible', () => {
       const { queryByText } = render(
         <ChoresQuickActionModal {...defaultProps} visible={false} />
       );
-      expect(queryByText('chores.quickActionModal.title')).toBeNull();
+      expect(queryByText('quickActionModal.title')).toBeNull();
     });
   });
 
   describe('chore text input', () => {
     it('allows typing a chore name', () => {
       const { getByPlaceholderText } = render(<ChoresQuickActionModal {...defaultProps} />);
-      const input = getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder');
+      const input = getByPlaceholderText('quickActionModal.choreNamePlaceholder');
       fireEvent.changeText(input, 'Wash dishes');
       expect(input.props.value).toBe('Wash dishes');
     });
@@ -96,7 +96,7 @@ describe('ChoresQuickActionModal', () => {
       );
 
       fireEvent.changeText(
-        getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder'),
+        getByPlaceholderText('quickActionModal.choreNamePlaceholder'),
         'Wash'
       );
 
@@ -116,7 +116,7 @@ describe('ChoresQuickActionModal', () => {
       );
 
       fireEvent.changeText(
-        getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder'),
+        getByPlaceholderText('quickActionModal.choreNamePlaceholder'),
         'Wash'
       );
 
@@ -127,7 +127,7 @@ describe('ChoresQuickActionModal', () => {
       });
 
       fireEvent.press(queryByText('Wash dishes')!);
-      expect(getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder').props.value).toBe('Wash dishes');
+      expect(getByPlaceholderText('quickActionModal.choreNamePlaceholder').props.value).toBe('Wash dishes');
 
       jest.useRealTimers();
     });
@@ -138,7 +138,7 @@ describe('ChoresQuickActionModal', () => {
       const { getByText } = render(<ChoresQuickActionModal {...defaultProps} />);
       expect(getByText('Alice')).toBeTruthy();
       expect(getByText('Bob')).toBeTruthy();
-      expect(getByText('chores.quickActionModal.unassigned')).toBeTruthy();
+      expect(getByText('quickActionModal.unassigned')).toBeTruthy();
     });
 
     it('passes the correct assigneeId and assigneeName to onAddChore', () => {
@@ -148,15 +148,13 @@ describe('ChoresQuickActionModal', () => {
       );
 
       fireEvent.changeText(
-        getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder'),
+        getByPlaceholderText('quickActionModal.choreNamePlaceholder'),
         'Clean kitchen'
       );
       fireEvent.press(getByText('Alice'));
-      fireEvent.press(getByText('chores.quickActionModal.choreNamePlaceholder'));
 
-      // Trigger add via text input submit
       fireEvent(
-        getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder'),
+        getByPlaceholderText('quickActionModal.choreNamePlaceholder'),
         'submitEditing'
       );
 
@@ -182,11 +180,11 @@ describe('ChoresQuickActionModal', () => {
       );
 
       fireEvent.changeText(
-        getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder'),
+        getByPlaceholderText('quickActionModal.choreNamePlaceholder'),
         'Vacuum living room'
       );
       fireEvent(
-        getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder'),
+        getByPlaceholderText('quickActionModal.choreNamePlaceholder'),
         'submitEditing'
       );
 
@@ -206,7 +204,7 @@ describe('ChoresQuickActionModal', () => {
       );
 
       fireEvent(
-        getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder'),
+        getByPlaceholderText('quickActionModal.choreNamePlaceholder'),
         'submitEditing'
       );
 
@@ -217,7 +215,7 @@ describe('ChoresQuickActionModal', () => {
       const { getByPlaceholderText } = render(
         <ChoresQuickActionModal {...defaultProps} />
       );
-      const input = getByPlaceholderText('chores.quickActionModal.choreNamePlaceholder');
+      const input = getByPlaceholderText('quickActionModal.choreNamePlaceholder');
 
       fireEvent.changeText(input, 'Mop floors');
       fireEvent(input, 'submitEditing');

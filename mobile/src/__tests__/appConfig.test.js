@@ -9,7 +9,9 @@ describe('app.config.js', () => {
   let config;
 
   beforeAll(() => {
-    config = require('../../app.config.js');
+    const appJson = require('../../app.json');
+    const buildConfig = require('../../app.config.js');
+    config = buildConfig({ config: appJson });
   });
 
   it('exports an expo object', () => {

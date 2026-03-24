@@ -24,11 +24,14 @@ export class NetworkError extends Error {
 
 export class ApiError extends Error {
   public statusCode: number;
+  /** Parsed JSON body from a non-2xx response (same payload passed to createApiError). */
+  public readonly responseData: unknown;
 
-  constructor(message: string, statusCode: number) {
+  constructor(message: string, statusCode: number, responseData?: unknown) {
     super(message);
     this.name = "ApiError";
     this.statusCode = statusCode;
+    this.responseData = responseData;
   }
 }
 
@@ -247,7 +250,7 @@ class ApiClient {
   private createApiError(statusCode: number, data: unknown): ApiError {
     const message =
       this.getMessageFromResponseData(data) ?? "API request failed";
-    return new ApiError(message, statusCode);
+    return new ApiError(message, statusCode, data);
   }
 
   private getMessageFromResponseData(data: unknown): string | undefined {

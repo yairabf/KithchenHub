@@ -35,10 +35,10 @@ describe('GuestDataImportModal', () => {
       );
 
       if (expectedVisible) {
-        expect(queryByText('Found existing data')).toBeTruthy();
-        expect(queryByText('We found recipes or plans from your guest session. Would you like to import them to your account?')).toBeTruthy();
+        expect(queryByText('guestDataImport.title')).toBeTruthy();
+        expect(queryByText('guestDataImport.body')).toBeTruthy();
       } else {
-        expect(queryByText('Found existing data')).toBeNull();
+        expect(queryByText('guestDataImport.title')).toBeNull();
       }
     });
   });
@@ -55,7 +55,7 @@ describe('GuestDataImportModal', () => {
         />
       );
 
-      fireEvent.press(getByText('Import local data'));
+      fireEvent.press(getByText('guestDataImport.importButton'));
       expect(onImport).toHaveBeenCalledTimes(1);
       expect(onSkip).not.toHaveBeenCalled();
     });
@@ -73,7 +73,7 @@ describe('GuestDataImportModal', () => {
         />
       );
 
-      fireEvent.press(getByText('Not now'));
+      fireEvent.press(getByText('guestDataImport.skipButton'));
       expect(onSkip).toHaveBeenCalledTimes(1);
       expect(onImport).not.toHaveBeenCalled();
     });
@@ -91,9 +91,9 @@ describe('GuestDataImportModal', () => {
         />
       );
 
-      expect(queryByText('Found existing data')).toBeNull();
-      expect(queryByText('Import local data')).toBeNull();
-      expect(queryByText('Not now')).toBeNull();
+      expect(queryByText('guestDataImport.title')).toBeNull();
+      expect(queryByText('guestDataImport.importButton')).toBeNull();
+      expect(queryByText('guestDataImport.skipButton')).toBeNull();
     });
   });
 

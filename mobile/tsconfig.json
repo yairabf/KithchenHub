@@ -9,8 +9,6 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",
-    "**/*.spec.tsx",
-    "src/features/onboarding/screens/EnterInviteCodeScreen.tsx",
-    "src/features/onboarding/screens/HouseholdNameScreen.tsx"
+    "**/*.spec.tsx"
   ]
 }

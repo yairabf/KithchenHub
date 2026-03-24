@@ -16,7 +16,6 @@ import Animated, {
   useSharedValue,
   withTiming,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -109,10 +108,9 @@ export function CenteredModal({
   }, [visible, triggerRef]);
 
   const handleClose = () => {
+    onClose();
     opacity.value = withTiming(0, { duration: 200 });
-    scale.value = withTiming(0.8, { duration: 200 }, () => {
-      runOnJS(onClose)();
-    });
+    scale.value = withTiming(0.8, { duration: 200 });
   };
 
   const animatedBackdropStyle = useAnimatedStyle(() => ({

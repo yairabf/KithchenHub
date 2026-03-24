@@ -9,12 +9,15 @@ jest.mock('@expo/vector-icons', () => ({
     Ionicons: 'Ionicons',
 }));
 
-jest.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key,
-        i18n: { language: 'en', dir: () => 'ltr' },
-    }),
-}));
+jest.mock('react-i18next', () => {
+    const mockT = (key: string) => key;
+    return {
+        useTranslation: () => ({
+            t: mockT,
+            i18n: { language: 'en', dir: () => 'ltr' },
+        }),
+    };
+});
 
 jest.mock('../../../services/import/importService', () => ({
     ImportService: {

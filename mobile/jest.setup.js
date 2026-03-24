@@ -20,6 +20,8 @@ jest.mock('react-i18next', () => ({
     },
     i18n: {
       language: 'en',
+      /** i18next API used by components for RTL layout (e.g. CategoryPicker). */
+      dir: jest.fn(() => 'ltr'),
       changeLanguage: jest.fn(() => Promise.resolve()),
     },
   }),
