@@ -1,5 +1,7 @@
 # Unrelated app directories
-/mobile/
+# NOTE: Do NOT list /mobile/ here — breaks Expo web when the Vercel root is the repo root.
+# NOTE: Do NOT list /static-legal/ — backend vercel-build copies HTML from repo-root static-legal/.
+# Backend deploys: set Vercel "Root Directory" to backend/ (still a full clone; paths above must exist).
 /catalog-seeder/
 /design-system/
 /sandbox/
@@ -32,8 +34,8 @@ node_modules/
 .venv/
 .venv-skill-creator/
 
-# Root-level files not needed
-*.png
+# Root-level files not needed (use /prefix so mobile/assets/**/*.png are NOT excluded)
+/*.png
 wikidata_ai_catalog_to_csv.js
 /package.json
 /package-lock.json

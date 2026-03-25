@@ -1,5 +1,7 @@
 {
-  "buildCommand": "npx expo export --platform web",
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build:web",
   "outputDirectory": "dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

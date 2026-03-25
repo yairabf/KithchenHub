@@ -1,0 +1,138 @@
+name: Deploy Status (main vs deployed)
+
+on:
+  workflow_dispatch:
+    inputs:
+      vercel_api_base_url:
+        description: "Vercel production base URL (e.g. https://api.example.com)"
+        required: true
+        type: string
+  schedule:
+    - cron: "0 9 * * *" # daily 09:00 UTC
+
+concurrency:
+  group: deploy-status-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: Compare main vs Vercel + EAS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Compute main SHA + version.json
+        id: main
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p \"require('./version.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch deployed backend info (Vercel)
+        id: vercel
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERCEL_API_BASE_URL="${{ inputs.vercel_api_base_url }}"
+          else
+            VERCEL_API_BASE_URL="${{ secrets.VERCEL_API_BASE_URL }}"
+          fi
+
+          if [ -z "$VERCEL_API_BASE_URL" ]; then
+            echo "VERCEL_API_BASE_URL is required (input or repo secret)."
+            exit 1
+          fi
+
+          URL="${VERCEL_API_BASE_URL%/}/api/v1/deploy-info"
+          echo "Fetching $URL"
+          BODY="$(curl -fsSL "$URL")"
+          echo "body=$BODY" >> "$GITHUB_OUTPUT"
+
+          node - <<'NODE'
+          const raw = process.env.BODY;
+          const data = JSON.parse(raw);
+          if (data == null || typeof data !== 'object') throw new Error('deploy-info response is not an object');
+          console.log('deploy-info:', data);
+          NODE
+        env:
+          BODY: ${{ steps.vercel.outputs.body }}
+
+      - name: Compare main vs Vercel
+        env:
+          MAIN_SHA: ${{ steps.main.outputs.sha }}
+          DEPLOY_INFO: ${{ steps.vercel.outputs.body }}
+        run: |
+          node - <<'NODE'
+          const mainSha = process.env.MAIN_SHA;
+          const deployInfo = JSON.parse(process.env.DEPLOY_INFO);
+          const deployedSha = typeof deployInfo.gitSha === 'string' ? deployInfo.gitSha : '';
+          if (!deployedSha) {
+            console.warn('No gitSha reported by /api/v1/deploy-info; cannot compare reliably.');
+            process.exit(1);
+          }
+          if (deployedSha !== mainSha) {
+            console.error(`Mismatch: main=${mainSha} deployed=${deployedSha}`);
+            process.exit(1);
+          }
+          console.log(`OK: deployed backend matches main (${mainSha})`);
+          NODE
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install EAS CLI (for build list)
+        run: npm install -g eas-cli
+
+      - name: Fetch latest EAS production builds
+        id: eas
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN secret is required to query EAS builds."
+            exit 1
+          fi
+          cd mobile
+          eas build:list --platform all --limit 10 --json --non-interactive > ../eas-builds.json
+          echo "json=$(node -p \"JSON.stringify(require('../eas-builds.json'))\")" >> "$GITHUB_OUTPUT"
+
+      - name: Summarize (main vs backend vs EAS)
+        env:
+          MAIN_SHA: ${{ steps.main.outputs.sha }}
+          MAIN_VERSION: ${{ steps.main.outputs.version }}
+          DEPLOY_INFO: ${{ steps.vercel.outputs.body }}
+          EAS_BUILDS: ${{ steps.eas.outputs.json }}
+        run: |
+          node - <<'NODE'
+          const mainSha = process.env.MAIN_SHA;
+          const mainVersion = process.env.MAIN_VERSION;
+          const deployInfo = JSON.parse(process.env.DEPLOY_INFO);
+          const builds = JSON.parse(process.env.EAS_BUILDS);
+
+          const finished = Array.isArray(builds) ? builds.filter(b => b && b.status === 'finished') : [];
+          const production = finished.filter(b => b.buildProfile === 'production');
+          const latest = production[0];
+
+          const rows = [
+            ['main', mainSha, mainVersion],
+            ['vercel-backend', deployInfo.gitSha || '', deployInfo.appVersion || ''],
+            ['eas-latest-production', latest?.gitCommitHash || latest?.gitCommitId || '', latest?.appVersion || ''],
+          ];
+
+          const header = '| surface | gitSha | appVersion |\\n|---|---|---|\\n';
+          const body = rows.map(r => `| ${r[0]} | ${r[1]} | ${r[2]} |`).join('\\n');
+          const md = `## Deploy status\\n\\n${header}${body}\\n`;
+          console.log(md);
+          NODE
+

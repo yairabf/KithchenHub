@@ -56,6 +56,9 @@
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
     "@testing-library/react-native": "^13.3.3",

@@ -102,6 +102,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 - **Swagger Documentation**: Interactive API docs at `/api/docs/v1`
 - **API Versioning**: URI-based versioning (`/api/v1`, `/api/v2`, etc.)
 - **Version Discovery**: `GET /api/version` endpoint for version information
+- **Deploy Metadata (Vercel)**: `GET /api/v1/deploy-info` for deployment SHA/version reporting (used by the deploy-status workflow)
 - **Deprecation Support**: Automatic deprecation headers and sunset handling
 - **CORS Enabled**: Configured for mobile app access
 
