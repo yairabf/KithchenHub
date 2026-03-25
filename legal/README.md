@@ -4,7 +4,7 @@ This folder contains versioned legal documents for the Kitchen Hub app (privacy 
 
 ## Operator details (production)
 
-**Privacy policy** (`privacy-policy-v1.md`) and **public HTML** (`backend/static-web/privacy.html`): **Yair Abramovitch** (individual developer, **Israel**), contact **yairabc@gmail.com**, app branding **FullHouse** / **Kitchen Hub**.
+**Privacy policy** (`privacy-policy-v1.md`) / **Terms** (`terms-of-service-v1.md`) and **public HTML** (`static-legal/privacy.html`, `static-legal/terms.html`, deployed via Vercel or served from the API deployment — see `static-legal/README.md`): **Yair Abramovitch** (individual developer, **Israel**), contact **yairabc@gmail.com**, app branding **FullHouse** / **Kitchen Hub**.
 
 **Terms of service** (`terms-of-service-v1.md`): Same operator, governing law **State of Israel**, courts in **Israel**, contact **yairabc@gmail.com**.
 

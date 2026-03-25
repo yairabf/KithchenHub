@@ -29,7 +29,7 @@ Declare each row as **collected** and select the purpose(s) that match. Do **not
 
 ## Where to configure
 
-- **Play Console:** [Policy → App content → Data safety](https://support.google.com/googleplay/android-developer/answer/10787469) — complete the form using the table above and set the privacy policy URL (e.g. https://kitchenhub.com/privacy).
+- **Play Console:** [Policy → App content → Data safety](https://support.google.com/googleplay/android-developer/answer/10787469) — complete the form using the table above and set the privacy policy URL to your hosted page (same origin as your API is typical: `https://<your-api-host>/privacy`, or a dedicated static deploy — see `static-legal/README.md`).
 - **Privacy policy:** [legal/privacy-policy-v1.md](../../legal/privacy-policy-v1.md) — single source of truth for store and in-app legal links.
 
 ## When to update
