@@ -1,0 +1,1 @@
+Legal HTML for store listings lives in the monorepo root: **`static-legal/`**. The backend `vercel-build` script copies from there into `public/`. This folder is kept only as a legacy fallback if `static-legal/` is absent.

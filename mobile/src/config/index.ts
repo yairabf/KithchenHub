@@ -1,11 +1,9 @@
 import { isMockDataEnabled } from '../common/utils/mockDataToggle';
 
-// Default base URL when EXPO_PUBLIC_API_URL is not set
-// Using localhost for both platforms because adb reverse forwards Android emulator port to host
-const DEFAULT_API_BASE_URL = 'http://localhost:3000';
+import { resolveApiBaseUrl } from './apiBaseUrl';
 
-const rawApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-const API_BASE_URL = rawApiUrl && rawApiUrl.length > 0 ? rawApiUrl.replace(/\/$/, '') : DEFAULT_API_BASE_URL;
+// Localhost default: adb reverse forwards Android emulator port to host
+const API_BASE_URL = resolveApiBaseUrl();
 
 /**
  * Mobile application configuration.
