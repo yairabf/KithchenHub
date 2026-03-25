@@ -71,6 +71,8 @@ kitchen-hub/
 
 **Product version:** The canonical app version lives in `version.json` at the repo root. Bump it only when cutting a **store release**; over-the-air (OTA) updates do not change this version. The mobile app reads it via `app.config.js`.
 
+**Deploy/version pipeline:** See `docs/implementation/deploy-version-pipeline.md` for how we compare `main` vs deployed (Vercel + EAS), trigger releases, and roll back safely.
+
 ## Tech Stack
 
 ### Mobile App

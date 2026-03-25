@@ -145,6 +145,14 @@ After one-time channel/branch setup (see [docs/OTA_CHANNELS.md](docs/OTA_CHANNEL
 
 **Workflow:** Publish an update with `eas update` (after configuring EAS). Production builds will receive the new bundle on the next launch (or after error recovery, per `checkAutomatically`). Only JS/asset changes are delivered via OTA; native code changes require a new store build.
 
+### Release / rollback automation
+
+This repo includes GitHub Actions workflows to compare `main` vs deployed, and to trigger production EAS builds on-demand. See:
+
+- `/.github/workflows/deploy-status.yml`
+- `/.github/workflows/mobile-release.yml`
+- `/docs/implementation/deploy-version-pipeline.md`
+
 **Troubleshooting:**
 
 - **Updates not applying:** Ensure the published update’s `runtimeVersion` matches the app’s `version` (from `version.json` via `app.config.js`). Run `npx expo doctor` to check config.
