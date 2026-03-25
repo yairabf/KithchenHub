@@ -45,6 +45,7 @@ Use **Node 20.x** (or the version your Expo SDK recommends) in Vercel → Projec
 2. **Redeploy** after changing `.vercelignore` (e.g. `/mobile/` must stay removed).
 3. **Branch** connected in Vercel includes both `backend/` and `mobile/` (and `static-legal/` for backend).
 4. **Separate env vars** per project — backend secrets must not be assumed on the mobile project.
+5. **`Unable to resolve module … fullhouse_icon.png` (or any `assets/**/*.png`)** — the repo `.vercelignore` must **not** use a blanket `*.png` rule (that strips `mobile/assets/`). Use `/*.png` if you only want to ignore PNGs at the monorepo root.
 
 ## Related
 

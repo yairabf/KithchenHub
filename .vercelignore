@@ -34,8 +34,8 @@ node_modules/
 .venv/
 .venv-skill-creator/
 
-# Root-level files not needed
-*.png
+# Root-level files not needed (use /prefix so mobile/assets/**/*.png are NOT excluded)
+/*.png
 wikidata_ai_catalog_to_csv.js
 /package.json
 /package-lock.json
