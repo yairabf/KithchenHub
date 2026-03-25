@@ -49,10 +49,7 @@ export function LegalConsentGate({ children }: LegalConsentGateProps) {
     }
   };
 
-  const showModal = accepted === false;
-  const isLoading = accepted === null;
-
-  if (isLoading) {
+  if (accepted === null) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -60,15 +57,20 @@ export function LegalConsentGate({ children }: LegalConsentGateProps) {
     );
   }
 
-  return (
-    <>
-      {children}
+  if (accepted === false) {
+    return (
       <LegalConsentModal
-        visible={showModal}
+        visible
         onAccept={handleAccept}
         onOpenPrivacyPolicy={() => openLegalUrl(privacyPolicyUrl)}
         onOpenTerms={() => openLegalUrl(termsOfServiceUrl)}
       />
+    );
+  }
+
+  return (
+    <>
+      {children}
     </>
   );
 }

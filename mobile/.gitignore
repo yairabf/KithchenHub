@@ -1,1 +1,17 @@
 .vercel
+
+# Fastlane local secrets/output
+AuthKey_*.p8
+*.ipa
+*.app.dSYM.zip
+*.aab
+*.apk
+*.jks
+*.keystore
+play-service-account*.json
+service-account*.json
+fastlane/*.p8
+fastlane/*.json
+fastlane/README.md
+fastlane/report.xml
+fastlane/test_output/

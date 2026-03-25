@@ -13,7 +13,13 @@
     "clean:android": "bash scripts/clean-android-build.sh",
     "verify:identifiers": "bash scripts/verify-app-identifiers.sh",
     "verify:ota": "bash scripts/verify-ota-config.sh",
-    "verify:eas": "bash scripts/verify-eas-config.sh"
+    "verify:eas": "bash scripts/verify-eas-config.sh",
+    "release:ios:internal": "bundle exec fastlane ios internal",
+    "release:ios:prod": "bundle exec fastlane ios prod",
+    "release:android:internal": "bundle exec fastlane android internal",
+    "release:android:prod": "bundle exec fastlane android prod",
+    "release:stores:internal": "npm run release:ios:internal && npm run release:android:internal",
+    "release:stores:prod": "npm run release:ios:prod && npm run release:android:prod"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

@@ -105,7 +105,7 @@ describe('LegalConsentGate', () => {
         await waitFor(() => {
           expect(queryByTestId('accept-continue')).toBeTruthy();
         });
-        expect(queryByText(childText)).toBeTruthy();
+        expect(queryByText(childText)).toBeNull();
       } else {
         await waitFor(() => {
           expect(queryByTestId('accept-continue')).toBeNull();
@@ -119,7 +119,7 @@ describe('LegalConsentGate', () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
 
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId, queryByText } = render(
       <LegalConsentGate>
         <View><Text>{childText}</Text></View>
       </LegalConsentGate>
@@ -129,6 +129,9 @@ describe('LegalConsentGate', () => {
       expect(getByTestId('accept-continue')).toBeTruthy();
     });
 
+    expect(queryByTestId('legal-consent-message')).toBeTruthy();
+    expect(queryByTestId('accept-continue')).toBeTruthy();
+
     fireEvent.press(getByTestId('accept-continue'));
 
     await waitFor(() => {
@@ -137,6 +140,10 @@ describe('LegalConsentGate', () => {
 
     await waitFor(() => {
       expect(queryByTestId('accept-continue')).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(queryByText(childText)).toBeTruthy();
     });
   });
 

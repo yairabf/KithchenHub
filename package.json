@@ -13,7 +13,13 @@
     "mobile:ios:mock": "cd mobile && npm run ios:mock",
     "mobile:ios:backend": "cd mobile && npm run ios:backend",
     "mobile:android:mock": "cd mobile && npm run android:mock",
-    "mobile:android:backend": "cd mobile && npm run android:backend"
+    "mobile:android:backend": "cd mobile && npm run android:backend",
+    "release:ios:internal": "npm --prefix mobile run release:ios:internal",
+    "release:ios:prod": "npm --prefix mobile run release:ios:prod",
+    "release:android:internal": "npm --prefix mobile run release:android:internal",
+    "release:android:prod": "npm --prefix mobile run release:android:prod",
+    "release:stores:internal": "npm --prefix mobile run release:stores:internal",
+    "release:stores:prod": "npm --prefix mobile run release:stores:prod"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

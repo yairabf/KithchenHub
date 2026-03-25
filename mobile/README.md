@@ -186,6 +186,104 @@ The **production** profile is configured for App Store and Google Play submissio
 
 To verify EAS config locally (remote app version source; production store distribution, Android app-bundle, and auto-increment; preview internal distribution and Android APK; OTA channel names develop/main), run `npm run verify:eas` from the mobile directory.
 
+## Fastlane (CLI releases without EAS queue)
+
+This repo supports shipping store builds using **Fastlane** so you can release from your Mac without waiting for EAS Build queues.
+
+### One-time setup
+
+Install the Ruby gems from `mobile/`:
+
+```bash
+bundle install
+```
+
+The native projects must exist locally for Fastlane to build them:
+
+```bash
+npx expo prebuild
+```
+
+### Required environment variables
+
+Set these before running any release command:
+
+- `EXPO_PUBLIC_API_URL` (must be your production URL; do not use `localhost`)
+- `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH` (App Store Connect API key for iOS)
+- `SUPPLY_JSON_KEY` (absolute path to the Google Play service account JSON for Android)
+- `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (Android upload keystore used for Play builds)
+
+Optional:
+
+- `FASTLANE_APPLE_ID` (convenience for some Apple flows)
+
+You can place these in `mobile/.env`, export them in your shell, or load them via your preferred secret manager.
+
+### Recommended release flow
+
+Use a two-step flow per platform:
+
+1. **Internal first**
+   Build and upload a new candidate to TestFlight internal testers / Google Play internal track.
+2. **Production second**
+   Only after the internal build looks good:
+   - iOS submits the tested TestFlight build for App Store review
+   - Android promotes the tested internal build to the production track as a **draft**
+
+### Repo-root commands
+
+Run these from the repo root:
+
+```bash
+npm run release:ios:internal
+npm run release:ios:prod
+npm run release:android:internal
+npm run release:android:prod
+npm run release:stores:internal
+npm run release:stores:prod
+```
+
+### What each command does
+
+- `npm run release:ios:internal`
+  - Sets the iOS marketing version from repo-root `version.json`
+  - Increments the iOS build number from the latest TestFlight build for that version
+  - Builds a new IPA locally
+  - Uploads it to TestFlight and distributes it to internal testers
+
+- `npm run release:ios:prod`
+  - Does **not** rebuild
+  - Finds the latest TestFlight build for the current `version.json`
+  - Submits that already-tested build for App Store review
+  - Leaves release timing under App Store control (`automatic_release: false`)
+
+- `npm run release:android:internal`
+  - Computes the next `versionCode` from the highest code already active on Google Play
+  - Builds a new release AAB locally
+  - Uploads it to the Play internal track
+
+- `npm run release:android:prod`
+  - Does **not** rebuild
+  - Promotes the currently tested internal-track release to `production`
+  - Creates it as a **draft**, so you can review it in Play Console before rollout
+
+- `npm run release:stores:internal`
+  - Runs iOS internal, then Android internal
+
+- `npm run release:stores:prod`
+  - Runs iOS prod, then Android prod
+
+### Direct mobile commands
+
+If you prefer running from `mobile/`, the equivalent commands are:
+
+```bash
+npm run release:ios:internal
+npm run release:ios:prod
+npm run release:android:internal
+npm run release:android:prod
+```
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:

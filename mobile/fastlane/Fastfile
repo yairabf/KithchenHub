@@ -1,0 +1,306 @@
+default_platform(:ios)
+
+require 'fileutils'
+require 'json'
+
+APP_SCHEME = 'KitchenHub'
+IOS_CONFIGURATION = 'Release'
+APPLE_TEAM_ID = 'UT62KQGZDJ'
+IOS_APP_IDENTIFIER = 'com.kitchenhub.app'
+ANDROID_PACKAGE_NAME = 'com.kitchenhub.app'
+ANDROID_TRACKS = %w[internal alpha beta production].freeze
+
+MOBILE_ROOT = File.expand_path('..', __dir__)
+IOS_ROOT = File.join(MOBILE_ROOT, 'ios')
+IOS_WORKSPACE = File.join(IOS_ROOT, 'KitchenHub.xcworkspace')
+IOS_XCODEPROJ = File.join(IOS_ROOT, 'KitchenHub.xcodeproj')
+ANDROID_GRADLE_PROJECT_DIR = File.join(MOBILE_ROOT, 'android')
+ANDROID_AAB_PATH = File.join(
+  ANDROID_GRADLE_PROJECT_DIR,
+  'app',
+  'build',
+  'outputs',
+  'bundle',
+  'release',
+  'app-release.aab',
+)
+
+def ensure_env!(key)
+  value = ENV[key]
+  UI.user_error!("Missing required env var: #{key}") if value.nil? || value.strip.empty?
+  value.strip
+end
+
+def ensure_release_api_url!
+  api_url = ensure_env!('EXPO_PUBLIC_API_URL')
+  if api_url.match?(/localhost|127\.0\.0\.1|10\.0\.2\.2/i)
+    UI.user_error!("EXPO_PUBLIC_API_URL must point to a deployed backend, got: #{api_url}")
+  end
+  api_url
+end
+
+def read_repo_version
+  version_json_path = File.expand_path('../version.json', __dir__)
+  JSON.parse(File.read(version_json_path))['version']
+rescue
+  nil
+end
+
+def read_repo_version!
+  version = read_repo_version
+  UI.user_error!('Unable to resolve repo version from version.json') if version.nil? || version.strip.empty?
+  version
+end
+
+def read_react_native_version
+  react_native_package_path = File.join(MOBILE_ROOT, 'node_modules', 'react-native', 'package.json')
+  JSON.parse(File.read(react_native_package_path))['version']
+rescue
+  nil
+end
+
+def app_store_api_key!
+  ensure_env!('ASC_KEY_ID')
+  ensure_env!('ASC_ISSUER_ID')
+  ensure_env!('ASC_KEY_PATH')
+
+  app_store_connect_api_key(
+    key_id: ENV['ASC_KEY_ID'],
+    issuer_id: ENV['ASC_ISSUER_ID'],
+    key_filepath: ENV['ASC_KEY_PATH'],
+    in_house: false,
+  )
+end
+
+def configure_local_ios_build_environment!
+  ENV['RCT_USE_RN_DEP'] = '0'
+  ENV['RCT_USE_PREBUILT_RNCORE'] = '0'
+end
+
+def ensure_hermes_artifact!(configuration)
+  react_native_version = read_react_native_version
+  UI.user_error!('Unable to resolve the React Native version for Hermes artifacts') if react_native_version.nil? || react_native_version.strip.empty?
+
+  normalized_configuration = configuration.downcase
+  hermes_artifact_directory = File.join(IOS_ROOT, 'Pods', 'hermes-engine-artifacts')
+  hermes_artifact_path = File.join(
+    hermes_artifact_directory,
+    "hermes-ios-#{react_native_version.downcase}-#{normalized_configuration}.tar.gz",
+  )
+  temporary_download_path = File.join(hermes_artifact_directory, 'hermes-ios.download')
+
+  return if File.exist?(hermes_artifact_path)
+
+  hermes_artifact_url = [
+    'https://repo1.maven.org/maven2/com/facebook/react/react-native-artifacts',
+    react_native_version,
+    "react-native-artifacts-#{react_native_version}-hermes-ios-#{normalized_configuration}.tar.gz",
+  ].join('/')
+
+  UI.message("Downloading Hermes #{normalized_configuration} artifact for React Native #{react_native_version}")
+
+  FileUtils.mkdir_p(hermes_artifact_directory)
+  FileUtils.rm_f(temporary_download_path)
+
+  sh(
+    'curl',
+    '-fL',
+    '--retry',
+    '5',
+    '--retry-delay',
+    '2',
+    '--retry-all-errors',
+    hermes_artifact_url,
+    '-o',
+    temporary_download_path,
+  )
+  FileUtils.mv(temporary_download_path, hermes_artifact_path)
+end
+
+def install_ios_pods!
+  Dir.chdir(IOS_ROOT) do
+    sh('bundle', 'exec', 'pod', 'install')
+  end
+end
+
+def next_ios_build_number(api_key:, version:)
+  latest_build_number = latest_testflight_build_number(
+    api_key: api_key,
+    app_identifier: IOS_APP_IDENTIFIER,
+    version: version,
+    initial_build_number: 0,
+  )
+
+  latest_build_number.to_i + 1
+rescue => error
+  UI.important("Unable to read latest TestFlight build number (#{error.message}); defaulting to 1")
+  1
+end
+
+def latest_ios_build_for_version!(api_key:, version:)
+  build_number = latest_testflight_build_number(
+    api_key: api_key,
+    app_identifier: IOS_APP_IDENTIFIER,
+    version: version,
+    initial_build_number: 0,
+  ).to_i
+
+  UI.user_error!("No TestFlight build found for iOS version #{version}. Run `fastlane ios internal` first.") if build_number < 1
+
+  build_number
+end
+
+def next_android_version_code(json_key:)
+  existing_version_codes = ANDROID_TRACKS.flat_map do |track|
+    google_play_track_version_codes(
+      json_key: json_key,
+      package_name: ANDROID_PACKAGE_NAME,
+      track: track,
+    )
+  rescue => error
+    UI.message("Skipping Google Play track lookup for #{track}: #{error.message}")
+    []
+  end
+
+  (existing_version_codes.max || 0) + 1
+end
+
+def android_signing_properties!
+  {
+    'android.injected.signing.store.file' => ensure_env!('ANDROID_KEYSTORE_PATH'),
+    'android.injected.signing.store.password' => ensure_env!('ANDROID_KEYSTORE_PASSWORD'),
+    'android.injected.signing.key.alias' => ensure_env!('ANDROID_KEY_ALIAS'),
+    'android.injected.signing.key.password' => ensure_env!('ANDROID_KEY_PASSWORD'),
+  }
+end
+
+def build_android_aab!(version_code:, version_name:)
+  gradle(
+    task: 'bundle',
+    build_type: 'Release',
+    project_dir: ANDROID_GRADLE_PROJECT_DIR,
+    properties: {
+      'android.injected.version.code' => version_code.to_s,
+      'android.injected.version.name' => version_name,
+    }.merge(android_signing_properties!),
+  )
+end
+
+platform :ios do
+  desc 'Build and upload a new internal iOS build to TestFlight'
+  lane :internal do
+    ensure_release_api_url!
+    repo_version = read_repo_version!
+    UI.message("Repo version.json: #{repo_version}")
+
+    configure_local_ios_build_environment!
+    api_key = app_store_api_key!
+
+    increment_version_number(
+      version_number: repo_version,
+      xcodeproj: IOS_XCODEPROJ,
+    )
+    increment_build_number(
+      build_number: next_ios_build_number(api_key: api_key, version: repo_version),
+      xcodeproj: IOS_XCODEPROJ,
+    )
+
+    install_ios_pods!
+    ensure_hermes_artifact!(IOS_CONFIGURATION)
+
+    build_app(
+      workspace: IOS_WORKSPACE,
+      scheme: APP_SCHEME,
+      configuration: IOS_CONFIGURATION,
+      export_method: 'app-store',
+      clean: true,
+      export_options: {
+        method: 'app-store-connect',
+        signingStyle: 'automatic',
+        teamID: APPLE_TEAM_ID,
+      },
+      xcargs: '-allowProvisioningUpdates',
+      export_xcargs: '-allowProvisioningUpdates',
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: false,
+    )
+  end
+
+  desc 'Alias for the internal iOS TestFlight lane'
+  lane :beta do
+    internal
+  end
+
+  desc 'Submit the latest tested TestFlight iOS build for App Store review'
+  lane :prod do
+    ensure_release_api_url!
+    repo_version = read_repo_version!
+    api_key = app_store_api_key!
+    build_number = latest_ios_build_for_version!(api_key: api_key, version: repo_version)
+
+    upload_to_app_store(
+      api_key: api_key,
+      app_version: repo_version,
+      build_number: build_number.to_s,
+      submit_for_review: true,
+      automatic_release: false,
+      force: true,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      precheck_include_in_app_purchases: false,
+    )
+  end
+end
+
+platform :android do
+  desc 'Build and upload a new internal Android release to Google Play'
+  lane :internal do
+    ensure_release_api_url!
+    json_key = ensure_env!('SUPPLY_JSON_KEY')
+    repo_version = read_repo_version!
+    next_version_code = next_android_version_code(json_key: json_key)
+
+    UI.message("Repo version.json: #{repo_version}")
+    UI.message("Android versionCode: #{next_version_code}")
+
+    build_android_aab!(
+      version_code: next_version_code,
+      version_name: repo_version,
+    )
+
+    upload_to_play_store(
+      json_key: json_key,
+      package_name: ANDROID_PACKAGE_NAME,
+      track: 'internal',
+      aab: ANDROID_AAB_PATH,
+      release_status: 'completed',
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+    )
+  end
+
+  desc 'Promote the tested Android internal release to the production track as a draft'
+  lane :prod do
+    json_key = ensure_env!('SUPPLY_JSON_KEY')
+
+    upload_to_play_store(
+      json_key: json_key,
+      package_name: ANDROID_PACKAGE_NAME,
+      track: 'internal',
+      track_promote_to: 'production',
+      track_promote_release_status: 'draft',
+      skip_upload_aab: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+    )
+  end
+end
+

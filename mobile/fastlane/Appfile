@@ -1,0 +1,6 @@
+app_identifier("com.kitchenhub.app")
+
+# Set this to your Apple ID email for convenience. Fastlane can also run purely
+# with an App Store Connect API key (recommended).
+apple_id(ENV["FASTLANE_APPLE_ID"])
+
