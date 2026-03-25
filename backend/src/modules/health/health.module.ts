@@ -16,6 +16,6 @@ import { PrismaModule } from '../../infrastructure/database/prisma/prisma.module
     HealthController,
   ],
   providers: [ClientLinksService, HealthService],
-  exports: [HealthService, ClientLinksService],
+  exports: [HealthService],
 })
 export class HealthModule {}

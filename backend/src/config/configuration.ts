@@ -22,8 +22,11 @@ export interface AppConfig {
     stateSecret: string;
     skipEmailVerification: boolean;
   };
-  /** Optional overrides; defaults are AUTH_BACKEND_BASE_URL + /privacy | /terms */
-  legal?: {
+  /**
+   * Optional URL overrides for client legal links.
+   * Always present at runtime; unset sides default to AUTH_BACKEND_BASE_URL + /privacy | /terms.
+   */
+  legal: {
     privacyPolicyUrl?: string;
     termsOfServiceUrl?: string;
   };

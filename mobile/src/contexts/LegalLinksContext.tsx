@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 
 import { buildFallbackLegalUrls } from '../common/utils/legalLinksFallback';
+import { logger } from '../common/utils/logger';
 import { api } from '../services/api';
 
 export type LegalLinks = {
@@ -39,9 +40,18 @@ export function LegalLinksProvider({ children }: { children: React.ReactNode }) 
           next.termsOfServiceUrl.length > 0
         ) {
           setUrls(next);
+        } else if (__DEV__) {
+          logger.warn(
+            '[LegalLinks] Invalid or empty client-links payload, using fallback URLs',
+          );
         }
-      } catch {
-        // keep fallback from EXPO_PUBLIC_API_URL
+      } catch (error: unknown) {
+        if (__DEV__) {
+          logger.warn(
+            '[LegalLinks] GET /client-links failed, using fallback URLs',
+            error,
+          );
+        }
       }
     })();
     return () => {

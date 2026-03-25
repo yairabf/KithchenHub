@@ -7,51 +7,52 @@ describe('ClientLinksService', () => {
     jest.restoreAllMocks();
   });
 
-  it('uses AUTH_BACKEND_BASE_URL when legal overrides are unset', () => {
-    jest.spyOn(configuration, 'loadConfiguration').mockReturnValue({
+  describe.each([
+    {
+      title: 'uses AUTH_BACKEND_BASE_URL when legal overrides are unset',
       auth: { backendBaseUrl: 'https://api.example.com/' },
       legal: {
         privacyPolicyUrl: undefined,
         termsOfServiceUrl: undefined,
       },
-    } as AppConfig);
-
-    const service = new ClientLinksService();
-    expect(service.getLegalLinks()).toEqual({
-      privacyPolicyUrl: 'https://api.example.com/privacy',
-      termsOfServiceUrl: 'https://api.example.com/terms',
-    });
-  });
-
-  it('uses LEGAL_* overrides when provided', () => {
-    jest.spyOn(configuration, 'loadConfiguration').mockReturnValue({
+      expected: {
+        privacyPolicyUrl: 'https://api.example.com/privacy',
+        termsOfServiceUrl: 'https://api.example.com/terms',
+      },
+    },
+    {
+      title: 'uses LEGAL_* overrides when provided',
       auth: { backendBaseUrl: 'https://api.example.com' },
       legal: {
         privacyPolicyUrl: 'https://cdn.example/privacy',
         termsOfServiceUrl: 'https://cdn.example/terms',
       },
-    } as AppConfig);
-
-    const service = new ClientLinksService();
-    expect(service.getLegalLinks()).toEqual({
-      privacyPolicyUrl: 'https://cdn.example/privacy',
-      termsOfServiceUrl: 'https://cdn.example/terms',
-    });
-  });
-
-  it('mixes override with default path for missing side', () => {
-    jest.spyOn(configuration, 'loadConfiguration').mockReturnValue({
+      expected: {
+        privacyPolicyUrl: 'https://cdn.example/privacy',
+        termsOfServiceUrl: 'https://cdn.example/terms',
+      },
+    },
+    {
+      title: 'mixes override with default path for missing side',
       auth: { backendBaseUrl: 'https://api.example.com' },
       legal: {
         privacyPolicyUrl: 'https://cdn.example/privacy',
         termsOfServiceUrl: undefined,
       },
-    } as AppConfig);
+      expected: {
+        privacyPolicyUrl: 'https://cdn.example/privacy',
+        termsOfServiceUrl: 'https://api.example.com/terms',
+      },
+    },
+  ])('$title', ({ auth, legal, expected }) => {
+    it('returns configured legal links', () => {
+      jest.spyOn(configuration, 'loadConfiguration').mockReturnValue({
+        auth,
+        legal,
+      } as AppConfig);
 
-    const service = new ClientLinksService();
-    expect(service.getLegalLinks()).toEqual({
-      privacyPolicyUrl: 'https://cdn.example/privacy',
-      termsOfServiceUrl: 'https://api.example.com/terms',
+      const service = new ClientLinksService();
+      expect(service.getLegalLinks()).toEqual(expected);
     });
   });
 });
