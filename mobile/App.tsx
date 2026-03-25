@@ -11,6 +11,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { getLocales } from './src/i18n/localize';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { HouseholdProvider } from './src/contexts/HouseholdContext';
+import { LegalLinksProvider } from './src/contexts/LegalLinksContext';
 import { OnboardingProvider } from './src/features/auth/contexts/OnboardingContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { LegalConsentGate } from './src/features/settings';
@@ -81,6 +82,7 @@ export default function App() {
         <OnboardingProvider>
           <AuthProvider>
             <HouseholdProvider>
+              <LegalLinksProvider>
               <LegalConsentGate>
                 <StatusBar style="auto" />
                 {/*
@@ -99,6 +101,7 @@ export default function App() {
                  */}
                 <RootNavigator key={`root-nav-${treeKey}`} />
               </LegalConsentGate>
+              </LegalLinksProvider>
             </HouseholdProvider>
           </AuthProvider>
         </OnboardingProvider>

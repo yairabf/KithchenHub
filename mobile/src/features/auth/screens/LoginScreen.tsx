@@ -21,6 +21,9 @@ import { boxShadow } from '../../../theme/shadows';
 import { useReducedMotion } from '../../../common/hooks/useReducedMotion';
 import { useTranslation } from 'react-i18next';
 
+import { openLegalUrl } from '../../../common/utils/legalLinks';
+import { useLegalLinks } from '../../../contexts/LegalLinksContext';
+
 type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -37,6 +40,7 @@ interface LoginScreenProps {
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const { t } = useTranslation('auth');
+  const { privacyPolicyUrl, termsOfServiceUrl } = useLegalLinks();
   const { signInWithGoogle, signInWithEmail, showHouseholdNameScreen } = useAuth();
   const { mode, inviteContext, setMode, setInviteContext } = useOnboarding();
   const [isLoading, setIsLoading] = useState(false);
@@ -373,9 +377,21 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           <View style={styles.footer}>
             <Text style={styles.footerText}>
               {t('login.agreePrefix')}{' '}
-              <Text style={styles.footerLink}>{t('login.termsOfService')}</Text>
+              <Text
+                style={styles.footerLink}
+                onPress={() => void openLegalUrl(termsOfServiceUrl)}
+                accessibilityRole="link"
+              >
+                {t('login.termsOfService')}
+              </Text>
               {' & '}
-              <Text style={styles.footerLink}>{t('login.privacyPolicy')}</Text>
+              <Text
+                style={styles.footerLink}
+                onPress={() => void openLegalUrl(privacyPolicyUrl)}
+                accessibilityRole="link"
+              >
+                {t('login.privacyPolicy')}
+              </Text>
             </Text>
           </View>
         </View>

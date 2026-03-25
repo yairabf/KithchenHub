@@ -99,6 +99,12 @@ const envSchema = z
       .pipe(z.number().int().positive())
       .optional()
       .default('24'),
+    /**
+     * Optional full URLs for in-app / store legal links. When unset, the API
+     * derives URLs from AUTH_BACKEND_BASE_URL + /privacy and /terms.
+     */
+    LEGAL_PRIVACY_POLICY_URL: z.string().url().optional(),
+    LEGAL_TERMS_OF_SERVICE_URL: z.string().url().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.AUTH_SKIP_EMAIL_VERIFICATION) {

@@ -22,6 +22,14 @@ export interface AppConfig {
     stateSecret: string;
     skipEmailVerification: boolean;
   };
+  /**
+   * Optional URL overrides for client legal links.
+   * Always present at runtime; unset sides default to AUTH_BACKEND_BASE_URL + /privacy | /terms.
+   */
+  legal: {
+    privacyPolicyUrl?: string;
+    termsOfServiceUrl?: string;
+  };
   logging: {
     level: string;
     format: 'json' | 'pretty';
@@ -78,6 +86,10 @@ export const loadConfiguration = (): AppConfig => {
       appScheme: env.AUTH_APP_SCHEME,
       stateSecret: env.AUTH_STATE_SECRET,
       skipEmailVerification: env.AUTH_SKIP_EMAIL_VERIFICATION,
+    },
+    legal: {
+      privacyPolicyUrl: env.LEGAL_PRIVACY_POLICY_URL?.trim() || undefined,
+      termsOfServiceUrl: env.LEGAL_TERMS_OF_SERVICE_URL?.trim() || undefined,
     },
     logging: {
       level: env.LOG_LEVEL,

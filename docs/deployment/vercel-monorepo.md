@@ -33,6 +33,7 @@ Configure production env vars in the Vercel dashboard (database, JWT, etc.) — 
 ### Environment variables (mobile on Vercel)
 
 - Set **`EXPO_PUBLIC_*`** values your app needs (API URL, Supabase, etc.) in the **mobile** Vercel project.
+- **Legal links:** the app loads URLs from **`GET /api/v1/client-links`** on the API. Until that request succeeds, it uses **`{EXPO_PUBLIC_API_URL}/privacy`** and **`/terms`** as fallback. To point users elsewhere without a mobile release, set backend env **`LEGAL_PRIVACY_POLICY_URL`** / **`LEGAL_TERMS_OF_SERVICE_URL`** (or keep defaults derived from **`AUTH_BACKEND_BASE_URL`**).
 - Optional: **`APP_VERSION`** if you do not rely on repo-root `version.json` (often omitted from the Vercel upload via `.vercelignore`; `app.config.js` falls back to `APP_VERSION` or `1.0.0`).
 
 ### Node version
