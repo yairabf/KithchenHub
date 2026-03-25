@@ -103,6 +103,7 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
 - **API Versioning**: URI-based versioning (`/api/v1`, `/api/v2`, etc.)
 - **Version Discovery**: `GET /api/version` endpoint for version information
 - **Deploy Metadata (Vercel)**: `GET /api/v1/deploy-info` for deployment SHA/version reporting (used by the deploy-status workflow)
+- **Client legal URLs (public)**: `GET /api/v1/client-links` returns `{ privacyPolicyUrl, termsOfServiceUrl }` for the mobile/web apps. Defaults use `AUTH_BACKEND_BASE_URL` + `/privacy` and `/terms`; override with `LEGAL_PRIVACY_POLICY_URL` / `LEGAL_TERMS_OF_SERVICE_URL` when needed.
 - **Deprecation Support**: Automatic deprecation headers and sunset handling
 - **CORS Enabled**: Configured for mobile app access
 

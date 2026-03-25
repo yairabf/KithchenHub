@@ -83,6 +83,14 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+const mockLegalLinks = {
+  privacyPolicyUrl: 'https://api.example.com/privacy',
+  termsOfServiceUrl: 'https://api.example.com/terms',
+};
+jest.mock('../../../../contexts/LegalLinksContext', () => ({
+  useLegalLinks: () => mockLegalLinks,
+}));
+
 const mockOpenLegalUrl = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../../common/utils/legalLinks', () => ({
   openLegalUrl: (url: string) => mockOpenLegalUrl(url),
@@ -192,17 +200,15 @@ describe('SettingsScreen', () => {
 
   describe('Legal links', () => {
     it('calls openLegalUrl with privacy URL when Privacy Policy row is pressed', () => {
-      const { PRIVACY_POLICY_URL } = require('../../../../common/constants/legal');
       const { getByText } = render(<SettingsScreen />);
       fireEvent.press(getByText('Privacy Policy'));
-      expect(mockOpenLegalUrl).toHaveBeenCalledWith(PRIVACY_POLICY_URL);
+      expect(mockOpenLegalUrl).toHaveBeenCalledWith(mockLegalLinks.privacyPolicyUrl);
     });
 
     it('calls openLegalUrl with terms URL when Terms of Service row is pressed', () => {
-      const { TERMS_OF_SERVICE_URL } = require('../../../../common/constants/legal');
       const { getByText } = render(<SettingsScreen />);
       fireEvent.press(getByText('Terms of Service'));
-      expect(mockOpenLegalUrl).toHaveBeenCalledWith(TERMS_OF_SERVICE_URL);
+      expect(mockOpenLegalUrl).toHaveBeenCalledWith(mockLegalLinks.termsOfServiceUrl);
     });
   });
 

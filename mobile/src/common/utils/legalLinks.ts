@@ -4,7 +4,7 @@ import * as Linking from 'expo-linking';
  * Opens a legal document URL (e.g. privacy policy, terms) in the device browser.
  * Catches and logs failures; does not throw. Use for in-app legal links.
  *
- * @param url - Full URL to open (e.g. PRIVACY_POLICY_URL).
+ * @param url - Full URL to open (from useLegalLinks() or backend client-links).
  */
 export async function openLegalUrl(url: string): Promise<void> {
   try {

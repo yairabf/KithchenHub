@@ -24,8 +24,8 @@ import { i18n } from '../../../i18n';
 import { normalizeLocale } from '../../../i18n/localeNormalization';
 import { getNativeNameForCode } from '../../../i18n/constants';
 import { getDirectionalIcon } from '../../../common/utils/rtlIcons';
-import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../../../common/constants/legal';
 import { openLegalUrl } from '../../../common/utils/legalLinks';
+import { useLegalLinks } from '../../../contexts/LegalLinksContext';
 import { accountService } from '../services/accountService';
 import { getDeleteAccountErrorMessage } from '../utils/errorMessages';
 
@@ -37,6 +37,7 @@ const SHOW_EXPORT_DATA_SETTING = false;
 
 export function SettingsScreen() {
   const { t, i18n } = useTranslation('settings');
+  const { privacyPolicyUrl, termsOfServiceUrl } = useLegalLinks();
   const { user, signOut } = useAuth();
   const [pushNotifications, setPushNotifications] = React.useState(true);
   const [showLanguageSelector, setShowLanguageSelector] = React.useState(false);
@@ -297,7 +298,7 @@ export function SettingsScreen() {
           )}
           <TouchableOpacity
             style={styles.settingRow}
-            onPress={() => openLegalUrl(PRIVACY_POLICY_URL)}
+            onPress={() => openLegalUrl(privacyPolicyUrl)}
             accessibilityRole="link"
             accessibilityLabel={`${t('privacyPolicy')} ${t('opensExternalLink')}`}
           >
@@ -313,7 +314,7 @@ export function SettingsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.settingRow}
-            onPress={() => openLegalUrl(TERMS_OF_SERVICE_URL)}
+            onPress={() => openLegalUrl(termsOfServiceUrl)}
             accessibilityRole="link"
             accessibilityLabel={`${t('termsOfService')} ${t('opensExternalLink')}`}
           >

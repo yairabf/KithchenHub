@@ -14,6 +14,13 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+jest.mock('../../../../contexts/LegalLinksContext', () => ({
+  useLegalLinks: () => ({
+    privacyPolicyUrl: 'https://api.test/privacy',
+    termsOfServiceUrl: 'https://api.test/terms',
+  }),
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) =>

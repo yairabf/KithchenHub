@@ -2,12 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LegalConsentModal } from './LegalConsentModal/LegalConsentModal';
-import {
-  LEGAL_ACCEPTED_STORAGE_KEY,
-  PRIVACY_POLICY_URL,
-  TERMS_OF_SERVICE_URL,
-} from '../../../common/constants/legal';
+import { LEGAL_ACCEPTED_STORAGE_KEY } from '../../../common/constants/legal';
 import { openLegalUrl } from '../../../common/utils/legalLinks';
+import { useLegalLinks } from '../../../contexts/LegalLinksContext';
 import { colors } from '../../../theme';
 
 export interface LegalConsentGateProps {
@@ -21,6 +18,7 @@ export interface LegalConsentGateProps {
  * to avoid flicker when the modal appears.
  */
 export function LegalConsentGate({ children }: LegalConsentGateProps) {
+  const { privacyPolicyUrl, termsOfServiceUrl } = useLegalLinks();
   const [accepted, setAccepted] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -68,8 +66,8 @@ export function LegalConsentGate({ children }: LegalConsentGateProps) {
       <LegalConsentModal
         visible={showModal}
         onAccept={handleAccept}
-        onOpenPrivacyPolicy={() => openLegalUrl(PRIVACY_POLICY_URL)}
-        onOpenTerms={() => openLegalUrl(TERMS_OF_SERVICE_URL)}
+        onOpenPrivacyPolicy={() => openLegalUrl(privacyPolicyUrl)}
+        onOpenTerms={() => openLegalUrl(termsOfServiceUrl)}
       />
     </>
   );

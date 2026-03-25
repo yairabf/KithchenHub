@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import { LoginScreen } from '../LoginScreen';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useOnboarding } from '../../contexts/OnboardingContext';
 
@@ -44,6 +43,19 @@ jest.mock('../../../../contexts/AuthContext', () => ({
 jest.mock('../../contexts/OnboardingContext', () => ({
   useOnboarding: jest.fn(),
 }));
+
+jest.mock('../../../../contexts/LegalLinksContext', () => ({
+  useLegalLinks: () => ({
+    privacyPolicyUrl: 'https://api.example.com/privacy',
+    termsOfServiceUrl: 'https://api.example.com/terms',
+  }),
+}));
+
+jest.mock('../../../../common/utils/legalLinks', () => ({
+  openLegalUrl: jest.fn().mockResolvedValue(undefined),
+}));
+
+const { LoginScreen } = require('../LoginScreen');
 
 jest.mock('../../components/GoogleSignInButton', () => {
   const { TouchableOpacity, Text } = require('react-native');
