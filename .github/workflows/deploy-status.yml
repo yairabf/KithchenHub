@@ -53,25 +53,50 @@ jobs:
           URL="${VERCEL_API_BASE_URL%/}/api/v1/deploy-info"
           echo "Fetching $URL"
           BODY="$(curl -fsSL "$URL")"
-          echo "body=$BODY" >> "$GITHUB_OUTPUT"
+          export BODY
 
-          node - <<'NODE'
+          node <<'NODE'
           const raw = process.env.BODY;
-          const data = JSON.parse(raw);
-          if (data == null || typeof data !== 'object') throw new Error('deploy-info response is not an object');
-          console.log('deploy-info:', data);
+          if (raw == null || String(raw).trim() === '') {
+            throw new Error('deploy-info: empty response body (curl output was not exported to Node)');
+          }
+          const parsed = JSON.parse(raw);
+          const data =
+            parsed &&
+            typeof parsed === 'object' &&
+            parsed.success === true &&
+            parsed.data != null &&
+            typeof parsed.data === 'object'
+              ? parsed.data
+              : parsed;
+          if (data == null || typeof data !== 'object') {
+            throw new Error('deploy-info response is not an object');
+          }
+          console.log('deploy-info (normalized):', data);
           NODE
-        env:
-          BODY: ${{ steps.vercel.outputs.body }}
+
+          {
+            echo "body<<DEPLOY_INFO_JSON_EOF"
+            echo "$BODY"
+            echo "DEPLOY_INFO_JSON_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Compare main vs Vercel
         env:
           MAIN_SHA: ${{ steps.main.outputs.sha }}
           DEPLOY_INFO: ${{ steps.vercel.outputs.body }}
         run: |
-          node - <<'NODE'
+          node <<'NODE'
           const mainSha = process.env.MAIN_SHA;
-          const deployInfo = JSON.parse(process.env.DEPLOY_INFO);
+          const parsed = JSON.parse(process.env.DEPLOY_INFO);
+          const deployInfo =
+            parsed &&
+            typeof parsed === 'object' &&
+            parsed.success === true &&
+            parsed.data != null &&
+            typeof parsed.data === 'object'
+              ? parsed.data
+              : parsed;
           const deployedSha = typeof deployInfo.gitSha === 'string' ? deployInfo.gitSha : '';
           if (!deployedSha) {
             console.warn('No gitSha reported by /api/v1/deploy-info; cannot compare reliably.');
@@ -114,10 +139,18 @@ jobs:
           DEPLOY_INFO: ${{ steps.vercel.outputs.body }}
           EAS_BUILDS: ${{ steps.eas.outputs.json }}
         run: |
-          node - <<'NODE'
+          node <<'NODE'
           const mainSha = process.env.MAIN_SHA;
           const mainVersion = process.env.MAIN_VERSION;
-          const deployInfo = JSON.parse(process.env.DEPLOY_INFO);
+          const parsed = JSON.parse(process.env.DEPLOY_INFO);
+          const deployInfo =
+            parsed &&
+            typeof parsed === 'object' &&
+            parsed.success === true &&
+            parsed.data != null &&
+            typeof parsed.data === 'object'
+              ? parsed.data
+              : parsed;
           const builds = JSON.parse(process.env.EAS_BUILDS);
 
           const finished = Array.isArray(builds) ? builds.filter(b => b && b.status === 'finished') : [];
