@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FullHouse — Household management made simple</title>
+    <meta
+      name="description"
+      content="FullHouse (Kitchen Hub) helps households manage shopping lists, recipes, chores, and daily planning in one app."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="container hero-content">
+        <img src="./assets/fullhouse_icon.png" alt="FullHouse app icon" class="app-icon" />
+        <p class="eyebrow">FullHouse (Kitchen Hub)</p>
+        <h1>Organize your home in one place</h1>
+        <p class="hero-text">
+          Manage shopping lists, recipes, chores, and household routines with one clean, shared app experience.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#contact">Contact</a>
+          <a class="btn btn-secondary" href="#downloads">Get the app</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <h2>What FullHouse includes</h2>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <h3>Shopping Lists</h3>
+              <p>Create and share lists with smart item organization for faster grocery planning.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Recipes</h3>
+              <p>Save recipes, organize ingredients, and connect meals directly to shopping lists.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Chores</h3>
+              <p>Track household tasks with progress visibility so everyone knows what is done.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Dashboard</h3>
+              <p>Get a daily overview of home activity, priorities, and key household updates.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Authentication</h3>
+              <p>Sign in with email or Google, or run in guest mode for local-first usage.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Offline support</h3>
+              <p>Continue using core features with graceful offline fallback behavior.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="downloads" class="section section-alt">
+        <div class="container">
+          <h2>Download links</h2>
+          <p class="muted">Replace these placeholder links with your live App Store and Google Play URLs.</p>
+          <div class="store-links">
+            <a class="btn btn-primary" href="#" aria-disabled="true">App Store (coming soon)</a>
+            <a class="btn btn-secondary" href="#" aria-disabled="true">Google Play (coming soon)</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="section">
+        <div class="container">
+          <h2>Contact</h2>
+          <p>
+            For support, partnerships, or product questions, contact:
+            <a href="mailto:yairabc@gmail.com">yairabc@gmail.com</a>
+          </p>
+          <p>
+            GitHub:
+            <a href="https://github.com/yairabf">https://github.com/yairabf</a>
+          </p>
+          <p>
+            LinkedIn:
+            <a href="https://www.linkedin.com/in/yair-abramovitch/">https://www.linkedin.com/in/yair-abramovitch/</a>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© <span id="year"></span> FullHouse (Kitchen Hub). All rights reserved.</p>
+        <p class="muted">
+          <a href="#">Privacy URL placeholder</a>
+          ·
+          <a href="#">Terms URL placeholder</a>
+        </p>
+      </div>
+    </footer>
+    <script>
+      const yearElement = document.getElementById('year');
+      if (yearElement) yearElement.textContent = String(new Date().getFullYear());
+    </script>
+  </body>
+</html>

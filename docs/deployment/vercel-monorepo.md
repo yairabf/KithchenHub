@@ -1,6 +1,6 @@
-# Vercel — one repo, two projects (Kitchen Hub)
+# Vercel — one repo, three projects (Kitchen Hub)
 
-This monorepo is meant to use **two separate Vercel projects** connected to the **same GitHub repository**. Each project sets a different **Root Directory** so builds do not step on each other.
+This monorepo is meant to use **three separate Vercel projects** connected to the **same GitHub repository**. Each project sets a different **Root Directory** so builds do not step on each other.
 
 ## Project 1 — Backend API (Nest + serverless)
 
@@ -40,11 +40,23 @@ Configure production env vars in the Vercel dashboard (database, JWT, etc.) — 
 
 Use **Node 20.x** (or the version your Expo SDK recommends) in Vercel → Project → Settings → General → Node.js Version.
 
+## Project 3 — Marketing website (static)
+
+| Vercel setting | Value |
+|----------------|--------|
+| **Root Directory** | `website` |
+| **Framework Preset** | Other |
+| **Build Command** | *(empty)* |
+| **Output Directory** | *(empty or `.`)* |
+| **Install Command** | *(empty; not required for static HTML/CSS)* |
+
+This project serves the public landing page from `website/index.html` and keeps marketing content separate from API and mobile-web deployments.
+
 ## Checklist after errors
 
-1. **Each project’s Root Directory** is exactly `backend` or `mobile` (not `.`, not `static-legal`).
+1. **Each project’s Root Directory** is exactly `backend`, `mobile`, or `website` (not `.`, not `static-legal`).
 2. **Redeploy** after changing `.vercelignore` (e.g. `/mobile/` must stay removed).
-3. **Branch** connected in Vercel includes both `backend/` and `mobile/` (and `static-legal/` for backend).
+3. **Branch** connected in Vercel includes `backend/`, `mobile/`, and `website/` (and `static-legal/` for backend legal copy).
 4. **Separate env vars** per project — backend secrets must not be assumed on the mobile project.
 5. **`Unable to resolve module … fullhouse_icon.png` (or any `assets/**/*.png`)** — the repo `.vercelignore` must **not** use a blanket `*.png` rule (that strips `mobile/assets/`). Use `/*.png` if you only want to ignore PNGs at the monorepo root.
 

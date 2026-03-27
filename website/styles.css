@@ -1,0 +1,154 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-alt: #eef2ff;
+  --text: #172033;
+  --muted: #5d6678;
+  --primary: #ff6b35;
+  --primary-strong: #db4f1f;
+  --border: #dce3f2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101522;
+    --surface: #1a2233;
+    --surface-alt: #141b2a;
+    --text: #eef3ff;
+    --muted: #b8c0d4;
+    --border: #2a344a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+}
+
+a {
+  color: inherit;
+}
+
+.container {
+  width: min(70rem, 92vw);
+  margin: 0 auto;
+}
+
+.hero {
+  background: linear-gradient(150deg, var(--surface) 0%, var(--surface-alt) 100%);
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-content {
+  text-align: center;
+  padding: 4.5rem 0 4rem;
+}
+
+.app-icon {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+}
+
+.eyebrow {
+  margin: 1rem 0 0.5rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+h1,
+h2,
+h3 {
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  margin-bottom: 0.75rem;
+}
+
+.hero-text {
+  max-width: 40rem;
+  margin: 0 auto 1.75rem;
+  color: var(--muted);
+}
+
+.cta-row,
+.store-links {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-block;
+  text-decoration: none;
+  border-radius: 0.7rem;
+  padding: 0.7rem 1rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-strong);
+}
+
+.btn-secondary {
+  border-color: var(--border);
+  background: transparent;
+}
+
+.section {
+  padding: 3.75rem 0;
+}
+
+.section-alt {
+  background: var(--surface-alt);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.feature-grid {
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  padding: 1rem;
+}
+
+.feature-card p,
+.muted {
+  color: var(--muted);
+}
+
+.footer {
+  padding: 2rem 0 3rem;
+  text-align: center;
+}
+
+@media (max-width: 40rem) {
+  .hero-content {
+    padding-top: 3.5rem;
+  }
+}
