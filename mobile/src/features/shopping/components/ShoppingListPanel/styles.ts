@@ -90,8 +90,8 @@ export const styles = StyleSheet.create({
     zIndex: 1050,
   },
   listCardActive: {
-    borderColor: colors.primary + '40',
-    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary + '60',
+    backgroundColor: colors.primary + '18',
   },
   listCardDot: {
     position: 'absolute',
@@ -196,7 +196,8 @@ export const styles = StyleSheet.create({
     color: colors.recipes,
   },
   listCardNameActive: {
-    color: colors.primary,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   listCardCount: {
     fontSize: 11,

@@ -13,7 +13,10 @@ export type ShadowStyle = {
   elevation?: number;
 };
 
-export const shadows: Record<'none' | 'sm' | 'md' | 'lg' | 'xl' | 'float' | 'deep', ShadowStyle> = {
+export const shadows: Record<
+  'none' | 'sm' | 'md' | 'lg' | 'xl' | 'float' | 'deep' | 'floatingTile',
+  ShadowStyle
+> = {
   none: {
     boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 0, color: 'transparent' }],
     elevation: 0,
@@ -41,6 +44,15 @@ export const shadows: Record<'none' | 'sm' | 'md' | 'lg' | 'xl' | 'float' | 'dee
   deep: {
     boxShadow: [{ offsetX: 0, offsetY: 12, blurRadius: 24, color: 'rgba(15, 23, 42, 0.2)' }],
     elevation: 16,
+  },
+  /** Layered shadow for category tiles — lifted “floating card” on light backgrounds */
+  floatingTile: {
+    boxShadow: [
+      { offsetX: 0, offsetY: 2, blurRadius: 6, color: 'rgba(15, 23, 42, 0.06)' },
+      { offsetX: 0, offsetY: 10, blurRadius: 24, color: 'rgba(15, 23, 42, 0.12)' },
+      { offsetX: 0, offsetY: 18, blurRadius: 40, color: 'rgba(15, 23, 42, 0.08)' },
+    ],
+    elevation: 18,
   },
 };
 

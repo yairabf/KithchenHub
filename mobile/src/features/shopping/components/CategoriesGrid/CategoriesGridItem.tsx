@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { isValidImageUrl } from '../../../../common/utils/imageUtils';
-import { styles, NAME_ZONE_MIN_HEIGHT } from './styles';
+import { TILE_GAP, styles, NAME_ZONE_MIN_HEIGHT } from './styles';
 import { Category } from './types';
 
 /**
@@ -38,11 +38,12 @@ export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
      * and they never overlap. On small screens both scale down to fit.
      */
     const responsiveSizes = useMemo(() => {
-        // Tile: 31% of available width, aspect ratio 1
-        const horizontalPadding = 48;
-        const gaps = 16;
-        const availableWidth = width - horizontalPadding - gaps;
-        const tileWidth = availableWidth * 0.31;
+        // Exact pixel width so all gutters (left edge, between tiles, right edge) = TILE_GAP.
+        // Formula: contentWidth - 4*TILE_GAP (left + 2 between + right) divided by 3 columns.
+        // contentWidth = screenWidth - shopping screen paddingHorizontal (24 * 2 = 48).
+        const CONTENT_HORIZONTAL_PADDING = 48;
+        const COLUMNS = 3;
+        const tileWidth = (width - CONTENT_HORIZONTAL_PADDING - (COLUMNS + 1) * TILE_GAP) / COLUMNS;
         const tileHeight = tileWidth; // aspect ratio 1
 
         const cornerOffset = Math.min(Math.max(tileWidth * 0.08, 6), 10);
@@ -73,6 +74,7 @@ export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
         }
 
         return {
+            tileWidth: Math.floor(tileWidth), // floor prevents 3rd tile wrapping due to sub-pixel rounding
             iconSize: Math.round(iconSize),
             fontSize,
             cornerOffset: Math.round(cornerOffset),
@@ -82,7 +84,7 @@ export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
     return (
         <TouchableOpacity
             onPress={onPress}
-            style={styles.categoryTile}
+            style={[styles.categoryTile, { width: responsiveSizes.tileWidth }]}
             activeOpacity={0.8}
         >
             <View

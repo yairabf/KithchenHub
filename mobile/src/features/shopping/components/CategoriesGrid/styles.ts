@@ -9,6 +9,12 @@ const CATEGORY_ICON_SIZE = 80; // Width and height for category icons in pixels
 const ICON_CORNER_OFFSET = 8;  // Distance from top-right corner for icon positioning
 
 /**
+ * Uniform gap in pixels between tiles and between tiles and container edges.
+ * Used in both the grid (paddingHorizontal + columnGap) and tile width calculation.
+ */
+export const TILE_GAP = 10;
+
+/**
  * Reserved height for the category name at the bottom of the tile.
  * Image is constrained to stay above this zone so it never overlaps the name.
  */
@@ -33,14 +39,16 @@ export const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    paddingHorizontal: TILE_GAP,
+    columnGap: TILE_GAP,
+    rowGap: TILE_GAP,
   },
   categoryTile: {
-    width: '31%',
+    // Width is calculated dynamically in CategoriesGridItem using screen width and TILE_GAP
+    // to guarantee: edge gap === column gap === TILE_GAP
     aspectRatio: 1,
     borderRadius: 16,
-    overflow: 'hidden',
-    ...shadows.md,
+    ...shadows.floatingTile,
   },
   categoryBg: {
     flex: 1,
@@ -49,6 +57,8 @@ export const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'flex-end',
     position: 'relative',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   categoryNameContainer: {
     position: 'absolute',

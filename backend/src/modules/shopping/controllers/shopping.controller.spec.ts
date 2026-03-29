@@ -1,4 +1,8 @@
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CurrentUserPayload } from '../../../common/decorators';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
@@ -10,6 +14,7 @@ describe('ShoppingListsController', () => {
 
   const mockShoppingService = {
     getShoppingData: jest.fn(),
+    deleteList: jest.fn(),
   };
 
   const mockUser: CurrentUserPayload = {
@@ -108,6 +113,44 @@ describe('ShoppingListsController', () => {
         await expect(
           controller.getShoppingData(mockUser, 'en'),
         ).rejects.toThrow('Database unavailable');
+      });
+    });
+  });
+
+  describe('deleteList', () => {
+    const listId = 'list-123';
+
+    it('throws BadRequestException and does not call service when user has no household', async () => {
+      await expect(
+        controller.deleteList({ ...mockUser, householdId: undefined }, listId),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockShoppingService.deleteList).not.toHaveBeenCalled();
+    });
+
+    it('delegates to ShoppingService with listId and householdId', async () => {
+      mockShoppingService.deleteList.mockResolvedValue(undefined);
+
+      await expect(
+        controller.deleteList(mockUser, listId),
+      ).resolves.toBeUndefined();
+
+      expect(mockShoppingService.deleteList).toHaveBeenCalledWith(
+        listId,
+        mockUser.householdId,
+      );
+    });
+
+    describe.each([
+      ['NotFoundException', new NotFoundException('Shopping list not found')],
+      ['ForbiddenException', new ForbiddenException('Access denied')],
+    ])('when service throws %s', (_description, serviceError) => {
+      it('propagates the error to the caller', async () => {
+        mockShoppingService.deleteList.mockRejectedValue(serviceError);
+
+        await expect(controller.deleteList(mockUser, listId)).rejects.toThrow(
+          serviceError,
+        );
       });
     });
   });
