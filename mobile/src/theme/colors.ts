@@ -6,7 +6,7 @@ export const colors = {
   secondary: '#456882',
 
   // Background colors
-  background: '#E3E3E3',
+  background: '#FAFAFA',
   surface: '#FFFFFF',
   surfaceGlass: 'rgba(255, 255, 255, 0.8)', // Glassmorphism surfaces
 
@@ -42,12 +42,12 @@ export const colors = {
   google: '#4285F4',
 
   // Avatar fallback
-  avatarBackground: '#E3E3E3',
+  avatarBackground: '#FAFAFA',
 
   // Icon background colors (Stitch style)
   iconBg: {
     teal: '#D9E1E8',
-    orange: '#E3E3E3',
+    orange: '#FAFAFA',
     blue: '#D2DCE4',
     purple: '#DCE3E8',
     amber: '#E8EBEE',
@@ -57,7 +57,7 @@ export const colors = {
   pastel: {
     cyan: '#D8E0E7',
     green: '#D4DEE6',
-    peach: '#E3E3E3',
+    peach: '#FAFAFA',
     coral: '#D9DDE1',
     lavender: '#D1D9E0',
     yellow: '#DEE3E7',

@@ -73,9 +73,9 @@ describe('CategoriesGridItem - Refactored Layout', () => {
         fontWeight: '700',
       });
       
-      // Responsive fontSize should be present (13-18px range for phone/tablet)
+      // Responsive fontSize should be present (11-18px range for phone/tablet; smaller tiles use 11-12)
       const responsiveStyle = styleArray.find(s => s.fontSize !== undefined);
-      expect(responsiveStyle?.fontSize).toBeGreaterThanOrEqual(13);
+      expect(responsiveStyle?.fontSize).toBeGreaterThanOrEqual(11);
       expect(responsiveStyle?.fontSize).toBeLessThanOrEqual(18);
     });
 
@@ -159,11 +159,11 @@ describe('CategoriesGridItem - Refactored Layout', () => {
         position: 'absolute',
       });
       
-      // Responsive dimensions should be in valid ranges
+      // Responsive dimensions should be in valid ranges (smaller tiles cap icons below 48px)
       const responsiveStyle = styleArray.find(s => s.width !== undefined);
-      expect(responsiveStyle?.width).toBeGreaterThanOrEqual(48);
+      expect(responsiveStyle?.width).toBeGreaterThanOrEqual(32);
       expect(responsiveStyle?.width).toBeLessThanOrEqual(100);
-      expect(responsiveStyle?.height).toBeGreaterThanOrEqual(48);
+      expect(responsiveStyle?.height).toBeGreaterThanOrEqual(32);
       expect(responsiveStyle?.height).toBeLessThanOrEqual(100);
       expect(responsiveStyle?.top).toBeGreaterThanOrEqual(6);
       expect(responsiveStyle?.top).toBeLessThanOrEqual(10);

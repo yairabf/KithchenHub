@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { isValidImageUrl } from '../../../../common/utils/imageUtils';
-import { styles, NAME_ZONE_MIN_HEIGHT } from './styles';
+import { TILE_GAP, styles, NAME_ZONE_MIN_HEIGHT } from './styles';
 import { Category } from './types';
 
 /**
@@ -22,12 +22,19 @@ interface CategoriesGridItemProps {
      * @example require('../../../../../assets/categories/fruits.png')
      */
     categoryIcon: ReturnType<typeof require> | null;
+
+    /**
+     * Measured width of the grid container from parent onLayout.
+     * Falls back to window width when not yet measured.
+     */
+    gridWidth?: number;
 }
 
 export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
     category,
     onPress,
-    categoryIcon
+    categoryIcon,
+    gridWidth
 }) => {
     const { width } = useWindowDimensions();
     const hasImage = isValidImageUrl(category.image);
@@ -38,11 +45,13 @@ export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
      * and they never overlap. On small screens both scale down to fit.
      */
     const responsiveSizes = useMemo(() => {
-        // Tile: 31% of available width, aspect ratio 1
-        const horizontalPadding = 48;
-        const gaps = 16;
-        const availableWidth = width - horizontalPadding - gaps;
-        const tileWidth = availableWidth * 0.31;
+        // Exact pixel width so all gutters (left edge, between tiles, right edge) = TILE_GAP.
+        // Formula: containerWidth - 4*TILE_GAP (left + 2 between + right) divided by 3 columns.
+        // Use measured grid width when available; fallback keeps first paint stable.
+        const COLUMNS = 3;
+        const fallbackContainerWidth = width - 48; // shopping screen horizontal padding (24 * 2)
+        const containerWidth = gridWidth && gridWidth > 0 ? gridWidth : fallbackContainerWidth;
+        const tileWidth = (containerWidth - (COLUMNS + 1) * TILE_GAP) / COLUMNS;
         const tileHeight = tileWidth; // aspect ratio 1
 
         const cornerOffset = Math.min(Math.max(tileWidth * 0.08, 6), 10);
@@ -73,16 +82,17 @@ export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
         }
 
         return {
+            tileWidth: Math.floor(tileWidth), // floor prevents 3rd tile wrapping due to sub-pixel rounding
             iconSize: Math.round(iconSize),
             fontSize,
             cornerOffset: Math.round(cornerOffset),
         };
-    }, [width]);
+    }, [gridWidth, width]);
 
     return (
         <TouchableOpacity
             onPress={onPress}
-            style={styles.categoryTile}
+            style={[styles.categoryTile, { width: responsiveSizes.tileWidth }]}
             activeOpacity={0.8}
         >
             <View

@@ -190,12 +190,11 @@ export class ShoppingListsController {
   async deleteList(
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') listId: string,
-  ) {
+  ): Promise<void> {
     if (!user.householdId) {
       throw new BadRequestException('User must belong to a household');
     }
     await this.shoppingService.deleteList(listId, user.householdId);
-    return { success: true };
   }
 
   @Post(':id/items')

@@ -20,8 +20,11 @@ export class ShoppingRepository {
   }
 
   async findListById(id: string): Promise<ShoppingList | null> {
-    return this.prisma.shoppingList.findUnique({
-      where: { id },
+    return this.prisma.shoppingList.findFirst({
+      where: {
+        id,
+        ...ACTIVE_RECORDS_FILTER,
+      },
     });
   }
 

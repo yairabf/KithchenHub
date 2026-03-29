@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../theme';
@@ -23,6 +24,7 @@ export function CategoriesGrid({
   onCategoryPress,
 }: CategoriesGridProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [gridWidth, setGridWidth] = useState(0);
   const { t } = useTranslation('shopping');
 
   // Deduplicate categories by ID to prevent duplicates
@@ -72,12 +74,19 @@ export function CategoriesGrid({
     setIsExpanded((prev) => !prev);
   };
 
+  const handleGridLayout = (event: LayoutChangeEvent) => {
+    const measuredWidth = event.nativeEvent.layout.width;
+    setGridWidth((currentWidth) =>
+      Math.abs(currentWidth - measuredWidth) > 0.5 ? measuredWidth : currentWidth,
+    );
+  };
+
   return (
     <View style={styles.categoriesSection}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{t('categoriesSection.title')}</Text>
       </View>
-      <View style={styles.categoriesGrid}>
+      <View style={styles.categoriesGrid} onLayout={handleGridLayout}>
         {displayedCategories.map((category) => {
           const localizedName = t(`categories:${category.id}`, { defaultValue: category.name });
 
@@ -87,6 +96,7 @@ export function CategoriesGrid({
             category={{ ...category, name: localizedName }}
             onPress={() => onCategoryPress(category.id)}
             categoryIcon={getCategoryImageSource(category.id)}
+            gridWidth={gridWidth}
           />
           );
         })}
