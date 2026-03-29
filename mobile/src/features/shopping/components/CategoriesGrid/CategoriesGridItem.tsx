@@ -22,12 +22,19 @@ interface CategoriesGridItemProps {
      * @example require('../../../../../assets/categories/fruits.png')
      */
     categoryIcon: ReturnType<typeof require> | null;
+
+    /**
+     * Measured width of the grid container from parent onLayout.
+     * Falls back to window width when not yet measured.
+     */
+    gridWidth?: number;
 }
 
 export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
     category,
     onPress,
-    categoryIcon
+    categoryIcon,
+    gridWidth
 }) => {
     const { width } = useWindowDimensions();
     const hasImage = isValidImageUrl(category.image);
@@ -39,11 +46,12 @@ export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
      */
     const responsiveSizes = useMemo(() => {
         // Exact pixel width so all gutters (left edge, between tiles, right edge) = TILE_GAP.
-        // Formula: contentWidth - 4*TILE_GAP (left + 2 between + right) divided by 3 columns.
-        // contentWidth = screenWidth - shopping screen paddingHorizontal (24 * 2 = 48).
-        const CONTENT_HORIZONTAL_PADDING = 48;
+        // Formula: containerWidth - 4*TILE_GAP (left + 2 between + right) divided by 3 columns.
+        // Use measured grid width when available; fallback keeps first paint stable.
         const COLUMNS = 3;
-        const tileWidth = (width - CONTENT_HORIZONTAL_PADDING - (COLUMNS + 1) * TILE_GAP) / COLUMNS;
+        const fallbackContainerWidth = width - 48; // shopping screen horizontal padding (24 * 2)
+        const containerWidth = gridWidth && gridWidth > 0 ? gridWidth : fallbackContainerWidth;
+        const tileWidth = (containerWidth - (COLUMNS + 1) * TILE_GAP) / COLUMNS;
         const tileHeight = tileWidth; // aspect ratio 1
 
         const cornerOffset = Math.min(Math.max(tileWidth * 0.08, 6), 10);
@@ -79,7 +87,7 @@ export const CategoriesGridItem: React.FC<CategoriesGridItemProps> = ({
             fontSize,
             cornerOffset: Math.round(cornerOffset),
         };
-    }, [width]);
+    }, [gridWidth, width]);
 
     return (
         <TouchableOpacity
