@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Plan Mode Auto Branch
 
-When a user starts a new Plan Mode task (new epic/task or explicit "start a new plan"), ensure work happens on a dedicated branch before implementation.
+**MANDATORY FIRST STEP** — Before researching, planning, or writing any code for a new feature or task, you MUST create and switch to a dedicated git branch. Do this immediately, as the very first action in your response, before any tool calls for research or implementation.
 
 ## Branch Naming
 
