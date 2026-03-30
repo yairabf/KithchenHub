@@ -13,6 +13,7 @@ export function ConfirmationModal({
   confirmText,
   cancelText,
   confirmColor = colors.error,
+  confirmLoading = false,
   onConfirm,
   onCancel,
 }: ConfirmationModalProps) {
@@ -28,6 +29,7 @@ export function ConfirmationModal({
       confirmText={resolvedConfirmText}
       cancelText={resolvedCancelText}
       confirmColor={confirmColor}
+      confirmLoading={confirmLoading}
       onConfirm={onConfirm}
     >
       <View style={styles.content}>

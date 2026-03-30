@@ -5,6 +5,7 @@ export interface ConfirmationModalProps {
   confirmText?: string;
   cancelText?: string;
   confirmColor?: string;
+  confirmLoading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
