@@ -373,14 +373,15 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
    * Delegates the actual fetch to `loadShoppingData` so there is a
    * single source of truth for the fetch-sort-setState sequence.
    */
+  // Pull-to-refresh: refresh lists first, then items derived from those same
+  // lists.  Sequential ordering prevents a snapshot mismatch where refreshItems()
+  // would call findAllLists() (cache-first) while refreshLists() is simultaneously
+  // writing a newer list snapshot to the cache.
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       if (shoppingRepository) {
-        await Promise.all([
-          shoppingRepository.refreshLists(),
-          shoppingRepository.refreshItems(),
-        ]);
+        await shoppingRepository.refreshAll();
       }
       await loadShoppingData();
     } finally {

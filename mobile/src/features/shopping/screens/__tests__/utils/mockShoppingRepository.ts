@@ -29,6 +29,7 @@ export function createMockShoppingRepository(
     findAllItems: overrides.findAllItems ?? jest.fn().mockResolvedValue([]),
     refreshLists: jest.fn().mockResolvedValue([]),
     refreshItems: jest.fn().mockResolvedValue([]),
+    refreshAll: jest.fn().mockResolvedValue({ lists: [], items: [] }),
     getShoppingData: jest.fn().mockResolvedValue({ shoppingLists: [], shoppingItems: [] }),
     createList: jest.fn(),
     updateList: jest.fn(),
