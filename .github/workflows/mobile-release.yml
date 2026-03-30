@@ -1,26 +1,8 @@
 name: Mobile Release (EAS Build / optional Submit)
 
-# Manually triggered from the GitHub Actions UI.
-# Builds on EAS cloud infrastructure (free tier: 30 builds/month).
-# No macOS runner needed — all signing is handled remotely by EAS.
-#
-# Prerequisites (one-time setup):
-#   1. Add EXPO_TOKEN secret: GitHub repo → Settings → Secrets → Actions
-#      Create at: https://expo.dev/settings/access-tokens
-#   2. For iOS submit: fill in eas.json submit.production.ios.ascAppId
-#      (find it in App Store Connect → Apps → select app → App Information)
-
 on:
   workflow_dispatch:
     inputs:
-      profile:
-        description: "Build profile"
-        required: true
-        default: "production"
-        type: choice
-        options:
-          - production
-          - preview
       platform:
         description: "Which platform(s) to build"
         required: true
@@ -31,14 +13,10 @@ on:
           - android
           - both
       submit:
-        description: "Submit the latest build(s) to stores after build completes"
+        description: "Submit the latest build(s) to store(s) after build"
         required: true
         default: false
         type: boolean
-      ref:
-        description: "Branch or commit SHA to build from (default: main)"
-        required: false
-        default: "main"
 
 concurrency:
   group: mobile-release-${{ github.workflow }}-${{ github.ref }}
@@ -49,15 +27,15 @@ permissions:
 
 jobs:
   release:
-    name: "EAS ${{ inputs.profile }} (${{ inputs.platform }})"
+    name: Build (and optionally submit)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
 
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || 'main' }}
+          ref: main
           fetch-depth: 1
 
       - name: Setup Node
@@ -74,50 +52,46 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Validate EXPO_TOKEN
+      - name: Validate Expo auth for CI
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
-            echo "::error::EXPO_TOKEN secret is not set."
-            echo "Create one at https://expo.dev/settings/access-tokens"
-            echo "then add it under GitHub repo → Settings → Secrets → Actions → New repository secret"
+            echo "EXPO_TOKEN secret is required to run EAS in CI."
             exit 1
           fi
-          echo "✓ EXPO_TOKEN is present"
 
-      - name: Build iOS
+      - name: Build iOS (production)
         if: ${{ inputs.platform == 'ios' || inputs.platform == 'both' }}
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          echo "Building iOS (${{ inputs.profile }})..."
-          eas build --platform ios --profile ${{ inputs.profile }} --non-interactive
+        run: eas build --platform ios --profile production --non-interactive
 
-      - name: Build Android
+      - name: Build Android (production)
         if: ${{ inputs.platform == 'android' || inputs.platform == 'both' }}
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          echo "Building Android (${{ inputs.profile }})..."
-          eas build --platform android --profile ${{ inputs.profile }} --non-interactive
+        run: eas build --platform android --profile production --non-interactive
 
-      - name: Submit iOS to App Store
-        if: ${{ inputs.submit && inputs.profile == 'production' && (inputs.platform == 'ios' || inputs.platform == 'both') }}
+      - name: Submit iOS (latest)
+        if: ${{ inputs.submit && (inputs.platform == 'ios' || inputs.platform == 'both') }}
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          echo "Submitting latest iOS build to TestFlight..."
+          echo "Submitting latest iOS build via EAS Submit..."
+          echo "Note: For CI submit, configure App Store Connect API Key and ios.ascAppId in eas.json submit profile."
           eas submit --platform ios --latest --profile production --non-interactive
 
-      - name: Submit Android to Play Store
-        if: ${{ inputs.submit && inputs.profile == 'production' && (inputs.platform == 'android' || inputs.platform == 'both') }}
+      - name: Submit Android (latest)
+        if: ${{ inputs.submit && (inputs.platform == 'android' || inputs.platform == 'both') }}
         working-directory: mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          echo "Submitting latest Android build to Play Store internal track..."
+          echo "Submitting latest Android build via EAS Submit..."
+          echo "Note: For CI submit, configure Google Play credentials and submit profile in eas.json."
           eas submit --platform android --latest --profile production --non-interactive
+
