@@ -10,6 +10,7 @@ export function ConfirmationModal({
   visible,
   title,
   message,
+  errorMessage,
   confirmText,
   cancelText,
   confirmColor = colors.error,
@@ -34,6 +35,9 @@ export function ConfirmationModal({
     >
       <View style={styles.content}>
         <Text style={styles.message}>{message}</Text>
+        {errorMessage ? (
+          <Text style={styles.errorMessage}>{errorMessage}</Text>
+        ) : null}
       </View>
     </CenteredModal>
   );

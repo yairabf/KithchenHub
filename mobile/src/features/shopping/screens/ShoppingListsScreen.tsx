@@ -226,6 +226,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [pendingDeleteList, setPendingDeleteList] = useState<ShoppingList | null>(null);
   const [isDeletingList, setIsDeletingList] = useState(false);
+  const [deleteListError, setDeleteListError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const categoryRequestIdRef = useRef(0);
   const previousCategoryLanguageRef = useRef(i18n.language);
@@ -251,18 +252,16 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     [userMode]
   );
 
+  // Reset hasLoadedOnceRef synchronously inside useMemo so the very next
+  // render (caused by the auth-state change) already reflects "not loaded yet",
+  // with no one-render delay that a useEffect would introduce.
   const shoppingRepository = useMemo<ICacheAwareShoppingRepository | null>(() => {
+    hasLoadedOnceRef.current = false;
     if (userMode !== 'signed-in') {
       return null;
     }
     return new CacheAwareShoppingRepository(shoppingService);
   }, [userMode, shoppingService]);
-
-  // When the repository instance changes (auth state change), reset so the
-  // next loadShoppingData call shows the loading spinner again.
-  useEffect(() => {
-    hasLoadedOnceRef.current = false;
-  }, [shoppingRepository]);
 
   // Use state management for all modes
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
@@ -305,8 +304,8 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const loadShoppingData = useCallback(async () => {
     if (isAuthLoading) return;
 
-    const isFirstLoad = !hasLoadedOnceRef.current;
-    if (isFirstLoad) {
+    const shouldShowLoadingSpinner = !hasLoadedOnceRef.current;
+    if (shouldShowLoadingSpinner) {
       setIsListsLoading(true);
       setIsItemsLoading(true);
     }
@@ -333,7 +332,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     } catch (error) {
       console.error('Failed to load shopping data:', error);
     } finally {
-      if (isFirstLoad) {
+      if (shouldShowLoadingSpinner) {
         setIsListsLoading(false);
         setIsItemsLoading(false);
       }
@@ -802,6 +801,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   const confirmDeleteList = useCallback((list: ShoppingList) => {
     if (list.isMain) return;
+    setDeleteListError(null);
     setPendingDeleteList(list);
   }, []);
 
@@ -809,15 +809,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     if (!pendingDeleteList || isDeletingList) return;
 
     setIsDeletingList(true);
+    setDeleteListError(null);
     try {
       await deleteList(pendingDeleteList.id);
       setPendingDeleteList(null);
     } catch (error) {
       console.error('Failed to delete shopping list:', error);
+      setDeleteListError(t('screen.deleteListError'));
     } finally {
       setIsDeletingList(false);
     }
-  }, [pendingDeleteList, isDeletingList, deleteList]);
+  }, [pendingDeleteList, isDeletingList, deleteList, t]);
 
   const handleCategoryClick = useCallback(async (categoryName: string) => {
     const requestId = categoryRequestIdRef.current + 1;
@@ -1074,10 +1076,14 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             ? t('screen.deleteListMessage', { name: pendingDeleteList.name })
             : ''
         }
+        errorMessage={deleteListError ?? undefined}
         confirmText={t('screen.deleteListConfirm')}
         confirmLoading={isDeletingList}
         onConfirm={handleConfirmDeleteList}
-        onCancel={() => setPendingDeleteList(null)}
+        onCancel={() => {
+          setPendingDeleteList(null);
+          setDeleteListError(null);
+        }}
       />
 
     </SafeAreaView>

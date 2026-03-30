@@ -66,9 +66,11 @@ jest.mock('../../hooks/useShoppingRealtime', () => ({
   useShoppingRealtime: () => ({ error: null }),
 }));
 
-// Mock shopping service
+// Per-test mocks — each has a single, focused responsibility.
 const mockDeleteItem = jest.fn();
 const mockGetShoppingData = jest.fn();
+const mockFindAllLists = jest.fn();
+const mockFindAllItems = jest.fn();
 
 jest.mock('../../services/shoppingService', () => ({
   createShoppingService: jest.fn(() => ({
@@ -83,35 +85,21 @@ jest.mock('../../services/shoppingService', () => ({
   })),
 }));
 
-// Mock CacheAwareShoppingRepository so findAllLists/findAllItems delegate to
-// the existing mockGetShoppingData, keeping all existing assertions unchanged.
-jest.mock('../../../../common/repositories/cacheAwareShoppingRepository', () => ({
-  CacheAwareShoppingRepository: jest.fn().mockImplementation(() => ({
-    findAllLists: jest.fn(() =>
-      mockGetShoppingData().then((d: { shoppingLists: unknown[] }) => d.shoppingLists)
+// Mock CacheAwareShoppingRepository via the shared factory.
+// findAllLists / findAllItems delegate to dedicated mocks so test assertions
+// can target either method independently.
+jest.mock('../../../../common/repositories/cacheAwareShoppingRepository', () => {
+  const { createMockShoppingRepository } = require('./utils/mockShoppingRepository');
+  return {
+    CacheAwareShoppingRepository: jest.fn().mockImplementation(() =>
+      createMockShoppingRepository({
+        findAllLists: mockFindAllLists,
+        findAllItems: mockFindAllItems,
+        deleteItem: mockDeleteItem,
+      }),
     ),
-    findAllItems: jest.fn(() =>
-      mockGetShoppingData().then((d: { shoppingItems: unknown[] }) => d.shoppingItems)
-    ),
-    refreshLists: jest.fn().mockResolvedValue([]),
-    refreshItems: jest.fn().mockResolvedValue([]),
-    getShoppingData: mockGetShoppingData,
-    createList: jest.fn(),
-    updateList: jest.fn(),
-    deleteList: jest.fn(),
-    createItem: jest.fn(),
-    updateItem: jest.fn(),
-    deleteItem: mockDeleteItem,
-    toggleItem: jest.fn(),
-    findListById: jest.fn().mockResolvedValue(null),
-    findItemsByListId: jest.fn().mockResolvedValue([]),
-    applyRealtimeListChange: jest.fn(),
-    applyRealtimeItemChange: jest.fn(),
-    invalidateListsCache: jest.fn(),
-    invalidateItemsCache: jest.fn(),
-    invalidateAllCache: jest.fn(),
-  })),
-}));
+  };
+});
 
 // Test data
 const mockList: ShoppingList = {
@@ -162,6 +150,9 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       shoppingLists: [mockList],
       shoppingItems: [localOnlyItem, serverPersistedItem],
     });
+
+    mockFindAllLists.mockResolvedValue([mockList]);
+    mockFindAllItems.mockResolvedValue([localOnlyItem, serverPersistedItem]);
   });
 
   describe('Local-only item deletion', () => {
@@ -170,14 +161,10 @@ describe('ShoppingListsScreen - Item Deletion', () => {
 
       const { findByText } = render(<ShoppingListsScreen />);
 
-      // Wait for component to load
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
-      // Simulate deletion of local-only item
-      // (In real test, would trigger via UI interaction)
-      
       // Verify API was NOT called for local-only item
       expect(mockDeleteItem).not.toHaveBeenCalledWith('item-temp-123');
     });
@@ -186,7 +173,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       const { queryByText } = render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
       // After deletion, local-only item should be removed from UI
@@ -201,12 +188,9 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
-      // Simulate deletion of server-persisted item
-      // (In real test, would trigger via UI interaction)
-      
       // In actual implementation, would verify:
       // expect(mockDeleteItem).toHaveBeenCalledWith('server-456');
     });
@@ -222,7 +206,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       const { queryByText } = render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
       // After triggering delete, item should be removed immediately
@@ -234,7 +218,6 @@ describe('ShoppingListsScreen - Item Deletion', () => {
 
   describe('404 Error Handling (Idempotent Delete)', () => {
     it('should treat 404 as successful deletion', async () => {
-      // Mock 404 error from API
       const error404 = new Error('Not Found');
       Object.assign(error404, { statusCode: 404, name: 'ApiError' });
       mockDeleteItem.mockRejectedValue(error404);
@@ -242,7 +225,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
       // Even though API returned 404, item should be removed from UI
@@ -251,7 +234,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
 
     it('should log warning for 404 but not show error to user', async () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      
+
       const error404 = new Error('Not Found');
       Object.assign(error404, { statusCode: 404, name: 'ApiError' });
       mockDeleteItem.mockRejectedValue(error404);
@@ -259,7 +242,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
       // Would verify console.warn was called with 404 message
@@ -276,12 +259,10 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
       // Simulate rapid double-click on delete
-      // (In real test, would trigger delete twice in quick succession)
-      
       // Verify API was called only once despite multiple delete attempts
       // expect(mockDeleteItem).toHaveBeenCalledTimes(1);
     });
@@ -292,13 +273,10 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
-      // Delete item 1
-      // Wait for completion
-      // Delete item 2
-      // Both should succeed
+      // Delete item 1, wait for completion, delete item 2 — both should succeed
     });
   });
 
@@ -310,13 +288,10 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       const { findByText } = render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
-      // Trigger delete
-      // Item removed from UI optimistically
-      // API fails
-      // Item should be restored to UI
+      // Trigger delete → item removed optimistically → API fails → item restored
     });
 
     it('should not restore item if already present (concurrent updates)', async () => {
@@ -325,7 +300,7 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
       // If realtime update already restored the item,
@@ -338,11 +313,10 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
-      // Attempt to delete item that doesn't exist
-      // Should not throw error
+      // Attempt to delete item that doesn't exist — should not throw
     });
 
     it('should handle mixed local and server items correctly', async () => {
@@ -351,12 +325,10 @@ describe('ShoppingListsScreen - Item Deletion', () => {
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
-      // Delete local-only item: no API call
-      // Delete server item: API call made
-      // Both should be removed from UI
+      // Delete local-only item: no API call; delete server item: API call made
     });
   });
 
@@ -380,18 +352,15 @@ describe('ShoppingListsScreen - Item Deletion', () => {
         updatedAt: '2024-01-01T00:00:00Z',
       };
 
-      mockGetShoppingData.mockResolvedValue({
-        shoppingLists: [mockList],
-        shoppingItems: [item],
-      });
+      mockFindAllLists.mockResolvedValue([mockList]);
+      mockFindAllItems.mockResolvedValue([item]);
 
       render(<ShoppingListsScreen />);
 
       await waitFor(() => {
-        expect(mockGetShoppingData).toHaveBeenCalled();
+        expect(mockFindAllLists).toHaveBeenCalled();
       });
 
-      // Verify behavior based on item type
       if (shouldCallApi) {
         // Would verify API called
       } else {

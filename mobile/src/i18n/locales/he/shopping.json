@@ -90,7 +90,8 @@
     "shareTitle": "שתף את {{name}}",
     "deleteListTitle": "מחק רשימה",
     "deleteListMessage": "למחוק את \"{{name}}\"?",
-    "deleteListConfirm": "מחק"
+    "deleteListConfirm": "מחק",
+    "deleteListError": "מחיקת הרשימה נכשלה. אנא נסה שוב."
   },
   "share": {
     "shoppingListHeader": "רשימת קניות: {{listName}}",

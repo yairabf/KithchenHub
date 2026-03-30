@@ -446,7 +446,12 @@ export class RemoteShoppingService implements IShoppingService {
       }
     }
 
-    // Remove from cache (best-effort)
+    // Remove from cache (best-effort).
+    // Invariant: every entity written by RemoteShoppingService uses l.id as the
+    // cache key, so matching by l.id is always correct here.  If the caller is
+    // CacheAwareShoppingRepository, it has already soft-deleted the entry in
+    // cache before invoking this method, so this call is a redundant but harmless
+    // cleanup that removes the (now soft-deleted) entity entirely.
     await removeEntityFromCache<ShoppingList>(
       "shoppingLists",
       listId,
