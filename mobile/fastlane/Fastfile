@@ -40,7 +40,8 @@ def ensure_release_api_url!
 end
 
 def read_repo_version
-  version_json_path = File.expand_path('../version.json', __dir__)
+  # version.json lives at the repo root (two levels up from mobile/fastlane/)
+  version_json_path = File.expand_path('../../version.json', __dir__)
   JSON.parse(File.read(version_json_path))['version']
 rescue
   nil
@@ -73,8 +74,8 @@ def app_store_api_key!
 end
 
 def configure_local_ios_build_environment!
-  ENV['RCT_USE_RN_DEP'] = '0'
-  ENV['RCT_USE_PREBUILT_RNCORE'] = '0'
+  ENV['RCT_USE_RN_DEP'] = '1'
+  ENV['RCT_USE_PREBUILT_RNCORE'] = '1'
 end
 
 def ensure_hermes_artifact!(configuration)
@@ -119,7 +120,10 @@ end
 
 def install_ios_pods!
   Dir.chdir(IOS_ROOT) do
-    sh('bundle', 'exec', 'pod', 'install')
+    # xcodeproj's plist parser requires a UTF-8 locale; set it explicitly so
+    # pod install doesn't fail with "invalid byte sequence in UTF-8" on macOS
+    # systems whose default shell locale differs from the parent process.
+    sh({ 'LANG' => 'en_US.UTF-8', 'LC_ALL' => 'en_US.UTF-8' }, 'bundle', 'exec', 'pod', 'install')
   end
 end
 
