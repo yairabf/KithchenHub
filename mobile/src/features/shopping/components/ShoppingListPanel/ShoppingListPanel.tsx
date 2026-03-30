@@ -7,6 +7,7 @@ import {
   Image,
   Pressable,
   I18nManager,
+  type GestureResponderEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
@@ -104,6 +105,10 @@ export function ShoppingListPanel({
    */
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [openListMenuId, setOpenListMenuId] = useState<string | null>(null);
+
+  const stopPressPropagation = useCallback((event?: GestureResponderEvent) => {
+    event?.stopPropagation?.();
+  }, []);
 
   useEffect(() => {
     setOpenListMenuId(null);
@@ -243,6 +248,8 @@ export function ShoppingListPanel({
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listsDrawerContent}
+          style={styles.listsDrawerScrollView}
+          onScrollBeginDrag={() => setOpenListMenuId(null)}
         >
           {shoppingLists.map((list) => (
             <TouchableOpacity
@@ -252,7 +259,10 @@ export function ShoppingListPanel({
                 selectedList.id === list.id && styles.listCardActive,
                 openListMenuId === list.id && styles.listCardMenuOpen,
               ]}
-              onPress={() => onSelectList(list)}
+              onPress={() => {
+                setOpenListMenuId(null);
+                onSelectList(list);
+              }}
             >
               {selectedList.id === list.id && <View style={styles.listCardDot} />}
               <View style={[styles.listIconContainer, { backgroundColor: list.color + '20' }]}>
@@ -278,11 +288,12 @@ export function ShoppingListPanel({
               <View style={styles.listActionsContainer}>
                 <TouchableOpacity
                   style={styles.listActionButton}
-                  onPress={() =>
+                  onPress={(event) => {
+                    stopPressPropagation(event);
                     setOpenListMenuId((currentId) =>
                       currentId === list.id ? null : list.id,
-                    )
-                  }
+                    );
+                  }}
                   accessibilityLabel={t('listPanel.moreActionsFor', { name: list.name })}
                   accessibilityRole="button"
                 >
@@ -297,7 +308,8 @@ export function ShoppingListPanel({
                   <View style={styles.listActionsMenu}>
                       <TouchableOpacity
                         style={styles.listActionMenuItem}
-                        onPress={() => {
+                        onPress={(event) => {
+                          stopPressPropagation(event);
                           setOpenListMenuId(null);
                           onEditList(list);
                         }}
@@ -311,7 +323,8 @@ export function ShoppingListPanel({
                       <TouchableOpacity
                         style={styles.listActionMenuItem}
                         disabled={list.isMain}
-                        onPress={() => {
+                        onPress={(event) => {
+                          stopPressPropagation(event);
                           setOpenListMenuId(null);
                           onDeleteList(list);
                         }}
