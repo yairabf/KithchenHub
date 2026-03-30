@@ -94,6 +94,9 @@ sandbox/*
 .opencode/*
 .venv/*
 .cursor/*
+# Track shared Cursor project rules; keep other .cursor/ paths local
+!.cursor/rules/
+!.cursor/rules/**
 _bmad/*
 _bmad-output/
 

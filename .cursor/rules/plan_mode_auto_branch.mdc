@@ -1,0 +1,41 @@
+---
+description: Automatically create/switch to a plan branch when starting a new plan task
+alwaysApply: true
+---
+
+# Plan Mode Auto Branch
+
+When a user starts a new Plan Mode task (new epic/task or explicit "start a new plan"), ensure work happens on a dedicated branch before implementation.
+
+## Branch Naming
+
+- Build the branch name as: `feature/<epic>/<task>`
+- Use kebab-case for both `epic` and `task`
+- Remove unsafe characters (anything except `a-z`, `0-9`, `-`, `/`)
+- Collapse repeated separators (for example `--` -> `-`)
+
+Example:
+- `Epic: User Authentication`
+- `Task: 001-login-flow`
+- Branch: `feature/user-authentication/001-login-flow`
+
+## Safe Git Workflow
+
+1. Detect current branch and target branch.
+2. If already on the target branch, continue.
+3. If repository has uncommitted changes and switching is required, ask for confirmation before switching.
+4. If target branch exists locally, switch to it.
+5. If target branch does not exist, create and switch to it.
+6. Never use destructive commands (`git reset --hard`, forced checkout, discard commands).
+
+## Command Guidance
+
+Prefer:
+- `git switch <branch>` to switch
+- `git switch -c <branch>` to create and switch
+
+Fallback (older Git):
+- `git checkout <branch>`
+- `git checkout -b <branch>`
+
+If branch creation/switch fails, report the reason and ask the user how to proceed.

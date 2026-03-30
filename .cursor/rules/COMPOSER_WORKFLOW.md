@@ -164,6 +164,16 @@ That's it! The AI will handle the rest automatically.
 - **Example Plan**: `.cursor/tasks/_example-epic/000-example-task/000-example-task_plan.plan.md`
 - **Example Summary**: `.cursor/tasks/_example-epic/000-example-task/000-example-task_summary.md`
 
+## Branch Workflow for New Plans
+
+When starting a new plan, the global rule in `.cursor/rules/plan_mode_auto_branch.mdc` should make sure work happens on a dedicated branch:
+
+- Branch format: `feature/<epic>/<task>`
+- Example: `feature/user-authentication/001-login-flow`
+- If the branch exists, switch to it
+- If it does not exist, create and switch
+- If switching requires leaving a dirty working tree, ask before switching
+
 ## Git Integration
 
 All task documentation is tracked in git (not excluded by `.gitignore`), so you have:
