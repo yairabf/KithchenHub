@@ -5,37 +5,78 @@ alwaysApply: true
 
 # Plan Mode Auto Branch
 
-**MANDATORY FIRST STEP** — Before researching, planning, or writing any code for a new feature or task, you MUST create and switch to a dedicated git branch. Do this immediately, as the very first action in your response, before any tool calls for research or implementation.
+**MANDATORY FIRST STEP** — Before any research, planning, or implementation for a new feature or bugfix, create and switch to a dedicated branch. Execute the git commands as the very first Shell tool call in your response.
+
+## When to Create a Branch
+
+Create a branch when the user:
+- Describes a new feature to build ("next feature is…", "I want to add…")
+- Asks to fix a bug or issue
+- Starts a Plan Mode session with a new goal
+- Accepts a plan and asks you to implement it
+
+**Skip** branch creation when:
+- Already on a matching feature branch (not `main`, `develop`, or `master`)
+- The user is asking a pure question with no code changes expected
+- The user explicitly says to stay on the current branch
+- Continuing work on the same task already in progress on the current branch
 
 ## Branch Naming
 
-- Build the branch name as: `feature/<epic>/<task>`
-- Use kebab-case for both `epic` and `task`
-- Remove unsafe characters (anything except `a-z`, `0-9`, `-`, `/`)
-- Collapse repeated separators (for example `--` -> `-`)
+### When the user provides explicit Epic + Task
 
-Example:
-- `Epic: User Authentication`
-- `Task: 001-login-flow`
-- Branch: `feature/user-authentication/001-login-flow`
+Pattern: `feature/<epic>/<task>`
+
+```
+Epic: User Authentication
+Task: 001-login-flow
+→ feature/user-authentication/001-login-flow
+```
+
+### When no Epic/Task is provided (most common)
+
+Infer from the description using:
+`feature/<area>/<short-slug>`
+
+- `<area>` — affected product area: `shopping`, `recipes`, `chores`, `auth`, `dashboard`, `settings`, `ui`
+- `<short-slug>` — 2–4 kebab-case words describing the change
+
+Examples:
+| User says | Branch |
+|---|---|
+| "Add color palette to list modal" | `feature/shopping/color-palette-modal` |
+| "Make save and create snappy" | `feature/shopping/optimistic-list-mutations` |
+| "Fix login redirect bug" | `feature/auth/fix-login-redirect` |
+| "Add dark mode toggle" | `feature/ui/dark-mode-toggle` |
+
+**Naming rules for all cases:**
+- kebab-case only: `a-z`, `0-9`, `-`, `/`
+- Strip unsafe characters; collapse repeated separators (`--` → `-`)
+- Keep slugs short and descriptive (max ~5 words total)
 
 ## Safe Git Workflow
 
-1. Detect current branch and target branch.
-2. If already on the target branch, continue.
-3. If repository has uncommitted changes and switching is required, ask for confirmation before switching.
-4. If target branch exists locally, switch to it.
-5. If target branch does not exist, create and switch to it.
-6. Never use destructive commands (`git reset --hard`, forced checkout, discard commands).
+1. Run `git branch --show-current` to check the current branch.
+2. If already on a matching feature branch → continue, no action needed.
+3. If on `main`, `develop`, `master`, or a different feature branch → proceed to step 4.
+4. If the repo has **uncommitted changes**, warn the user and ask before switching.
+5. If the target branch **exists locally** → `git switch <branch>`
+6. If the target branch **does not exist** → `git switch -c <branch>`
+7. **Never** use destructive commands (`git reset --hard`, forced checkout, discard).
 
-## Command Guidance
+## After Creating the Branch
 
-Prefer:
-- `git switch <branch>` to switch
-- `git switch -c <branch>` to create and switch
+Immediately tell the user in one line before continuing:
 
-Fallback (older Git):
-- `git checkout <branch>`
-- `git checkout -b <branch>`
+> Switched to `feature/shopping/color-palette-modal`.
 
-If branch creation/switch fails, report the reason and ask the user how to proceed.
+Then proceed with research or implementation.
+
+## Fallback Commands (older Git)
+
+```bash
+git checkout <branch>       # switch
+git checkout -b <branch>    # create and switch
+```
+
+If the branch operation fails, report the error and ask the user how to proceed.
