@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors } from '../../../../theme';
+import { colors, shoppingListPickerColors, checkmarkColorOnHexSwatch } from '../../../../theme';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import type { CreateListModalProps, ListIconName } from './types';
 import { styles } from './styles';
@@ -17,14 +17,6 @@ const LIST_ICON_CATEGORIES: ReadonlyArray<{
 ] as const;
 
 const LIST_ICON_OPTIONS = LIST_ICON_CATEGORIES.flatMap((category) => category.icons);
-
-const LIST_COLOR_CATEGORIES = [
-  ['#1B3C53', '#234C6A', '#456882'],
-  ['#5A7890', '#6D8797', '#8CA1AF'],
-  ['#A8B7C2', '#C7D1D8'],
-] as const;
-
-const LIST_COLOR_OPTIONS = LIST_COLOR_CATEGORIES.flatMap((category) => category);
 
 export function CreateListModal({
   visible,
@@ -50,7 +42,7 @@ export function CreateListModal({
       title={isEditMode ? t('createListModal.titleEdit') : t('createListModal.titleCreate')}
       confirmText={isEditMode ? t('createListModal.confirmSave') : t('createListModal.confirmCreate')}
       onConfirm={onConfirm}
-      confirmColor={colors.chores}
+      confirmColor={colors.shopping}
       confirmDisabled={confirmDisabled}
     >
       <View style={[styles.createListInputSection, isRtlLayout && styles.modalSectionRtl]}>
@@ -90,7 +82,7 @@ export function CreateListModal({
               <Ionicons
                 name={icon}
                 size={24}
-                color={selectedIcon === icon ? colors.chores : colors.textSecondary}
+                color={selectedIcon === icon ? colors.shopping : colors.textSecondary}
               />
             </TouchableOpacity>
           ))}
@@ -106,20 +98,22 @@ export function CreateListModal({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={[styles.colorPickerContent, isRtlLayout && styles.pickerContentRtl]}
         >
-          {LIST_COLOR_OPTIONS.map((color) => (
+          {shoppingListPickerColors.map((swatchColor) => (
             <TouchableOpacity
-              key={color}
+              key={swatchColor}
               style={[
                 styles.colorOption,
-                { backgroundColor: color },
-                selectedColor === color && styles.colorOptionActive,
+                { backgroundColor: swatchColor },
+                selectedColor === swatchColor && styles.colorOptionActive,
               ]}
-              onPress={() => onSelectColor(color)}
-              accessibilityLabel={t('createListModal.colorSelectAccessibility', { color })}
+              onPress={() => onSelectColor(swatchColor)}
+              accessibilityLabel={t('createListModal.colorSelectAccessibility', { color: swatchColor })}
               accessibilityRole="button"
-              accessibilityState={{ selected: selectedColor === color }}
+              accessibilityState={{ selected: selectedColor === swatchColor }}
             >
-              {selectedColor === color && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
+              {selectedColor === swatchColor && (
+                <Ionicons name="checkmark" size={20} color={checkmarkColorOnHexSwatch(swatchColor)} />
+              )}
             </TouchableOpacity>
           ))}
         </ScrollView>

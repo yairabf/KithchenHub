@@ -61,8 +61,8 @@ export const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   iconOptionActive: {
-    borderColor: colors.chores,
-    backgroundColor: colors.chores + '10',
+    borderColor: colors.shopping,
+    backgroundColor: colors.shopping + '10',
   },
   createListColorSection: {
     marginBottom: 24,
