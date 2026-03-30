@@ -84,9 +84,11 @@ export function CenteredModal({
     if (visible && modalTitleRef.current) {
       // Delay to allow modal animation to complete
       const timer = setTimeout(() => {
-        const reactTag = findNodeHandle(modalTitleRef.current);
-        if (reactTag && Platform.OS !== 'web') {
-          AccessibilityInfo.setAccessibilityFocus(reactTag);
+        if (Platform.OS !== 'web') {
+          const reactTag = findNodeHandle(modalTitleRef.current);
+          if (reactTag) {
+            AccessibilityInfo.setAccessibilityFocus(reactTag);
+          }
         }
       }, 300);
       return () => clearTimeout(timer);
@@ -98,9 +100,11 @@ export function CenteredModal({
     if (!visible && triggerRef?.current) {
       // Delay to allow modal close animation to complete
       const timer = setTimeout(() => {
-        const reactTag = findNodeHandle(triggerRef.current);
-        if (reactTag && Platform.OS !== 'web') {
-          AccessibilityInfo.setAccessibilityFocus(reactTag);
+        if (Platform.OS !== 'web') {
+          const reactTag = findNodeHandle(triggerRef.current);
+          if (reactTag) {
+            AccessibilityInfo.setAccessibilityFocus(reactTag);
+          }
         }
       }, 250);
       return () => clearTimeout(timer);

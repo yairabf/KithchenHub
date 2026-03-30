@@ -90,7 +90,8 @@
     "shareTitle": "مشاركة {{name}}",
     "deleteListTitle": "حذف القائمة",
     "deleteListMessage": "حذف \"{{name}}\"؟",
-    "deleteListConfirm": "حذف"
+    "deleteListConfirm": "حذف",
+    "deleteListError": "فشل حذف القائمة. الرجاء المحاولة مرة أخرى."
   },
   "share": {
     "shoppingListHeader": "قائمة التسوق: {{listName}}",

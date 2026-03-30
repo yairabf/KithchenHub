@@ -90,6 +90,12 @@ export interface ICacheAwareShoppingRepository {
   // Refresh methods (force fetch from API)
   refreshLists(): Promise<ShoppingList[]>;
   refreshItems(): Promise<ShoppingItem[]>;
+  /**
+   * Sequentially refreshes lists then items so both datasets are derived from
+   * the same server snapshot.  Prefer this over calling refreshLists() and
+   * refreshItems() in parallel to avoid list-ID mismatches.
+   */
+  refreshAll(): Promise<{ lists: ShoppingList[]; items: ShoppingItem[] }>;
   
   // Realtime update methods
   applyRealtimeListChange(payload: RealtimePostgresChangesPayload<{
@@ -190,12 +196,16 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   }
   
   /**
-   * Fetches shopping items from API (used by cache layer)
+   * Fetches shopping items from API (used by cache layer).
+   *
+   * @param knownLists - Optional pre-fetched list array.  When provided the
+   *   method uses it directly instead of calling findAllLists(), which avoids a
+   *   redundant cache read and prevents a snapshot mismatch when the caller has
+   *   just refreshed the lists and wants items derived from the same dataset.
    */
-  private async fetchItemsFromApi(): Promise<ShoppingItem[]> {
-    // Get lists first
-    const lists = await this.findAllLists();
-    
+  private async fetchItemsFromApi(knownLists?: ShoppingList[]): Promise<ShoppingItem[]> {
+    const lists = knownLists ?? await this.findAllLists();
+
     // Get grocery items for mapping
     const groceryItems = await this.getGroceryItems();
     
@@ -617,7 +627,30 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       true // Force refresh
     );
   }
-  
+
+  /**
+   * Sequentially refreshes lists then items so both datasets are derived from
+   * the same server snapshot.
+   *
+   * Calling refreshLists() and refreshItems() in parallel would cause
+   * fetchItemsFromApi() to call findAllLists() (cache-first) while
+   * refreshLists() is simultaneously writing a newer list snapshot to the
+   * same cache key, producing a mismatched pair.  By awaiting the list
+   * refresh first and passing the result directly to fetchItemsFromApi(),
+   * both datasets are guaranteed to be consistent.
+   */
+  async refreshAll(): Promise<{ lists: ShoppingList[]; items: ShoppingItem[] }> {
+    const lists = await this.refreshLists();
+    const items = await getCached<ShoppingItem>(
+      'shoppingItems',
+      () => this.fetchItemsFromApi(lists),
+      (item) => this.getItemId(item),
+      getIsOnline(),
+      true,
+    );
+    return { lists, items };
+  }
+
   async findItemsByListId(listId: string): Promise<ShoppingItem[]> {
     const items = await this.findAllItems();
     return items.filter(item => item.listId === listId);

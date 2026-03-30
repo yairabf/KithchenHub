@@ -90,7 +90,8 @@
     "shareTitle": "Share {{name}}",
     "deleteListTitle": "Delete List",
     "deleteListMessage": "Delete \"{{name}}\"?",
-    "deleteListConfirm": "Delete"
+    "deleteListConfirm": "Delete",
+    "deleteListError": "Failed to delete list. Please try again."
   },
   "share": {
     "shoppingListHeader": "Shopping List: {{listName}}",

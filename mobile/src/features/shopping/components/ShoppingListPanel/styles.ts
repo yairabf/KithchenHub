@@ -145,13 +145,8 @@ export const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 1040,
   },
-  listActionsDismissArea: {
-    position: 'absolute',
-    top: -2000,
-    left: -2000,
-    width: 4000,
-    height: 4000,
-    zIndex: 1090,
+  listsDrawerScrollView: {
+    zIndex: 1045,
   },
   listActionMenuItem: {
     flexDirection: 'row',
