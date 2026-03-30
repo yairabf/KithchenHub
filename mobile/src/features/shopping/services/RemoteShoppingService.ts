@@ -3,7 +3,6 @@ import { is404Error } from "../../../common/utils/apiErrorGuards";
 import { colors } from "../../../theme";
 import {
   withUpdatedAt,
-  markDeleted,
   withCreatedAtAndUpdatedAt,
   normalizeTimestampsFromApi,
 } from "../../../common/utils/timestamps";
@@ -434,26 +433,24 @@ export class RemoteShoppingService implements IShoppingService {
   }
 
   async deleteList(listId: string): Promise<void> {
-    // Get existing list
-    const existing = await this.getShoppingLists().then((lists) =>
-      lists.find((l) => l.id === listId),
-    );
-    if (!existing) {
-      throw new Error(`Shopping list not found: ${listId}`);
+    try {
+      await api.delete<{ success: boolean }>(`/shopping-lists/${listId}`);
+    } catch (error) {
+      // Treat 404 as idempotent delete success (already deleted server-side).
+      if (is404Error(error)) {
+        logger.warn(
+          `[RemoteShoppingService] deleteList(${listId}) returned 404; treating as already deleted`,
+        );
+      } else {
+        throw error;
+      }
     }
 
-    // Apply timestamp for optimistic UI and offline queue
-    const deleted = markDeleted(existing);
-    const withTimestamps = withUpdatedAt(deleted);
-    await api.delete<{ success: boolean }>(`/shopping-lists/${listId}`);
-
-    // Write-through cache update: update entity in cache with deleted timestamp
-    // Note: Cache updates are best-effort; failures are logged but don't throw
-    await updateEntityInCache(
+    // Remove from cache (best-effort)
+    await removeEntityFromCache<ShoppingList>(
       "shoppingLists",
-      withTimestamps,
+      listId,
       (l) => l.id,
-      (l) => l.id === listId,
     );
   }
 

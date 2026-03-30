@@ -83,6 +83,36 @@ jest.mock('../../services/shoppingService', () => ({
   })),
 }));
 
+// Mock CacheAwareShoppingRepository so findAllLists/findAllItems delegate to
+// the existing mockGetShoppingData, keeping all existing assertions unchanged.
+jest.mock('../../../../common/repositories/cacheAwareShoppingRepository', () => ({
+  CacheAwareShoppingRepository: jest.fn().mockImplementation(() => ({
+    findAllLists: jest.fn(() =>
+      mockGetShoppingData().then((d: { shoppingLists: unknown[] }) => d.shoppingLists)
+    ),
+    findAllItems: jest.fn(() =>
+      mockGetShoppingData().then((d: { shoppingItems: unknown[] }) => d.shoppingItems)
+    ),
+    refreshLists: jest.fn().mockResolvedValue([]),
+    refreshItems: jest.fn().mockResolvedValue([]),
+    getShoppingData: mockGetShoppingData,
+    createList: jest.fn(),
+    updateList: jest.fn(),
+    deleteList: jest.fn(),
+    createItem: jest.fn(),
+    updateItem: jest.fn(),
+    deleteItem: mockDeleteItem,
+    toggleItem: jest.fn(),
+    findListById: jest.fn().mockResolvedValue(null),
+    findItemsByListId: jest.fn().mockResolvedValue([]),
+    applyRealtimeListChange: jest.fn(),
+    applyRealtimeItemChange: jest.fn(),
+    invalidateListsCache: jest.fn(),
+    invalidateItemsCache: jest.fn(),
+    invalidateAllCache: jest.fn(),
+  })),
+}));
+
 // Test data
 const mockList: ShoppingList = {
   id: 'list-123',

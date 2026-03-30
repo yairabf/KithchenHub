@@ -57,6 +57,7 @@ import {
 } from '../utils/shoppingRealtime';
 import { useShoppingRealtime } from '../hooks/useShoppingRealtime';
 import { useTranslation } from 'react-i18next';
+import { CacheAwareShoppingRepository, type ICacheAwareShoppingRepository } from '../../../common/repositories/cacheAwareShoppingRepository';
 
 /**
  * Migration key for one-time category cache clearing.
@@ -224,10 +225,14 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [pendingDeleteList, setPendingDeleteList] = useState<ShoppingList | null>(null);
+  const [isDeletingList, setIsDeletingList] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const categoryRequestIdRef = useRef(0);
   const previousCategoryLanguageRef = useRef(i18n.language);
   const deletingItemIdsRef = useRef<Set<string>>(new Set());
+  // Tracks whether shopping data has been successfully loaded at least once.
+  // When true, subsequent cache reads happen silently without showing the loading spinner.
+  const hasLoadedOnceRef = useRef(false);
 
   // Determine data mode based on user authentication state
   const userMode = useMemo(() => {
@@ -246,7 +251,20 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     [userMode]
   );
 
-  // Use state management for all modes (no cache)
+  const shoppingRepository = useMemo<ICacheAwareShoppingRepository | null>(() => {
+    if (userMode !== 'signed-in') {
+      return null;
+    }
+    return new CacheAwareShoppingRepository(shoppingService);
+  }, [userMode, shoppingService]);
+
+  // When the repository instance changes (auth state change), reset so the
+  // next loadShoppingData call shows the loading spinner again.
+  useEffect(() => {
+    hasLoadedOnceRef.current = false;
+  }, [shoppingRepository]);
+
+  // Use state management for all modes
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
   const [isListsLoading, setIsListsLoading] = useState(false);
@@ -279,46 +297,75 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     });
   }, []);
 
-  // Load shopping data function - reusable for both initial load and refresh
+  // Load shopping data function - reusable for both initial load and refresh.
+  // Shows loading spinner only on the first load (no data yet). Subsequent
+  // tab-switch refreshes read from cache silently to avoid visible flickering.
+  // Uses findAllLists/findAllItems directly to avoid the unnecessary getGroceryItems()
+  // API call that getShoppingData() would trigger on every tab switch.
   const loadShoppingData = useCallback(async () => {
     if (isAuthLoading) return;
 
-    setIsListsLoading(true);
-    setIsItemsLoading(true);
+    const isFirstLoad = !hasLoadedOnceRef.current;
+    if (isFirstLoad) {
+      setIsListsLoading(true);
+      setIsItemsLoading(true);
+    }
     try {
-      const data = await shoppingService.getShoppingData();
-      // Sort lists so main list is always first
-      const sortedLists = sortListsWithMainFirst(data.shoppingLists);
+      let lists: ShoppingList[];
+      let items: ShoppingItem[];
+
+      if (shoppingRepository) {
+        [lists, items] = await Promise.all([
+          shoppingRepository.findAllLists(),
+          shoppingRepository.findAllItems(),
+        ]);
+      } else {
+        const data = await shoppingService.getShoppingData();
+        lists = data.shoppingLists;
+        items = data.shoppingItems;
+      }
+
+      hasLoadedOnceRef.current = true;
+      const sortedLists = sortListsWithMainFirst(lists);
       setShoppingLists(sortedLists);
-      setAllItems(data.shoppingItems);
+      setAllItems(items);
       setSelectedList((current) => getSelectedList(sortedLists, current?.id));
     } catch (error) {
       console.error('Failed to load shopping data:', error);
     } finally {
-      setIsListsLoading(false);
-      setIsItemsLoading(false);
+      if (isFirstLoad) {
+        setIsListsLoading(false);
+        setIsItemsLoading(false);
+      }
     }
-  }, [shoppingService, isAuthLoading, sortListsWithMainFirst]);
+  }, [shoppingRepository, shoppingService, isAuthLoading, sortListsWithMainFirst]);
 
   // Load shopping data on mount
   useEffect(() => {
     loadShoppingData();
   }, [loadShoppingData]);
 
-  // Track previous active state to detect when tab becomes active
-  const prevIsActiveRef = useRef<boolean>(false);
+  // Track previous active state to detect when tab becomes active.
+  // Initialized to null so the first effect run (on mount) is skipped — the
+  // mount effect already loads data, so we only want subsequent tab activations
+  // to trigger a reload.
+  const prevIsActiveRef = useRef<boolean | null>(null);
 
-  // Refresh shopping data when Shopping tab becomes active (transitions from inactive to active)
+  // Refresh shopping data when Shopping tab becomes active (transitions from inactive to active).
+  // Skips the initial mount run to avoid a double call alongside the mount effect.
   useEffect(() => {
+    if (prevIsActiveRef.current === null) {
+      prevIsActiveRef.current = isActive;
+      return;
+    }
+
     const wasInactive = !prevIsActiveRef.current;
     const isNowActive = isActive;
 
-    // Only refresh when transitioning from inactive to active
     if (wasInactive && isNowActive) {
       loadShoppingData();
     }
 
-    // Update ref for next comparison
     prevIsActiveRef.current = isActive;
   }, [isActive, loadShoppingData]);
 
@@ -330,11 +377,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
+      if (shoppingRepository) {
+        await Promise.all([
+          shoppingRepository.refreshLists(),
+          shoppingRepository.refreshItems(),
+        ]);
+      }
       await loadShoppingData();
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadShoppingData]);
+  }, [shoppingRepository, loadShoppingData]);
 
   // Update list item counts when items change
   useEffect(() => {
@@ -369,7 +422,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     isRealtimeEnabled: isRealtimeEnabled,
     householdId: user?.householdId ?? null,
     isSignedIn,
-    repository: null, // No repository - direct API calls
+    repository: shoppingRepository,
     groceryItems,
     listIds,
     onListChange: handleRealtimeListChange,
@@ -410,13 +463,15 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
   const createList = useCallback(async (list: Partial<ShoppingList>) => {
     const created = await shoppingService.createList(list);
-    // Realtime may not catch list creation immediately — fetch fresh data.
-    const data = await shoppingService.getShoppingData();
-    const sortedLists = sortListsWithMainFirst(data.shoppingLists);
+    // Read updated lists from cache (write-through cache means this is instant)
+    const updatedLists = shoppingRepository
+      ? await shoppingRepository.findAllLists()
+      : (await shoppingService.getShoppingData()).shoppingLists;
+    const sortedLists = sortListsWithMainFirst(updatedLists);
     setShoppingLists(sortedLists);
     setSelectedList((current) => getSelectedList(sortedLists, current?.id));
     return created;
-  }, [shoppingService, sortListsWithMainFirst]);
+  }, [shoppingRepository, shoppingService, sortListsWithMainFirst]);
 
   const updateList = useCallback(async (listId: string, updates: Partial<ShoppingList>) => {
     const updated = await shoppingService.updateList(listId, updates);
@@ -751,15 +806,18 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, []);
 
   const handleConfirmDeleteList = useCallback(async () => {
-    if (!pendingDeleteList) return;
+    if (!pendingDeleteList || isDeletingList) return;
 
+    setIsDeletingList(true);
     try {
       await deleteList(pendingDeleteList.id);
       setPendingDeleteList(null);
     } catch (error) {
       console.error('Failed to delete shopping list:', error);
+    } finally {
+      setIsDeletingList(false);
     }
-  }, [pendingDeleteList, deleteList]);
+  }, [pendingDeleteList, isDeletingList, deleteList]);
 
   const handleCategoryClick = useCallback(async (categoryName: string) => {
     const requestId = categoryRequestIdRef.current + 1;
@@ -1017,6 +1075,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             : ''
         }
         confirmText={t('screen.deleteListConfirm')}
+        confirmLoading={isDeletingList}
         onConfirm={handleConfirmDeleteList}
         onCancel={() => setPendingDeleteList(null)}
       />
