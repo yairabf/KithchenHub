@@ -226,10 +226,12 @@ export class OAuthController {
         ? this.buildWebSuccessRedirect(
             decodedState.metadata.redirectUri,
             authResponse.accessToken,
+            authResponse.refreshToken,
             authResponse.isNewHousehold,
           )
         : this.buildSuccessRedirect(
             authResponse.accessToken,
+            authResponse.refreshToken,
             authResponse.householdId,
             authResponse.isNewHousehold,
           );
@@ -256,17 +258,21 @@ export class OAuthController {
   /**
    * Builds success redirect URL to mobile app.
    *
-   * Format: kitchen-hub://auth/callback?token=JWT&isNewHousehold=true|false
+   * Format: kitchen-hub://auth/callback?token=JWT&refreshToken=RT&isNewHousehold=true|false
    */
   private buildSuccessRedirect(
     accessToken: string,
+    refreshToken?: string,
     householdId?: string | null,
     isNewHousehold?: boolean,
   ): string {
     const url = new URL(`${this.appScheme}://auth/callback`);
     url.searchParams.set('token', accessToken);
 
-    // Include isNewHousehold flag if provided
+    if (refreshToken) {
+      url.searchParams.set('refreshToken', refreshToken);
+    }
+
     if (isNewHousehold !== undefined) {
       url.searchParams.set('isNewHousehold', String(isNewHousehold));
     }
@@ -277,17 +283,21 @@ export class OAuthController {
   /**
    * Builds success redirect URL for web platform.
    *
-   * Format: {redirectUri}?token=JWT&isNewHousehold=true|false
+   * Format: {redirectUri}?token=JWT&refreshToken=RT&isNewHousehold=true|false
    */
   private buildWebSuccessRedirect(
     redirectUri: string,
     accessToken: string,
+    refreshToken?: string,
     isNewHousehold?: boolean,
   ): string {
     const url = new URL(redirectUri);
     url.searchParams.set('token', accessToken);
 
-    // Include isNewHousehold flag if provided
+    if (refreshToken) {
+      url.searchParams.set('refreshToken', refreshToken);
+    }
+
     if (isNewHousehold !== undefined) {
       url.searchParams.set('isNewHousehold', String(isNewHousehold));
     }

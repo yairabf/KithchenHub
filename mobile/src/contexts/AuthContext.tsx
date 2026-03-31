@@ -3,9 +3,16 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import { useOAuthSignIn } from '../features/auth/hooks/useOAuthSignIn';
-import { api, setOnUnauthorizedHandler } from '../services/api';
+import {
+  ApiError,
+  NetworkError,
+  api,
+  setOnUnauthorizedHandler,
+  setSessionRefreshHandler,
+} from '../services/api';
 import { tokenStorage } from '../features/auth/services/tokenStorage';
 import { authApi } from '../features/auth/services/authApi';
+import { refreshAccessToken } from '../features/auth/services/sessionManager';
 import { logger } from '../common/utils/logger';
 import { guestStorage } from '../common/utils/guestStorage';
 import {
@@ -44,6 +51,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = '@kitchen_hub_user';
 const IS_NEW_HOUSEHOLD_KEY = '@kitchen_hub_is_new_household';
+
+function isAuthError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.statusCode === 401 || error.statusCode === 403)
+  );
+}
+
+function isTransientSessionError(error: unknown): boolean {
+  if (error instanceof NetworkError) {
+    return true;
+  }
+
+  return (
+    error instanceof ApiError &&
+    (error.statusCode >= 500 || error.statusCode === 408)
+  );
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -109,14 +134,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: userData.role,
           };
           setUser(userToSet);
-          await saveUser(userToSet);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userToSet));
           // Ensure token is still set after user is loaded
           api.setAuthToken(storedToken);
         } catch (error) {
-          // Token is invalid, clear it
-          logger.warn('Stored token is invalid, clearing session', error);
-          await tokenStorage.clearTokens();
-          api.setAuthToken(null);
+          if (isAuthError(error)) {
+            const refreshedToken = await refreshAccessToken();
+            if (refreshedToken) {
+              const refreshedUser = await authApi.getCurrentUser();
+              const refreshedUserToSet: User = {
+                id: refreshedUser.id,
+                email: refreshedUser.email || '',
+                name: refreshedUser.name || 'Kitchen User',
+                avatarUrl: refreshedUser.avatarUrl,
+                householdId: refreshedUser.householdId || undefined,
+                isGuest: refreshedUser.isGuest,
+                role: refreshedUser.role,
+              };
+              setUser(refreshedUserToSet);
+              await AsyncStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify(refreshedUserToSet),
+              );
+              api.setAuthToken(refreshedToken);
+            } else {
+              logger.warn('Stored token is invalid, clearing session', error);
+              await tokenStorage.clearTokens();
+              api.setAuthToken(null);
+            }
+          } else if (isTransientSessionError(error)) {
+            logger.warn(
+              'Transient session restore error detected, keeping local session',
+              error,
+            );
+            const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
+            if (storedUser) {
+              setUser(JSON.parse(storedUser) as User);
+            }
+          } else {
+            throw error;
+          }
         }
       } else {
         // No token - clear any stored user (guest mode removed; authenticated users require token)
@@ -138,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * @param token - JWT access token from backend
    * @param isNewHousehold - Flag indicating if a new household was created
    */
-  const handleOAuthCallback = useCallback(async (token: string, isNewHousehold: boolean) => {
+  const handleOAuthCallback = useCallback(async (token: string, isNewHousehold: boolean, refreshToken?: string) => {
     // Prevent race conditions from duplicate callbacks
     if (isProcessingOAuthRef.current) {
       logger.warn('OAuth callback already in progress, ignoring duplicate');
@@ -152,6 +209,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Store the JWT token in secure storage
       await tokenStorage.saveAccessToken(token);
+      if (refreshToken) {
+        await tokenStorage.saveRefreshToken(refreshToken);
+      }
 
       // Set API auth token for subsequent requests
       api.setAuthToken(token);
@@ -206,7 +266,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       isProcessingOAuthRef.current = false;
     }
-  }, [saveUser]);
+  }, []);
 
   useEffect(() => {
     // On web, check for OAuth callback in URL
@@ -215,10 +275,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = urlParams.get('token');
       const error = urlParams.get('error');
       const isNewHousehold = urlParams.get('isNewHousehold') === 'true';
+      const oauthRefreshToken = urlParams.get('refreshToken') ?? undefined;
 
       if (token) {
         // Handle OAuth success callback
-        handleOAuthCallback(token, isNewHousehold);
+        handleOAuthCallback(token, isNewHousehold, oauthRefreshToken);
         // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname);
       } else if (error) {
@@ -253,8 +314,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           api.setAuthToken(null);
         }
       } else if (!user && !isLoading) {
-        // No user - ensure token is cleared
-        api.setAuthToken(null);
+        // Only clear API token when there is truly no stored token (e.g. signed out).
+        // If a token exists in secure storage we may be in a transient offline state
+        // (startup /auth/me failed temporarily) and must keep the API auth token intact
+        // so subsequent requests can still authenticate when connectivity is restored.
+        const storedToken = await tokenStorage.getAccessToken();
+        if (!storedToken) {
+          api.setAuthToken(null);
+        }
       }
     };
 
@@ -284,6 +351,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Store the JWT token in secure storage
       await tokenStorage.saveAccessToken(result.token!);
+      if (result.refreshToken) {
+        await tokenStorage.saveRefreshToken(result.refreshToken);
+      }
 
       // Set API auth token for subsequent requests
       api.setAuthToken(result.token!);
@@ -371,6 +441,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store token first (critical operation)
       try {
         await tokenStorage.saveAccessToken(response.accessToken);
+        if (response.refreshToken) {
+          await tokenStorage.saveRefreshToken(response.refreshToken);
+        }
       } catch (storageError) {
         logger.error('[AuthContext] Failed to save token:', storageError);
         throw new Error('Failed to save authentication data. Please try again.');
@@ -460,6 +533,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOnUnauthorizedHandler(null);
     };
   }, [saveUser]);
+
+  useEffect(() => {
+    setSessionRefreshHandler(refreshAccessToken);
+    return () => {
+      setSessionRefreshHandler(null);
+    };
+  }, []);
 
   return (
     <AuthContext.Provider
