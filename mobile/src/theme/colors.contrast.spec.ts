@@ -2,6 +2,7 @@ import {
   checkmarkColorOnHexSwatch,
   parseHexRgb,
   relativeLuminanceFromRgb,
+  wcagContrastRatio,
   colors,
 } from './index';
 
@@ -51,19 +52,38 @@ describe('relativeLuminanceFromRgb', () => {
 });
 
 // ---------------------------------------------------------------------------
-// checkmarkColorOnHexSwatch
+// wcagContrastRatio
 // ---------------------------------------------------------------------------
 describe.each([
-  ['dark swatch uses light checkmark', '#1B3C53', colors.textLight],
+  ['black on white is 21:1', 0, 1, 21],
+  ['identical luminances is 1:1', 0.5, 0.5, 1],
+  ['symmetric — argument order does not matter', 0.2, 0.8, (0.8 + 0.05) / (0.2 + 0.05)],
+])('wcagContrastRatio', (_label, a, b, expected) => {
+  it(_label, () => {
+    expect(wcagContrastRatio(a, b)).toBeCloseTo(expected, 5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkmarkColorOnHexSwatch — picks the ink with the highest contrast ratio
+// ---------------------------------------------------------------------------
+describe.each([
+  // --- dark swatches: light ink wins ---
+  ['dark navy uses light checkmark', '#1B3C53', colors.textLight],
   ['shopping blue uses light checkmark', '#234C6A', colors.textLight],
-  ['mid-gray below threshold uses light checkmark', '#888888', colors.textLight],
-  ['light gray above threshold uses dark checkmark', '#E5E7EB', colors.textPrimary],
+  // --- mid-range: grey where light ink still has higher contrast (~3.95:1) ---
+  ['mid-gray (#888) uses light checkmark', '#888888', colors.textLight],
+  // --- amber: previously mispicked by luminance threshold; dark ink wins (3.93:1 vs 2.94:1) ---
+  ['amber (#CA8A04) uses dark checkmark', '#CA8A04', colors.textPrimary],
+  // --- light swatches: dark ink wins ---
+  ['light gray uses dark checkmark', '#E5E7EB', colors.textPrimary],
   ['pure white uses dark checkmark', '#FFFFFF', colors.textPrimary],
-  ['uppercase hex is parsed correctly', '#FFFFFF', colors.textPrimary],
+  ['uppercase hex parses correctly', '#FFFFFF', colors.textPrimary],
+  // --- parse failures fall back to light ---
   ['3-char hex falls back to light', '#FFF', colors.textLight],
   ['invalid hex falls back to light', 'not-a-color', colors.textLight],
 ])('checkmarkColorOnHexSwatch', (_label, hex, expected) => {
-  it(`returns ${expected} for "${hex}"`, () => {
+  it(_label, () => {
     expect(checkmarkColorOnHexSwatch(hex)).toBe(expected);
   });
 });

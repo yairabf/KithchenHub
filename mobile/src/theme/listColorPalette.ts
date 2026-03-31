@@ -68,17 +68,48 @@ export function relativeLuminanceFromRgb(rgb: { r: number; g: number; b: number 
 }
 
 /**
- * Luminance threshold above which a swatch is considered "light" and
- * requires dark ink for sufficient contrast. Chosen empirically for
- * this palette: WCAG AA at 3:1 contrast vs. our textPrimary (#1B3C53)
- * is met for all swatches below this boundary.
+ * WCAG 2.1 contrast ratio between two relative luminance values.
+ * The ratio ranges from 1:1 (identical) to 21:1 (black on white).
+ *
+ * @see https://www.w3.org/TR/WCAG21/#dfn-contrast-ratio
  */
-const LIGHT_SWATCH_LUMINANCE_THRESHOLD = 0.55;
+export function wcagContrastRatio(luminanceA: number, luminanceB: number): number {
+  const lighter = Math.max(luminanceA, luminanceB);
+  const darker = Math.min(luminanceA, luminanceB);
+  return (lighter + 0.05) / (darker + 0.05);
+}
 
 /**
- * Returns the appropriate checkmark / icon color for a solid color swatch.
- * Light swatches receive dark ink; dark swatches receive light ink.
- * Falls back to light ink for any unparseable hex value.
+ * Candidate ink colors for checkmarks / icons on a solid swatch, with their
+ * luminance values pre-computed once at module load so checkmarkColorOnHexSwatch
+ * does not re-parse the same hex strings on every render.
+ *
+ * To add more ink options (e.g. a mid-tone), push an entry here.
+ */
+const INK_CANDIDATES = [
+  {
+    color: colors.textPrimary,
+    luminance: relativeLuminanceFromRgb(
+      parseHexRgb(colors.textPrimary) ?? { r: 0, g: 0, b: 0 },
+    ),
+  },
+  {
+    color: colors.textLight,
+    luminance: relativeLuminanceFromRgb(
+      parseHexRgb(colors.textLight) ?? { r: 255, g: 255, b: 255 },
+    ),
+  },
+] as const;
+
+/**
+ * Returns the ink color (checkmark / icon) with the highest WCAG contrast
+ * ratio against the given swatch background.
+ *
+ * This replaces a fixed luminance threshold, which mispicked ink for mid-tone
+ * palette entries such as #CA8A04 where the threshold produced a ~2.94:1 ratio
+ * while the other candidate achieves ~3.93:1.
+ *
+ * Falls back to `colors.textLight` for any unparseable hex value.
  *
  * @param hexColor - A 6-digit hex color string (e.g. `#FFFFFF`)
  */
@@ -87,6 +118,11 @@ export function checkmarkColorOnHexSwatch(hexColor: string): string {
   if (!rgb) {
     return colors.textLight;
   }
-  const isLightSwatch = relativeLuminanceFromRgb(rgb) > LIGHT_SWATCH_LUMINANCE_THRESHOLD;
-  return isLightSwatch ? colors.textPrimary : colors.textLight;
+  const swatchLuminance = relativeLuminanceFromRgb(rgb);
+  const bestInk = INK_CANDIDATES.reduce((best, candidate) => {
+    const candidateContrast = wcagContrastRatio(swatchLuminance, candidate.luminance);
+    const bestContrast = wcagContrastRatio(swatchLuminance, best.luminance);
+    return candidateContrast > bestContrast ? candidate : best;
+  });
+  return bestInk.color;
 }
