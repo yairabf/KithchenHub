@@ -27,7 +27,7 @@ import {
   SHOPPING_CATEGORIES,
   normalizeCategoryKey,
 } from '../constants/categories';
-import { colors } from '../../../theme';
+import { colors, shoppingListPickerColors } from '../../../theme';
 import { styles } from './styles';
 import type { ShoppingItem, ShoppingList, Category } from '../../../mocks/shopping';
 
@@ -216,7 +216,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [editingList, setEditingList] = useState<ShoppingList | null>(null);
   const [newListName, setNewListName] = useState('');
   const [newListIcon, setNewListIcon] = useState<ListIconName>('cart-outline');
-  const [newListColor, setNewListColor] = useState('#10B981');
+  const [newListColor, setNewListColor] = useState(shoppingListPickerColors[0]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [categoryItems, setCategoryItems] = useState<GroceryItem[]>([]);
@@ -225,7 +225,6 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [pendingDeleteList, setPendingDeleteList] = useState<ShoppingList | null>(null);
-  const [isDeletingList, setIsDeletingList] = useState(false);
   const [deleteListError, setDeleteListError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const categoryRequestIdRef = useRef(0);
@@ -772,33 +771,57 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     setEditingList(null);
     setNewListName('');
     setNewListIcon('cart-outline');
-    setNewListColor('#10B981');
+    setNewListColor(shoppingListPickerColors[0]);
   }, []);
 
-  const handleCreateList = useCallback(async () => {
+  const handleCreateList = useCallback(() => {
     const trimmedName = newListName.trim();
     if (!trimmedName) return;
 
-    try {
-      if (editingList) {
-        await updateList(editingList.id, {
-          name: trimmedName,
-          icon: newListIcon,
-          color: newListColor,
-        });
-      } else {
-        const newList = await createList({
-          name: trimmedName,
-          icon: newListIcon,
-          color: newListColor,
-        });
-        setSelectedList(newList);
-      }
+    if (editingList) {
+      const optimisticUpdates = { name: trimmedName, icon: newListIcon, color: newListColor };
+      const previousList = shoppingLists.find((l) => l.id === editingList.id);
+      const previousSelected = selectedList;
+
+      setShoppingLists((currentLists) =>
+        sortListsWithMainFirst(
+          currentLists.map((list) =>
+            list.id === editingList.id ? { ...list, ...optimisticUpdates } : list,
+          ),
+        ),
+      );
+      setSelectedList((currentSelected) =>
+        currentSelected?.id === editingList.id
+          ? { ...currentSelected, ...optimisticUpdates }
+          : currentSelected,
+      );
       handleCancelCreateListModal();
-    } catch (error) {
-      console.error('Failed to save shopping list:', error);
+
+      updateList(editingList.id, optimisticUpdates).catch((error) => {
+        console.error('Failed to save shopping list:', error);
+        if (previousList) {
+          setShoppingLists((currentLists) =>
+            sortListsWithMainFirst(
+              currentLists.map((list) => (list.id === editingList.id ? previousList : list)),
+            ),
+          );
+          setSelectedList((currentSelected) =>
+            currentSelected?.id === editingList.id ? previousSelected : currentSelected,
+          );
+        }
+      });
+    } else {
+      const icon = newListIcon;
+      const color = newListColor;
+      handleCancelCreateListModal();
+
+      createList({ name: trimmedName, icon, color })
+        .then((newList) => setSelectedList(newList))
+        .catch((error) => {
+          console.error('Failed to create shopping list:', error);
+        });
     }
-  }, [newListName, editingList, newListIcon, newListColor, updateList, createList, handleCancelCreateListModal]);
+  }, [newListName, editingList, newListIcon, newListColor, updateList, createList, handleCancelCreateListModal, sortListsWithMainFirst, shoppingLists, selectedList]);
 
   const confirmDeleteList = useCallback((list: ShoppingList) => {
     if (list.isMain) return;
@@ -806,21 +829,40 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     setPendingDeleteList(list);
   }, []);
 
-  const handleConfirmDeleteList = useCallback(async () => {
-    if (!pendingDeleteList || isDeletingList) return;
+  const handleConfirmDeleteList = useCallback(() => {
+    if (!pendingDeleteList) return;
 
-    setIsDeletingList(true);
+    const listToDelete = pendingDeleteList;
+    const originalIndex = shoppingLists.findIndex((l) => l.id === listToDelete.id);
+    const itemsToRestore = allItems.filter((item) => item.listId === listToDelete.id);
+    const previousSelected = selectedList;
+
+    const nextLists = sortListsWithMainFirst(
+      shoppingLists.filter((list) => list.id !== listToDelete.id),
+    );
+    const nextSelectedId =
+      selectedList?.id === listToDelete.id ? undefined : selectedList?.id;
+    const nextSelected = getSelectedList(nextLists, nextSelectedId);
+
+    setShoppingLists(nextLists);
+    setSelectedList(nextSelected);
+    setAllItems((currentItems) => currentItems.filter((item) => item.listId !== listToDelete.id));
+    setPendingDeleteList(null);
     setDeleteListError(null);
-    try {
-      await deleteList(pendingDeleteList.id);
-      setPendingDeleteList(null);
-    } catch (error) {
+
+    shoppingService.deleteList(listToDelete.id).catch((error) => {
       console.error('Failed to delete shopping list:', error);
+      setShoppingLists((currentLists) => {
+        const restored = [...currentLists];
+        restored.splice(originalIndex, 0, listToDelete);
+        return sortListsWithMainFirst(restored);
+      });
+      setAllItems((currentItems) => [...currentItems, ...itemsToRestore]);
+      setSelectedList(previousSelected);
       setDeleteListError(t('screen.deleteListError'));
-    } finally {
-      setIsDeletingList(false);
-    }
-  }, [pendingDeleteList, isDeletingList, deleteList, t]);
+      setPendingDeleteList(listToDelete);
+    });
+  }, [pendingDeleteList, allItems, shoppingLists, selectedList, shoppingService, sortListsWithMainFirst, t]);
 
   const handleCategoryClick = useCallback(async (categoryName: string) => {
     const requestId = categoryRequestIdRef.current + 1;
@@ -1079,7 +1121,6 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         }
         errorMessage={deleteListError ?? undefined}
         confirmText={t('screen.deleteListConfirm')}
-        confirmLoading={isDeletingList}
         onConfirm={handleConfirmDeleteList}
         onCancel={() => {
           setPendingDeleteList(null);
