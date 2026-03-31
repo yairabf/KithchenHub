@@ -21,7 +21,9 @@
     "release:stores:internal": "npm run release:ios:internal && npm run release:android:internal",
     "release:stores:prod": "npm run release:ios:prod && npm run release:android:prod",
     "deploy:ios": "bash scripts/deploy-ios.sh",
-    "deploy:android": "bash scripts/deploy-android.sh"
+    "deploy:android": "bash scripts/deploy-android.sh",
+    "ci:deploy:ios": "bash scripts/trigger-ci-ios.sh",
+    "ci:deploy:android": "bash scripts/trigger-ci-android.sh"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

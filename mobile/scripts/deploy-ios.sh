@@ -37,6 +37,18 @@ success() { echo -e "${GREEN}[deploy-ios]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[deploy-ios]${NC} $*"; }
 fail()    { echo -e "${RED}[deploy-ios] ERROR:${NC} $*" >&2; exit 1; }
 
+# Auto-load mobile/.env so credentials do not require manual export.
+ENV_FILE="${MOBILE_DIR}/.env"
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$ENV_FILE"
+  set +a
+  info "Loaded credentials from ${ENV_FILE}"
+else
+  warn ".env not found at ${ENV_FILE} — falling back to shell environment"
+fi
+
 # ---------------------------------------------------------------------------
 # 1. Branch and working-tree checks
 # ---------------------------------------------------------------------------
