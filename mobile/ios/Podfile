@@ -1,0 +1,145 @@
+require File.join(File.dirname(`node --print "require.resolve('expo/package.json')"`), "scripts/autolinking")
+require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
+
+require 'json'
+require 'shellwords'
+
+# xcodeproj 1.27.x passes the already-read file contents string to
+# file_in_conflict? without checking for valid encoding first.  On Ruby 3.x the
+# default File.read encoding is UTF-8; binary plist files inside XCFramework
+# bundles contain non-UTF-8 bytes, so the conflict-marker regex match raises
+# Encoding::InvalidByteSequenceError.  Monkey-patch file_in_conflict? to bail
+# out early for non-UTF-8-valid strings (binary files can't have text conflict
+# markers anyway).
+require 'xcodeproj'
+module Xcodeproj
+  class Plist
+    def self.file_in_conflict?(contents)
+      return false unless contents.valid_encoding?
+      conflict_regex = /
+        ^<{7}(?!<)
+        [\w\W]*
+        ^={7}(?!=)
+        [\w\W]*
+        ^>{7}(?!>)
+      /xm
+      contents.match(conflict_regex)
+    rescue
+      false
+    end
+  end
+end
+podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
+
+def ccache_enabled?(podfile_properties)
+  # Environment variable takes precedence
+  return ENV['USE_CCACHE'] == '1' if ENV['USE_CCACHE']
+  
+  # Fall back to Podfile properties
+  podfile_properties['apple.ccacheEnabled'] == 'true'
+end
+
+def normalize_build_setting_paths(value)
+  case value
+  when Array
+    value
+  when String
+    Shellwords.shellsplit(value)
+  else
+    []
+  end
+end
+
+def configure_libwebp_header_search_paths(installer)
+  libwebp_target = installer.pods_project.targets.find { |target| target.name == 'libwebp' }
+  return if libwebp_target.nil?
+
+  required_search_paths = [
+    '$(PODS_TARGET_SRCROOT)',
+    '$(PODS_TARGET_SRCROOT)/src',
+    '$(PODS_TARGET_SRCROOT)/sharpyuv',
+  ]
+
+  libwebp_target.build_configurations.each do |build_configuration|
+    header_search_paths = normalize_build_setting_paths(build_configuration.build_settings['HEADER_SEARCH_PATHS'])
+    user_header_search_paths = normalize_build_setting_paths(build_configuration.build_settings['USER_HEADER_SEARCH_PATHS'])
+
+    build_configuration.build_settings['HEADER_SEARCH_PATHS'] = (header_search_paths + required_search_paths).uniq
+    build_configuration.build_settings['USER_HEADER_SEARCH_PATHS'] = (user_header_search_paths + required_search_paths).uniq
+  end
+end
+
+# Xcode 15+ introduced an "Explicit Module Build" system that performs a
+# ScanDependencies step before compilation.  libwebp's sharpyuv C files
+# (sharpyuv_neon.c, sharpyuv_sse2.c, etc.) and SDWebImageWebPCoder's
+# SDImageWebPCoder.m fail this scan phase under the iOS 26 SDK because the
+# scanner cannot resolve platform-specific intrinsics at scan time.
+#
+# Disabling CLANG_ENABLE_EXPLICIT_MODULES for these targets falls back to the
+# traditional implicit module resolution (the pre-Xcode-15 behaviour) which
+# compiles them without issues.  The header-search-path fix above handles the
+# build-phase include resolution separately.
+def disable_explicit_modules_for_problematic_pods(installer)
+  problematic_pods = %w[libwebp SDWebImageWebPCoder]
+
+  installer.pods_project.targets.each do |target|
+    next unless problematic_pods.include?(target.name)
+
+    target.build_configurations.each do |config|
+      config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
+    end
+  end
+end
+
+ENV['RCT_NEW_ARCH_ENABLED'] ||= '0' if podfile_properties['newArchEnabled'] == 'false'
+ENV['EX_DEV_CLIENT_NETWORK_INSPECTOR'] ||= podfile_properties['EX_DEV_CLIENT_NETWORK_INSPECTOR']
+ENV['RCT_USE_RN_DEP'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
+ENV['RCT_USE_PREBUILT_RNCORE'] ||= '1' if podfile_properties['ios.buildReactNativeFromSource'] != 'true' && podfile_properties['newArchEnabled'] != 'false'
+platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
+
+prepare_react_native_project!
+
+target 'KitchenHub' do
+  use_expo_modules!
+
+  if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
+    config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
+  else
+    config_command = [
+      'node',
+      '--no-warnings',
+      '--eval',
+      'require(\'expo/bin/autolinking\')',
+      'expo-modules-autolinking',
+      'react-native-config',
+      '--json',
+      '--platform',
+      'ios'
+    ]
+  end
+
+  config = use_native_modules!(config_command)
+
+  use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
+  use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :hermes_enabled => podfile_properties['expo.jsEngine'] == nil || podfile_properties['expo.jsEngine'] == 'hermes',
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
+  )
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      :ccache_enabled => ccache_enabled?(podfile_properties),
+    )
+
+    configure_libwebp_header_search_paths(installer)
+    disable_explicit_modules_for_problematic_pods(installer)
+  end
+end

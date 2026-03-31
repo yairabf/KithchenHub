@@ -19,7 +19,9 @@
     "release:android:internal": "bundle exec fastlane android internal",
     "release:android:prod": "bundle exec fastlane android prod",
     "release:stores:internal": "npm run release:ios:internal && npm run release:android:internal",
-    "release:stores:prod": "npm run release:ios:prod && npm run release:android:prod"
+    "release:stores:prod": "npm run release:ios:prod && npm run release:android:prod",
+    "deploy:ios": "bash scripts/deploy-ios.sh",
+    "deploy:android": "bash scripts/deploy-android.sh"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

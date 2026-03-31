@@ -43,6 +43,8 @@ yarn-error.*
 /android
 /mobile/ios
 /mobile/android
+# mobile/ios/Podfile is force-tracked (git add -f) despite the above rule
+# because it contains manually-maintained build workarounds.
 
 # Logs
 *.log
