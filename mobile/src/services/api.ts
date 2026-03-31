@@ -9,6 +9,7 @@ const BASE_URL = `${API_BASE_URL}/api`;
 
 interface ApiOptions extends RequestInit {
   token?: string;
+  hasRetriedAuth?: boolean;
 }
 
 type ApiErrorResponse = {
@@ -36,6 +37,7 @@ export class ApiError extends Error {
 }
 
 type NetworkStatusProvider = () => { isOffline: boolean };
+type SessionRefreshHandler = () => Promise<string | null>;
 
 class ApiClient {
   private baseUrl: string;
@@ -100,7 +102,7 @@ class ApiClient {
     endpoint: string,
     options: ApiOptions = {},
   ): Promise<T> {
-    const { token, headers, ...customConfig } = options;
+    const { token, headers, hasRetriedAuth, ...customConfig } = options;
 
     if (ApiClient.networkStatusProvider?.().isOffline) {
       throw new NetworkError("No internet connection");
@@ -137,10 +139,23 @@ class ApiClient {
       );
 
       if (!response.ok) {
-        // If we get 401 and have a token, it's likely expired or invalid
-        if (response.status === 401 && effectiveToken) {
+        // If we get 401 or 403 with a token, the session may be expired or invalid
+        const isAuthFailure =
+          (response.status === 401 || response.status === 403) &&
+          !!effectiveToken;
+        if (isAuthFailure) {
+          if (!hasRetriedAuth && sessionRefreshHandler) {
+            const refreshedToken = await sessionRefreshHandler();
+            if (refreshedToken) {
+              return this.request<T>(endpoint, {
+                ...options,
+                token: refreshedToken,
+                hasRetriedAuth: true,
+              });
+            }
+          }
           logger.warn(
-            "[API] 401 Unauthorized with token - token may be expired or invalid",
+            `[API] ${response.status} auth failure with token - token may be expired or invalid`,
           );
           // Trigger unauthorized handler if set (will clear user session)
           if (onUnauthorizedHandler) {
@@ -287,7 +302,12 @@ export const setNetworkStatusProvider = ApiClient.setNetworkStatusProvider;
 
 // Global handler for 401 errors - will be set by AuthContext
 let onUnauthorizedHandler: (() => void) | null = null;
+let sessionRefreshHandler: SessionRefreshHandler | null = null;
 
 export function setOnUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorizedHandler = handler;
+}
+
+export function setSessionRefreshHandler(handler: SessionRefreshHandler | null) {
+  sessionRefreshHandler = handler;
 }

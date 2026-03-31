@@ -51,6 +51,10 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
 /**
  * Registration response from the backend
  */
@@ -99,6 +103,15 @@ export const authApi = {
    */
   login: (data: LoginRequest): Promise<AuthResponse> => {
     return api.post<AuthResponse>('/auth/login', data);
+  },
+
+  /**
+   * Refreshes access token using a valid refresh token.
+   */
+  refreshToken: (
+    data: RefreshTokenRequest,
+  ): Promise<{ accessToken: string }> => {
+    return api.post<{ accessToken: string }>('/auth/refresh', data);
   },
 
   /**
