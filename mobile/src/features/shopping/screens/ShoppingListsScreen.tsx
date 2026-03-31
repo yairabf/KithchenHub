@@ -835,6 +835,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     const listToDelete = pendingDeleteList;
     const originalIndex = shoppingLists.findIndex((l) => l.id === listToDelete.id);
     const itemsToRestore = allItems.filter((item) => item.listId === listToDelete.id);
+    const previousSelected = selectedList;
 
     const nextLists = sortListsWithMainFirst(
       shoppingLists.filter((list) => list.id !== listToDelete.id),
@@ -857,6 +858,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         return sortListsWithMainFirst(restored);
       });
       setAllItems((currentItems) => [...currentItems, ...itemsToRestore]);
+      setSelectedList(previousSelected);
       setDeleteListError(t('screen.deleteListError'));
       setPendingDeleteList(listToDelete);
     });
