@@ -55,9 +55,13 @@ def configure_libwebp_header_search_paths(installer)
   return if libwebp_target.nil?
 
   required_search_paths = [
+    '$(inherited)',
     '$(PODS_TARGET_SRCROOT)',
     '$(PODS_TARGET_SRCROOT)/src',
     '$(PODS_TARGET_SRCROOT)/sharpyuv',
+    '$(PODS_ROOT)/libwebp',
+    '$(PODS_ROOT)/libwebp/src',
+    '$(PODS_ROOT)/libwebp/sharpyuv',
   ]
 
   libwebp_target.build_configurations.each do |build_configuration|
