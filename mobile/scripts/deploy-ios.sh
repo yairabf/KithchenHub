@@ -103,6 +103,9 @@ success "Environment OK. API URL: ${EXPO_PUBLIC_API_URL}"
 info "Starting iOS build and TestFlight upload..."
 cd "$MOBILE_DIR"
 
+export FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT="${FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT:-120}"
+export FASTLANE_XCODEBUILD_SETTINGS_RETRIES="${FASTLANE_XCODEBUILD_SETTINGS_RETRIES:-5}"
+
 rbenv exec bundle exec fastlane ios internal
 
 success "TestFlight upload complete."
