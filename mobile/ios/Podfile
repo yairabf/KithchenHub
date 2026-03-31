@@ -50,47 +50,80 @@ def normalize_build_setting_paths(value)
   end
 end
 
-def configure_libwebp_header_search_paths(installer)
-  libwebp_target = installer.pods_project.targets.find { |target| target.name == 'libwebp' }
-  return if libwebp_target.nil?
+# libwebp 1.5.0 podspec ships sharpyuv_cpu.c and sharpyuv_dsp.h which both
+# #include "sharpyuv/sharpyuv_cpu.h", but that header (and its transitive
+# dependency src/dsp/cpu.h) are missing from the pod's source_files glob.
+# Without them the compilation fails with "fatal error: file not found".
+#
+# Fix: synthesise the two missing headers during pod install.  The stubs
+# provide the VP8CPUInfo function-pointer typedef and a NULL default so the
+# sharpyuv code falls back to its portable C path (no NEON/SSE2 dispatch).
+# This is safe — SDWebImage only uses sharpyuv for colour-space conversion
+# during WebP decoding, and the generic path is functionally identical.
+def patch_libwebp_missing_headers(installer)
+  pods_root = installer.sandbox.root
+  libwebp_root = File.join(pods_root, 'libwebp')
+  return unless Dir.exist?(libwebp_root)
 
-  required_search_paths = [
-    '$(inherited)',
-    '$(PODS_TARGET_SRCROOT)',
-    '$(PODS_TARGET_SRCROOT)/src',
-    '$(PODS_TARGET_SRCROOT)/sharpyuv',
-    '$(PODS_ROOT)/libwebp',
-    '$(PODS_ROOT)/libwebp/src',
-    '$(PODS_ROOT)/libwebp/sharpyuv',
-  ]
+  cpu_header = File.join(libwebp_root, 'sharpyuv', 'sharpyuv_cpu.h')
+  dsp_cpu_header = File.join(libwebp_root, 'src', 'dsp', 'cpu.h')
 
-  libwebp_target.build_configurations.each do |build_configuration|
-    header_search_paths = normalize_build_setting_paths(build_configuration.build_settings['HEADER_SEARCH_PATHS'])
-    user_header_search_paths = normalize_build_setting_paths(build_configuration.build_settings['USER_HEADER_SEARCH_PATHS'])
+  unless File.exist?(cpu_header)
+    UI.message('[libwebp] Creating missing sharpyuv/sharpyuv_cpu.h stub')
+    File.write(cpu_header, <<~HEADER)
+      #ifndef WEBP_SHARPYUV_SHARPYUV_CPU_H_
+      #define WEBP_SHARPYUV_SHARPYUV_CPU_H_
 
-    build_configuration.build_settings['HEADER_SEARCH_PATHS'] = (header_search_paths + required_search_paths).uniq
-    build_configuration.build_settings['USER_HEADER_SEARCH_PATHS'] = (user_header_search_paths + required_search_paths).uniq
+      #include "sharpyuv/sharpyuv.h"
+
+      #undef WEBP_EXTERN
+      #define WEBP_EXTERN extern
+      #define VP8GetCPUInfo SharpYuvGetCPUInfo
+      #include "src/dsp/cpu.h"
+
+      #endif
+    HEADER
+  end
+
+  unless File.exist?(dsp_cpu_header)
+    UI.message('[libwebp] Creating missing src/dsp/cpu.h stub')
+    FileUtils.mkdir_p(File.dirname(dsp_cpu_header))
+    File.write(dsp_cpu_header, <<~HEADER)
+      #ifndef WEBP_DSP_CPU_H_
+      #define WEBP_DSP_CPU_H_
+
+      typedef int (*VP8CPUInfo)(int feature);
+      #ifndef VP8GetCPUInfo
+      #define VP8_DEFINE_CPU_INFO_PLACEHOLDER
+      static VP8CPUInfo VP8GetCPUInfo = 0;
+      #else
+      WEBP_EXTERN VP8CPUInfo VP8GetCPUInfo;
+      #endif
+
+      #define NEON_CAPABLE  0
+      #define SSE2_CAPABLE  0
+      #define SSE41_CAPABLE 0
+
+      #endif
+    HEADER
   end
 end
 
-# Xcode 15+ introduced an "Explicit Module Build" system that performs a
-# ScanDependencies step before compilation.  libwebp's sharpyuv C files
-# (sharpyuv_neon.c, sharpyuv_sse2.c, etc.) and SDWebImageWebPCoder's
-# SDImageWebPCoder.m fail this scan phase under the iOS 26 SDK because the
-# scanner cannot resolve platform-specific intrinsics at scan time.
-#
-# Disabling CLANG_ENABLE_EXPLICIT_MODULES for these targets falls back to the
-# traditional implicit module resolution (the pre-Xcode-15 behaviour) which
-# compiles them without issues.  The header-search-path fix above handles the
-# build-phase include resolution separately.
-def disable_explicit_modules_for_problematic_pods(installer)
-  problematic_pods = %w[libwebp SDWebImageWebPCoder]
+# Xcode 15+ ScanDependencies and libwebp/SDWebImage explicit module failures:
+# Disable CLANG_ENABLE_EXPLICIT_MODULES for pods that trip the scanner under
+# the iOS 26 SDK.  Also bump the deployment target for SDWebImage which ships
+# IPHONEOS_DEPLOYMENT_TARGET = 9.0 (below the Xcode 26 minimum of 12.0).
+def fix_problematic_pod_build_settings(installer)
+  explicit_module_pods = %w[libwebp SDWebImageWebPCoder SDWebImage]
 
   installer.pods_project.targets.each do |target|
-    next unless problematic_pods.include?(target.name)
-
     target.build_configurations.each do |config|
-      config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
+      if explicit_module_pods.include?(target.name)
+        config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
+      end
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 12.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '12.0'
+      end
     end
   end
 end
@@ -143,7 +176,7 @@ target 'KitchenHub' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
-    configure_libwebp_header_search_paths(installer)
-    disable_explicit_modules_for_problematic_pods(installer)
+    patch_libwebp_missing_headers(installer)
+    fix_problematic_pod_build_settings(installer)
   end
 end
