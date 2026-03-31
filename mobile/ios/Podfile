@@ -39,73 +39,48 @@ def ccache_enabled?(podfile_properties)
   podfile_properties['apple.ccacheEnabled'] == 'true'
 end
 
-def normalize_build_setting_paths(value)
-  case value
-  when Array
-    value
-  when String
-    Shellwords.shellsplit(value)
-  else
-    []
-  end
-end
-
-# libwebp 1.5.0 podspec ships sharpyuv_cpu.c and sharpyuv_dsp.h which both
-# #include "sharpyuv/sharpyuv_cpu.h", but that header (and its transitive
-# dependency src/dsp/cpu.h) are missing from the pod's source_files glob.
-# Without them the compilation fails with "fatal error: file not found".
+# libwebp 1.5.0: CocoaPods strips the src/ tree from Pods/libwebp/ because the
+# sharpyuv subspec only declares source_files = "sharpyuv/*.{h,c}".  The webp
+# subspec declares src/**/*.{h,c} but CocoaPods' file cleanup can still remove
+# files that don't match any subspec's source_files when evaluated in isolation.
 #
-# Fix: synthesise the two missing headers during pod install.  The stubs
-# provide the VP8CPUInfo function-pointer typedef and a NULL default so the
-# sharpyuv code falls back to its portable C path (no NEON/SSE2 dispatch).
-# This is safe — SDWebImage only uses sharpyuv for colour-space conversion
-# during WebP decoding, and the generic path is functionally identical.
-def patch_libwebp_missing_headers(installer)
+# The sharpyuv C code #include-s files from src/ (src/webp/types.h, src/dsp/cpu.c,
+# etc.), so compilation fails with "file not found" on a clean archive build.
+#
+# Fix: copy the full src/ tree from the CocoaPods download cache into
+# Pods/libwebp/ if it's missing.  This is safe — the files are the exact same
+# version (v1.5.0) that CocoaPods downloaded; we're just restoring what the
+# cleanup phase incorrectly removed.
+def restore_libwebp_src_tree(installer)
   pods_root = installer.sandbox.root
-  libwebp_root = File.join(pods_root, 'libwebp')
-  return unless Dir.exist?(libwebp_root)
+  libwebp_pod_dir = File.join(pods_root, 'libwebp')
+  libwebp_src_dir = File.join(libwebp_pod_dir, 'src')
+  return unless Dir.exist?(libwebp_pod_dir)
+  return if Dir.exist?(File.join(libwebp_src_dir, 'webp'))
 
-  cpu_header = File.join(libwebp_root, 'sharpyuv', 'sharpyuv_cpu.h')
-  dsp_cpu_header = File.join(libwebp_root, 'src', 'dsp', 'cpu.h')
+  cache_base = File.expand_path('~/Library/Caches/CocoaPods/Pods/Release/libwebp')
+  if Dir.exist?(cache_base)
+    cached_version_dir = Dir.glob(File.join(cache_base, '1.5.0*')).first
+    cached_src = cached_version_dir ? File.join(cached_version_dir, 'src') : nil
 
-  unless File.exist?(cpu_header)
-    UI.message('[libwebp] Creating missing sharpyuv/sharpyuv_cpu.h stub')
-    File.write(cpu_header, <<~HEADER)
-      #ifndef WEBP_SHARPYUV_SHARPYUV_CPU_H_
-      #define WEBP_SHARPYUV_SHARPYUV_CPU_H_
-
-      #include "sharpyuv/sharpyuv.h"
-
-      #undef WEBP_EXTERN
-      #define WEBP_EXTERN extern
-      #define VP8GetCPUInfo SharpYuvGetCPUInfo
-      #include "src/dsp/cpu.h"
-
-      #endif
-    HEADER
+    if cached_src && Dir.exist?(cached_src)
+      UI.message("[libwebp] Restoring missing src/ tree from CocoaPods cache: #{cached_src}")
+      FileUtils.cp_r(cached_src, libwebp_pod_dir)
+      return
+    end
   end
 
-  unless File.exist?(dsp_cpu_header)
-    UI.message('[libwebp] Creating missing src/dsp/cpu.h stub')
-    FileUtils.mkdir_p(File.dirname(dsp_cpu_header))
-    File.write(dsp_cpu_header, <<~HEADER)
-      #ifndef WEBP_DSP_CPU_H_
-      #define WEBP_DSP_CPU_H_
-
-      typedef int (*VP8CPUInfo)(int feature);
-      #ifndef VP8GetCPUInfo
-      #define VP8_DEFINE_CPU_INFO_PLACEHOLDER
-      static VP8CPUInfo VP8GetCPUInfo = 0;
-      #else
-      WEBP_EXTERN VP8CPUInfo VP8GetCPUInfo;
-      #endif
-
-      #define NEON_CAPABLE  0
-      #define SSE2_CAPABLE  0
-      #define SSE41_CAPABLE 0
-
-      #endif
-    HEADER
+  UI.message('[libwebp] Cache miss — downloading src/ tree from GitHub')
+  Dir.mktmpdir do |tmpdir|
+    tarball = File.join(tmpdir, 'libwebp.tar.gz')
+    system('curl', '-sL', 'https://github.com/webmproject/libwebp/archive/refs/tags/v1.5.0.tar.gz', '-o', tarball)
+    system('tar', 'xzf', tarball, '-C', tmpdir)
+    extracted_src = File.join(tmpdir, 'libwebp-1.5.0', 'src')
+    if Dir.exist?(extracted_src)
+      FileUtils.cp_r(extracted_src, libwebp_pod_dir)
+    else
+      UI.warn('[libwebp] Could not download src/ tree — build may fail')
+    end
   end
 end
 
@@ -176,7 +151,7 @@ target 'KitchenHub' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
-    patch_libwebp_missing_headers(installer)
+    restore_libwebp_src_tree(installer)
     fix_problematic_pod_build_settings(installer)
   end
 end

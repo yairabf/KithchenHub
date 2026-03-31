@@ -120,10 +120,16 @@ end
 
 def install_ios_pods!
   Dir.chdir(IOS_ROOT) do
-    # xcodeproj's plist parser requires a UTF-8 locale; set it explicitly so
-    # pod install doesn't fail with "invalid byte sequence in UTF-8" on macOS
-    # systems whose default shell locale differs from the parent process.
-    sh({ 'LANG' => 'en_US.UTF-8', 'LC_ALL' => 'en_US.UTF-8' }, 'bundle', 'exec', 'pod', 'install')
+    utf8_env = { 'LANG' => 'en_US.UTF-8', 'LC_ALL' => 'en_US.UTF-8' }
+
+    libwebp_src = File.join('Pods', 'libwebp', 'src')
+    unless File.exist?(File.join(libwebp_src, 'webp', 'types.h'))
+      UI.message('[pods] libwebp src/ tree is incomplete — cleaning pod cache and Pods/libwebp to force a full re-download')
+      sh(utf8_env, 'bundle', 'exec', 'pod', 'cache', 'clean', 'libwebp', '--all') rescue nil
+      FileUtils.rm_rf(File.join('Pods', 'libwebp'))
+    end
+
+    sh(utf8_env, 'bundle', 'exec', 'pod', 'install')
   end
 end
 
