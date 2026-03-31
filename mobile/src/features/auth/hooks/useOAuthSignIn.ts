@@ -11,6 +11,8 @@ export interface OAuthResult {
   success: boolean;
   /** JWT access token (only present on success) */
   token?: string;
+  /** JWT refresh token (only present on success) */
+  refreshToken?: string;
   /** Whether a new household was created for the user */
   isNewHousehold?: boolean;
   /** Error code (only present on failure) */
@@ -195,10 +197,12 @@ function parseCallbackUrl(url: string): OAuthResult {
     if (token) {
       const isNewHouseholdStr = params.get('isNewHousehold');
       const isNewHousehold = isNewHouseholdStr === 'true';
+      const refreshToken = params.get('refreshToken') ?? undefined;
 
       return {
         success: true,
         token,
+        refreshToken,
         isNewHousehold,
       };
     }
