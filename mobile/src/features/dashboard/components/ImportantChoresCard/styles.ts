@@ -70,6 +70,7 @@ export const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.xxl,
     gap: spacing.md,
+    ...shadows.md,
   },
   choreRowDone: {
     opacity: 0.7,

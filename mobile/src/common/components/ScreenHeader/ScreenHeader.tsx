@@ -53,6 +53,7 @@ import { getDirectionalIcon } from '../../utils/rtlIcons';
 export function ScreenHeader({
   title,
   titleIcon,
+  titleIconSlot,
   subtitle,
   leftIcon = 'none',
   onLeftPress,
@@ -84,14 +85,16 @@ export function ScreenHeader({
   const renderTitle = () => {
     const titleRow = (
       <View style={styles.titleRow}>
-        {titleIcon && (
+        {titleIconSlot ? (
+          titleIconSlot
+        ) : titleIcon ? (
           <Ionicons
             name={titleIcon}
             size={20}
             color={colors.textPrimary}
             style={styles.titleIcon}
           />
-        )}
+        ) : null}
         <Text
           style={styles.title}
           numberOfLines={1}

@@ -79,6 +79,7 @@ export const styles = StyleSheet.create({
   choreCardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacing.xs,
     minWidth: 0,
   },
@@ -89,7 +90,6 @@ export const styles = StyleSheet.create({
     borderRadius: borderRadius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
-    maxWidth: 120,
   },
   choreTagPrimary: {
     backgroundColor: colors.pastel.yellow,
@@ -110,6 +110,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginStart: spacing.sm,
+    flexShrink: 1,
   },
   choreCardRightRtl: {
     flexDirection: 'row-reverse',
@@ -120,7 +121,7 @@ export const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textSecondary,
     fontWeight: '600',
-    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   choreCardEditButton: {
     width: 24,

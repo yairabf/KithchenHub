@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 export interface ScreenHeaderProps {
   title: string;
   titleIcon?: import('react').ComponentProps<typeof import('@expo/vector-icons').Ionicons>['name'];
+  titleIconSlot?: ReactNode;
   subtitle?: string;
   leftIcon?: 'back' | 'home' | 'none';
   onLeftPress?: () => void;

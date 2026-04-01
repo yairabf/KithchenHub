@@ -85,7 +85,7 @@ export const ChoreCard = React.memo(function ChoreCard({
                     isRtlAppLanguage ? styles.choreCardNameRtl : styles.choreCardNameLtr,
                     chore.isCompleted && styles.choreCompleted,
                   ]}
-                  numberOfLines={1}
+                  numberOfLines={2}
                 >
                   {chore.title}
                 </Text>
