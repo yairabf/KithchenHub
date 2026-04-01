@@ -115,15 +115,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadStoredUser = useCallback(async () => {
+    let didRestoreAuthenticatedUser = false;
+
+    const clearSessionState = async () => {
+      await tokenStorage.clearTokens();
+      await AsyncStorage.removeItem(STORAGE_KEY);
+      setUser(null);
+      api.setAuthToken(null);
+      logger.debug('[AuthContext] Session cleared during startup restore');
+    };
+
     try {
       // Try to restore auth session from secure storage
       const storedToken = await tokenStorage.getAccessToken();
+      logger.debug(
+        `[AuthContext] Startup restore initiated (tokenPresent=${storedToken ? 'yes' : 'no'})`,
+      );
       if (storedToken) {
         // CRITICAL: Set token BEFORE any API calls
         api.setAuthToken(storedToken);
         try {
           // Fetch current user from backend to ensure session is valid
           const userData = await authApi.getCurrentUser();
+          logger.debug('[AuthContext] Startup restore via /auth/me succeeded');
           const userToSet: User = {
             id: userData.id,
             email: userData.email || '',
@@ -134,42 +148,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: userData.role,
           };
           setUser(userToSet);
+          didRestoreAuthenticatedUser = true;
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userToSet));
           // Ensure token is still set after user is loaded
           api.setAuthToken(storedToken);
         } catch (error) {
+          logger.warn('[AuthContext] Startup restore /auth/me failed', error);
           if (isAuthError(error)) {
+            logger.debug('[AuthContext] Attempting refresh after auth error during startup');
             const refreshedToken = await refreshAccessToken();
             if (refreshedToken) {
-              const refreshedUser = await authApi.getCurrentUser();
-              const refreshedUserToSet: User = {
-                id: refreshedUser.id,
-                email: refreshedUser.email || '',
-                name: refreshedUser.name || 'Kitchen User',
-                avatarUrl: refreshedUser.avatarUrl,
-                householdId: refreshedUser.householdId || undefined,
-                isGuest: refreshedUser.isGuest,
-                role: refreshedUser.role,
-              };
-              setUser(refreshedUserToSet);
-              await AsyncStorage.setItem(
-                STORAGE_KEY,
-                JSON.stringify(refreshedUserToSet),
-              );
-              api.setAuthToken(refreshedToken);
+              logger.debug('[AuthContext] Refresh succeeded, loading user again');
+              try {
+                const refreshedUser = await authApi.getCurrentUser();
+                const refreshedUserToSet: User = {
+                  id: refreshedUser.id,
+                  email: refreshedUser.email || '',
+                  name: refreshedUser.name || 'Kitchen User',
+                  avatarUrl: refreshedUser.avatarUrl,
+                  householdId: refreshedUser.householdId || undefined,
+                  isGuest: refreshedUser.isGuest,
+                  role: refreshedUser.role,
+                };
+                setUser(refreshedUserToSet);
+                didRestoreAuthenticatedUser = true;
+                await AsyncStorage.setItem(
+                  STORAGE_KEY,
+                  JSON.stringify(refreshedUserToSet),
+                );
+                api.setAuthToken(refreshedToken);
+                logger.debug('[AuthContext] Startup restore completed after refresh');
+              } catch (refetchedUserError) {
+                logger.warn(
+                  '[AuthContext] Startup restore failed after refresh, clearing session',
+                  refetchedUserError,
+                );
+                await clearSessionState();
+              }
             } else {
-              logger.warn('Stored token is invalid, clearing session', error);
-              await tokenStorage.clearTokens();
-              api.setAuthToken(null);
+              logger.warn('[AuthContext] Refresh returned no token, clearing session');
+              await clearSessionState();
             }
           } else if (isTransientSessionError(error)) {
             logger.warn(
-              'Transient session restore error detected, keeping local session',
+              '[AuthContext] Transient session restore error detected, attempting cached user fallback',
               error,
             );
             const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
             if (storedUser) {
               setUser(JSON.parse(storedUser) as User);
+              didRestoreAuthenticatedUser = true;
+              logger.debug('[AuthContext] Cached user fallback restored');
+            } else {
+              logger.debug('[AuthContext] No cached user available for fallback');
             }
           } else {
             throw error;
@@ -180,10 +211,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.removeItem(STORAGE_KEY);
         setUser(null);
         api.setAuthToken(null);
+        logger.debug('[AuthContext] Startup restore completed as unauthenticated (no token)');
       }
     } catch (error) {
-      logger.error('Error loading user:', error);
+      logger.error('[AuthContext] Error loading user during startup restore:', error);
+      setUser(null);
+      api.setAuthToken(null);
+      await AsyncStorage.removeItem(STORAGE_KEY);
     } finally {
+      logger.debug(
+        `[AuthContext] Startup restore finished (userAuthenticated=${didRestoreAuthenticatedUser ? 'yes' : 'no'})`,
+      );
       setIsLoading(false);
     }
   }, []);

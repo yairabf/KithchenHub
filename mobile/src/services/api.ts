@@ -129,6 +129,7 @@ class ApiClient {
 
     // Construct URL with version: /api/v1/endpoint or /api/v2/endpoint
     const versionedUrl = `${this.baseUrl}/v${this.apiVersion}${endpoint}`;
+    const isRefreshEndpoint = endpoint === "/auth/refresh";
 
     try {
       logger.debug(`[API] ${customConfig.method || "GET"} ${versionedUrl}`);
@@ -144,7 +145,7 @@ class ApiClient {
           (response.status === 401 || response.status === 403) &&
           !!effectiveToken;
         if (isAuthFailure) {
-          if (!hasRetriedAuth && sessionRefreshHandler) {
+          if (!hasRetriedAuth && sessionRefreshHandler && !isRefreshEndpoint) {
             const refreshedToken = await sessionRefreshHandler();
             if (refreshedToken) {
               return this.request<T>(endpoint, {
