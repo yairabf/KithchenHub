@@ -58,6 +58,12 @@ describe('Row Level Security (RLS) Integration Tests', () => {
     await prisma.chore.deleteMany({
       where: { householdId: context.householdId },
     });
+    await prisma.customItem.deleteMany({
+      where: { householdId: context.householdId },
+    });
+    await prisma.householdInvite.deleteMany({
+      where: { householdId: context.householdId },
+    });
     await prisma.user.deleteMany({ where: { id: context.userId } });
     await prisma.household.deleteMany({ where: { id: context.householdId } });
   }
@@ -391,6 +397,116 @@ describe('Row Level Security (RLS) Integration Tests', () => {
       });
 
       // Cleanup
+      await cleanupContext(contextA);
+      await cleanupContext(contextB);
+    }, 30000);
+  });
+
+  describe.each([['Custom Item', 'customItem']])(
+    '%s isolation',
+    (label, collection) => {
+      it(`should prevent cross-household access for ${label}`, async () => {
+        const contextA = await createTestContext('custom-a');
+        const contextB = await createTestContext('custom-b');
+
+        const itemA = await (prisma[collection] as any).create({
+          data: {
+            householdId: contextA.householdId,
+            name: `Item A ${label}`,
+            category: 'Test',
+          },
+        });
+
+        const itemB = await (prisma[collection] as any).create({
+          data: {
+            householdId: contextB.householdId,
+            name: `Item B ${label}`,
+            category: 'Test',
+          },
+        });
+        void itemB;
+
+        await prisma.$transaction(async (tx) => {
+          await tx.$executeRawUnsafe('SET LOCAL ROLE authenticated');
+          await tx.$executeRawUnsafe(
+            `SET LOCAL "request.jwt.claims" = '{"sub": "${contextA.userId}"}'`,
+          );
+
+          const myItems = await (tx[collection] as any).findMany({
+            where: { householdId: contextA.householdId },
+          });
+          expect(myItems.map((i: any) => i.id)).toContain(itemA.id);
+
+          const otherItems = await (tx[collection] as any).findMany({
+            where: { householdId: contextB.householdId },
+          });
+          expect(otherItems.length).toBe(0);
+
+          await expect(
+            (tx[collection] as any).create({
+              data: {
+                householdId: contextB.householdId,
+                name: `Stolen ${label}`,
+                category: 'Test',
+              },
+            }),
+          ).rejects.toThrow();
+        });
+
+        await cleanupContext(contextA);
+        await cleanupContext(contextB);
+      }, 30000);
+    },
+  );
+
+  describe('Household Invite isolation', () => {
+    it('should prevent cross-household access and writes for household_invites', async () => {
+      const contextA = await createTestContext('invite-a');
+      const contextB = await createTestContext('invite-b');
+
+      const inviteA = await prisma.householdInvite.create({
+        data: {
+          householdId: contextA.householdId,
+          creatorId: contextA.userId,
+          code: `INVITE-A-${randomUUID().slice(0, 8)}`,
+        },
+      });
+
+      await prisma.householdInvite.create({
+        data: {
+          householdId: contextB.householdId,
+          creatorId: contextB.userId,
+          code: `INVITE-B-${randomUUID().slice(0, 8)}`,
+        },
+      });
+
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe('SET LOCAL ROLE authenticated');
+        await tx.$executeRawUnsafe(
+          `SET LOCAL "request.jwt.claims" = '{"sub": "${contextA.userId}"}'`,
+        );
+
+        const myInvites = await tx.householdInvite.findMany({
+          where: { householdId: contextA.householdId },
+        });
+        expect(myInvites.map((i) => i.id)).toContain(inviteA.id);
+
+        const otherInvites = await tx.householdInvite.findMany({
+          where: { householdId: contextB.householdId },
+        });
+        expect(otherInvites.length).toBe(0);
+
+        await expect(
+          tx.householdInvite.create({
+            data: {
+              householdId: contextB.householdId,
+              creatorId: contextA.userId,
+              code: `X-HH-${randomUUID().slice(0, 8)}`,
+            },
+          }),
+        ).rejects.toThrow();
+      });
+
       await cleanupContext(contextA);
       await cleanupContext(contextB);
     }, 30000);
