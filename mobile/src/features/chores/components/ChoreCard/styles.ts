@@ -9,13 +9,17 @@ import {
 export const styles = StyleSheet.create({
   cardContainer: {
     borderRadius: borderRadius.xxxl,
-    borderColor: colors.divider,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  cardBackgroundDefault: {
+    backgroundColor: '#EEF3F7',
+  },
+  cardBackgroundCompleted: {
+    backgroundColor: 'rgba(16, 185, 129, 0.07)',
   },
   choreCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
   },
   choreCardRtl: {
@@ -33,6 +37,8 @@ export const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: colors.iconBg.amber,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
@@ -83,6 +89,14 @@ export const styles = StyleSheet.create({
     gap: spacing.xs,
     minWidth: 0,
   },
+  choreMetaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.xs,
+    alignSelf: 'center',
+  },
   choreCardMetaRtl: {
     flexDirection: 'row-reverse',
   },
@@ -106,27 +120,23 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.7,
   },
   choreCardRight: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     gap: spacing.sm,
+    alignSelf: 'flex-start',
     marginStart: spacing.sm,
-    flexShrink: 1,
-  },
-  choreCardRightRtl: {
-    flexDirection: 'row-reverse',
-    marginStart: 0,
-    marginEnd: spacing.sm,
   },
   choreCardTime: {
     ...typography.caption,
     color: colors.textSecondary,
     fontWeight: '600',
-    flexWrap: 'wrap',
+    fontSize: 11,
   },
   choreCardEditButton: {
     width: 24,
     height: 24,
     borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.65)',
     justifyContent: 'center',
     alignItems: 'center',
   },

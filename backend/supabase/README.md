@@ -129,3 +129,49 @@ After applying these policies:
 2. ✅ Update `CATALOG_ICONS_BASE_URL` to point to public-assets
 3. ✅ Verify recipe image uploads go to `household-uploads/{householdId}/recipes/...`
 4. ✅ Test that users can only access their household's images
+
+## Database Table RLS Remediation
+
+This repository also enforces RLS for `public` schema tables via Prisma SQL migrations.
+
+### Primary migrations
+
+- `20260122130000_enable_rls_and_policies` (initial household/user RLS rollout)
+- `20260401130000_rls_remaining_public_tables` (coverage for newer tables and sensitive tables)
+
+### Tables covered by remediation migration
+
+- Sensitive/user scoped: `refresh_tokens`, `sync_idempotency_keys`
+- Household scoped: `household_invites`, `custom_items`
+- Read-only audit visibility: `audit_logs` (read-only by household/user; no client write policy)
+- Read-only catalog reference tables: `catalog_item_i18n`, `catalog_item_aliases`, `catalog_tags`, `catalog_item_tags`
+
+### Verification queries (Supabase SQL Editor)
+
+```sql
+-- 1) Ensure RLS is enabled on public tables
+SELECT schemaname, tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY tablename;
+
+-- 2) Inspect policies for public schema
+SELECT schemaname, tablename, policyname, permissive, roles, cmd
+FROM pg_policies
+WHERE schemaname = 'public'
+ORDER BY tablename, policyname;
+```
+
+Expected outcomes:
+
+- `rowsecurity = true` on all user-data tables in `public`
+- no permissive client write policy on sensitive internal tables
+- household/user scoped policies restrict cross-tenant access
+
+### Security Advisor closeout checklist
+
+1. Run migrations on target Supabase environment.
+2. Re-run Security Advisor scan.
+3. Confirm `rls_disabled_in_public` is cleared.
+4. Confirm `sensitive_columns_exposed` is cleared.
+5. If any warning remains, add a follow-up migration for the flagged table.

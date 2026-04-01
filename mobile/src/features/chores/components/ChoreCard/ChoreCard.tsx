@@ -10,6 +10,9 @@ import { formatChoreDueDateTime } from '../../../../common/utils/choreDisplayUti
 import { styles } from './styles';
 import type { ChoreCardProps } from './types';
 
+const CARD_BG_DEFAULT = '#EEF3F7';
+const CARD_BG_COMPLETED = 'rgba(16, 185, 129, 0.07)';
+
 /**
  * Chore Card Component
  * 
@@ -64,7 +67,7 @@ export const ChoreCard = React.memo(function ChoreCard({
       borderRadius={borderRadius.xxl}
     >
       <ListItemCardWrapper
-        backgroundColor={colors.surface}
+        backgroundColor={chore.isCompleted ? CARD_BG_COMPLETED : CARD_BG_DEFAULT}
         onPress={() => onToggle(chore.id)}
         style={styles.cardContainer}
         testID={`chore-card-${chore.id}`}
@@ -90,7 +93,11 @@ export const ChoreCard = React.memo(function ChoreCard({
                   {chore.title}
                 </Text>
               </View>
-              <View style={styles.choreCardMeta}>
+              <View style={[styles.choreCardMeta, isRtlAppLanguage ? styles.choreCardMetaRtl : null]}>
+                <Text style={styles.choreCardTime} numberOfLines={1}>
+                  {t('card.dueBy')} {formatChoreDueDateTime(chore.dueDate, chore.dueTime)}
+                </Text>
+                <View style={styles.choreMetaDot} />
                 <View style={[styles.choreTag, styles.choreTagPrimary]}>
                   <Text style={styles.choreTagText} numberOfLines={1}>
                     {recurrenceLabel}
@@ -106,9 +113,6 @@ export const ChoreCard = React.memo(function ChoreCard({
           </View>
 
           <View style={styles.choreCardRight}>
-            <Text style={styles.choreCardTime} numberOfLines={1}>
-              {t('card.dueBy')} {formatChoreDueDateTime(chore.dueDate, chore.dueTime)}
-            </Text>
             <TouchableOpacity
               style={styles.choreCardEditButton}
               onPress={handleEditPress}
