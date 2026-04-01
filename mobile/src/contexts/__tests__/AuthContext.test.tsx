@@ -165,6 +165,39 @@ describe('AuthContext', () => {
     },
   );
 
+  it('startup auth error then refresh success then transient /auth/me failure: preserves session tokens', async () => {
+    await AsyncStorage.setItem(
+      '@kitchen_hub_user',
+      JSON.stringify({
+        id: 'cached-user',
+        email: 'cached@example.com',
+        name: 'Cached User',
+        isGuest: false,
+        role: 'member',
+      }),
+    );
+
+    mockGetCurrentUser
+      .mockRejectedValueOnce(new ApiError('expired', 401))
+      .mockRejectedValueOnce(new NetworkError('timeout'));
+    mockRefreshAccessToken.mockResolvedValueOnce('new-token');
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const { tokenStorage: mockTokenStorage } = jest.requireMock(
+      '../../features/auth/services/tokenStorage',
+    ) as { tokenStorage: { clearTokens: jest.Mock } };
+    expect(mockTokenStorage.clearTokens).not.toHaveBeenCalled();
+    expect(result.current.user).not.toBeNull();
+  });
+
   it('startup transient failure with cached user: preserves tokens and keeps session', async () => {
     await AsyncStorage.setItem(
       '@kitchen_hub_user',

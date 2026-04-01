@@ -125,6 +125,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logger.debug('[AuthContext] Session cleared during startup restore');
     };
 
+    const restoreCachedUserFallback = async (): Promise<boolean> => {
+      const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
+      if (!storedUser) {
+        logger.debug('[AuthContext] No cached user available for fallback');
+        return false;
+      }
+
+      setUser(JSON.parse(storedUser) as User);
+      didRestoreAuthenticatedUser = true;
+      logger.debug('[AuthContext] Cached user fallback restored');
+      return true;
+    };
+
     try {
       // Try to restore auth session from secure storage
       const storedToken = await tokenStorage.getAccessToken();
@@ -179,11 +192,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 api.setAuthToken(refreshedToken);
                 logger.debug('[AuthContext] Startup restore completed after refresh');
               } catch (refetchedUserError) {
-                logger.warn(
-                  '[AuthContext] Startup restore failed after refresh, clearing session',
-                  refetchedUserError,
-                );
-                await clearSessionState();
+                if (isTransientSessionError(refetchedUserError)) {
+                  logger.warn(
+                    '[AuthContext] Startup restore /auth/me failed after refresh due to transient error, preserving session',
+                    refetchedUserError,
+                  );
+                  await restoreCachedUserFallback();
+                } else {
+                  logger.warn(
+                    '[AuthContext] Startup restore failed after refresh with non-transient error, clearing session',
+                    refetchedUserError,
+                  );
+                  await clearSessionState();
+                }
               }
             } else {
               logger.warn('[AuthContext] Refresh returned no token, clearing session');
@@ -194,14 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               '[AuthContext] Transient session restore error detected, attempting cached user fallback',
               error,
             );
-            const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
-            if (storedUser) {
-              setUser(JSON.parse(storedUser) as User);
-              didRestoreAuthenticatedUser = true;
-              logger.debug('[AuthContext] Cached user fallback restored');
-            } else {
-              logger.debug('[AuthContext] No cached user available for fallback');
-            }
+            await restoreCachedUserFallback();
           } else {
             throw error;
           }
