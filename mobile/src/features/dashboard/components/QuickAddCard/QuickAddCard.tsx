@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   I18nManager,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
@@ -30,7 +29,7 @@ export function QuickAddCard({
 }: QuickAddCardProps) {
   const { t } = useTranslation("dashboard");
   const isRtlLayout = isRtl ?? I18nManager.isRTL;
-  const isMobile = Platform.OS !== "web" && !isTablet;
+  const isMobile = !isTablet;
 
   return (
     <View

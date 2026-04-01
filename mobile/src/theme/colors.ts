@@ -46,21 +46,21 @@ export const colors = {
 
   // Icon background colors (Stitch style)
   iconBg: {
-    teal: '#D9E1E8',
+    teal: '#D6F0E0',
     orange: '#FAFAFA',
     blue: '#D2DCE4',
-    purple: '#DCE3E8',
-    amber: '#E8EBEE',
+    purple: '#E8DAEF',
+    amber: '#FFF5CC',
   },
 
   // Soft palette for cards/decorative elements
   pastel: {
-    cyan: '#D8E0E7',
-    green: '#D4DEE6',
-    peach: '#FAFAFA',
-    coral: '#D9DDE1',
-    lavender: '#D1D9E0',
-    yellow: '#DEE3E7',
+    cyan: '#D6EAF8',
+    green: '#D6F0E0',
+    peach: '#FFE8D6',
+    coral: '#FADADD',
+    lavender: '#E8DAEF',
+    yellow: '#FFF5CC',
   },
 
   // Transparent variants

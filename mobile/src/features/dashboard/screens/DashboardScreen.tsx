@@ -12,7 +12,6 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Platform,
   Image,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
@@ -76,7 +75,7 @@ export function DashboardScreen({
   const isRtl = i18n.dir() === 'rtl';
   const { user } = useAuth();
   const { isTablet } = useResponsive();
-  const isMobile = Platform.OS !== "web" && !isTablet;
+  const isMobile = !isTablet;
   const [searchValue, setSearchValue] = useState("");
   const [showSuggestedItems, setShowSuggestedItems] = useState(!isMobile);
   const shoppingButtonRef = useRef<View>(null);
@@ -425,17 +424,16 @@ export function DashboardScreen({
     <SafeAreaView style={styles.container}>
       <ScreenHeader
         title={t("header.title")}
-        titleIcon="grid-outline"
+        titleIconSlot={(
+          <Image
+            source={require("../../../../assets/fullhouse_icon.png")}
+            style={styles.titleBrandIcon}
+            resizeMode="contain"
+            accessibilityLabel="FullHouse icon"
+          />
+        )}
         rightSlot={(
           <View style={styles.headerRight}>
-            <View style={styles.brandIconContainer}>
-              <Image
-                source={require("../../../../assets/fullhouse_icon.png")}
-                style={styles.brandIcon}
-                resizeMode="contain"
-                accessibilityLabel="FullHouse icon"
-              />
-            </View>
             {isTablet && (
               <View style={styles.dateTimeContainer}>
                 <Text style={[styles.timeText, isRtl && styles.rtlNativeText]}>{formattedTime}</Text>
