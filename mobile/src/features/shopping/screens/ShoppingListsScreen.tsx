@@ -901,14 +901,24 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       return;
     }
 
-    if (!showCategoryModal || !selectedCategory) {
+    // Re-fetch whenever the language changes and a category was previously loaded,
+    // regardless of whether the modal is currently open. Without this, items fetched
+    // before i18n detection resolved (English fallback) are never corrected after
+    // the modal is closed.
+    if (!selectedCategory) {
       return;
     }
 
     const requestId = categoryRequestIdRef.current + 1;
     categoryRequestIdRef.current = requestId;
     setCategoryItemsError(null);
-    setIsCategoryItemsLoading(true);
+
+    // Only show the loading spinner when the modal is visible — if the re-fetch
+    // runs in the background (modal closed), updating the items silently avoids
+    // a loading-state flash the next time the modal opens.
+    if (showCategoryModal) {
+      setIsCategoryItemsLoading(true);
+    }
 
     void (async () => {
       try {
@@ -927,8 +937,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         }
       }
     })();
-    // Only run when language changes; modal/category are read to decide if we refetch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid refetch on modal open
+    // Only run when language changes; selectedCategory guards against a fetch with no active category.
+    // showCategoryModal/selectedCategory intentionally omitted from deps to avoid re-running on modal open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: selectedCategory and showCategoryModal are read but not deps
   }, [i18n.language, getGroceriesByCategory, t]);
 
   const handleCloseCategoryModal = useCallback(() => {
