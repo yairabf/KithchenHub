@@ -94,6 +94,7 @@ sandbox/*
 .claude/*
 .gemimi/*
 .opencode/*
+.openclaw/
 .venv/*
 .cursor/*
 # Track shared Cursor project rules; keep other .cursor/ paths local

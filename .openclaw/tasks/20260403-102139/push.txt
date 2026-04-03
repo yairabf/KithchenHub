@@ -1,4 +1,0 @@
-Project: kithchenhub
-Task ID: 20260403-102139
-Branch: task/20260403-add-the-option-to-delete-recipes
-Push completed
