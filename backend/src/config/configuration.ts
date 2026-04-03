@@ -54,6 +54,19 @@ export interface AppConfig {
 let config: AppConfig | null = null;
 
 /**
+ * Reads CATALOG_ICONS_BASE_URL without running full env validation.
+ * Used where relative catalog image paths must resolve without DATABASE_URL
+ * and other required vars (e.g. unit tests, CI).
+ */
+export function readCatalogIconsBaseUrlFromEnv(): string | undefined {
+  const raw = process.env.CATALOG_ICONS_BASE_URL;
+  if (!raw || raw.trim() === '') {
+    return undefined;
+  }
+  return raw.replace(/\/$/, '');
+}
+
+/**
  * Loads configuration values from environment variables with validation.
  * @returns Environment-aware configuration values.
  */
@@ -102,10 +115,7 @@ export const loadConfiguration = (): AppConfig => {
           tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
         }
       : undefined,
-    catalogIconsBaseUrl:
-      env.CATALOG_ICONS_BASE_URL && env.CATALOG_ICONS_BASE_URL.trim() !== ''
-        ? env.CATALOG_ICONS_BASE_URL.replace(/\/$/, '')
-        : undefined,
+    catalogIconsBaseUrl: readCatalogIconsBaseUrlFromEnv(),
     email:
       env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
         ? {
