@@ -13,6 +13,7 @@ import {
   findNodeHandle,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
@@ -30,6 +31,7 @@ export function CategoryModal({
 }: CategoryModalProps) {
   const titleRef = useRef<Text>(null);
   const { t } = useTranslation('shopping');
+  const insets = useSafeAreaInsets();
   const localizedCategoryName = t(`categories:${categoryName}`, { defaultValue: categoryName });
 
   // Set initial focus when modal opens
@@ -58,9 +60,9 @@ export function CategoryModal({
           <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
 
-        {/* Side Panel */}
+        {/* Side Panel — offset by safe-area inset so header clears the notch/Dynamic Island */}
         <Animated.View
-          style={styles.sidePanel}
+          style={[styles.sidePanel, { marginTop: insets.top + 8 }]}
           accessibilityViewIsModal={true}
           importantForAccessibility="yes"
         >

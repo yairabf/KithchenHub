@@ -22,6 +22,7 @@ export const styles = StyleSheet.create({
     width: SCREEN_WIDTH * 0.75,
     maxWidth: 500,
     backgroundColor: colors.surface,
+    borderTopLeftRadius: 16,
     ...boxShadow(0, 12, 'rgba(0, 0, 0, 0.25)', -4),
   },
   header: {
