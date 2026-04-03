@@ -20,7 +20,7 @@ import {
   UpdateListDto,
   ShoppingItemDto,
 } from '../dtos';
-import { loadConfiguration } from '../../../config/configuration';
+import { readCatalogIconsBaseUrlFromEnv } from '../../../config/configuration';
 import { MemoryCacheService } from '../../../infrastructure/cache';
 
 interface CatalogSearchRow {
@@ -134,7 +134,7 @@ export class ShoppingService {
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
-    const { catalogIconsBaseUrl } = loadConfiguration();
+    const catalogIconsBaseUrl = readCatalogIconsBaseUrlFromEnv();
     if (!catalogIconsBaseUrl) {
       return trimmed;
     }
