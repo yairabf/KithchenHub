@@ -226,25 +226,25 @@ export class CatalogService {
 
     try {
       const lang = getCatalogLanguageParam();
-      // Fetch from API
-      const results = await api.get<GrocerySearchItemDto[] | undefined>(
-        `/groceries/search?q=${encodeURIComponent(trimmedQuery)}&lang=${encodeURIComponent(lang)}`,
-      );
+
+      const [results, customItems] = await Promise.all([
+        api.get<GrocerySearchItemDto[] | undefined>(
+          `/groceries/search?q=${encodeURIComponent(trimmedQuery)}&lang=${encodeURIComponent(lang)}`,
+        ),
+        this.getCustomItems(),
+      ]);
+
       const list = Array.isArray(results) ? results : [];
       const apiItems = list.map(mapGroceryItem);
 
-      // Get custom items to merge (filter in memory)
-      const customItems = await this.getCustomItems();
+      const queryLower = trimmedQuery.toLowerCase();
       const matchingCustom = customItems.filter(ci =>
-        ci.name.toLowerCase().includes(trimmedQuery.toLowerCase())
+        ci.name.toLowerCase().includes(queryLower),
       );
 
-      // Merge results
       return this.mergeGroceryItems(apiItems, matchingCustom);
     } catch (error) {
       console.error('Search failed:', error);
-      // Fallback: try to search in cached items if we have any? 
-      // For now, return empty on error effectively, or maybe custom items.
       return [];
     }
   }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface UseDebouncedRemoteSearchOptions<T> {
+  /** Debounce delay in milliseconds (default: 150ms). */
   delay?: number;
   enabled?: boolean;
   onError?: (error: unknown) => void;
@@ -14,7 +15,7 @@ interface UseDebouncedRemoteSearchOptions<T> {
 }
 
 export function useDebouncedRemoteSearch<T>({
-  delay = 300,
+  delay = 150,
   enabled = true,
   onError,
   query,
