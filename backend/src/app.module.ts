@@ -22,11 +22,13 @@ import { VersionGuard } from './common/versioning';
 import { LoggerModule } from './common/logger/logger.module';
 import { MonitoringModule } from './common/monitoring/monitoring.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
+import { CacheModule } from './infrastructure/cache';
 
 @Module({
   imports: [
     LoggerModule,
     MonitoringModule,
+    CacheModule,
     PrismaModule,
     AuthModule,
     HouseholdsModule,

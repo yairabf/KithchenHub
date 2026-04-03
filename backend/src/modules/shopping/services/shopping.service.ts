@@ -21,6 +21,17 @@ import {
   ShoppingItemDto,
 } from '../dtos';
 import { loadConfiguration } from '../../../config/configuration';
+import { MemoryCacheService } from '../../../infrastructure/cache';
+
+interface CatalogSearchRow {
+  catalog_id: string;
+  match_name: string;
+  category: string;
+  default_unit: string | null;
+  image_url: string | null;
+  default_quantity: number | null;
+  match_score: number;
+}
 
 /**
  * Shopping service handling shopping lists, items, and grocery search.
@@ -33,10 +44,14 @@ import { loadConfiguration } from '../../../config/configuration';
 @Injectable()
 export class ShoppingService {
   private readonly logger = new Logger(ShoppingService.name);
+  private static readonly SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+  private static readonly SEARCH_CACHE_PREFIX = 'catalog_search:';
+  private static readonly SEARCH_RESULT_LIMIT = 50;
 
   constructor(
     private shoppingRepository: ShoppingRepository,
     private prisma: PrismaService,
+    private cache: MemoryCacheService,
   ) {}
 
   /**
@@ -199,191 +214,52 @@ export class ShoppingService {
     return canonicalName;
   }
 
-  private scoreCatalogSearchMatch(
-    itemName: string,
-    aliases: string[],
-    searchTerm: string,
-  ): number {
-    const normalizedName = itemName.toLowerCase();
-    const normalizedAliases = aliases.map((alias) => alias.toLowerCase());
-
-    if (normalizedName === searchTerm) {
-      return 1000;
-    }
-    if (normalizedName.startsWith(searchTerm)) {
-      return 900;
-    }
-    if (normalizedAliases.includes(searchTerm)) {
-      return 800;
-    }
-    if (normalizedAliases.some((alias) => alias.startsWith(searchTerm))) {
-      return 700;
-    }
-    if (normalizedName.includes(searchTerm)) {
-      return 600;
-    }
-    if (normalizedAliases.some((alias) => alias.includes(searchTerm))) {
-      return 500;
-    }
-
-    return 0;
-  }
-
   /**
-   * Searches groceries by name (case-insensitive).
+   * Searches groceries using the database search_catalog() function.
+   * Provides typo tolerance via pg_trgm similarity, multilingual support,
+   * and database-level relevance scoring with in-memory TTL caching.
    *
    * @param query - Search query string
-   * @returns Array of matching grocery items
+   * @param lang - Optional language code (e.g. 'he', 'en-US')
+   * @returns Array of matching grocery items, ranked by relevance
    */
   async searchGroceries(
     query: string,
     lang?: string,
   ): Promise<GrocerySearchItemDto[]> {
     const searchTerm = query?.trim() ?? '';
-    const normalizedSearchTerm = searchTerm.toLowerCase();
-    const normalizedLang = this.normalizeSearchLanguage(lang);
-    const baseLang = this.getBaseLanguage(normalizedLang);
-    const languageOrFilters = this.buildLanguageOrFilters(
-      normalizedLang,
-      baseLang,
-    );
-
     if (!searchTerm) {
       return [];
     }
 
-    const rows = await this.prisma.masterGroceryCatalog.findMany({
-      where: {
-        OR: [
-          {
-            translations: {
-              some: {
-                AND: [
-                  {
-                    OR: languageOrFilters,
-                  },
-                  {
-                    name: {
-                      contains: searchTerm,
-                      mode: 'insensitive',
-                    },
-                  },
-                ],
-              },
-            },
-          },
-          {
-            AND: [
-              {
-                translations: {
-                  none: {
-                    OR: languageOrFilters,
-                  },
-                },
-              },
-              {
-                translations: {
-                  some: {
-                    lang: 'en',
-                    name: {
-                      contains: searchTerm,
-                      mode: 'insensitive',
-                    },
-                  },
-                },
-              },
-            ],
-          },
-          {
-            aliases: {
-              some: {
-                AND: [
-                  {
-                    OR: languageOrFilters,
-                  },
-                  {
-                    alias: {
-                      contains: searchTerm,
-                      mode: 'insensitive',
-                    },
-                  },
-                ],
-              },
-            },
-          },
-          {
-            name: {
-              contains: searchTerm,
-              mode: 'insensitive',
-            },
-          },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        category: true,
-        defaultUnit: true,
-        imageUrl: true,
-        defaultQuantity: true,
-        translations: {
-          where: {
-            OR: [
-              ...languageOrFilters,
-              { lang: 'en' },
-              { lang: { startsWith: 'en-' } },
-            ],
-          },
-          select: {
-            lang: true,
-            name: true,
-          },
-        },
-        aliases: {
-          where: {
-            OR: languageOrFilters,
-          },
-          select: {
-            alias: true,
-          },
-        },
-      },
-    });
+    const normalizedLang = this.normalizeSearchLanguage(lang);
+    const cacheKey = `${ShoppingService.SEARCH_CACHE_PREFIX}${normalizedLang}:${searchTerm.toLowerCase()}`;
 
-    return rows
-      .map((row) => ({
-        resolvedName: this.resolveLocalizedCatalogName(
-          row.name,
-          row.translations,
-          normalizedLang,
-          baseLang,
-        ),
-        row,
-        score: this.scoreCatalogSearchMatch(
-          this.resolveLocalizedCatalogName(
-            row.name,
-            row.translations,
-            normalizedLang,
-            baseLang,
-          ),
-          row.aliases.map((alias) => alias.alias),
-          normalizedSearchTerm,
-        ),
-      }))
-      .sort((a, b) => {
-        if (a.score !== b.score) {
-          return b.score - a.score;
-        }
-        return a.resolvedName.localeCompare(b.resolvedName);
-      })
-      .map(({ row, resolvedName }) => ({
-        id: row.id,
-        name: resolvedName,
-        category: row.category,
-        defaultUnit: row.defaultUnit ?? undefined,
-        imageUrl: this.resolveCatalogImageUrl(row.imageUrl),
-        defaultQuantity: row.defaultQuantity ?? 1,
-      }));
+    const cached = this.cache.get<GrocerySearchItemDto[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const rows = await this.prisma.$queryRaw<CatalogSearchRow[]>`
+      SELECT * FROM search_catalog(
+        ${searchTerm},
+        ${normalizedLang},
+        ${ShoppingService.SEARCH_RESULT_LIMIT}
+      )
+    `;
+
+    const results = rows.map((row) => ({
+      id: row.catalog_id,
+      name: row.match_name,
+      category: row.category,
+      defaultUnit: row.default_unit ?? undefined,
+      imageUrl: this.resolveCatalogImageUrl(row.image_url),
+      defaultQuantity: row.default_quantity ?? 1,
+    }));
+
+    this.cache.set(cacheKey, results, ShoppingService.SEARCH_CACHE_TTL_MS);
+
+    return results;
   }
 
   /**
