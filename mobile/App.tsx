@@ -18,6 +18,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { getStoredLanguage } from './src/i18n/storage';
 import { normalizeLocale } from './src/i18n/localeNormalization';
 import { isRtlLanguage } from './src/i18n/rtl';
+import { syncI18nToDetectedLocale } from './src/i18n/syncI18nToDetectedLocale';
 
 export default function App() {
   const [bootstrapped, setBootstrapped] = useState(false);
@@ -40,6 +41,13 @@ export default function App() {
         I18nManager.forceRTL(isRTL);
         setLayoutDirection(isRTL ? 'rtl' : 'ltr');
         const { i18n } = await import('./src/i18n');
+
+        await syncI18nToDetectedLocale(i18n, initialLocale);
+
+        // Guard against component unmount during the async language-sync above.
+        // Without this, the languageChanged listener below would be attached but
+        // never cleaned up because the cleanup function ran before this point.
+        if (cancelled) return;
 
         const onLanguageChanged = (lng: string) => {
           const nextRtl = isRtlLanguage(lng);
