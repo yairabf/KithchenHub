@@ -241,6 +241,16 @@ if (typeof global.MouseEvent === 'undefined') {
   };
 }
 
+// react-native-safe-area-context - used by CategoryModal and OfflineBanner
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  SafeAreaProvider: ({ children }) => children,
+  SafeAreaView: require('react-native').View,
+  SafeAreaConsumer: ({ children }) => children({ top: 0, bottom: 0, left: 0, right: 0 }),
+  SafeAreaInsetsContext: { Consumer: ({ children }) => children({ top: 0, bottom: 0, left: 0, right: 0 }) },
+  initialWindowMetrics: { insets: { top: 0, bottom: 0, left: 0, right: 0 }, frame: { x: 0, y: 0, width: 375, height: 812 } },
+}));
+
 // react-native-gesture-handler - used by SwipeableWrapper
 jest.mock('react-native-gesture-handler', () => {
   const View = require('react-native/Libraries/Components/View/View');

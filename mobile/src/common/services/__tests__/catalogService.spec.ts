@@ -344,7 +344,7 @@ describe('CatalogService', () => {
           id: '1',
           name: 'Apple',
           image: 'apple.jpg',
-          category: 'Fruits',
+          category: 'fruits',
           defaultQuantity: 2,
         },
       ]);
@@ -370,7 +370,7 @@ describe('CatalogService', () => {
 
       expect(items).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ name: 'My Apple', category: 'Fruits' }),
+          expect.objectContaining({ name: 'My Apple', category: 'fruits' }),
         ]),
       );
     });

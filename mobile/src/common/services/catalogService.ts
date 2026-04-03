@@ -91,7 +91,9 @@ function mapGroceryItem(item: GrocerySearchItemDto): GroceryItem {
     id: item.id,
     name: item.name,
     image: item.imageUrl ?? '',
-    category: item.category,
+    // Normalize to lowercase so the category key always matches i18n lookup keys
+    // (e.g. API returns "Seafood" but categories.json uses "seafood").
+    category: item.category?.toLowerCase() ?? '',
     defaultQuantity: item.defaultQuantity ?? 1,
   };
 }
@@ -116,7 +118,7 @@ function mapCustomItemToGroceryItem(customItem: CustomItemDto): GroceryItem {
     id: `custom-${customItem.id}`,
     name: customItem.name,
     image: '', // Custom items don't have images
-    category: customItem.category || DEFAULT_CATEGORY.toLowerCase(),
+    category: customItem.category?.toLowerCase() || DEFAULT_CATEGORY.toLowerCase(),
     defaultQuantity: 1,
   };
 }
