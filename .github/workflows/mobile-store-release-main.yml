@@ -1,0 +1,25 @@
+# On merge to main (mobile changes), run Fastlane on GitHub runners — no EAS build/submit.
+# Defaults: TestFlight + Play internal only (no App Store review submit, no Play production draft).
+# For full store steps, run "Mobile release (manual)" with the prod checkboxes enabled.
+
+name: Mobile store release (main)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-store-release-main.yml"
+      - ".github/workflows/mobile-native-store-release.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  stores:
+    uses: ./.github/workflows/mobile-native-store-release.yml
+    secrets: inherit
+    with:
+      ios_app_store_submit: false
+      android_production_promote: false

@@ -200,6 +200,8 @@ platform :ios do
   desc 'Build and upload a new internal iOS build to TestFlight'
   lane :internal do
     ensure_release_api_url!
+    setup_ci if ENV['CI']
+
     repo_version = read_repo_version!
     UI.message("Repo version.json: #{repo_version}")
 
@@ -224,6 +226,7 @@ platform :ios do
       configuration: IOS_CONFIGURATION,
       export_method: 'app-store',
       clean: true,
+      api_key: api_key,
       export_options: {
         method: 'app-store-connect',
         signingStyle: 'automatic',
