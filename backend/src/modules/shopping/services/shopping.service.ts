@@ -143,7 +143,7 @@ export class ShoppingService {
   }
 
   private normalizeSearchLanguage(lang?: string): string {
-    const normalized = lang?.trim().toLowerCase();
+    const normalized = lang?.trim().toLowerCase().replace(/_/g, '-');
     if (!normalized || normalized.length === 0) {
       return 'en';
     }

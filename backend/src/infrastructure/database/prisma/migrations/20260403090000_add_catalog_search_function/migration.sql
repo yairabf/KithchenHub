@@ -36,11 +36,13 @@ RETURNS TABLE(
 ) AS $$
 DECLARE
   v_base_lang TEXT;
+  v_lang      TEXT;  -- p_lang with underscores normalized to hyphens
   v_term      TEXT;
   v_term_like TEXT;  -- v_term with LIKE metacharacters (% _) escaped
 BEGIN
-  v_term      := lower(trim(p_search_term));
-  v_base_lang := split_part(lower(trim(p_lang)), '-', 1);
+  v_term := lower(trim(p_search_term));
+  v_lang := replace(lower(trim(p_lang)), '_', '-');
+  v_base_lang := split_part(v_lang, '-', 1);
 
   IF v_term IS NULL OR v_term = '' THEN
     RETURN;
@@ -56,11 +58,11 @@ BEGIN
       t.catalog_item_id,
       t.name AS translated_name
     FROM catalog_item_i18n t
-    WHERE t.lang IN (p_lang, v_base_lang, 'en')
+    WHERE t.lang IN (v_lang, v_base_lang, 'en')
        OR t.lang LIKE v_base_lang || '-%'
     ORDER BY t.catalog_item_id,
       CASE t.lang
-        WHEN p_lang     THEN 1
+        WHEN v_lang     THEN 1
         WHEN v_base_lang THEN 2
         WHEN 'en'        THEN 4
         ELSE 3  -- base-language regional variants (e.g. he-IL when p_lang = he)
@@ -71,7 +73,7 @@ BEGIN
   lang_aliases AS (
     SELECT a.catalog_item_id, a.alias
     FROM catalog_item_aliases a
-    WHERE a.lang IN (p_lang, v_base_lang)
+    WHERE a.lang IN (v_lang, v_base_lang)
        OR a.lang LIKE v_base_lang || '-%'
   ),
 

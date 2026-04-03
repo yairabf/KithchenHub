@@ -589,6 +589,30 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       );
     });
 
+    describe('locale normalization (underscore → hyphen)', () => {
+      it.each([
+        ['pt_BR', 'pt-br'],
+        ['en_US', 'en-us'],
+        ['he_IL', 'he-il'],
+        ['zh_Hans_CN', 'zh-hans-cn'],
+        ['pt-BR', 'pt-br'],
+        ['en', 'en'],
+      ])(
+        'should normalize %s to %s in the cache key',
+        async (inputLang, expectedNormalized) => {
+          (prisma.$queryRaw as jest.Mock).mockResolvedValue([]);
+
+          await service.searchGroceries('test', inputLang);
+
+          expect(cache.set).toHaveBeenCalledWith(
+            `catalog_search:${expectedNormalized}:test`,
+            expect.any(Array),
+            expect.any(Number),
+          );
+        },
+      );
+    });
+
     /*
      * NOTE: Language-fallback ranking (exact lang > base lang > en) is now
      * handled inside the search_catalog() SQL function. Unit testing the
