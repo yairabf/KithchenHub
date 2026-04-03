@@ -153,6 +153,18 @@ export function useRecipes() {
         return repository.update(recipeId, updates);
     };
 
+    const deleteRecipe = async (recipeId: string): Promise<void> => {
+        if (!repository) {
+            // Guest mode: delete recipe and update local state. On failure, state is unchanged; error propagates to caller.
+            await service.deleteRecipe(recipeId);
+            setGuestRecipes(prev => prev.filter(recipe => recipe.id !== recipeId));
+            return;
+        }
+
+        // Signed-in mode: use repository (cache events will trigger UI update)
+        await repository.delete(recipeId);
+    };
+
     const getRecipeById = useCallback(async (recipeId: string): Promise<Recipe | null> => {
         if (!repository) {
             // Guest mode: find in guest recipes
@@ -198,6 +210,7 @@ export function useRecipes() {
         error,
         addRecipe,
         updateRecipe,
+        deleteRecipe,
         getRecipeById,
         refresh,
     };

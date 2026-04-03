@@ -67,6 +67,18 @@ export const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.md + spacing.xs,
   },
+  deleteButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    zIndex: 1,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
   recipeName: {
     fontSize: 16,
     fontWeight: '800',

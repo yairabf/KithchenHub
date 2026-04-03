@@ -55,7 +55,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const { t } = useTranslation('recipes');
   const { width, isTablet } = useResponsive();
   const { user } = useAuth();
-  const { recipes, isLoading, addRecipe, updateRecipe, refresh, getRecipeById } = useRecipes();
+  const { recipes, isLoading, addRecipe, updateRecipe, deleteRecipe, refresh, getRecipeById } = useRecipes();
   const { groceryItems, searchGroceries } = useCatalog(); // Use catalog hook for grocery items and search
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -245,6 +245,16 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     }
   };
 
+  const handleDeleteRecipe = async (recipe: Recipe) => {
+    try {
+      await deleteRecipe(recipe.id);
+      showToast('Recipe deleted successfully', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete recipe';
+      showToast(message, 'error');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
@@ -378,6 +388,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                     backgroundColor={colors.surface}
                     onPress={() => onSelectRecipe?.(recipe)}
                     onEdit={() => handleEditRecipe(recipe)}
+                    onDelete={() => handleDeleteRecipe(recipe)}
                     width={cardWidth}
                   />
                 ))}

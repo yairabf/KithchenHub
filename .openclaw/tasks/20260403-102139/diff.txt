@@ -1,0 +1,148 @@
+ M mobile/src/features/recipes/components/RecipeCard/RecipeCard.tsx
+ M mobile/src/features/recipes/components/RecipeCard/styles.ts
+ M mobile/src/features/recipes/components/RecipeCard/types.ts
+ M mobile/src/features/recipes/hooks/useRecipes.ts
+ M mobile/src/features/recipes/screens/RecipesScreen.tsx
+?? .openclaw/
+
+=== git diff --stat ===
+ .../features/recipes/components/RecipeCard/RecipeCard.tsx   | 12 +++++++++++-
+ mobile/src/features/recipes/components/RecipeCard/styles.ts | 12 ++++++++++++
+ mobile/src/features/recipes/components/RecipeCard/types.ts  |  1 +
+ mobile/src/features/recipes/hooks/useRecipes.ts             | 13 +++++++++++++
+ mobile/src/features/recipes/screens/RecipesScreen.tsx       | 13 ++++++++++++-
+ 5 files changed, 49 insertions(+), 2 deletions(-)
+
+=== git diff (first 300 lines) ===
+diff --git a/mobile/src/features/recipes/components/RecipeCard/RecipeCard.tsx b/mobile/src/features/recipes/components/RecipeCard/RecipeCard.tsx
+index 2cc8591..6d6334e 100644
+--- a/mobile/src/features/recipes/components/RecipeCard/RecipeCard.tsx
++++ b/mobile/src/features/recipes/components/RecipeCard/RecipeCard.tsx
+@@ -11,7 +11,7 @@ import { RecipeCardProps } from './types';
+ import { useRecipeImage } from '../../../../common/hooks/useRecipeImage';
+ import { getRecipeCategoryLabel, normalizeRecipeCategory } from '../../constants';
+ 
+-export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onEdit }: RecipeCardProps) {
++export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onEdit, onDelete }: RecipeCardProps) {
+   const { t, i18n } = useTranslation('recipes');
+   const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
+ 
+@@ -89,6 +89,16 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
+       </View>
+ 
+       <View style={styles.recipeInfo}>
++        {onDelete ? (
++          <TouchableOpacity
++            onPress={onDelete}
++            style={styles.deleteButton}
++            accessibilityRole="button"
++            accessibilityLabel={t('screen.deleteRecipe')}
++          >
++            <Ionicons name="trash-outline" size={18} color={colors.error} />
++          </TouchableOpacity>
++        ) : null}
+         <TextWrapper>
+           <Text
+             style={[styles.recipeName, isRtlLayout && styles.recipeNameRtl]}
+diff --git a/mobile/src/features/recipes/components/RecipeCard/styles.ts b/mobile/src/features/recipes/components/RecipeCard/styles.ts
+index 4c24347..e938a88 100644
+--- a/mobile/src/features/recipes/components/RecipeCard/styles.ts
++++ b/mobile/src/features/recipes/components/RecipeCard/styles.ts
+@@ -67,6 +67,18 @@ export const styles = StyleSheet.create({
+     paddingTop: spacing.md,
+     paddingBottom: spacing.md + spacing.xs,
+   },
++  deleteButton: {
++    position: 'absolute',
++    top: spacing.sm,
++    right: spacing.sm,
++    zIndex: 1,
++    width: 30,
++    height: 30,
++    borderRadius: 15,
++    alignItems: 'center',
++    justifyContent: 'center',
++    backgroundColor: colors.surface,
++  },
+   recipeName: {
+     fontSize: 16,
+     fontWeight: '800',
+diff --git a/mobile/src/features/recipes/components/RecipeCard/types.ts b/mobile/src/features/recipes/components/RecipeCard/types.ts
+index bd6727c..03c7d69 100644
+--- a/mobile/src/features/recipes/components/RecipeCard/types.ts
++++ b/mobile/src/features/recipes/components/RecipeCard/types.ts
+@@ -16,4 +16,5 @@ export interface RecipeCardProps {
+   width: number;
+   style?: ViewStyle;
+   onEdit?: () => void;
++  onDelete?: () => void;
+ }
+diff --git a/mobile/src/features/recipes/hooks/useRecipes.ts b/mobile/src/features/recipes/hooks/useRecipes.ts
+index 35024c4..c3b49bf 100644
+--- a/mobile/src/features/recipes/hooks/useRecipes.ts
++++ b/mobile/src/features/recipes/hooks/useRecipes.ts
+@@ -153,6 +153,18 @@ export function useRecipes() {
+         return repository.update(recipeId, updates);
+     };
+ 
++    const deleteRecipe = async (recipeId: string): Promise<void> => {
++        if (!repository) {
++            // Guest mode: delete recipe and update local state. On failure, state is unchanged; error propagates to caller.
++            await service.deleteRecipe(recipeId);
++            setGuestRecipes(prev => prev.filter(recipe => recipe.id !== recipeId));
++            return;
++        }
++
++        // Signed-in mode: use repository (cache events will trigger UI update)
++        await repository.delete(recipeId);
++    };
++
+     const getRecipeById = useCallback(async (recipeId: string): Promise<Recipe | null> => {
+         if (!repository) {
+             // Guest mode: find in guest recipes
+@@ -198,6 +210,7 @@ export function useRecipes() {
+         error,
+         addRecipe,
+         updateRecipe,
++        deleteRecipe,
+         getRecipeById,
+         refresh,
+     };
+diff --git a/mobile/src/features/recipes/screens/RecipesScreen.tsx b/mobile/src/features/recipes/screens/RecipesScreen.tsx
+index e8ee548..143950c 100644
+--- a/mobile/src/features/recipes/screens/RecipesScreen.tsx
++++ b/mobile/src/features/recipes/screens/RecipesScreen.tsx
+@@ -55,7 +55,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
+   const { t } = useTranslation('recipes');
+   const { width, isTablet } = useResponsive();
+   const { user } = useAuth();
+-  const { recipes, isLoading, addRecipe, updateRecipe, refresh, getRecipeById } = useRecipes();
++  const { recipes, isLoading, addRecipe, updateRecipe, deleteRecipe, refresh, getRecipeById } = useRecipes();
+   const { groceryItems, searchGroceries } = useCatalog(); // Use catalog hook for grocery items and search
+   const [searchQuery, setSearchQuery] = useState('');
+   const [selectedCategory, setSelectedCategory] = useState('All');
+@@ -245,6 +245,16 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
+     }
+   };
+ 
++  const handleDeleteRecipe = async (recipe: Recipe) => {
++    try {
++      await deleteRecipe(recipe.id);
++      showToast('Recipe deleted successfully', 'success');
++    } catch (error) {
++      const message = error instanceof Error ? error.message : 'Failed to delete recipe';
++      showToast(message, 'error');
++    }
++  };
++
+   return (
+     <SafeAreaView style={styles.container}>
+       <ScreenHeader
+@@ -378,6 +388,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
+                     backgroundColor={colors.surface}
+                     onPress={() => onSelectRecipe?.(recipe)}
+                     onEdit={() => handleEditRecipe(recipe)}
++                    onDelete={() => handleDeleteRecipe(recipe)}
+                     width={cardWidth}
+                   />
+                 ))}
