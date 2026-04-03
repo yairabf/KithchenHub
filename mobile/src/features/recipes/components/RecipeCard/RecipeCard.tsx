@@ -11,7 +11,7 @@ import { RecipeCardProps } from './types';
 import { useRecipeImage } from '../../../../common/hooks/useRecipeImage';
 import { getRecipeCategoryLabel, normalizeRecipeCategory } from '../../constants';
 
-export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onEdit }: RecipeCardProps) {
+export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onEdit, onDelete }: RecipeCardProps) {
   const { t, i18n } = useTranslation('recipes');
   const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
 
@@ -89,6 +89,16 @@ export function RecipeCard({ recipe, backgroundColor, onPress, width, style, onE
       </View>
 
       <View style={styles.recipeInfo}>
+        {onDelete ? (
+          <TouchableOpacity
+            onPress={onDelete}
+            style={styles.deleteButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('screen.deleteRecipe')}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+          </TouchableOpacity>
+        ) : null}
         <TextWrapper>
           <Text
             style={[styles.recipeName, isRtlLayout && styles.recipeNameRtl]}

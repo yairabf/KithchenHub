@@ -16,4 +16,5 @@ export interface RecipeCardProps {
   width: number;
   style?: ViewStyle;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
