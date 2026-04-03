@@ -23,6 +23,7 @@ export const styles = StyleSheet.create({
     maxWidth: 500,
     backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
+    overflow: 'hidden',
     ...boxShadow(0, 12, 'rgba(0, 0, 0, 0.25)', -4),
   },
   header: {
