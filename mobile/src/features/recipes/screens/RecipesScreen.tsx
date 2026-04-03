@@ -32,6 +32,7 @@ import { useRecipes } from '../hooks/useRecipes';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { Toast } from '../../../common/components/Toast';
+import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
 import { logger } from '../../../common/utils/logger';
 import {
   RECIPE_CATEGORIES,
@@ -382,15 +383,18 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
             ) : (
               <View style={styles.grid}>
                 {filteredRecipes.map((recipe) => (
-                  <RecipeCard
+                  <SwipeableWrapper
                     key={recipe.id}
-                    recipe={recipe}
-                    backgroundColor={colors.surface}
-                    onPress={() => onSelectRecipe?.(recipe)}
-                    onEdit={() => handleEditRecipe(recipe)}
-                    onDelete={() => handleDeleteRecipe(recipe)}
-                    width={cardWidth}
-                  />
+                    onSwipeDelete={() => handleDeleteRecipe(recipe)}
+                  >
+                    <RecipeCard
+                      recipe={recipe}
+                      backgroundColor={colors.surface}
+                      onPress={() => onSelectRecipe?.(recipe)}
+                      onEdit={() => handleEditRecipe(recipe)}
+                      width={cardWidth}
+                    />
+                  </SwipeableWrapper>
                 ))}
               </View>
             )}
