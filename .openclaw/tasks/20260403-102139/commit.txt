@@ -2,4 +2,4 @@ Project: kithchenhub
 Task ID: 20260403-102139
 Branch: task/20260403-add-the-option-to-delete-recipes
 Commit:
-7c319f5 task(task-20260403-102139): add the option to delete recipes
+3b7cbd0 task(task-20260403-102139): add the option to delete recipes
