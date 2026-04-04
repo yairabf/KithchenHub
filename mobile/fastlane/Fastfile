@@ -3,7 +3,7 @@ default_platform(:ios)
 require 'fileutils'
 require 'json'
 
-APP_SCHEME = 'KitchenHub'
+APP_SCHEME = 'FullHouse'
 IOS_CONFIGURATION = 'Release'
 APPLE_TEAM_ID = 'UT62KQGZDJ'
 IOS_APP_IDENTIFIER = 'com.kitchenhub.app'
@@ -12,8 +12,8 @@ ANDROID_TRACKS = %w[internal alpha beta production].freeze
 
 MOBILE_ROOT = File.expand_path('..', __dir__)
 IOS_ROOT = File.join(MOBILE_ROOT, 'ios')
-IOS_WORKSPACE = File.join(IOS_ROOT, 'KitchenHub.xcworkspace')
-IOS_XCODEPROJ = File.join(IOS_ROOT, 'KitchenHub.xcodeproj')
+IOS_WORKSPACE = File.join(IOS_ROOT, 'FullHouse.xcworkspace')
+IOS_XCODEPROJ = File.join(IOS_ROOT, 'FullHouse.xcodeproj')
 ANDROID_GRADLE_PROJECT_DIR = File.join(MOBILE_ROOT, 'android')
 ANDROID_AAB_PATH = File.join(
   ANDROID_GRADLE_PROJECT_DIR,
