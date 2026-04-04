@@ -226,7 +226,6 @@ platform :ios do
       configuration: IOS_CONFIGURATION,
       export_method: 'app-store',
       clean: true,
-      api_key: api_key,
       export_options: {
         method: 'app-store-connect',
         signingStyle: 'automatic',
