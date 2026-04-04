@@ -1,0 +1,10 @@
+git_url("https://github.com/yairabf/kitchenhub-certs.git")
+
+storage_mode("git")
+
+type("appstore")
+
+app_identifier("com.kitchenhub.app")
+
+# In CI the git clone uses MATCH_GIT_BASIC_AUTHORIZATION (base64 user:PAT).
+# Locally it falls back to your default git credentials.

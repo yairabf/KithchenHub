@@ -159,11 +159,15 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
           if [ -z "$EXPO_PUBLIC_API_URL" ]; then echo "Missing EXPO_PUBLIC_API_URL"; exit 1; fi
           if [ -z "$ASC_KEY_ID" ]; then echo "Missing ASC_KEY_ID"; exit 1; fi
           if [ -z "$ASC_ISSUER_ID" ]; then echo "Missing ASC_ISSUER_ID"; exit 1; fi
           if [ -z "$ASC_KEY_P8" ]; then echo "Missing ASC_KEY_P8"; exit 1; fi
+          if [ -z "$MATCH_PASSWORD" ]; then echo "Missing MATCH_PASSWORD"; exit 1; fi
+          if [ -z "$MATCH_GIT_BASIC_AUTHORIZATION" ]; then echo "Missing MATCH_GIT_BASIC_AUTHORIZATION"; exit 1; fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -203,9 +207,10 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
           FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "5"
-          GYM_OUTPUT_FILES: "${{ runner.temp }}/ipa"
         run: bundle exec fastlane ios internal
 
       - name: Upload gym build log on failure
@@ -224,6 +229,8 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
           FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "5"
         run: bundle exec fastlane ios prod
