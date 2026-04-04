@@ -1,11 +1,16 @@
-# Manually trigger the Fastlane store pipeline. Check the boxes to run store promotion
-# lanes after upload (same as mobile-store-release-main, but you control prod steps).
+# Manually trigger the Fastlane store pipeline.
+# build_only=true: archive iOS + build Android AAB but do NOT upload to any store.
+# Use this to validate compilation before committing to a full release run.
 
 name: Mobile release (manual)
 
 on:
   workflow_dispatch:
     inputs:
+      build_only:
+        description: "Build only — archive iOS and build Android AAB, skip all store uploads"
+        type: boolean
+        default: false
       ios_app_store_submit:
         description: After TestFlight, submit for App Store review (fastlane ios prod)
         type: boolean
@@ -19,7 +24,137 @@ permissions:
   contents: read
 
 jobs:
+  # --- Build-only path (no uploads, fast iteration) ---
+  ios-build-check:
+    name: iOS build check (archive only)
+    if: ${{ inputs.build_only }}
+    runs-on: macos-15
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version-file: mobile/.ruby-version
+          bundler-cache: true
+          working-directory: mobile
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Write App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Generate native iOS project (Expo prebuild)
+        env:
+          CI: "1"
+          EXPO_NO_TELEMETRY: "1"
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Fastlane iOS archive (build only, no TestFlight upload)
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "5"
+        run: bundle exec fastlane ios build_check
+
+      - name: Upload gym build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gym-build-log
+          path: ~/Library/Logs/gym/
+          retention-days: 5
+
+  android-build-check:
+    name: Android build check (AAB only)
+    if: ${{ inputs.build_only }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: >-
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Write keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          chmod 600 "$RUNNER_TEMP/release.keystore"
+
+      - name: Generate native Android project (Expo prebuild)
+        env:
+          CI: "1"
+          EXPO_NO_TELEMETRY: "1"
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version-file: mobile/.ruby-version
+          bundler-cache: true
+          working-directory: mobile
+
+      - name: Fastlane Android AAB build (no Play upload)
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bundle exec fastlane android build_check
+
+  # --- Full release path (uploads to stores) ---
   stores:
+    if: ${{ !inputs.build_only }}
     uses: ./.github/workflows/mobile-native-store-release.yml
     secrets: inherit
     with:
