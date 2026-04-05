@@ -20,6 +20,8 @@ import {
   preserveLocalizedName,
 } from './shoppingFactory';
 
+type ShoppingItemInput = Parameters<typeof createShoppingItem>[0];
+
 const baseItem = (): ShoppingItem =>
   ({
     id: 'item-1',
@@ -80,6 +82,20 @@ describe('createShoppingItem', () => {
     expect(result.createdAt).toBeDefined();
     expect(result.updatedAt).toBeDefined();
   });
+
+  describe.each<[string, ShoppingItemInput, string | undefined]>([
+    ['catalog item (non-custom id)', { id: 'cat-uuid-1', name: 'Apple', image: '', category: 'Fruits', defaultQuantity: 1 }, 'cat-uuid-1'],
+    ['custom item (custom- prefix)', { id: 'custom-abc', name: 'My Item', image: '', category: 'Other', defaultQuantity: 1 }, undefined],
+    ['item with no id field', { name: 'Apple', image: '', category: 'Fruits' }, undefined],
+  ])(
+    'catalogItemId propagation for %s',
+    (_label, groceryItem, expectedCatalogItemId) => {
+      it(`sets catalogItemId to ${expectedCatalogItemId ?? 'undefined'}`, () => {
+        const result = createShoppingItem(groceryItem, 'list-1', 1);
+        expect(result.catalogItemId).toBe(expectedCatalogItemId);
+      });
+    },
+  );
 });
 
 describe('createShoppingList', () => {

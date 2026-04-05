@@ -147,7 +147,7 @@ describe('quickAddItem – create new item', () => {
 });
 
 describe('quickAddItem – increment existing item', () => {
-  it('calls updateItem with incremented quantity when item already exists', async () => {
+  it('calls updateItem with incremented quantity when item already exists (same name)', async () => {
     const existingItem: ShoppingItem = makeServerItem({ quantity: 2 });
     const groceryItem = makeGroceryItem({ name: 'Red Apple' });
 
@@ -175,4 +175,107 @@ describe('quickAddItem – increment existing item', () => {
 
     expect(updateItem).toHaveBeenCalledWith('cuid-server-1', { quantity: 3 });
   });
+});
+
+describe('quickAddItem – catalogItemId deduplication', () => {
+  // The existing item was created with a Hebrew name (or loaded from a session
+  // where the server returned English).  The user is now adding the same
+  // catalog item, but the grocery search returned a different name.
+  describe.each([
+    [
+      'Hebrew user, English stored item',
+      'תפוחים',     // name returned by catalog search in current locale
+      'Red Apple',  // name stored on the existing item (English from DB)
+      'catalog-1',  // same catalogItemId on both
+    ],
+    [
+      'Spanish user, English stored item',
+      'Manzana',
+      'Red Apple',
+      'catalog-1',
+    ],
+    [
+      'same catalog item, same English name',
+      'Red Apple',
+      'Red Apple',
+      'catalog-1',
+    ],
+  ])(
+    '%s',
+    (_label, searchResultName, existingStoredName, catalogItemId) => {
+      it('increments quantity instead of creating a duplicate', async () => {
+        const existingItem: ShoppingItem = makeServerItem({
+          name: existingStoredName,
+          catalogItemId,
+          quantity: 1,
+        });
+
+        const groceryItem = makeGroceryItem({
+          id: catalogItemId,
+          name: searchResultName,
+        });
+
+        const updateItem = jest.fn().mockResolvedValue({ ...existingItem, quantity: 2 });
+        const executeWithOptimisticUpdate = jest.fn().mockImplementation(
+          async (operation, optimistic) => {
+            optimistic();
+            return operation();
+          },
+        );
+
+        let items: ShoppingItem[] = [existingItem];
+        const setAllItems = jest.fn((updater) => {
+          items = typeof updater === 'function' ? updater(items) : updater;
+        });
+
+        await quickAddItem(groceryItem, makeList(), {
+          allItems: items,
+          setAllItems,
+          createItem: jest.fn(),
+          updateItem,
+          executeWithOptimisticUpdate,
+          logError: jest.fn(),
+        });
+
+        expect(updateItem).toHaveBeenCalledWith('cuid-server-1', { quantity: 2 });
+      });
+
+      it('does NOT call createItem when the same catalog item already exists', async () => {
+        const existingItem: ShoppingItem = makeServerItem({
+          name: existingStoredName,
+          catalogItemId,
+          quantity: 1,
+        });
+
+        const groceryItem = makeGroceryItem({
+          id: catalogItemId,
+          name: searchResultName,
+        });
+
+        const createItem = jest.fn();
+        const executeWithOptimisticUpdate = jest.fn().mockImplementation(
+          async (operation, optimistic) => {
+            optimistic();
+            return operation();
+          },
+        );
+
+        let items: ShoppingItem[] = [existingItem];
+        const setAllItems = jest.fn((updater) => {
+          items = typeof updater === 'function' ? updater(items) : updater;
+        });
+
+        await quickAddItem(groceryItem, makeList(), {
+          allItems: items,
+          setAllItems,
+          createItem,
+          updateItem: jest.fn().mockResolvedValue({ ...existingItem, quantity: 2 }),
+          executeWithOptimisticUpdate,
+          logError: jest.fn(),
+        });
+
+        expect(createItem).not.toHaveBeenCalled();
+      });
+    },
+  );
 });
