@@ -32,7 +32,7 @@ import { ImportantChoresCard } from "../components/ImportantChoresCard";
 import { QuickAddCard } from "../components/QuickAddCard";
 import { QuickStatsRow } from "../components/QuickStats";
 import type { QuickStatItem } from "../components/QuickStats";
-import type { ShoppingItem } from "../../../mocks/shopping";
+import type { ShoppingItem, ShoppingList } from "../../../mocks/shopping";
 import { useDashboardChores } from "../hooks/useDashboardChores";
 import { useRecipes } from "../../recipes/hooks/useRecipes";
 import { createShoppingService } from "../../shopping/services/shoppingService";
@@ -121,22 +121,37 @@ export function DashboardScreen({
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [shoppingListsCount, setShoppingListsCount] = useState(0);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
+  const [mainList, setMainList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Always-current snapshot of allItems, read synchronously inside event handlers
+  // to avoid stale closure captures during rapid concurrent taps.
+  const allItemsRef = useRef<ShoppingItem[]>([]);
+  allItemsRef.current = allItems;
+
+  // Tracks catalog IDs / names of items currently being added to prevent
+  // concurrent rapid taps of the same item from racing past the dedup check.
+  const pendingQuickAddKeys = useRef<Set<string>>(new Set());
 
   const loadShoppingData = useCallback(async () => {
     try {
+      // getShoppingData passes the current i18n.language to the aggregate endpoint,
+      // so item names are returned in the active locale. i18n.language is listed as
+      // a dependency so this callback is recreated (and re-run) on language changes.
       const data = await shoppingService.getShoppingData();
       setActiveListId((current) =>
         getActiveListId(data.shoppingLists, current),
       );
       setShoppingListsCount(data.shoppingLists.length);
       setAllItems(data.shoppingItems);
+      setMainList(getMainList(data.shoppingLists));
     } catch (_err) {
       setActiveListId(null);
       setShoppingListsCount(0);
       setAllItems([]);
+      setMainList(null);
     }
-  }, [shoppingService]);
+  }, [shoppingService, i18n.language]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -290,10 +305,6 @@ export function DashboardScreen({
     return await shoppingService.createItem(item);
   };
 
-  const updateItem = async (itemId: string, updates: Partial<ShoppingItem>) => {
-    return await shoppingService.updateItem(itemId, updates);
-  };
-
   const executeWithOptimisticUpdate = async <T,>(
     operation: () => Promise<T>,
     optimisticUpdate: () => void,
@@ -311,36 +322,46 @@ export function DashboardScreen({
   };
 
   const handleQuickAddGroceryItem = async (item: GroceryItem) => {
+    if (!mainList) {
+      showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
+      return;
+    }
+
+    // Prevent concurrent rapid taps of the same item from racing past the
+    // dedup check before React re-renders with the updated allItems state.
+    const addKey = item.id ?? item.name;
+    if (pendingQuickAddKeys.current.has(addKey)) return;
+    pendingQuickAddKeys.current.add(addKey);
+
     try {
-      const data = await shoppingService.getShoppingData();
-      const mainList = getMainList(data.shoppingLists);
-
-      if (!mainList) {
-        showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
-        return;
-      }
-
-      // Refresh allItems from latest data before quick add
-      setAllItems(data.shoppingItems);
-
+      // Read from the ref (not the closure) so we always see the latest allItems,
+      // including in-flight optimistic items added by the very first tap.
       await quickAddItem(item, mainList, {
-        allItems: data.shoppingItems,
+        allItems: allItemsRef.current,
         setAllItems,
         createItem,
-        updateItem,
+        updateItem: async (itemId, updates) => {
+          try {
+            return await shoppingService.updateItem(itemId, updates);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (message.includes('not found')) {
+              // The item exists in cached state but was deleted from the server.
+              // Remove it so the next tap creates it fresh instead of retrying a
+              // stale update that will always 404.
+              setAllItems((prev) => prev.filter((i) => i.id !== itemId));
+            }
+            throw error;
+          }
+        },
         executeWithOptimisticUpdate,
         logError: (message, error) => {
           console.error(message, error);
           showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
         },
       });
-
-      // Refresh data after quick add to sync with server
-      const updatedData = await shoppingService.getShoppingData();
-      setAllItems(updatedData.shoppingItems);
-    } catch (error) {
-      console.error("Failed to add item to shopping list:", error);
-      showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
+    } finally {
+      pendingQuickAddKeys.current.delete(addKey);
     }
   };
 

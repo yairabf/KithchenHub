@@ -18,6 +18,7 @@ type ShoppingListRow = {
 type ShoppingItemRow = {
   id: string;
   list_id: string;
+  catalog_item_id?: string | null;
   name: string;
   quantity?: number | null;
   category?: string | null;
@@ -266,5 +267,195 @@ describe('buildListIdFilter', () => {
     ['multiple ids', ['list-2', 'list-1'], 'list_id=in.(list-1,list-2)'],
   ])('when %s', (_label, listIds, expected) => {
     expect(buildListIdFilter(listIds)).toBe(expected);
+  });
+});
+
+describe('applyShoppingItemChange – catalogItemId deduplication', () => {
+  // An optimistic item that was created with a Hebrew name and a client-side
+  // temporary ID (simulates the item sitting in state before the API responds).
+  // createShoppingItem always generates id !== localId (id = 'item-{timestamp}',
+  // localId = randomUUID()), so a realistic optimistic item has different values.
+  const hebrewOptimisticItem: ShoppingItem = {
+    id: 'item-1234567890',   // client-generated temp id (item-{Date.now()} pattern)
+    localId: 'uuid-abc-def', // client-generated stable localId (randomUUID pattern)
+    name: 'תפוחים',           // Hebrew for "apples"
+    catalogItemId: 'cat-apple',
+    image: 'apple.png',
+    quantity: 1,
+    category: 'Fruits',
+    listId: 'list-1',
+    isChecked: false,
+  };
+
+  describe.each([
+    [
+      'Hebrew name vs English DB name – match by catalogItemId',
+      'תפוחים',       // existing localized name
+      'Red Apple',    // English name stored in DB
+      'cat-apple',    // catalog_item_id in DB row matches optimistic item
+    ],
+    [
+      'Spanish name vs English DB name – match by catalogItemId',
+      'Manzana',
+      'Red Apple',
+      'cat-apple',
+    ],
+  ])(
+    '%s',
+    (_label, localizedName, dbName, catalogItemId) => {
+      const optimisticItem: ShoppingItem = {
+        ...hebrewOptimisticItem,
+        name: localizedName,
+        catalogItemId,
+      };
+
+      const realtimeInsertPayload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+        eventType: 'INSERT',
+        new: {
+          id: 'server-uuid-apple',
+          list_id: 'list-1',
+          catalog_item_id: catalogItemId,
+          name: dbName,
+          quantity: 1,
+          category: 'Fruits',
+          is_checked: false,
+        },
+        old: null,
+      };
+
+      it('replaces the optimistic item – no duplicate created', () => {
+        const result = applyShoppingItemChange(
+          [optimisticItem],
+          realtimeInsertPayload,
+          groceryItems,
+        );
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('server-uuid-apple');
+      });
+
+      it('preserves the localized name after the replace', () => {
+        const result = applyShoppingItemChange(
+          [optimisticItem],
+          realtimeInsertPayload,
+          groceryItems,
+        );
+
+        expect(result[0].name).toBe(localizedName);
+      });
+
+      it('carries the catalogItemId from the DB row onto the merged item', () => {
+        const result = applyShoppingItemChange(
+          [optimisticItem],
+          realtimeInsertPayload,
+          groceryItems,
+        );
+
+        expect(result[0].catalogItemId).toBe(catalogItemId);
+      });
+    },
+  );
+
+  it('does NOT replace a confirmed server item that shares a catalogItemId on a new INSERT', () => {
+    // A server-confirmed item has localId === id (set via mapItemRowToItem without an existing entity)
+    const confirmedItem: ShoppingItem = {
+      id: 'server-confirmed-1',
+      localId: 'server-confirmed-1', // localId === id → confirmed, not optimistic
+      name: 'Red Apple',
+      catalogItemId: 'cat-apple',
+      image: 'apple.png',
+      quantity: 1,
+      category: 'Fruits',
+      listId: 'list-1',
+      isChecked: false,
+    };
+
+    const insertPayload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+      eventType: 'INSERT',
+      new: {
+        id: 'server-uuid-apple-2',
+        list_id: 'list-1',
+        catalog_item_id: 'cat-apple',
+        name: 'Red Apple',
+        quantity: 1,
+        category: 'Fruits',
+        is_checked: false,
+      },
+      old: null,
+    };
+
+    // The realtime INSERT should be treated as a new item (different server id)
+    // and must NOT silently replace the already-confirmed item.
+    const result = applyShoppingItemChange([confirmedItem], insertPayload, groceryItems);
+
+    expect(result).toHaveLength(2);
+    expect(result.map((i) => i.id)).toContain('server-confirmed-1');
+    expect(result.map((i) => i.id)).toContain('server-uuid-apple-2');
+  });
+
+  it('replaces repository-path optimistic item (id = "item-{ts}", localId = UUID) on realtime INSERT', () => {
+    // CacheAwareShoppingRepository.createOptimisticItem now produces id !== localId
+    // (id = `item-${Date.now()}`, localId = randomUUID). Verify isOptimisticMatchForRow
+    // recognises this pattern and does NOT append a second entry.
+    const repositoryOptimisticItem: ShoppingItem = {
+      id: 'item-1714000000000',   // pattern from createOptimisticItem after the fix
+      localId: 'aaaa-bbbb-cccc',  // distinct UUID
+      name: 'Red Apple',
+      catalogItemId: 'cat-apple',
+      image: '',
+      quantity: 1,
+      category: 'Fruits',
+      listId: 'list-1',
+      isChecked: false,
+    };
+
+    const payload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+      eventType: 'INSERT',
+      new: {
+        id: 'server-uuid-apple',
+        list_id: 'list-1',
+        catalog_item_id: 'cat-apple',
+        name: 'Red Apple',
+        quantity: 1,
+        category: 'Fruits',
+        is_checked: false,
+      },
+      old: null,
+    };
+
+    const result = applyShoppingItemChange([repositoryOptimisticItem], payload, groceryItems);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('server-uuid-apple');
+  });
+
+  it('still adds a genuinely new item when catalogItemId does not match anything in state', () => {
+    const unrelatedItem: ShoppingItem = {
+      ...hebrewOptimisticItem,
+      catalogItemId: 'cat-milk',
+    };
+
+    const realtimeInsertPayload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+      eventType: 'INSERT',
+      new: {
+        id: 'server-uuid-apple',
+        list_id: 'list-1',
+        catalog_item_id: 'cat-apple',
+        name: 'Red Apple',
+        quantity: 1,
+        category: 'Fruits',
+        is_checked: false,
+      },
+      old: null,
+    };
+
+    const result = applyShoppingItemChange(
+      [unrelatedItem],
+      realtimeInsertPayload,
+      groceryItems,
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result.map((i) => i.id)).toContain('server-uuid-apple');
   });
 });

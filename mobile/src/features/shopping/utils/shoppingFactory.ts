@@ -24,38 +24,48 @@ export const preserveLocalizedName = (
 type IoniconsName = ComponentProps<typeof Ionicons>['name'];
 
 export const createShoppingItem = (
-    groceryItem: Omit<ShoppingItem, 'id' | 'localId' | 'listId' | 'quantity' | 'isChecked'> | GroceryItem,
-    listId: string,
-    quantity: number
+  groceryItem: Omit<ShoppingItem, 'id' | 'localId' | 'listId' | 'quantity' | 'isChecked'> | GroceryItem,
+  listId: string,
+  quantity: number,
 ): ShoppingItem => {
-    const item = {
-        id: `item-${Date.now()}`,
-        localId: Crypto.randomUUID(),
-        name: groceryItem.name,
-        image: groceryItem.image,
-        quantity: quantity,
-        category: groceryItem.category,
-        listId: listId,
-        isChecked: false,
-    };
-    // Business rule: auto-populate createdAt and updatedAt on creation
-    return withCreatedAtAndUpdatedAt<ShoppingItem>(item as ShoppingItem);
+  const item = {
+    id: `item-${Date.now()}`,
+    localId: Crypto.randomUUID(),
+    name: groceryItem.name,
+    image: groceryItem.image,
+    quantity: quantity,
+    category: groceryItem.category,
+    listId: listId,
+    isChecked: false,
+    // Propagate catalog ID so the realtime dedup handler can match by ID
+    // rather than name, preventing Hebrew ↔ English name mismatches from
+    // creating duplicate items when the realtime INSERT fires before the
+    // API response.
+    catalogItemId:
+      'id' in groceryItem &&
+      typeof groceryItem.id === 'string' &&
+      !groceryItem.id.startsWith('custom-')
+        ? groceryItem.id
+        : undefined,
+  };
+  // Business rule: auto-populate createdAt and updatedAt on creation
+  return withCreatedAtAndUpdatedAt<ShoppingItem>(item as ShoppingItem);
 };
 
 export const createShoppingList = (
-    name: string,
-    icon: IoniconsName,
-    color: string
+  name: string,
+  icon: IoniconsName,
+  color: string,
 ): ShoppingList => {
-    const list = {
-        id: `list-${Date.now()}`,
-        localId: Crypto.randomUUID(),
-        name: name,
-        itemCount: 0,
-        icon: icon,
-        color: color,
-        isMain: false,
-    };
-    // Business rule: auto-populate createdAt and updatedAt on creation
-    return withCreatedAtAndUpdatedAt<ShoppingList>(list as ShoppingList);
+  const list = {
+    id: `list-${Date.now()}`,
+    localId: Crypto.randomUUID(),
+    name: name,
+    itemCount: 0,
+    icon: icon,
+    color: color,
+    isMain: false,
+  };
+  // Business rule: auto-populate createdAt and updatedAt on creation
+  return withCreatedAtAndUpdatedAt<ShoppingList>(list as ShoppingList);
 };

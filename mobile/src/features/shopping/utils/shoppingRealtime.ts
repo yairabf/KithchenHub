@@ -31,6 +31,7 @@ type ShoppingListRow = {
 type ShoppingItemRow = {
   id: string;
   list_id?: string | null;
+  catalog_item_id?: string | null;
   name?: string | null;
   quantity?: number | null;
   category?: string | null;
@@ -125,6 +126,9 @@ const mapItemRowToItem = (
     category: row.category ?? matchingGrocery?.category ?? existing?.category ?? 'Other',
     listId: row.list_id ?? existing?.listId ?? '',
     isChecked: row.is_checked ?? existing?.isChecked ?? false,
+    // Prefer the DB value (authoritative) and fall back to the in-memory
+    // catalogItemId so it is never lost after realtime merges.
+    catalogItemId: row.catalog_item_id ?? existing?.catalogItemId,
   };
 
   // Normalize timestamps from snake_case to camelCase Date objects
@@ -194,6 +198,31 @@ export const applyShoppingListChange = (
   return lists.map((list) => (list.id === updatedRow.id ? merged : list));
 };
 
+/**
+ * Returns true when `item` is an optimistic (not-yet-confirmed) entity whose
+ * content matches the incoming realtime row.
+ *
+ * Matching strategy:
+ * - Primary: catalogItemId equality — language-agnostic, handles Hebrew ↔ English
+ *   name mismatches between the optimistic item and the DB row.
+ * - Fallback: exact name equality — for custom items that have no catalogItemId.
+ *
+ * Only matches optimistic entities (localId !== id) to avoid incorrectly
+ * replacing server-confirmed items that share a catalogItemId.
+ */
+const isOptimisticMatchForRow = (item: ShoppingItem, row: ShoppingItemRow): boolean => {
+  if (item.listId !== (row.list_id ?? '')) return false;
+
+  const catalogIdMatches =
+    item.catalogItemId != null && item.catalogItemId === row.catalog_item_id;
+  const nameMatches = item.name === (row.name ?? '');
+  if (!catalogIdMatches && !nameMatches) return false;
+
+  // Only replace optimistic entities: localId was set by the client and differs
+  // from id, meaning the server ID has not yet been written back to this item.
+  return item.localId != null && item.localId !== item.id;
+};
+
 export const applyShoppingItemChange = (
   items: ShoppingItem[],
   payload: RealtimePostgresChangesPayload<ShoppingItemRow>,
@@ -215,25 +244,11 @@ export const applyShoppingItemChange = (
 
   // Check for existing item by ID (server ID)
   const existingById = items.find((item) => item.id === updatedRow.id);
-  
-  // Also check for items with same name and listId to catch optimistic updates
-  // that haven't been replaced yet (race condition protection)
-  // Match optimistic entities: items where name+listId match and either:
-  // 1. id === localId (initial optimistic entity before API response)
-  // 2. localId exists and differs from id (optimistic entity that was partially updated)
-  const existingByContent = !existingById 
-    ? items.find((item) => {
-        const nameMatches = item.name === (updatedRow.name ?? '');
-        const listIdMatches = item.listId === (updatedRow.list_id ?? '');
-        if (!nameMatches || !listIdMatches) {
-          return false;
-        }
-        // Match optimistic entities: has localId and either matches id (initial) or differs (updated)
-        return item.localId && (
-          item.id === item.localId || // Initial optimistic entity (id === localId === UUID)
-          item.localId !== item.id    // Updated optimistic entity (localId preserved, id changed to server ID)
-        );
-      })
+
+  // Also check for items with same content and listId to catch optimistic updates
+  // that haven't been replaced yet (race condition protection).
+  const existingByContent = !existingById
+    ? items.find((item) => isOptimisticMatchForRow(item, updatedRow))
     : null;
 
   const existing = existingById ?? existingByContent ?? undefined;

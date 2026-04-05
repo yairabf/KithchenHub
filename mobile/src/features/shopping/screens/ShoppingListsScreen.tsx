@@ -46,6 +46,7 @@ import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSelectedList } from '../utils/selectionUtils';
 import { quickAddItem } from '../utils/quickAddUtils';
+import { translateShoppingItemNames } from '../utils/catalogTranslation';
 import { determineUserDataMode } from '../../../common/types/dataModes';
 import { useDebouncedRemoteSearch, useResponsive } from '../../../common/hooks';
 import { useCatalog } from '../../../common/hooks/useCatalog';
@@ -111,6 +112,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     frequentlyAddedItems,
     searchGroceries,
     getGroceriesByCategory,
+    getCatalogDisplayNames,
   } = useCatalog();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -323,10 +325,19 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         items = data.shoppingItems;
       }
 
+      // The cache-aware repository may return items stored in a previous locale.
+      // Re-apply the current locale to catalog-linked items so the user always
+      // sees names in their selected language.
+      const translatedItems = await translateShoppingItemNames(
+        items,
+        i18n.language,
+        getCatalogDisplayNames,
+      );
+
       hasLoadedOnceRef.current = true;
       const sortedLists = sortListsWithMainFirst(lists);
       setShoppingLists(sortedLists);
-      setAllItems(items);
+      setAllItems(translatedItems);
       setSelectedList((current) => getSelectedList(sortedLists, current?.id));
     } catch (error) {
       console.error('Failed to load shopping data:', error);
@@ -336,7 +347,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         setIsItemsLoading(false);
       }
     }
-  }, [shoppingRepository, shoppingService, isAuthLoading, sortListsWithMainFirst]);
+  }, [shoppingRepository, shoppingService, isAuthLoading, sortListsWithMainFirst, i18n.language, getCatalogDisplayNames]);
 
   // Load shopping data on mount
   useEffect(() => {
