@@ -78,6 +78,21 @@ def configure_local_ios_build_environment!
   ENV['RCT_USE_PREBUILT_RNCORE'] = '1'
 end
 
+# expo prebuild generates the .xcodeproj with automatic signing.
+# This switches every target in the project to manual signing so that
+# xcodebuild uses the Match certificate + profile that is already installed
+# in the CI keychain, instead of trying to contact Apple developer portal.
+def configure_code_signing!
+  update_code_signing_settings(
+    use_automatic_signing: false,
+    path:                  IOS_XCODEPROJ,
+    team_id:               APPLE_TEAM_ID,
+    code_sign_identity:    'Apple Distribution',
+    profile_name:          "match AppStore #{IOS_APP_IDENTIFIER}",
+    bundle_identifier:     IOS_APP_IDENTIFIER,
+  )
+end
+
 def ensure_hermes_artifact!(configuration)
   react_native_version = read_react_native_version
   UI.user_error!('Unable to resolve the React Native version for Hermes artifacts') if react_native_version.nil? || react_native_version.strip.empty?
@@ -215,6 +230,8 @@ platform :ios do
       api_key: api_key,
     )
 
+    configure_code_signing!
+
     increment_version_number(
       version_number: repo_version,
       xcodeproj: IOS_XCODEPROJ,
@@ -271,6 +288,8 @@ platform :ios do
       readonly: true,
       api_key: api_key,
     )
+
+    configure_code_signing!
 
     increment_version_number(
       version_number: repo_version,
