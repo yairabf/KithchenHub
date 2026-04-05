@@ -14,7 +14,7 @@ export interface GrocerySearchBarProps {
   isRtl?: boolean;
   variant?: 'surface' | 'background';  // white vs cream background
   showShadow?: boolean;
-  maxResults?: number;                 // default: 8
+  maxResults?: number;                 // default: 10
   allowCustomItems?: boolean;          // default: false - allow adding items not in database
   searchMode?: 'local' | 'remote';     // default: 'local' - 'remote' disables client-side filtering
 

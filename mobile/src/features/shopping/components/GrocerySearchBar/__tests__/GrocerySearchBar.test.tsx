@@ -40,6 +40,11 @@ jest.mock('../../../../../common/hooks/useClickOutside', () => ({
   useClickOutside: jest.fn(),
 }));
 
+// Mock useKeyboardHeight hook
+jest.mock('../../../../../common/hooks/useKeyboardHeight', () => ({
+  useKeyboardHeight: jest.fn().mockReturnValue(0),
+}));
+
 import { useClickOutside } from '../../../../../common/hooks/useClickOutside';
 
 const mockUseClickOutside = useClickOutside as jest.MockedFunction<typeof useClickOutside>;
@@ -400,5 +405,42 @@ describe('GrocerySearchBar', () => {
 
       expect(input.props.value).toBe(specialQuery);
     });
+  });
+
+  describe('maxResults cap', () => {
+    const manyItems: GroceryItem[] = Array.from({ length: 15 }, (_, i) => ({
+      id: `item-${i}`,
+      name: `Item ${i}`,
+      category: 'General',
+      image: `https://example.com/item-${i}.jpg`,
+      defaultQuantity: 1,
+    }));
+
+    it.each([
+      ['default (10)', undefined, 10],
+      ['explicit 5', 5, 5],
+    ])(
+      'should show at most %s results when maxResults is %s',
+      async (_label, maxResultsProp, expectedCount) => {
+        const props: GrocerySearchBarProps = {
+          items: manyItems,
+          onSelectItem: mockOnSelectItem,
+          onQuickAddItem: mockOnQuickAddItem,
+          ...(maxResultsProp !== undefined ? { maxResults: maxResultsProp } : {}),
+        };
+
+        const { getByPlaceholderText, queryAllByTestId } = render(
+          <GrocerySearchBar {...props} />
+        );
+
+        const input = getByPlaceholderText('Search groceries to add...');
+        fireEvent.changeText(input, 'Item');
+
+        await waitFor(() => {
+          const addButtons = queryAllByTestId(/^add-button-item-/);
+          expect(addButtons).toHaveLength(expectedCount);
+        });
+      },
+    );
   });
 });

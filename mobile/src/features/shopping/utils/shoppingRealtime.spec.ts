@@ -169,6 +169,62 @@ describe('applyShoppingItemChange', () => {
   });
 });
 
+describe('applyShoppingItemChange – localized name preservation', () => {
+  it.each([
+    ['Hebrew', 'תפוח אדום'],
+    ['Spanish', 'Manzana'],
+    ['French', 'Pomme'],
+  ])(
+    'prefers the existing in-memory %s name over the English DB row name on UPDATE',
+    (_lang, localizedName) => {
+      const itemWithLocalizedName: ShoppingItem = {
+        ...baseItems[0],
+        name: localizedName,
+      };
+
+      const payload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+        eventType: 'UPDATE',
+        new: {
+          id: 'item-1',
+          list_id: 'list-1',
+          name: 'Banana',   // English canonical name from DB
+          quantity: 3,
+          category: 'Fruits',
+          is_checked: false,
+        },
+        old: null,
+      };
+
+      const result = applyShoppingItemChange(
+        [itemWithLocalizedName],
+        payload,
+        groceryItems,
+      );
+
+      expect(result[0].name).toBe(localizedName);
+    },
+  );
+
+  it('uses the DB row name when no existing in-memory item exists (INSERT)', () => {
+    const payload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+      eventType: 'INSERT',
+      new: {
+        id: 'item-new',
+        list_id: 'list-1',
+        name: 'Banana',
+        quantity: 1,
+        category: 'Fruits',
+        is_checked: false,
+      },
+      old: null,
+    };
+
+    const result = applyShoppingItemChange([], payload, groceryItems);
+
+    expect(result[0].name).toBe('Banana');
+  });
+});
+
 describe('updateShoppingListItemCounts', () => {
   it('updates item counts based on items', () => {
     const lists: ShoppingList[] = [

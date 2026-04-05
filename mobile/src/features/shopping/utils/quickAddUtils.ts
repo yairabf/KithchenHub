@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping';
-import { createShoppingItem } from './shoppingFactory';
+import { createShoppingItem, preserveLocalizedName } from './shoppingFactory';
 import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../constants/categories';
 
 /**
@@ -158,9 +158,10 @@ export async function quickAddItem(
         catalogItemId: !isCustomItem && groceryItem.id ? groceryItem.id : undefined,
       });
       
-      // Replace temp item with real item from service
+      // Replace temp item with server-confirmed item, preserving the localized
+      // name (the server always stores the English canonical name in the DB).
       setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
-        item.localId === tempItem.localId ? newItem : item
+        item.localId === tempItem.localId ? preserveLocalizedName(newItem, tempItem.name) : item
       ));
     } catch (error) {
       // Remove temp item on error
