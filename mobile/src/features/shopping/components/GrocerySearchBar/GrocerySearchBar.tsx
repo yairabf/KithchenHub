@@ -8,16 +8,18 @@ import {
   Text,
   Pressable,
   I18nManager,
+  useWindowDimensions,
 } from 'react-native';
 import type { ImageStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
-import { styles } from './styles';
+import { styles, SEARCH_BAR_TOTAL_HEIGHT } from './styles';
 import { GrocerySearchBarProps, GroceryItem } from './types';
 import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../constants/categories';
 import { compareGroceryItemsForSearch } from './searchSortingUtils';
 import { useClickOutside } from '../../../../common/hooks/useClickOutside';
+import { useKeyboardHeight } from '../../../../common/hooks/useKeyboardHeight';
 
 export function GrocerySearchBar({
   items,
@@ -27,7 +29,7 @@ export function GrocerySearchBar({
   isRtl,
   variant = 'surface',
   showShadow = true,
-  maxResults = 8,
+  maxResults = 10,
   allowCustomItems = false,
   value,
   onChangeText,
@@ -44,6 +46,17 @@ export function GrocerySearchBar({
   const inputRef = useRef<TextInput>(null);
   const containerRef = useRef<View>(null);
   const dropdownRef = useRef<View>(null);
+
+  const { height: windowHeight } = useWindowDimensions();
+  const keyboardHeight = useKeyboardHeight();
+
+  const dropdownMaxHeight = useMemo(() => {
+    const DROPDOWN_MAX_CAP = 400;
+    const SAFE_BOTTOM_MARGIN = 16;
+    const visibleHeight = windowHeight - keyboardHeight;
+    const spaceBelow = visibleHeight - SEARCH_BAR_TOTAL_HEIGHT - SAFE_BOTTOM_MARGIN;
+    return Math.min(Math.max(spaceBelow, 120), DROPDOWN_MAX_CAP);
+  }, [windowHeight, keyboardHeight]);
 
   // Use controlled value if provided, otherwise use internal state
   const searchQuery = value !== undefined ? value : internalQuery;
@@ -219,11 +232,11 @@ export function GrocerySearchBar({
           />
           <View
             ref={dropdownRef}
-            style={[styles.searchDropdown, dropdownStyle]}
+            style={[styles.searchDropdown, { maxHeight: dropdownMaxHeight }, dropdownStyle]}
             testID="grocery-search-dropdown"
           >
             <ScrollView
-              style={styles.searchDropdownScroll}
+              style={{ maxHeight: dropdownMaxHeight }}
               keyboardShouldPersistTaps="handled"
               nestedScrollEnabled
             >

@@ -3,7 +3,7 @@ import { colors, spacing, borderRadius, shadows } from "../../../../theme";
 
 // Search bar dimension constants for consistent styling across screens
 const SEARCH_BAR_INPUT_HEIGHT = 42;
-const SEARCH_BAR_TOTAL_HEIGHT = 58;
+export const SEARCH_BAR_TOTAL_HEIGHT = 58;
 const SEARCH_BAR_VERTICAL_PADDING =
   (SEARCH_BAR_TOTAL_HEIGHT - SEARCH_BAR_INPUT_HEIGHT) / 2;
 
@@ -66,15 +66,12 @@ export const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    maxHeight: 300,
     overflow: "hidden",
     ...shadows.xl,
     pointerEvents: "auto",
     zIndex: 1000,
   },
-  searchDropdownScroll: {
-    maxHeight: 300,
-  },
+  searchDropdownScroll: {},
   searchResultItem: {
     flexDirection: "row",
     alignItems: "center",
