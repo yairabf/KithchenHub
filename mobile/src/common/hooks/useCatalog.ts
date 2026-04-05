@@ -15,6 +15,11 @@ import { i18n } from '../../i18n';
 /**
  * Hook return type
  */
+export interface CatalogDisplayName {
+  id: string;
+  name: string;
+}
+
 export interface UseCatalogReturn {
   /** Array of grocery items from catalog */
   groceryItems: GroceryItem[];
@@ -32,6 +37,11 @@ export interface UseCatalogReturn {
   searchGroceries: (query: string) => Promise<GroceryItem[]>;
   /** Fetch groceries by category on demand (server-side) */
   getGroceriesByCategory: (categoryName: string) => Promise<GroceryItem[]>;
+  /**
+   * Batch-resolve catalog item IDs to their localized display names.
+   * Used to translate shopping item names after loading from cache.
+   */
+  getCatalogDisplayNames: (ids: string[], lang: string) => Promise<CatalogDisplayName[]>;
 }
 
 /**
@@ -125,6 +135,15 @@ export function useCatalog(): UseCatalogReturn {
     return catalogService.getGroceriesByCategory(categoryName);
   }, [languageVersion]);
 
+  /**
+   * Batch-resolve catalog IDs to localized display names.
+   * Stable reference — delegates to catalogService which reads i18n.language at call time.
+   */
+  const getCatalogDisplayNames = useCallback(
+    (ids: string[], lang: string) => catalogService.getCatalogDisplayNames(ids, lang),
+    [],
+  );
+
   // Load catalog data on mount
   useEffect(() => {
     loadCatalogData();
@@ -139,5 +158,6 @@ export function useCatalog(): UseCatalogReturn {
     refresh,
     searchGroceries,
     getGroceriesByCategory,
+    getCatalogDisplayNames,
   };
 }

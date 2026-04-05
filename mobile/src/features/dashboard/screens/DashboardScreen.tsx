@@ -135,6 +135,9 @@ export function DashboardScreen({
 
   const loadShoppingData = useCallback(async () => {
     try {
+      // getShoppingData passes the current i18n.language to the aggregate endpoint,
+      // so item names are returned in the active locale. i18n.language is listed as
+      // a dependency so this callback is recreated (and re-run) on language changes.
       const data = await shoppingService.getShoppingData();
       setActiveListId((current) =>
         getActiveListId(data.shoppingLists, current),
@@ -148,7 +151,7 @@ export function DashboardScreen({
       setAllItems([]);
       setMainList(null);
     }
-  }, [shoppingService]);
+  }, [shoppingService, i18n.language]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
