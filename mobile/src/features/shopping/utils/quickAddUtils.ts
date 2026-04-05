@@ -108,9 +108,17 @@ export async function quickAddItem(
     ? normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase())
     : safeCategory;
 
-  // Check if item already exists in the selected list
+  // Check if item already exists in the selected list.
+  // Match by catalogItemId first (language-agnostic) so that an item stored
+  // with an English name (e.g. "Red Apple") is not duplicated when the user
+  // searches in Hebrew and the catalog returns "תפוחים" for the same item.
   const existingItem = allItems.find(
-    item => item.name === groceryItem.name && item.listId === selectedList.id
+    (item) =>
+      item.listId === selectedList.id &&
+      (item.name === groceryItem.name ||
+        (item.catalogItemId != null &&
+          groceryItem.id != null &&
+          item.catalogItemId === groceryItem.id)),
   );
 
   if (existingItem) {
@@ -169,6 +177,4 @@ export async function quickAddItem(
       logError('Failed to create shopping item:', error);
     }
   }
-
-  // Keep dropdown open and search query intact for rapid multi-item addition
 }
