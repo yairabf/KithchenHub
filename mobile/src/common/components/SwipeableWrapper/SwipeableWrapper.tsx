@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Dimensions, Platform } from 'react-native';
+import { View, TouchableOpacity, Platform } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -12,10 +12,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius } from '../../../theme';
-import { styles, DELETE_THRESHOLD } from './styles';
+import { styles } from './styles';
 import { SwipeableWrapperProps } from './types';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
+const DEFAULT_ACTION_WIDTH = 84;
 
 // Platform-specific gesture configuration
 const GESTURE_CONFIG = {
@@ -40,6 +40,7 @@ export function SwipeableWrapper({
   onSwipeDelete,
   disabled = false,
   borderRadius: customBorderRadius,
+  actionWidth = DEFAULT_ACTION_WIDTH,
 }: SwipeableWrapperProps) {
   const translateX = useSharedValue(0);
   const swipeDirection = useSharedValue<number>(0); // 1 for right, -1 for left, 0 for none
@@ -61,33 +62,28 @@ export function SwipeableWrapper({
     .maxPointers(1)
     .activeOffsetX(config.activeOffsetX)
     .failOffsetY(config.failOffsetY)
-    // Block other gestures while we're active
     .shouldCancelWhenOutside(false)
-    // Enable mouse events on web
     .enableTrackpadTwoFingerGesture(false)
     .onStart(() => {
       'worklet';
-      // Reset direction at start of new gesture
       swipeDirection.value = 0;
     })
     .onUpdate((event) => {
       'worklet';
-      // Lock direction on first significant movement
       if (swipeDirection.value === 0 && Math.abs(event.translationX) > 5) {
         swipeDirection.value = event.translationX > 0 ? 1 : -1;
       }
 
-      // Only allow movement in the locked direction
       if (swipeDirection.value !== 0) {
         const isSameDirection =
           (swipeDirection.value > 0 && event.translationX > 0) ||
           (swipeDirection.value < 0 && event.translationX < 0);
 
         if (isSameDirection) {
-          // Continue in same direction
-          translateX.value = event.translationX;
+          const raw = event.translationX;
+          const clamped = Math.max(-actionWidth, Math.min(actionWidth, raw));
+          translateX.value = clamped;
         } else if (event.translationX * swipeDirection.value < 0) {
-          // Opposite direction - snap back to cancel
           translateX.value = withSpring(0, {
             damping: 20,
             stiffness: 300,
@@ -101,31 +97,22 @@ export function SwipeableWrapper({
       const absTranslateX = Math.abs(translateX.value);
       const absVelocityX = Math.abs(event.velocityX);
 
-      // Check if crossed 30% threshold or very fast swipe
-      if (
-        absTranslateX > DELETE_THRESHOLD ||
-        absVelocityX > config.deleteVelocityThreshold
-      ) {
-        // Automatically continue sliding off screen and delete
-        const direction = translateX.value > 0 ? 1 : -1;
-        translateX.value = withTiming(
-          direction * SCREEN_WIDTH,
-          { duration: 300 },
-          (finished) => {
-            if (finished) {
-              runOnJS(handleDelete)();
-            }
-          }
-        );
+      const openThreshold = actionWidth * 0.4;
+      const shouldOpen = absTranslateX >= openThreshold || absVelocityX > config.deleteVelocityThreshold;
+
+      if (shouldOpen) {
+        const direction = translateX.value >= 0 ? 1 : -1;
+        translateX.value = withSpring(direction * actionWidth, {
+          damping: 20,
+          stiffness: 300,
+        });
       } else {
-        // Snap back - didn't reach 30% threshold
         translateX.value = withSpring(0, {
           damping: 20,
           stiffness: 300,
         });
       }
 
-      // Reset direction
       swipeDirection.value = 0;
     });
 
@@ -138,14 +125,14 @@ export function SwipeableWrapper({
   const leftBackgroundStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       translateX.value,
-      [0, DELETE_THRESHOLD],
+      [0, actionWidth],
       [0, 1],
       Extrapolate.CLAMP
     );
 
     const scale = interpolate(
       translateX.value,
-      [0, DELETE_THRESHOLD],
+      [0, actionWidth],
       [0.5, 1],
       Extrapolate.CLAMP
     );
@@ -159,14 +146,14 @@ export function SwipeableWrapper({
   const rightBackgroundStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       translateX.value,
-      [-DELETE_THRESHOLD, 0],
+      [-actionWidth, 0],
       [1, 0],
       Extrapolate.CLAMP
     );
 
     const scale = interpolate(
       translateX.value,
-      [-DELETE_THRESHOLD, 0],
+      [-actionWidth, 0],
       [1, 0.5],
       Extrapolate.CLAMP
     );
@@ -194,7 +181,9 @@ export function SwipeableWrapper({
         borderRadiusStyle,
         leftBackgroundStyle
       ]}>
-        <Ionicons name="trash-outline" size={24} color={colors.textLight} />
+        <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete">
+          <Ionicons name="trash-outline" size={24} color={colors.textLight} />
+        </TouchableOpacity>
       </Animated.View>
 
       {/* Right delete background (swipe left) */}
@@ -204,7 +193,9 @@ export function SwipeableWrapper({
         borderRadiusStyle,
         rightBackgroundStyle
       ]}>
-        <Ionicons name="trash-outline" size={24} color={colors.textLight} />
+        <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete">
+          <Ionicons name="trash-outline" size={24} color={colors.textLight} />
+        </TouchableOpacity>
       </Animated.View>
 
       {/* Swipeable card */}
