@@ -98,7 +98,7 @@ describe('MemoryCacheService', () => {
 
   describe('max-size eviction', () => {
     it('should evict expired entries first when at capacity', () => {
-      const smallCache = new MemoryCacheService(3);
+      const smallCache = MemoryCacheService.createWithMaxSize(3);
       smallCache.set('a', 1, 100);
       smallCache.set('b', 2, 60_000);
       smallCache.set('c', 3, 60_000);
@@ -112,7 +112,7 @@ describe('MemoryCacheService', () => {
     });
 
     it('should evict oldest (FIFO) entry when no expired entries exist', () => {
-      const smallCache = new MemoryCacheService(2);
+      const smallCache = MemoryCacheService.createWithMaxSize(2);
       smallCache.set('first', 1, 60_000);
       smallCache.set('second', 2, 60_000);
 
@@ -124,7 +124,7 @@ describe('MemoryCacheService', () => {
     });
 
     it('should not evict when updating an existing key', () => {
-      const smallCache = new MemoryCacheService(2);
+      const smallCache = MemoryCacheService.createWithMaxSize(2);
       smallCache.set('a', 1, 60_000);
       smallCache.set('b', 2, 60_000);
 
@@ -136,7 +136,7 @@ describe('MemoryCacheService', () => {
     });
 
     it('should enforce maxSize under sustained inserts', () => {
-      const smallCache = new MemoryCacheService(5);
+      const smallCache = MemoryCacheService.createWithMaxSize(5);
       for (let i = 0; i < 20; i++) {
         smallCache.set(`key-${i}`, i, 60_000);
       }

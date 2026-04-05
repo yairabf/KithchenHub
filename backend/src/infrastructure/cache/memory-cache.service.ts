@@ -16,11 +16,20 @@ interface CacheEntry<T> {
  */
 @Injectable()
 export class MemoryCacheService {
+  private static readonly DEFAULT_MAX_SIZE = 10_000;
+
   private readonly store = new Map<string, CacheEntry<unknown>>();
   private readonly maxSize: number;
 
-  constructor(maxSize = 10_000) {
-    this.maxSize = maxSize;
+  constructor() {
+    this.maxSize = MemoryCacheService.DEFAULT_MAX_SIZE;
+  }
+
+  /** Test-only factory for creating a cache with a custom max size. */
+  static createWithMaxSize(maxSize: number): MemoryCacheService {
+    const instance = new MemoryCacheService();
+    (instance as unknown as { maxSize: number }).maxSize = maxSize;
+    return instance;
   }
 
   get size(): number {
