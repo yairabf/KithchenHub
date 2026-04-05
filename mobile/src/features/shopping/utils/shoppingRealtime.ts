@@ -117,7 +117,9 @@ const mapItemRowToItem = (
     // Preserve localId from existing item if it's an optimistic entity (localId !== id)
     // Otherwise use row.id as localId
     localId: existing?.localId && existing.localId !== existing.id ? existing.localId : row.id,
-    name: row.name ?? existing?.name ?? 'Untitled Item',
+    // The DB always stores the English canonical name; prefer the in-memory
+    // localized name (set at item creation) to avoid overwriting translations.
+    name: existing?.name ?? row.name ?? 'Untitled Item',
     image: matchingGrocery?.image ?? existing?.image ?? '',
     quantity: row.quantity ?? existing?.quantity ?? 1,
     category: row.category ?? matchingGrocery?.category ?? existing?.category ?? 'Other',

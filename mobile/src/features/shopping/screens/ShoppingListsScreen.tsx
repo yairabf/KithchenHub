@@ -538,6 +538,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     const nextQuantity = Math.max(1, previousQuantity + delta);
     if (nextQuantity === previousQuantity) return;
 
+    // Item is still being created on the server (optimistic create in flight).
+    // Apply the change locally only; skip the update API call to avoid 404 errors.
+    if (isLocalOnlyItem(targetItem, isSignedIn)) {
+      setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
+        item.id === itemId || item.localId === itemId
+          ? { ...item, quantity: nextQuantity }
+          : item,
+      ));
+      return;
+    }
+
     await executeWithOptimisticUpdate(
       () => updateItem(itemId, { quantity: nextQuantity }),
       () => {
@@ -603,6 +614,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
     const previousChecked = targetItem.isChecked;
     const nextChecked = !previousChecked;
+
+    // Item is still being created on the server (optimistic create in flight).
+    // Apply the toggle locally only; skip the update API call to avoid 404 errors.
+    if (isLocalOnlyItem(targetItem, isSignedIn)) {
+      setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
+        item.id === itemId || item.localId === itemId
+          ? { ...item, isChecked: nextChecked }
+          : item,
+      ));
+      return;
+    }
 
     await executeWithOptimisticUpdate(
       () => toggleItem(itemId),
