@@ -78,6 +78,21 @@ def configure_local_ios_build_environment!
   ENV['RCT_USE_PREBUILT_RNCORE'] = '1'
 end
 
+# expo prebuild generates the .xcodeproj with automatic signing.
+# This switches every target in the project to manual signing so that
+# xcodebuild uses the Match certificate + profile that is already installed
+# in the CI keychain, instead of trying to contact Apple developer portal.
+def configure_code_signing!
+  update_code_signing_settings(
+    use_automatic_signing: false,
+    path:                  IOS_XCODEPROJ,
+    team_id:               APPLE_TEAM_ID,
+    code_sign_identity:    'Apple Distribution',
+    profile_name:          "match AppStore #{IOS_APP_IDENTIFIER}",
+    bundle_identifier:     IOS_APP_IDENTIFIER,
+  )
+end
+
 def ensure_hermes_artifact!(configuration)
   react_native_version = read_react_native_version
   UI.user_error!('Unable to resolve the React Native version for Hermes artifacts') if react_native_version.nil? || react_native_version.strip.empty?
@@ -208,6 +223,15 @@ platform :ios do
     configure_local_ios_build_environment!
     api_key = app_store_api_key!
 
+    match(
+      type: 'appstore',
+      app_identifier: IOS_APP_IDENTIFIER,
+      readonly: true,
+      api_key: api_key,
+    )
+
+    configure_code_signing!
+
     increment_version_number(
       version_number: repo_version,
       xcodeproj: IOS_XCODEPROJ,
@@ -227,12 +251,13 @@ platform :ios do
       export_method: 'app-store',
       clean: true,
       export_options: {
-        method: 'app-store-connect',
-        signingStyle: 'automatic',
+        method: 'app-store',
+        signingStyle: 'manual',
         teamID: APPLE_TEAM_ID,
+        provisioningProfiles: {
+          IOS_APP_IDENTIFIER => 'match AppStore com.kitchenhub.app',
+        },
       },
-      xcargs: '-allowProvisioningUpdates',
-      export_xcargs: '-allowProvisioningUpdates',
     )
 
     upload_to_testflight(
@@ -244,6 +269,57 @@ platform :ios do
   desc 'Alias for the internal iOS TestFlight lane'
   lane :beta do
     internal
+  end
+
+  desc 'Archive only — no TestFlight upload. Use in CI to verify compilation.'
+  lane :build_check do
+    ensure_release_api_url!
+    setup_ci if ENV['CI']
+
+    repo_version = read_repo_version!
+    UI.message("Repo version.json: #{repo_version}")
+
+    configure_local_ios_build_environment!
+    api_key = app_store_api_key!
+
+    match(
+      type: 'appstore',
+      app_identifier: IOS_APP_IDENTIFIER,
+      readonly: true,
+      api_key: api_key,
+    )
+
+    configure_code_signing!
+
+    increment_version_number(
+      version_number: repo_version,
+      xcodeproj: IOS_XCODEPROJ,
+    )
+    increment_build_number(
+      build_number: 0,
+      xcodeproj: IOS_XCODEPROJ,
+    )
+
+    install_ios_pods!
+    ensure_hermes_artifact!(IOS_CONFIGURATION)
+
+    build_app(
+      workspace: IOS_WORKSPACE,
+      scheme: APP_SCHEME,
+      configuration: IOS_CONFIGURATION,
+      export_method: 'app-store',
+      clean: true,
+      skip_package_ipa: true,
+      export_options: {
+        method: 'app-store',
+        signingStyle: 'manual',
+        teamID: APPLE_TEAM_ID,
+        provisioningProfiles: {
+          IOS_APP_IDENTIFIER => 'match AppStore com.kitchenhub.app',
+        },
+      },
+    )
+    UI.success('iOS archive succeeded — build is valid.')
   end
 
   desc 'Submit the latest tested TestFlight iOS build for App Store review'
@@ -295,6 +371,19 @@ platform :android do
       skip_upload_screenshots: true,
       skip_upload_changelogs: true,
     )
+  end
+
+  desc 'Build release AAB only — no Play Store upload. Use in CI to verify compilation.'
+  lane :build_check do
+    ensure_release_api_url!
+    repo_version = read_repo_version!
+    UI.message("Repo version.json: #{repo_version}")
+
+    build_android_aab!(
+      version_code: 1,
+      version_name: repo_version,
+    )
+    UI.success("Android AAB build succeeded — #{ANDROID_AAB_PATH}")
   end
 
   desc 'Promote the tested Android internal release to the production track as a draft'
