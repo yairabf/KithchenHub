@@ -124,6 +124,15 @@ export function DashboardScreen({
   const [mainList, setMainList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Always-current snapshot of allItems, read synchronously inside event handlers
+  // to avoid stale closure captures during rapid concurrent taps.
+  const allItemsRef = useRef<ShoppingItem[]>([]);
+  allItemsRef.current = allItems;
+
+  // Tracks catalog IDs / names of items currently being added to prevent
+  // concurrent rapid taps of the same item from racing past the dedup check.
+  const pendingQuickAddKeys = useRef<Set<string>>(new Set());
+
   const loadShoppingData = useCallback(async () => {
     try {
       const data = await shoppingService.getShoppingData();
@@ -293,10 +302,6 @@ export function DashboardScreen({
     return await shoppingService.createItem(item);
   };
 
-  const updateItem = async (itemId: string, updates: Partial<ShoppingItem>) => {
-    return await shoppingService.updateItem(itemId, updates);
-  };
-
   const executeWithOptimisticUpdate = async <T,>(
     operation: () => Promise<T>,
     optimisticUpdate: () => void,
@@ -319,22 +324,42 @@ export function DashboardScreen({
       return;
     }
 
-    // Pass the current React state as allItems — it already includes any
-    // in-flight optimistic items from previous rapid taps, so the dedup
-    // check in quickAddItem correctly increments quantity instead of
-    // creating duplicates. Server round-trips here caused stale snapshots
-    // that bypassed deduplication on concurrent quick-add clicks.
-    await quickAddItem(item, mainList, {
-      allItems,
-      setAllItems,
-      createItem,
-      updateItem,
-      executeWithOptimisticUpdate,
-      logError: (message, error) => {
-        console.error(message, error);
-        showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
-      },
-    });
+    // Prevent concurrent rapid taps of the same item from racing past the
+    // dedup check before React re-renders with the updated allItems state.
+    const addKey = item.id ?? item.name;
+    if (pendingQuickAddKeys.current.has(addKey)) return;
+    pendingQuickAddKeys.current.add(addKey);
+
+    try {
+      // Read from the ref (not the closure) so we always see the latest allItems,
+      // including in-flight optimistic items added by the very first tap.
+      await quickAddItem(item, mainList, {
+        allItems: allItemsRef.current,
+        setAllItems,
+        createItem,
+        updateItem: async (itemId, updates) => {
+          try {
+            return await shoppingService.updateItem(itemId, updates);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (message.includes('not found')) {
+              // The item exists in cached state but was deleted from the server.
+              // Remove it so the next tap creates it fresh instead of retrying a
+              // stale update that will always 404.
+              setAllItems((prev) => prev.filter((i) => i.id !== itemId));
+            }
+            throw error;
+          }
+        },
+        executeWithOptimisticUpdate,
+        logError: (message, error) => {
+          console.error(message, error);
+          showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
+        },
+      });
+    } finally {
+      pendingQuickAddKeys.current.delete(addKey);
+    }
   };
 
   /**
