@@ -5,8 +5,9 @@
 #   1. Verify the working tree is on main and is clean.
 #   2. Pull the latest origin/main.
 #   3. Validate all required environment variables.
-#   4. Run `fastlane ios internal`  — builds an IPA and uploads it to TestFlight.
-#   5. Run `fastlane ios prod`      — submits the build for App Store review.
+#   4. Run expo prebuild to generate the native iOS project.
+#   5. Run `fastlane ios internal`  — builds an IPA and uploads it to TestFlight.
+#   6. Run `fastlane ios prod`      — submits the build for App Store review.
 #
 # Required environment variables (export before running, or put in .env.local):
 #   EXPO_PUBLIC_API_URL   — must point to the deployed backend (not localhost)
@@ -98,10 +99,23 @@ fi
 success "Environment OK. API URL: ${EXPO_PUBLIC_API_URL}"
 
 # ---------------------------------------------------------------------------
-# 4. Build + upload to TestFlight (fastlane ios internal)
+# 4. Generate native iOS project (expo prebuild)
+# ---------------------------------------------------------------------------
+info "Generating native iOS project..."
+cd "$MOBILE_DIR"
+
+npx expo prebuild --platform ios --clean --no-install
+
+if [[ ! -d "ios/FullHouse.xcodeproj" ]]; then
+  fail "expo prebuild did not generate ios/FullHouse.xcodeproj — check app.json and Expo config."
+fi
+
+success "Native iOS project generated."
+
+# ---------------------------------------------------------------------------
+# 5. Build + upload to TestFlight (fastlane ios internal)
 # ---------------------------------------------------------------------------
 info "Starting iOS build and TestFlight upload..."
-cd "$MOBILE_DIR"
 
 export FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT="${FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT:-120}"
 export FASTLANE_XCODEBUILD_SETTINGS_RETRIES="${FASTLANE_XCODEBUILD_SETTINGS_RETRIES:-5}"
@@ -111,7 +125,7 @@ rbenv exec bundle exec fastlane ios internal
 success "TestFlight upload complete."
 
 # ---------------------------------------------------------------------------
-# 5. Submit for App Store review (fastlane ios prod)
+# 6. Submit for App Store review (fastlane ios prod)
 # ---------------------------------------------------------------------------
 if [[ "${SKIP_PROD:-0}" == "1" ]]; then
   warn "Skipping App Store review submission (SKIP_PROD=1)."
