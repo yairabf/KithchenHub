@@ -242,9 +242,9 @@ export class ShoppingService {
 
     const rows = await this.prisma.$queryRaw<CatalogSearchRow[]>`
       SELECT * FROM search_catalog(
-        ${searchTerm},
-        ${normalizedLang},
-        ${ShoppingService.SEARCH_RESULT_LIMIT}
+        ${searchTerm}::TEXT,
+        ${normalizedLang}::TEXT,
+        ${ShoppingService.SEARCH_RESULT_LIMIT}::INT
       )
     `;
 
