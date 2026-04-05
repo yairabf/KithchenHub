@@ -393,6 +393,42 @@ describe('applyShoppingItemChange – catalogItemId deduplication', () => {
     expect(result.map((i) => i.id)).toContain('server-uuid-apple-2');
   });
 
+  it('replaces repository-path optimistic item (id = "item-{ts}", localId = UUID) on realtime INSERT', () => {
+    // CacheAwareShoppingRepository.createOptimisticItem now produces id !== localId
+    // (id = `item-${Date.now()}`, localId = randomUUID). Verify isOptimisticMatchForRow
+    // recognises this pattern and does NOT append a second entry.
+    const repositoryOptimisticItem: ShoppingItem = {
+      id: 'item-1714000000000',   // pattern from createOptimisticItem after the fix
+      localId: 'aaaa-bbbb-cccc',  // distinct UUID
+      name: 'Red Apple',
+      catalogItemId: 'cat-apple',
+      image: '',
+      quantity: 1,
+      category: 'Fruits',
+      listId: 'list-1',
+      isChecked: false,
+    };
+
+    const payload: RealtimePostgresChangesPayload<ShoppingItemRow> = {
+      eventType: 'INSERT',
+      new: {
+        id: 'server-uuid-apple',
+        list_id: 'list-1',
+        catalog_item_id: 'cat-apple',
+        name: 'Red Apple',
+        quantity: 1,
+        category: 'Fruits',
+        is_checked: false,
+      },
+      old: null,
+    };
+
+    const result = applyShoppingItemChange([repositoryOptimisticItem], payload, groceryItems);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('server-uuid-apple');
+  });
+
   it('still adds a genuinely new item when catalogItemId does not match anything in state', () => {
     const unrelatedItem: ShoppingItem = {
       ...hebrewOptimisticItem,

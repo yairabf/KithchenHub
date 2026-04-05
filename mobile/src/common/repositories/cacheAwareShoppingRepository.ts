@@ -258,14 +258,21 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
   }
 
   /**
-   * Creates an optimistic shopping item entity with localId for offline operations
+   * Creates an optimistic shopping item entity with localId for offline operations.
+   *
+   * INVARIANT: id !== localId.
+   * The realtime dedup guard (isOptimisticMatchForRow) identifies unconfirmed items
+   * by checking item.localId !== item.id. Setting them to the same value would make
+   * the guard treat this item as server-confirmed, causing a duplicate row when the
+   * realtime INSERT arrives before createItem resolves.
+   * This mirrors the pattern used by createShoppingItem in shoppingFactory.ts.
    */
   private createOptimisticItem(data: Partial<ShoppingItem>): ShoppingItem {
     const localId = Crypto.randomUUID();
     const now = new Date().toISOString();
     
     return withCreatedAt({
-      id: localId,
+      id: `item-${Date.now()}`,
       localId: localId,
       name: data.name ?? '',
       image: data.image ?? '',
