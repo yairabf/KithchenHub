@@ -32,7 +32,7 @@ import { ImportantChoresCard } from "../components/ImportantChoresCard";
 import { QuickAddCard } from "../components/QuickAddCard";
 import { QuickStatsRow } from "../components/QuickStats";
 import type { QuickStatItem } from "../components/QuickStats";
-import type { ShoppingItem } from "../../../mocks/shopping";
+import type { ShoppingItem, ShoppingList } from "../../../mocks/shopping";
 import { useDashboardChores } from "../hooks/useDashboardChores";
 import { useRecipes } from "../../recipes/hooks/useRecipes";
 import { createShoppingService } from "../../shopping/services/shoppingService";
@@ -121,6 +121,7 @@ export function DashboardScreen({
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [shoppingListsCount, setShoppingListsCount] = useState(0);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
+  const [mainList, setMainList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadShoppingData = useCallback(async () => {
@@ -131,10 +132,12 @@ export function DashboardScreen({
       );
       setShoppingListsCount(data.shoppingLists.length);
       setAllItems(data.shoppingItems);
+      setMainList(getMainList(data.shoppingLists));
     } catch (_err) {
       setActiveListId(null);
       setShoppingListsCount(0);
       setAllItems([]);
+      setMainList(null);
     }
   }, [shoppingService]);
 
@@ -311,37 +314,27 @@ export function DashboardScreen({
   };
 
   const handleQuickAddGroceryItem = async (item: GroceryItem) => {
-    try {
-      const data = await shoppingService.getShoppingData();
-      const mainList = getMainList(data.shoppingLists);
-
-      if (!mainList) {
-        showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
-        return;
-      }
-
-      // Refresh allItems from latest data before quick add
-      setAllItems(data.shoppingItems);
-
-      await quickAddItem(item, mainList, {
-        allItems: data.shoppingItems,
-        setAllItems,
-        createItem,
-        updateItem,
-        executeWithOptimisticUpdate,
-        logError: (message, error) => {
-          console.error(message, error);
-          showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
-        },
-      });
-
-      // Refresh data after quick add to sync with server
-      const updatedData = await shoppingService.getShoppingData();
-      setAllItems(updatedData.shoppingItems);
-    } catch (error) {
-      console.error("Failed to add item to shopping list:", error);
-      showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
+    if (!mainList) {
+      showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
+      return;
     }
+
+    // Pass the current React state as allItems — it already includes any
+    // in-flight optimistic items from previous rapid taps, so the dedup
+    // check in quickAddItem correctly increments quantity instead of
+    // creating duplicates. Server round-trips here caused stale snapshots
+    // that bypassed deduplication on concurrent quick-add clicks.
+    await quickAddItem(item, mainList, {
+      allItems,
+      setAllItems,
+      createItem,
+      updateItem,
+      executeWithOptimisticUpdate,
+      logError: (message, error) => {
+        console.error(message, error);
+        showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
+      },
+    });
   };
 
   /**
