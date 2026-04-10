@@ -9,11 +9,15 @@ export interface SwipeableWrapperProps {
   children: ReactNode;
 
   /**
-   * Callback invoked when item is swiped past the deletion threshold (30% of screen width)
-   * or when swipe velocity exceeds 1000.
-   * @note Renamed from `onDelete` in SwipeableShoppingItem for clarity
+   * Callback invoked when the user taps the revealed delete action.
    */
   onSwipeDelete: () => void;
+
+  /**
+   * Distance in px the card can be swiped to reveal actions.
+   * @default 84
+   */
+  actionWidth?: number;
 
   /**
    * If true, disables swipe gestures entirely.
