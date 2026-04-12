@@ -1,8 +1,5 @@
-import { StyleSheet, Dimensions } from 'react-native';
-import { colors, borderRadius, shadows } from '../../../theme';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-export const DELETE_THRESHOLD = SCREEN_WIDTH * 0.3; // 30% of screen width
+import { StyleSheet } from 'react-native';
+import { colors, borderRadius } from '../../../theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -16,8 +13,8 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.error,
-    borderRadius: borderRadius.lg,
-    width: SCREEN_WIDTH * 0.35, // Slightly wider than threshold
+    // Width is applied inline using the actionWidth prop so it always matches
+    // the maximum swipe distance and never overflows the card bounds.
   },
   leftBackground: {
     left: 0,

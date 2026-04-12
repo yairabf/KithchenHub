@@ -3,7 +3,7 @@ import { api } from '../../../services/api';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import type { DataMode } from '../../../common/types/dataModes';
 import { validateServiceCompatibility } from '../../../common/validation/dataModeValidation';
-import { withUpdatedAt, markDeleted, withCreatedAtAndUpdatedAt, toSupabaseTimestamps, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
+import { withUpdatedAt, markDeleted, withCreatedAtAndUpdatedAt, normalizeTimestampsFromApi } from '../../../common/utils/timestamps';
 import { isDevMode } from '../../../common/utils/devMode';
 import { getCached, setCached, readCachedEntitiesForUpdate } from '../../../common/repositories/cacheAwareRepository';
 import { EntityTimestamps } from '../../../common/types/entityMetadata';
@@ -785,13 +785,12 @@ export class RemoteRecipeService implements IRecipeService {
             throw new Error(`Recipe not found: ${recipeId}`);
         }
 
-        // Apply timestamp for optimistic UI and offline queue
+        // Build the tombstoned copy for the local cache update
         const deleted = markDeleted(existing);
         const withTimestamps = withUpdatedAt(deleted);
-        const payload = toSupabaseTimestamps(withTimestamps);
 
-        // Use PATCH instead of DELETE with body (more compatible)
-        await api.patch(`/recipes/${recipeId}`, { deleted_at: payload.deleted_at });
+        // Backend exposes DELETE /recipes/:id — use the correct HTTP verb
+        await api.delete(`/recipes/${recipeId}`);
 
         // Write-through cache update: read cache directly (no network fetch)
         // Note: Cache updates are best-effort; failures are logged but don't throw
