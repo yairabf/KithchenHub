@@ -5,8 +5,6 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
-  runOnJS,
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
@@ -172,12 +170,20 @@ export function SwipeableWrapper({
     [effectiveBorderRadius]
   );
 
+  // Width must exactly match actionWidth so the red background never bleeds
+  // outside the card bounds when the panel is revealed during a swipe.
+  const actionWidthStyle = useMemo(
+    () => ({ width: actionWidth }),
+    [actionWidth]
+  );
+
   return (
     <View style={styles.container}>
       {/* Left delete background (swipe right) */}
       <Animated.View style={[
         styles.deleteBackground,
         styles.leftBackground,
+        actionWidthStyle,
         borderRadiusStyle,
         leftBackgroundStyle
       ]}>
@@ -190,6 +196,7 @@ export function SwipeableWrapper({
       <Animated.View style={[
         styles.deleteBackground,
         styles.rightBackground,
+        actionWidthStyle,
         borderRadiusStyle,
         rightBackgroundStyle
       ]}>
