@@ -33,6 +33,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { Toast } from '../../../common/components/Toast';
 import { SwipeableWrapper } from '../../../common/components/SwipeableWrapper';
+import { ConfirmationModal } from '../../../common/components/ConfirmationModal';
 import { logger } from '../../../common/utils/logger';
 import {
   RECIPE_CATEGORIES,
@@ -70,6 +71,10 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'error' | 'success' | 'info'>('error');
+  const [recipePendingDeletion, setRecipePendingDeletion] = useState<Recipe | null>(null);
+  const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = useState(false);
+  const [isDeletingRecipe, setIsDeletingRecipe] = useState(false);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | undefined>();
 
   const showToast = (message: string, type: 'error' | 'success' | 'info' = 'error') => {
     setToastMessage(message);
@@ -246,13 +251,42 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
     }
   };
 
-  const handleDeleteRecipe = async (recipe: Recipe) => {
+  const handleRequestDeleteRecipe = useCallback((recipe: Recipe) => {
+    if (isDeletingRecipe || showDeleteConfirmationModal) {
+      return;
+    }
+    setDeleteErrorMessage(undefined);
+    setRecipePendingDeletion(recipe);
+    setShowDeleteConfirmationModal(true);
+  }, [isDeletingRecipe, showDeleteConfirmationModal]);
+
+  const handleCancelDeleteRecipe = useCallback(() => {
+    if (isDeletingRecipe) {
+      return;
+    }
+    setShowDeleteConfirmationModal(false);
+    setRecipePendingDeletion(null);
+    setDeleteErrorMessage(undefined);
+  }, [isDeletingRecipe]);
+
+  const handleDeleteRecipe = async () => {
+    if (!recipePendingDeletion) {
+      return;
+    }
+
     try {
-      await deleteRecipe(recipe.id);
-      showToast('Recipe deleted successfully', 'success');
+      setIsDeletingRecipe(true);
+      setDeleteErrorMessage(undefined);
+      await deleteRecipe(recipePendingDeletion.id);
+      setShowDeleteConfirmationModal(false);
+      setRecipePendingDeletion(null);
+      showToast(t('screen.deleteSuccess'), 'success');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete recipe';
+      const message = error instanceof Error ? error.message : t('screen.deleteFailed');
+      setDeleteErrorMessage(message);
       showToast(message, 'error');
+    } finally {
+      setIsDeletingRecipe(false);
     }
   };
 
@@ -385,7 +419,9 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                 {filteredRecipes.map((recipe) => (
                   <SwipeableWrapper
                     key={recipe.id}
-                    onSwipeDelete={() => handleDeleteRecipe(recipe)}
+                    actionWidth={cardWidth * 0.35}
+                    disabled={showDeleteConfirmationModal || isDeletingRecipe}
+                    onSwipeDelete={() => handleRequestDeleteRecipe(recipe)}
                   >
                     <RecipeCard
                       recipe={recipe}
@@ -434,6 +470,19 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
         message={toastMessage}
         type={toastType}
         onHide={() => setToastVisible(false)}
+      />
+
+      <ConfirmationModal
+        visible={showDeleteConfirmationModal}
+        title={t('screen.deleteConfirmTitle')}
+        message={t('screen.deleteConfirmMessage', {
+          title: recipePendingDeletion?.title || t('share.untitledRecipe'),
+        })}
+        errorMessage={deleteErrorMessage}
+        confirmText={t('screen.deleteConfirmButton')}
+        confirmLoading={isDeletingRecipe}
+        onConfirm={handleDeleteRecipe}
+        onCancel={handleCancelDeleteRecipe}
       />
     </SafeAreaView>
   );

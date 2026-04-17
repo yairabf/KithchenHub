@@ -27,6 +27,7 @@ jest.mock('../../../services/api', () => ({
         post: jest.fn(),
         put: jest.fn(),
         patch: jest.fn(),
+        delete: jest.fn(),
     },
 }));
 
@@ -461,6 +462,26 @@ describe('Recipe Services', () => {
                     ],
                 }),
             );
+        });
+
+        it('deleteRecipe calls api.delete with recipe id', async () => {
+            const recipeId = 'remote-1';
+            const existingRecipe = {
+                id: recipeId,
+                title: 'Recipe to delete',
+                prepTime: 30,
+                category: 'Dinner',
+                ingredients: [],
+                instructions: [],
+            };
+
+            await invalidateCache('recipes');
+            (api.get as jest.Mock).mockResolvedValue([existingRecipe]);
+            (api.delete as jest.Mock).mockResolvedValue(undefined);
+
+            await service.deleteRecipe(recipeId);
+
+            expect(api.delete).toHaveBeenCalledWith(`/recipes/${recipeId}`);
         });
     });
 });
