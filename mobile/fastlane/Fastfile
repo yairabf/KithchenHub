@@ -177,22 +177,34 @@ end
 
 def next_android_version_code(json_key:)
   existing_version_codes = ANDROID_TRACKS.flat_map do |track|
-    google_play_track_version_codes(
+    response = google_play_track_version_codes(
       json_key: json_key,
       package_name: ANDROID_PACKAGE_NAME,
       track: track,
     )
+
+    Array(response).map(&:to_i).select { |code| code.positive? }
   rescue => error
-    # The supply gem returns [] for tracks with no releases (not an error).
-    # If we end up here, something is genuinely wrong with the Play API call
-    # (auth, network, rate-limit, etc.). Silently returning [] would exclude
-    # that track's version codes from the max calculation and could produce a
-    # next_version_code lower than an existing release, causing Google Play to
-    # reject the upload after a ~25-minute build.
-    # Fail fast here so the engineer can investigate before wasting CI time.
-    UI.error("Failed to fetch version codes for track '#{track}': #{error.message}")
-    UI.error("Cannot safely compute next versionCode — aborting to prevent upload with a stale/wrong code.")
-    raise
+    # fastlane/supply can currently raise (sometimes wrapped):
+    #   undefined method `flat_map' for nil
+    # when a track has no releases metadata. In that case, the safe behavior
+    # is to treat the track as having no existing version codes.
+    if error.message.to_s.match?(/undefined method [`']flat_map[`'] for nil/i)
+      UI.important(
+        "Track '#{track}' returned no releases metadata from Google Play; treating as an empty track.",
+      )
+      []
+    else
+      # If we end up here, something is genuinely wrong with the Play API call
+      # (auth, network, rate-limit, etc.). Silently returning [] would exclude
+      # that track's version codes from the max calculation and could produce a
+      # next_version_code lower than an existing release, causing Google Play to
+      # reject the upload after a ~25-minute build.
+      # Fail fast here so the engineer can investigate before wasting CI time.
+      UI.error("Failed to fetch version codes for track '#{track}': #{error.message}")
+      UI.error("Cannot safely compute next versionCode — aborting to prevent upload with a stale/wrong code.")
+      raise
+    end
   end
 
   (existing_version_codes.max || 0) + 1
@@ -412,4 +424,3 @@ platform :android do
     )
   end
 end
-

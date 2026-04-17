@@ -19,7 +19,12 @@
     "noRecipesMatchSearch": "לא נמצאו מתכונים התואמים ל-\"{{query}}\". נסה שם אחר או אפס מסננים.",
     "tryDifferentCategory": "נסה קטגוריה אחרת או אפס מסננים.",
     "resetFilters": "איפוס מסננים",
-    "loadingDetails": "טוען פרטי מתכון..."
+    "loadingDetails": "טוען פרטי מתכון...",
+    "deleteConfirmTitle": "למחוק את המתכון?",
+    "deleteConfirmMessage": "האם למחוק את \"{{title}}\"?",
+    "deleteConfirmButton": "מחיקה",
+    "deleteSuccess": "המתכון נמחק בהצלחה",
+    "deleteFailed": "מחיקת המתכון נכשלה"
   },
   "detail": {
     "shareTitle": "שתף מתכון",

@@ -171,6 +171,10 @@ export function SwipeableWrapper({
     () => ({ borderRadius: effectiveBorderRadius }),
     [effectiveBorderRadius]
   );
+  const actionWidthStyle = useMemo(
+    () => ({ width: actionWidth }),
+    [actionWidth],
+  );
 
   return (
     <View style={styles.container}>
@@ -179,6 +183,7 @@ export function SwipeableWrapper({
         styles.deleteBackground,
         styles.leftBackground,
         borderRadiusStyle,
+        actionWidthStyle,
         leftBackgroundStyle
       ]}>
         <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete">
@@ -191,6 +196,7 @@ export function SwipeableWrapper({
         styles.deleteBackground,
         styles.rightBackground,
         borderRadiusStyle,
+        actionWidthStyle,
         rightBackgroundStyle
       ]}>
         <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete">

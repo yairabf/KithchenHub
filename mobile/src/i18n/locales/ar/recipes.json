@@ -19,7 +19,12 @@
     "noRecipesMatchSearch": "لا توجد وصفات تطابق \"{{query}}\". جرّب اسمًا آخر أو أعد ضبط الفلاتر.",
     "tryDifferentCategory": "جرّب فئة مختلفة أو أعد ضبط الفلاتر.",
     "resetFilters": "إعادة ضبط الفلاتر",
-    "loadingDetails": "جارٍ تحميل تفاصيل الوصفة..."
+    "loadingDetails": "جارٍ تحميل تفاصيل الوصفة...",
+    "deleteConfirmTitle": "حذف الوصفة؟",
+    "deleteConfirmMessage": "هل أنت متأكد من حذف \"{{title}}\"؟",
+    "deleteConfirmButton": "حذف",
+    "deleteSuccess": "تم حذف الوصفة بنجاح",
+    "deleteFailed": "فشل حذف الوصفة"
   },
   "detail": {
     "shareTitle": "مشاركة الوصفة",

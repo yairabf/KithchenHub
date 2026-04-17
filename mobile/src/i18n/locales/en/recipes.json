@@ -19,7 +19,12 @@
     "noRecipesMatchSearch": "No recipes match \"{{query}}\". Try another name or reset filters.",
     "tryDifferentCategory": "Try a different category or reset filters.",
     "resetFilters": "Reset filters",
-    "loadingDetails": "Loading recipe details..."
+    "loadingDetails": "Loading recipe details...",
+    "deleteConfirmTitle": "Delete recipe?",
+    "deleteConfirmMessage": "Are you sure you want to delete \"{{title}}\"?",
+    "deleteConfirmButton": "Delete",
+    "deleteSuccess": "Recipe deleted successfully",
+    "deleteFailed": "Failed to delete recipe"
   },
   "detail": {
     "shareTitle": "Share Recipe",
