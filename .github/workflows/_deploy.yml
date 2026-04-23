@@ -270,24 +270,29 @@ jobs:
     name: Post-deploy health check
     runs-on: ubuntu-latest
     needs: deploy
-    # Health checks are optional; run only when a service URL is provided by the caller.
-    if: ${{ secrets.SERVICE_URL != '' }}
     environment: ${{ inputs.environment }}
 
     steps:
-      - name: Ensure service_url is provided
+      - name: Resolve health check configuration
+        id: health_config
         run: |
           set -euo pipefail
           if [ -z "${{ secrets.SERVICE_URL }}" ]; then
-            echo "ERROR: service_url input is required for health checks."
-            exit 1
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "base_url=" >> "$GITHUB_OUTPUT"
+            echo "No SERVICE_URL secret provided; skipping post-deploy health check."
+            exit 0
           fi
 
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          echo "base_url=${{ secrets.SERVICE_URL }}" >> "$GITHUB_OUTPUT"
+
       - name: Wait for service to become healthy
+        if: ${{ steps.health_config.outputs.enabled == 'true' }}
         run: |
           set -euo pipefail
 
-          BASE_URL="${{ secrets.SERVICE_URL }}"
+          BASE_URL="${{ steps.health_config.outputs.base_url }}"
           HEALTH_URL="${BASE_URL%/}/api/version"
           echo "Checking health endpoint: $HEALTH_URL"
 
@@ -320,12 +325,13 @@ jobs:
           exit 1
 
       - name: Summary of deployment
+        if: ${{ steps.health_config.outputs.enabled == 'true' }}
         run: |
           echo "Deployment completed for:"
           echo "  Environment: ${{ inputs.environment }}"
           echo "  Target:      ${{ inputs.deploy_target }}"
           echo "  Image:       ${{ inputs.image_tag }}"
-          echo "  Health URL:  ${{ secrets.SERVICE_URL }}/api/version"
+          echo "  Health URL:  ${{ steps.health_config.outputs.base_url }}/api/version"
 
 # -----------------------------------------------------------------------------
 # Example usage (caller workflows)
