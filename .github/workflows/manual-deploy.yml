@@ -1,22 +1,35 @@
-# Manually trigger the Fastlane store pipeline.
-# build_only=true: archive iOS + build Android AAB but do NOT upload to any store.
-# Use this to validate compilation before committing to a full release run.
+# Unified manual deploy workflow:
+# - Optional backend redeploy to Vercel via Deploy Hook.
+# - Optional mobile build-only validation.
+# - Optional mobile store delivery via Fastlane reusable workflow.
 
-name: Mobile release (manual)
+name: Manual deploy
 
 on:
   workflow_dispatch:
     inputs:
-      build_only:
-        description: "Build only — archive iOS and build Android AAB, skip all store uploads"
+      redeploy_backend_vercel:
+        description: "Re-trigger backend deploy on Vercel (latest main via Deploy Hook)"
+        type: boolean
+        default: false
+      mobile_build_only:
+        description: "Mobile: build-only (archive iOS + Android AAB), no store uploads"
+        type: boolean
+        default: false
+      ios_testflight:
+        description: "Mobile: run iOS internal (TestFlight)"
         type: boolean
         default: false
       ios_app_store_submit:
-        description: After TestFlight, submit for App Store review (fastlane ios prod)
+        description: "Mobile: after TestFlight, submit for App Store review (fastlane ios prod)"
+        type: boolean
+        default: false
+      android_play_internal:
+        description: "Mobile: run Android internal (Play internal track)"
         type: boolean
         default: false
       android_production_promote:
-        description: After internal track, promote to production draft on Play (fastlane android prod)
+        description: "Mobile: after internal track, promote to production draft (fastlane android prod)"
         type: boolean
         default: false
 
@@ -24,10 +37,28 @@ permissions:
   contents: read
 
 jobs:
+  redeploy-vercel:
+    name: Redeploy backend on Vercel
+    if: ${{ inputs.redeploy_backend_vercel }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger Vercel deploy hook
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_DEPLOY_HOOK_URL:-}" ]; then
+            echo "Missing required secret: VERCEL_DEPLOY_HOOK_URL"
+            exit 1
+          fi
+          echo "Triggering Vercel deploy hook..."
+          curl -fsS -X POST "$VERCEL_DEPLOY_HOOK_URL"
+
   # --- Build-only path (no uploads, fast iteration) ---
   ios-build-check:
     name: iOS build check (archive only)
-    if: ${{ inputs.build_only }}
+    if: ${{ inputs.mobile_build_only }}
     runs-on: macos-15
     timeout-minutes: 90
     defaults:
@@ -47,7 +78,7 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version-file: mobile/.ruby-version
+          ruby-version: "3.3.6"
           bundler-cache: true
           working-directory: mobile
 
@@ -69,7 +100,6 @@ jobs:
         run: npx expo prebuild --platform ios --clean --no-install
 
       - name: Fastlane iOS archive (build only, no TestFlight upload)
-        working-directory: mobile
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -91,7 +121,7 @@ jobs:
 
   android-build-check:
     name: Android build check (AAB only)
-    if: ${{ inputs.build_only }}
+    if: ${{ inputs.mobile_build_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     defaults:
@@ -145,12 +175,11 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version-file: mobile/.ruby-version
+          ruby-version: "3.3.6"
           bundler-cache: true
           working-directory: mobile
 
       - name: Fastlane Android AAB build (no Play upload)
-        working-directory: mobile
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
@@ -160,9 +189,9 @@ jobs:
           GRADLE_OPTS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
         run: bundle exec fastlane android build_check
 
-  # --- Full release path (uploads to stores) ---
+  # --- Store delivery path (uploads to stores) ---
   stores:
-    if: ${{ !inputs.build_only }}
+    if: ${{ !inputs.mobile_build_only && (inputs.ios_testflight || inputs.android_play_internal || inputs.ios_app_store_submit || inputs.android_production_promote) }}
     uses: ./.github/workflows/mobile-native-store-release.yml
     secrets: inherit
     with:

@@ -14,7 +14,7 @@ const staticAppJson = require('./app.json');
 
 const versionJsonPath = path.resolve(__dirname, '..', 'version.json');
 
-/** When building from repo root (local/CI), use version.json. When only mobile is deployed (e.g. Vercel), fall back to env or default. */
+/** When building from repo root (local/CI), use version.json. Fall back to APP_VERSION env or default. */
 function resolveAppVersion() {
   let version = process.env.APP_VERSION || null;
   if (fs.existsSync(versionJsonPath)) {
