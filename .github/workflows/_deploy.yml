@@ -15,11 +15,6 @@ on:
         description: "Docker image tag or full image reference to deploy"
         required: true
         type: string
-      service_url:
-        description: "Base URL of the deployed service for health checks (e.g. https://api.staging.example.com)"
-        required: false
-        type: string
-        default: ""
       skip_migrations:
         description: "Skip the migrations job (use when platform runs migrations elsewhere, e.g. Render deploy hook)"
         required: false
@@ -64,6 +59,9 @@ on:
       GCP_SA_KEY:
         description: "GCP service account JSON key (if not using workload identity federation)"
         required: false
+      SERVICE_URL:
+        description: "Base URL of the deployed service for optional post-deploy health checks"
+        required: false
 
 concurrency:
   group: deploy-${{ inputs.environment }}-${{ inputs.deploy_target }}
@@ -83,6 +81,7 @@ jobs:
     name: Run database migrations
     runs-on: ubuntu-latest
     if: ${{ !inputs.skip_migrations }}
+    environment: ${{ inputs.environment }}
 
     steps:
       - name: Validate migration configuration
@@ -137,6 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [migrations]
     if: ${{ always() && (needs.migrations.result == 'success' || needs.migrations.result == 'skipped') }}
+    environment: ${{ inputs.environment }}
 
     steps:
       - name: Validate deploy target
@@ -271,13 +271,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     # Health checks are optional; run only when a service URL is provided by the caller.
-    if: ${{ inputs.service_url != '' }}
+    if: ${{ secrets.SERVICE_URL != '' }}
+    environment: ${{ inputs.environment }}
 
     steps:
       - name: Ensure service_url is provided
         run: |
           set -euo pipefail
-          if [ -z "${{ inputs.service_url }}" ]; then
+          if [ -z "${{ secrets.SERVICE_URL }}" ]; then
             echo "ERROR: service_url input is required for health checks."
             exit 1
           fi
@@ -286,7 +287,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          BASE_URL="${{ inputs.service_url }}"
+          BASE_URL="${{ secrets.SERVICE_URL }}"
           HEALTH_URL="${BASE_URL%/}/api/version"
           echo "Checking health endpoint: $HEALTH_URL"
 
@@ -324,7 +325,7 @@ jobs:
           echo "  Environment: ${{ inputs.environment }}"
           echo "  Target:      ${{ inputs.deploy_target }}"
           echo "  Image:       ${{ inputs.image_tag }}"
-          echo "  Health URL:  ${{ inputs.service_url }}/api/version"
+          echo "  Health URL:  ${{ secrets.SERVICE_URL }}/api/version"
 
 # -----------------------------------------------------------------------------
 # Example usage (caller workflows)
