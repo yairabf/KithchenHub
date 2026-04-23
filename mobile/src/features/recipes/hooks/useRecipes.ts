@@ -8,6 +8,8 @@ import { useCachedEntities } from '../../../common/hooks/useCachedEntities';
 import { CacheAwareRecipeRepository } from '../../../common/repositories/cacheAwareRecipeRepository';
 import { pruneStaleImages } from '../../../common/services/recipeImageCache';
 
+const isActiveRecipe = (recipe: Recipe): boolean => recipe.deletedAt == null;
+
 export function useRecipes() {
     const { user, isLoading: isAuthLoading } = useAuth();
 
@@ -123,7 +125,7 @@ export function useRecipes() {
 
     // For guest mode, use service-based approach
     // For signed-in mode, use repository + cache hook
-    const recipes = isSignedIn ? cachedRecipes : guestRecipes;
+    const recipes = (isSignedIn ? cachedRecipes : guestRecipes).filter(isActiveRecipe);
     const isLoading = isAuthLoading || (isSignedIn ? isCacheLoading : isGuestLoading);
     const error = isSignedIn ? cacheError : guestError;
 

@@ -420,6 +420,8 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                   <SwipeableWrapper
                     key={recipe.id}
                     actionWidth={cardWidth * 0.35}
+                    borderRadius={28}
+                    allowedSwipeDirection="left"
                     disabled={showDeleteConfirmationModal || isDeletingRecipe}
                     onSwipeDelete={() => handleRequestDeleteRecipe(recipe)}
                   >

@@ -119,4 +119,34 @@ describe('useRecipes', () => {
       expect(result.current.recipes[0].name).toBe('Updated Name');
     });
   });
+
+  describe('recipe visibility', () => {
+    it('filters out soft-deleted recipes from the returned list', async () => {
+      const activeRecipe = createMockRecipe({ id: 'active-1', name: 'Visible Recipe' });
+      const deletedRecipe = createMockRecipe({
+        id: 'deleted-1',
+        name: 'Deleted Recipe',
+        deletedAt: new Date('2026-04-23T05:00:00.000Z'),
+      });
+
+      const mockService = {
+        getRecipes: jest.fn().mockResolvedValue([activeRecipe, deletedRecipe]),
+        createRecipe: jest.fn(),
+        updateRecipe: jest.fn(),
+        deleteRecipe: jest.fn(),
+      };
+      createRecipeService.mockReturnValue(mockService);
+
+      const { result } = renderHook(() => useRecipes());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.recipes).toEqual([
+        expect.objectContaining({ id: 'active-1', name: 'Visible Recipe' }),
+      ]);
+      expect(result.current.recipes).toHaveLength(1);
+    });
+  });
 });

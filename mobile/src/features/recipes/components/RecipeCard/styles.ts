@@ -4,7 +4,6 @@ import { colors, spacing, shadows } from '../../../../theme';
 export const styles = StyleSheet.create({
   recipeCard: {
     borderRadius: 28,
-    marginBottom: spacing.lg,
     overflow: 'hidden',
     backgroundColor: colors.surface,
     ...shadows.md,
