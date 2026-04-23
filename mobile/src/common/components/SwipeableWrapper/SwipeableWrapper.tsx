@@ -1,12 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, TouchableOpacity, Platform } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
-  runOnJS,
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
@@ -41,11 +39,26 @@ export function SwipeableWrapper({
   disabled = false,
   borderRadius: customBorderRadius,
   actionWidth = DEFAULT_ACTION_WIDTH,
+  allowedSwipeDirection = 'both',
 }: SwipeableWrapperProps) {
   const translateX = useSharedValue(0);
   const swipeDirection = useSharedValue<number>(0); // 1 for right, -1 for left, 0 for none
 
+  useEffect(() => {
+    if (!disabled) {
+      return;
+    }
+
+    translateX.value = withTiming(0, { duration: 180 });
+  }, [disabled, translateX]);
+
+  const closeSwipe = () => {
+    translateX.value = withTiming(0, { duration: 180 });
+  };
+
   const handleDelete = () => {
+    closeSwipe();
+
     try {
       onSwipeDelete();
     } catch (error) {
@@ -75,6 +88,16 @@ export function SwipeableWrapper({
       }
 
       if (swipeDirection.value !== 0) {
+        const isDirectionAllowed =
+          allowedSwipeDirection === 'both' ||
+          (allowedSwipeDirection === 'left' && swipeDirection.value < 0) ||
+          (allowedSwipeDirection === 'right' && swipeDirection.value > 0);
+
+        if (!isDirectionAllowed) {
+          translateX.value = 0;
+          return;
+        }
+
         const isSameDirection =
           (swipeDirection.value > 0 && event.translationX > 0) ||
           (swipeDirection.value < 0 && event.translationX < 0);
@@ -84,10 +107,7 @@ export function SwipeableWrapper({
           const clamped = Math.max(-actionWidth, Math.min(actionWidth, raw));
           translateX.value = clamped;
         } else if (event.translationX * swipeDirection.value < 0) {
-          translateX.value = withSpring(0, {
-            damping: 20,
-            stiffness: 300,
-          });
+          translateX.value = 0;
           swipeDirection.value = 0;
         }
       }
@@ -96,21 +116,27 @@ export function SwipeableWrapper({
       'worklet';
       const absTranslateX = Math.abs(translateX.value);
       const absVelocityX = Math.abs(event.velocityX);
+      const resolvedDirection =
+        translateX.value === 0 ? (event.velocityX === 0 ? 0 : event.velocityX > 0 ? 1 : -1) : translateX.value > 0 ? 1 : -1;
+      const isDirectionAllowed =
+        resolvedDirection === 0 ||
+        allowedSwipeDirection === 'both' ||
+        (allowedSwipeDirection === 'left' && resolvedDirection < 0) ||
+        (allowedSwipeDirection === 'right' && resolvedDirection > 0);
 
-      const openThreshold = actionWidth * 0.4;
+      if (!isDirectionAllowed || resolvedDirection === 0) {
+        translateX.value = withTiming(0, { duration: 180 });
+        swipeDirection.value = 0;
+        return;
+      }
+
+      const openThreshold = actionWidth * 0.55;
       const shouldOpen = absTranslateX >= openThreshold || absVelocityX > config.deleteVelocityThreshold;
 
       if (shouldOpen) {
-        const direction = translateX.value >= 0 ? 1 : -1;
-        translateX.value = withSpring(direction * actionWidth, {
-          damping: 20,
-          stiffness: 300,
-        });
+        translateX.value = withTiming(resolvedDirection * actionWidth, { duration: 180 });
       } else {
-        translateX.value = withSpring(0, {
-          damping: 20,
-          stiffness: 300,
-        });
+        translateX.value = withTiming(0, { duration: 180 });
       }
 
       swipeDirection.value = 0;
@@ -130,16 +156,8 @@ export function SwipeableWrapper({
       Extrapolate.CLAMP
     );
 
-    const scale = interpolate(
-      translateX.value,
-      [0, actionWidth],
-      [0.5, 1],
-      Extrapolate.CLAMP
-    );
-
     return {
       opacity,
-      transform: [{ scale }],
     };
   });
 
@@ -151,16 +169,8 @@ export function SwipeableWrapper({
       Extrapolate.CLAMP
     );
 
-    const scale = interpolate(
-      translateX.value,
-      [-actionWidth, 0],
-      [1, 0.5],
-      Extrapolate.CLAMP
-    );
-
     return {
       opacity,
-      transform: [{ scale }],
     };
   });
 
@@ -177,7 +187,7 @@ export function SwipeableWrapper({
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, borderRadiusStyle]}>
       {/* Left delete background (swipe right) */}
       <Animated.View style={[
         styles.deleteBackground,
@@ -186,7 +196,7 @@ export function SwipeableWrapper({
         actionWidthStyle,
         leftBackgroundStyle
       ]}>
-        <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete">
+        <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete" style={styles.deleteActionButton}>
           <Ionicons name="trash-outline" size={24} color={colors.textLight} />
         </TouchableOpacity>
       </Animated.View>
@@ -199,7 +209,7 @@ export function SwipeableWrapper({
         actionWidthStyle,
         rightBackgroundStyle
       ]}>
-        <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete">
+        <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete" style={styles.deleteActionButton}>
           <Ionicons name="trash-outline" size={24} color={colors.textLight} />
         </TouchableOpacity>
       </Animated.View>
@@ -208,7 +218,6 @@ export function SwipeableWrapper({
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[
           styles.card,
-          // Apply border radius to the animated view to match content
           borderRadiusStyle,
           cardAnimatedStyle
         ]}>

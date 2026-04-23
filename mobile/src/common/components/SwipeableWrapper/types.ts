@@ -40,4 +40,11 @@ export interface SwipeableWrapperProps {
    * @default borderRadius.lg (12)
    */
   borderRadius?: number;
+
+  /**
+   * Restricts the gesture to a single direction when needed.
+   * Use `left` for destructive actions revealed by swiping left.
+   * @default 'both'
+   */
+  allowedSwipeDirection?: 'left' | 'right' | 'both';
 }

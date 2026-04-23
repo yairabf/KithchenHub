@@ -1,10 +1,9 @@
 import { StyleSheet } from 'react-native';
-import { colors, borderRadius, shadows } from '../../../theme';
+import { colors, borderRadius } from '../../../theme';
 
 export const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    // marginBottom removed - layout should be handled by parent list/container
   },
   deleteBackground: {
     position: 'absolute',
@@ -24,5 +23,11 @@ export const styles = StyleSheet.create({
   card: {
     // Styling handled by child component (ListItemCardWrapper)
     // Only transform is applied via animated styles
+  },
+  deleteActionButton: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
