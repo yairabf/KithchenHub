@@ -24,8 +24,6 @@ jobs:
       environment: staging
       deploy_target: gcp-cloudrun
       image_tag: develop-latest
-      # Health checks are optional. If STAGING_SERVICE_URL is unset, checks are skipped.
-      service_url: ${{ secrets.STAGING_SERVICE_URL }}
     # Required for Cloud Run: GCP_PROJECT_ID, GCP_REGION, GCP_CLOUD_RUN_SERVICE_STAGING, GCP_SA_KEY. See backend/DEPLOYMENT.md.
     secrets:
       DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
@@ -34,3 +32,5 @@ jobs:
       GCP_REGION: ${{ secrets.GCP_REGION }}
       GCP_CLOUD_RUN_SERVICE: ${{ secrets.GCP_CLOUD_RUN_SERVICE_STAGING }}
       GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      # Health checks are optional. If STAGING_SERVICE_URL is unset, checks are skipped.
+      SERVICE_URL: ${{ secrets.STAGING_SERVICE_URL }}
