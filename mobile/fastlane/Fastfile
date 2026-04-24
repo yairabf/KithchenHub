@@ -136,6 +136,7 @@ end
 def install_ios_pods!
   Dir.chdir(IOS_ROOT) do
     utf8_env = { 'LANG' => 'en_US.UTF-8', 'LC_ALL' => 'en_US.UTF-8' }
+    max_install_attempts = 3
 
     libwebp_src = File.join('Pods', 'libwebp', 'src')
     unless File.exist?(File.join(libwebp_src, 'webp', 'types.h'))
@@ -144,7 +145,28 @@ def install_ios_pods!
       FileUtils.rm_rf(File.join('Pods', 'libwebp'))
     end
 
-    sh(utf8_env, 'bundle', 'exec', 'pod', 'install')
+    attempts = 0
+    begin
+      attempts += 1
+      sh(utf8_env, 'bundle', 'exec', 'pod', 'install')
+    rescue => error
+      message = error.message.to_s
+      transient_failure = message.match?(/RPC failed/i) ||
+        message.match?(/The requested URL returned error:\s*5\d\d/i) ||
+        message.match?(/timed out/i) ||
+        message.match?(/Failed to open TCP connection/i) ||
+        message.match?(/Could not resolve host/i)
+
+      raise unless transient_failure && attempts < max_install_attempts
+
+      wait_seconds = attempts * 10
+      UI.important("[pods] pod install transient failure (attempt #{attempts}/#{max_install_attempts}): #{message}")
+      UI.important("[pods] cleaning SDWebImageWebPCoder cache and retrying in #{wait_seconds}s...")
+      sh(utf8_env, 'bundle', 'exec', 'pod', 'cache', 'clean', 'SDWebImageWebPCoder', '--all') rescue nil
+      FileUtils.rm_rf(File.join('Pods', 'SDWebImageWebPCoder'))
+      sleep(wait_seconds)
+      retry
+    end
   end
 end
 
@@ -176,6 +198,8 @@ def latest_ios_build_for_version!(api_key:, version:)
 end
 
 def next_android_version_code(json_key:)
+  lookup_failed = false
+
   existing_version_codes = ANDROID_TRACKS.flat_map do |track|
     response = google_play_track_version_codes(
       json_key: json_key,
@@ -193,6 +217,7 @@ def next_android_version_code(json_key:)
       UI.important(
         "Track '#{track}' returned no releases metadata from Google Play; treating as an empty track.",
       )
+      lookup_failed = true
       []
     else
       # If we end up here, something is genuinely wrong with the Play API call
@@ -207,7 +232,18 @@ def next_android_version_code(json_key:)
     end
   end
 
-  (existing_version_codes.max || 0) + 1
+  next_from_tracks = (existing_version_codes.max || 0) + 1
+  return next_from_tracks unless lookup_failed
+
+  # Guard against incomplete Play track metadata responses by applying a
+  # monotonic time-based floor for versionCode. Keeps uploads upgradeable even
+  # when one or more tracks cannot be read reliably.
+  fallback_floor = 100_000_000 + (Time.now.to_i / 60)
+  chosen_version_code = [next_from_tracks, fallback_floor].max
+  UI.important(
+    "One or more Play tracks could not be read reliably; using fallback versionCode floor #{fallback_floor} (chosen #{chosen_version_code}).",
+  )
+  chosen_version_code
 end
 
 def android_signing_properties!
