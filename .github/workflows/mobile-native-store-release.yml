@@ -117,7 +117,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version-file: mobile/.ruby-version
+          ruby-version: "3.3.6"
           bundler-cache: true
           working-directory: mobile
 
@@ -185,7 +185,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version-file: mobile/.ruby-version
+          ruby-version: "3.3.6"
           bundler-cache: true
           working-directory: mobile
 
