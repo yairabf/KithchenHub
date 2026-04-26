@@ -65,6 +65,7 @@ export const ChoreCard = React.memo(function ChoreCard({
       key={chore.id}
       onSwipeDelete={() => onDelete(chore.id)}
       borderRadius={borderRadius.xxl}
+      deleteOnSwipeOpen={true}
     >
       <ListItemCardWrapper
         backgroundColor={chore.isCompleted ? CARD_BG_COMPLETED : CARD_BG_DEFAULT}

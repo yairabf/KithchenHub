@@ -47,4 +47,11 @@ export interface SwipeableWrapperProps {
    * @default 'both'
    */
   allowedSwipeDirection?: 'left' | 'right' | 'both';
+
+  /**
+   * If true, crossing the open threshold triggers deletion immediately on swipe end
+   * instead of waiting for the user to tap the revealed trash action.
+   * @default false
+   */
+  deleteOnSwipeOpen?: boolean;
 }

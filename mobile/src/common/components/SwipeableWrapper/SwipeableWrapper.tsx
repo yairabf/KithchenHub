@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
   interpolate,
   Extrapolate,
+  runOnJS,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius } from '../../../theme';
@@ -40,6 +41,7 @@ export function SwipeableWrapper({
   borderRadius: customBorderRadius,
   actionWidth = DEFAULT_ACTION_WIDTH,
   allowedSwipeDirection = 'both',
+  deleteOnSwipeOpen = false,
 }: SwipeableWrapperProps) {
   const translateX = useSharedValue(0);
   const swipeDirection = useSharedValue<number>(0); // 1 for right, -1 for left, 0 for none
@@ -135,6 +137,12 @@ export function SwipeableWrapper({
 
       if (shouldOpen) {
         translateX.value = withTiming(resolvedDirection * actionWidth, { duration: 180 });
+
+        if (deleteOnSwipeOpen) {
+          swipeDirection.value = 0;
+          runOnJS(handleDelete)();
+          return;
+        }
       } else {
         translateX.value = withTiming(0, { duration: 180 });
       }
