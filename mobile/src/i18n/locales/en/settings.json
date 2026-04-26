@@ -1,6 +1,8 @@
 {
   "title": "Settings",
   "language": "Language",
+  "languageSaveErrorTitle": "Unable to save language",
+  "languageSaveErrorMessage": "Your language changed for now, but it could not be saved for next launch.",
   "household": "Household",
   "account": "Account",
   "admin": "Admin",

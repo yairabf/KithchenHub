@@ -95,7 +95,7 @@ const resources = {
 
 const isDev = __DEV__;
 
-i18n
+export const i18nInitialization = i18n
   .use(createLanguageDetector())
   .use(initReactI18next)
   .init({
@@ -165,11 +165,14 @@ export async function setAppLanguage(locale: string): Promise<void> {
   if (!isAllowed) {
     return;
   }
+
+  let persistenceError: unknown;
   try {
     await setStoredLanguage(normalized);
-  } catch {
-    // Storage failure should not block language switching
+  } catch (error) {
+    persistenceError = error;
   }
+
   await i18n.changeLanguage(normalized);
 
   const newIsRtl = isRtlLanguage(normalized);
@@ -177,5 +180,9 @@ export async function setAppLanguage(locale: string): Promise<void> {
   if (newIsRtl !== currentIsRtl) {
     I18nManager.swapLeftAndRightInRTL(true);
     I18nManager.forceRTL(newIsRtl);
+  }
+
+  if (persistenceError != null) {
+    throw persistenceError;
   }
 }

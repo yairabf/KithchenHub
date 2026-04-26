@@ -100,11 +100,11 @@ describe('setAppLanguage', () => {
       changeLanguageSpy.mockRestore();
     });
 
-    it('changes language even when persistence fails', async () => {
+    it('rejects when persistence fails so callers can surface the problem', async () => {
       const changeLanguageSpy = jest.spyOn(i18n, 'changeLanguage').mockResolvedValue(undefined as never);
       mockSetStoredLanguage.mockRejectedValueOnce(new Error('storage unavailable'));
 
-      await expect(setAppLanguage('en')).resolves.toBeUndefined();
+      await expect(setAppLanguage('en')).rejects.toThrow('storage unavailable');
 
       expect(changeLanguageSpy).toHaveBeenCalledWith('en');
       expect(mockSetStoredLanguage).toHaveBeenCalledWith('en');

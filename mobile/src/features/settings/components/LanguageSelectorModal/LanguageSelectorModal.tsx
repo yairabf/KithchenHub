@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Alert,
   View,
   Text,
   TouchableOpacity,
@@ -32,7 +33,10 @@ export function LanguageSelectorModal({
       await setAppLanguage(code);
       onClose();
     } catch {
-      onClose();
+      Alert.alert(
+        t('languageSaveErrorTitle'),
+        t('languageSaveErrorMessage'),
+      );
     }
   };
 
