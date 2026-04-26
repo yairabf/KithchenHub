@@ -2,6 +2,7 @@
  * Tests for i18n language detector (AsyncStorage + expo-localization, supportedLngs validation).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import i18next from 'i18next';
 import * as Localize from '../localize';
 import { createLanguageDetector } from '../languageDetector';
 
@@ -128,6 +129,28 @@ describe('language detector', () => {
   });
 
   describe('supportedLngs validation', () => {
+    it('does not persist the fallback language during initialization', async () => {
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+      mockGetLocales.mockReturnValue([]);
+      (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
+
+      const instance = i18next.createInstance();
+      await instance
+        .use(createLanguageDetector() as never)
+        .init({
+          resources: {
+            en: { translation: { ready: 'ready' } },
+            he: { translation: { ready: 'מוכן' } },
+          },
+          fallbackLng: 'en',
+          supportedLngs,
+          interpolation: { escapeValue: false },
+        });
+
+      expect(instance.language).toBe('en');
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith('@kitchen_hub_language', 'en');
+    });
+
     it('ignores invalid stored value and uses device locale', async () => {
       (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) =>
         key === '@kitchen_hub_language' ? Promise.resolve('invalid') : Promise.resolve(null)
