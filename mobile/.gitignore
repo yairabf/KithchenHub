@@ -15,3 +15,6 @@ fastlane/*.json
 fastlane/README.md
 fastlane/report.xml
 fastlane/test_output/
+
+# Hermes local planning artifacts
+.hermes/
