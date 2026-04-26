@@ -45,6 +45,7 @@ function ShoppingItemCard({
       key={item.id}
       onSwipeDelete={() => onDeleteItem(item.id)}
       borderRadius={borderRadius.xxl}
+      deleteOnSwipeOpen={true}
     >
       <ListItemCardWrapper
         style={[styles.shoppingItemCard, isChecked ? styles.checkedCard : undefined]}

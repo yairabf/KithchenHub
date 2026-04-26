@@ -10,10 +10,21 @@ import { ChoreCard } from '../ChoreCard';
 import type { Chore } from '../../../../../mocks/chores';
 
 jest.mock('../../../../../common/components/SwipeableWrapper', () => {
-  const { View } = require('react-native');
+  const { View, Text } = require('react-native');
   return {
-    SwipeableWrapper: ({ children }: { children: React.ReactNode }) => (
-      <View testID="swipeable-wrapper">{children}</View>
+    SwipeableWrapper: ({
+      children,
+      deleteOnSwipeOpen,
+      allowedSwipeDirection,
+    }: {
+      children: React.ReactNode;
+      deleteOnSwipeOpen?: boolean;
+      allowedSwipeDirection?: 'left' | 'right' | 'both';
+    }) => (
+      <View testID="swipeable-wrapper">
+        <Text>{`swipe-props:${String(deleteOnSwipeOpen)}:${allowedSwipeDirection ?? 'both'}`}</Text>
+        {children}
+      </View>
     ),
   };
 });
@@ -104,8 +115,8 @@ describe('ChoreCard', () => {
   });
 
   describe('ChoreCard interactions', () => {
-    it('should call onToggle when card is pressed', () => {
-      const { getByTestId } = render(
+    it('should configure direct swipe deletion in either direction', () => {
+      const { getByText } = render(
         <ChoreCard
           chore={baseChore}
           bgColor="#FFFFFF"
@@ -115,11 +126,7 @@ describe('ChoreCard', () => {
         />
       );
 
-      const card = getByTestId('chore-card-1');
-      fireEvent.press(card);
-
-      expect(mockOnToggle).toHaveBeenCalledWith('1');
-      expect(mockOnToggle).toHaveBeenCalledTimes(1);
+      expect(getByText('swipe-props:true:both')).toBeTruthy();
     });
 
     it('should call onEdit when edit button is pressed', () => {

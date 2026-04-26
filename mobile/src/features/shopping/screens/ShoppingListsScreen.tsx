@@ -267,6 +267,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   // Use state management for all modes
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
+  const [pendingDeletedItemIds, setPendingDeletedItemIds] = useState<string[]>([]);
   const [isListsLoading, setIsListsLoading] = useState(false);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
 
@@ -400,11 +401,18 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, [shoppingRepository, loadShoppingData]);
 
   // Update list item counts when items change
+  const visibleItems = useMemo(
+    () => allItems.filter(
+      (item) => !pendingDeletedItemIds.includes(item.id) && !pendingDeletedItemIds.includes(item.localId),
+    ),
+    [allItems, pendingDeletedItemIds],
+  );
+
   useEffect(() => {
     setShoppingLists((currentLists) =>
-      updateShoppingListItemCounts(currentLists, allItems),
+      updateShoppingListItemCounts(currentLists, visibleItems),
     );
-  }, [allItems]);
+  }, [visibleItems]);
 
   useEffect(() => {
     setSelectedList((currentSelected) => getSelectedList(shoppingLists, currentSelected?.id));
@@ -447,8 +455,8 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, [realtimeError]);
 
   const filteredItems = useMemo(
-    () => allItems.filter((item) => item.listId === activeList.id),
-    [allItems, activeList.id],
+    () => visibleItems.filter((item) => item.listId === activeList.id),
+    [visibleItems, activeList.id],
   );
 
   const createItem = useCallback(
@@ -587,7 +595,18 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     const deleteById = targetItem.id;
     if (deletingItemIdsRef.current.has(deleteById)) return;
 
+    const pendingIds = [targetItem.id, targetItem.localId].filter(Boolean);
+    const hideItem = () => {
+      setPendingDeletedItemIds((current) => Array.from(new Set([...current, ...pendingIds])));
+    };
+    const showItem = () => {
+      setPendingDeletedItemIds((current) =>
+        current.filter((id) => id !== targetItem.id && id !== targetItem.localId),
+      );
+    };
+
     deletingItemIdsRef.current.add(deleteById);
+    hideItem();
 
     // Item exists only locally (optimistic create not yet confirmed by server).
     // Remove it from UI and skip DELETE API call to avoid 404/API errors.
@@ -597,6 +616,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
           (item) => item.id !== targetItem.id && item.localId !== targetItem.localId,
         ),
       );
+      showItem();
       deletingItemIdsRef.current.delete(deleteById);
       return;
     }
@@ -610,10 +630,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
           );
         },
         () => {
-          setAllItems((prev: ShoppingItem[]) => [...prev, targetItem]);
+          setAllItems((prev: ShoppingItem[]) => {
+            const alreadyExists = prev.some(
+              (item) => item.id === targetItem.id || item.localId === targetItem.localId,
+            );
+            return alreadyExists ? prev : [...prev, targetItem];
+          });
+          showItem();
         },
         'Failed to delete shopping item:',
       );
+      showItem();
     } finally {
       deletingItemIdsRef.current.delete(deleteById);
     }

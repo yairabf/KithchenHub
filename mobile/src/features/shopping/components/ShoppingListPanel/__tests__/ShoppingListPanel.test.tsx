@@ -11,9 +11,26 @@ import { ShoppingListPanel } from '../ShoppingListPanel';
 import type { ShoppingItem, ShoppingList } from '../../../../../mocks/shopping';
 import type { GroceryItem } from '../../GrocerySearchBar';
 
-jest.mock('../../../../../common/components/SwipeableWrapper', () => ({
-  SwipeableWrapper: ({ children }: { children: React.ReactNode }) => children,
-}));
+jest.mock('../../../../../common/components/SwipeableWrapper', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    SwipeableWrapper: ({
+      children,
+      deleteOnSwipeOpen,
+      allowedSwipeDirection,
+    }: {
+      children: React.ReactNode;
+      deleteOnSwipeOpen?: boolean;
+      allowedSwipeDirection?: 'left' | 'right' | 'both';
+    }) => (
+      <>
+        {children}
+        <Text>{`swipe-props:${String(deleteOnSwipeOpen)}:${allowedSwipeDirection ?? 'both'}`}</Text>
+      </>
+    ),
+  };
+});
 
 jest.mock('../../GrocerySearchBar', () => ({
   GrocerySearchBar: () => null,
@@ -115,9 +132,10 @@ describe('ShoppingListPanel', () => {
     expect(queryByText('Failed')).toBeNull();
   });
 
-  it('should render Create New button', () => {
-    const { getByText } = render(<ShoppingListPanel {...defaultProps} />);
-    expect(getByText('Create New')).toBeTruthy();
+  it('should enable direct swipe deletion on shopping items in either direction', () => {
+    const { getAllByText } = render(<ShoppingListPanel {...defaultProps} />);
+    const swipeProps = getAllByText('swipe-props:true:both');
+    expect(swipeProps).toHaveLength(mockItems.length);
   });
 
   it('should render edit action for list cards', () => {

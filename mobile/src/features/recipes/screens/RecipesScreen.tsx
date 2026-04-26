@@ -421,7 +421,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
                     key={recipe.id}
                     actionWidth={cardWidth * 0.35}
                     borderRadius={28}
-                    allowedSwipeDirection="left"
+                    deleteOnSwipeOpen={true}
                     disabled={showDeleteConfirmationModal || isDeletingRecipe}
                     onSwipeDelete={() => handleRequestDeleteRecipe(recipe)}
                   >
