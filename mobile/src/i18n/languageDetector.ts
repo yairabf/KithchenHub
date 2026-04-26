@@ -3,7 +3,7 @@
  * Detection order: (1) AsyncStorage (normalize + validate against supportedLngs),
  * (2) device locale (expo-localization on native, navigator on web), (3) fallbackLng.
  */
-import { getStoredLanguage, setStoredLanguage } from './storage';
+import { getStoredLanguage } from './storage';
 import { normalizeLocale } from './localeNormalization';
 import { getLocales } from './localize';
 
@@ -94,12 +94,13 @@ export function createLanguageDetector(): LanguageDetectorModule {
         });
     },
 
-    cacheUserLanguage(lng: string): void {
-      setStoredLanguage(lng).catch((err) => {
-        if (__DEV__ && typeof console !== 'undefined') {
-          console.warn('[i18n] Failed to cache language:', err);
-        }
-      });
+    cacheUserLanguage(_lng: string): void {
+      // Intentionally do not persist here.
+      // i18next calls cacheUserLanguage during initialization as well as explicit
+      // user-triggered language changes. Persisting here can overwrite a saved
+      // user preference with the startup fallback language (for example, 'en').
+      // Explicit persistence belongs in setAppLanguage(), which is only used for
+      // deliberate user language selection.
     },
   };
 }
