@@ -18,6 +18,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { getStoredLanguage } from './src/i18n/storage';
 import { normalizeLocale } from './src/i18n/localeNormalization';
 import { isRtlLanguage } from './src/i18n/rtl';
+import { i18n, i18nInitialization } from './src/i18n';
 import { syncI18nToDetectedLocale } from './src/i18n/syncI18nToDetectedLocale';
 
 export default function App() {
@@ -35,14 +36,15 @@ export default function App() {
         const locale = stored ?? deviceLocale ?? 'en';
         const normalized = normalizeLocale(locale);
         const initialLocale = normalized !== '' ? normalized : 'en';
-        const isRTL = isRtlLanguage(initialLocale);
+        await i18nInitialization;
+        await syncI18nToDetectedLocale(i18n, initialLocale);
+
+        const resolvedLanguage = normalizeLocale(i18n.language ?? initialLocale) || initialLocale;
+        const isRTL = isRtlLanguage(resolvedLanguage);
         I18nManager.allowRTL(true);
         I18nManager.swapLeftAndRightInRTL(true);
         I18nManager.forceRTL(isRTL);
         setLayoutDirection(isRTL ? 'rtl' : 'ltr');
-        const { i18n } = await import('./src/i18n');
-
-        await syncI18nToDetectedLocale(i18n, initialLocale);
 
         // Guard against component unmount during the async language-sync above.
         // Without this, the languageChanged listener below would be attached but
@@ -68,7 +70,6 @@ export default function App() {
         if (typeof console !== 'undefined' && console.warn) {
           console.warn('[App] RTL/i18n bootstrap failed, using default', err);
         }
-        await import('./src/i18n');
       }
       if (!cancelled) setBootstrapped(true);
     })();

@@ -1,6 +1,8 @@
 {
   "title": "الإعدادات",
   "language": "اللغة",
+  "languageSaveErrorTitle": "تعذر حفظ اللغة",
+  "languageSaveErrorMessage": "تم تغيير اللغة الآن، ولكن تعذر حفظها لفتح التطبيق في المرة القادمة.",
   "household": "المنزل",
   "account": "الحساب",
   "admin": "المشرف",

@@ -1,6 +1,8 @@
 {
   "title": "הגדרות",
   "language": "שפה",
+  "languageSaveErrorTitle": "לא ניתן לשמור את השפה",
+  "languageSaveErrorMessage": "השפה השתנתה כעת, אבל לא ניתן היה לשמור אותה להפעלה הבאה.",
   "household": "משק בית",
   "account": "חשבון",
   "admin": "מנהל",
