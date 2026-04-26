@@ -45,27 +45,35 @@ export function SwipeableWrapper({
 }: SwipeableWrapperProps) {
   const translateX = useSharedValue(0);
   const swipeDirection = useSharedValue<number>(0); // 1 for right, -1 for left, 0 for none
+  const isAutoDeleting = useSharedValue(false);
 
   useEffect(() => {
     if (!disabled) {
       return;
     }
 
+    isAutoDeleting.value = false;
     translateX.value = withTiming(0, { duration: 180 });
-  }, [disabled, translateX]);
+  }, [disabled, isAutoDeleting, translateX]);
 
   const closeSwipe = () => {
+    isAutoDeleting.value = false;
     translateX.value = withTiming(0, { duration: 180 });
   };
 
-  const handleDelete = () => {
-    closeSwipe();
+  const finalizeDelete = () => {
+    isAutoDeleting.value = false;
 
     try {
       onSwipeDelete();
     } catch (error) {
       console.error('SwipeableWrapper: Failed to delete item:', error);
     }
+  };
+
+  const handleDelete = () => {
+    closeSwipe();
+    finalizeDelete();
   };
 
   // Select platform-specific configuration
@@ -81,10 +89,17 @@ export function SwipeableWrapper({
     .enableTrackpadTwoFingerGesture(false)
     .onStart(() => {
       'worklet';
+      if (isAutoDeleting.value) {
+        return;
+      }
+
       swipeDirection.value = 0;
     })
     .onUpdate((event) => {
       'worklet';
+      if (isAutoDeleting.value) {
+        return;
+      }
       if (swipeDirection.value === 0 && Math.abs(event.translationX) > 5) {
         swipeDirection.value = event.translationX > 0 ? 1 : -1;
       }
@@ -116,6 +131,10 @@ export function SwipeableWrapper({
     })
     .onEnd((event) => {
       'worklet';
+      if (isAutoDeleting.value) {
+        return;
+      }
+
       const absTranslateX = Math.abs(translateX.value);
       const absVelocityX = Math.abs(event.velocityX);
       const resolvedDirection =
@@ -132,19 +151,33 @@ export function SwipeableWrapper({
         return;
       }
 
-      const openThreshold = actionWidth * 0.55;
-      const shouldOpen = absTranslateX >= openThreshold || absVelocityX > config.deleteVelocityThreshold;
+      const openThreshold = deleteOnSwipeOpen
+        ? Math.min(actionWidth * 0.35, 32)
+        : actionWidth * 0.55;
+      const velocityThreshold = deleteOnSwipeOpen
+        ? config.deleteVelocityThreshold * 0.5
+        : config.deleteVelocityThreshold;
+      const shouldOpen = absTranslateX >= openThreshold || absVelocityX > velocityThreshold;
 
       if (shouldOpen) {
-        translateX.value = withTiming(resolvedDirection * actionWidth, { duration: 180 });
-
         if (deleteOnSwipeOpen) {
+          isAutoDeleting.value = true;
+          translateX.value = withTiming(resolvedDirection * (actionWidth + 24), { duration: 140 }, (finished) => {
+            'worklet';
+            if (!finished) {
+              isAutoDeleting.value = false;
+              return;
+            }
+
+            runOnJS(finalizeDelete)();
+          });
           swipeDirection.value = 0;
-          runOnJS(handleDelete)();
           return;
         }
+
+        translateX.value = withTiming(resolvedDirection * actionWidth, { duration: 180 });
       } else {
-        translateX.value = withTiming(0, { duration: 180 });
+        translateX.value = withTiming(0, { duration: 140 });
       }
 
       swipeDirection.value = 0;
@@ -196,31 +229,35 @@ export function SwipeableWrapper({
 
   return (
     <View style={[styles.container, borderRadiusStyle]}>
-      {/* Left delete background (swipe right) */}
-      <Animated.View style={[
-        styles.deleteBackground,
-        styles.leftBackground,
-        borderRadiusStyle,
-        actionWidthStyle,
-        leftBackgroundStyle
-      ]}>
-        <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete" style={styles.deleteActionButton}>
-          <Ionicons name="trash-outline" size={24} color={colors.textLight} />
-        </TouchableOpacity>
-      </Animated.View>
+      {!deleteOnSwipeOpen ? (
+        <>
+          {/* Left delete background (swipe right) */}
+          <Animated.View style={[
+            styles.deleteBackground,
+            styles.leftBackground,
+            borderRadiusStyle,
+            actionWidthStyle,
+            leftBackgroundStyle
+          ]}>
+            <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete" style={styles.deleteActionButton}>
+              <Ionicons name="trash-outline" size={24} color={colors.textLight} />
+            </TouchableOpacity>
+          </Animated.View>
 
-      {/* Right delete background (swipe left) */}
-      <Animated.View style={[
-        styles.deleteBackground,
-        styles.rightBackground,
-        borderRadiusStyle,
-        actionWidthStyle,
-        rightBackgroundStyle
-      ]}>
-        <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete" style={styles.deleteActionButton}>
-          <Ionicons name="trash-outline" size={24} color={colors.textLight} />
-        </TouchableOpacity>
-      </Animated.View>
+          {/* Right delete background (swipe left) */}
+          <Animated.View style={[
+            styles.deleteBackground,
+            styles.rightBackground,
+            borderRadiusStyle,
+            actionWidthStyle,
+            rightBackgroundStyle
+          ]}>
+            <TouchableOpacity onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete" style={styles.deleteActionButton}>
+              <Ionicons name="trash-outline" size={24} color={colors.textLight} />
+            </TouchableOpacity>
+          </Animated.View>
+        </>
+      ) : null}
 
       {/* Swipeable card */}
       <GestureDetector gesture={panGesture}>

@@ -19,7 +19,10 @@ jest.mock('react-native-reanimated', () => {
     },
     useSharedValue: (value: number) => ({ value }),
     useAnimatedStyle: (factory: () => object) => factory(),
-    withTiming: (value: number) => value,
+    withTiming: (value: number, _config?: unknown, callback?: (finished: boolean) => void) => {
+      callback?.(true);
+      return value;
+    },
     interpolate: (value: number, inputRange: number[], outputRange: number[]) => {
       if (value <= inputRange[0]) return outputRange[0];
       if (value >= inputRange[inputRange.length - 1]) return outputRange[outputRange.length - 1];
@@ -81,7 +84,7 @@ describe('SwipeableWrapper', () => {
     jest.clearAllMocks();
   });
 
-  it('calls onSwipeDelete when swipe passes the threshold in either direction and deleteOnSwipeOpen is enabled', () => {
+  it('calls onSwipeDelete after a shorter single swipe when deleteOnSwipeOpen is enabled', () => {
     const onSwipeDelete = jest.fn();
 
     render(
@@ -94,10 +97,20 @@ describe('SwipeableWrapper', () => {
     const handlers = __getLatestPanHandlers();
 
     handlers?.onStart?.({});
-    handlers?.onUpdate?.({ translationX: 60 });
+    handlers?.onUpdate?.({ translationX: 30 });
     handlers?.onEnd?.({ velocityX: 0 });
 
     expect(onSwipeDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render the red delete action buttons in immediate auto-delete mode', () => {
+    const { queryAllByLabelText } = render(
+      <SwipeableWrapper onSwipeDelete={jest.fn()} deleteOnSwipeOpen={true}>
+        <></>
+      </SwipeableWrapper>,
+    );
+
+    expect(queryAllByLabelText('Delete')).toHaveLength(0);
   });
 
   it('does not call onSwipeDelete on swipe end when deleteOnSwipeOpen is disabled', () => {
