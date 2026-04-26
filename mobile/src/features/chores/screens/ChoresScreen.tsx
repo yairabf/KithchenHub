@@ -74,10 +74,12 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
 
   // For guest mode, use service directly
   const [guestChores, setGuestChores] = useState<Chore[]>([]);
+  const [pendingDeletedChoreIds, setPendingDeletedChoreIds] = useState<string[]>([]);
   const [isLoadingChores, setIsLoadingChores] = useState(true);
 
   const chores = (isSignedIn ? cachedChores : guestChores)
-    .filter(c => !c.deletedAt);
+    .filter(c => !c.deletedAt)
+    .filter(c => !pendingDeletedChoreIds.includes(c.id) && !pendingDeletedChoreIds.includes(c.localId));
 
   const choresWithEffectiveSection = useMemo(() => {
     const now = new Date();
@@ -233,16 +235,38 @@ export function ChoresScreen({ onOpenChoresModal, onRegisterAddChoreHandler }: C
   };
 
   const handleDeleteChore = async (choreId: string) => {
+    const targetChore = (isSignedIn ? cachedChores : guestChores).find(
+      (chore) => chore.id === choreId || chore.localId === choreId,
+    );
+    if (!targetChore) {
+      return;
+    }
+
+    const pendingIds = [targetChore.id, targetChore.localId].filter(Boolean);
+    const hideChore = () => {
+      setPendingDeletedChoreIds((current) => Array.from(new Set([...current, ...pendingIds])));
+    };
+    const showChore = () => {
+      setPendingDeletedChoreIds((current) =>
+        current.filter((id) => id !== targetChore.id && id !== targetChore.localId),
+      );
+    };
+
+    hideChore();
+
     if (repository) {
       // Signed-in: use repository
       try {
         await repository.delete(choreId);
+        showChore();
       } catch (error) {
+        showChore();
         logger.error('Failed to delete chore:', error instanceof Error ? error : String(error));
       }
     } else {
       // Guest: update local state
       setGuestChores(prevChores => prevChores.filter(chore => chore.id !== choreId));
+      showChore();
     }
   };
 

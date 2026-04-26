@@ -46,6 +46,7 @@ export function SwipeableWrapper({
   const translateX = useSharedValue(0);
   const swipeDirection = useSharedValue<number>(0); // 1 for right, -1 for left, 0 for none
   const isAutoDeleting = useSharedValue(false);
+  const containerWidth = useSharedValue(0);
 
   useEffect(() => {
     if (!disabled) {
@@ -161,8 +162,9 @@ export function SwipeableWrapper({
 
       if (shouldOpen) {
         if (deleteOnSwipeOpen) {
+          const swipeOutDistance = Math.max(containerWidth.value + 32, actionWidth * 2);
           isAutoDeleting.value = true;
-          translateX.value = withTiming(resolvedDirection * (actionWidth + 24), { duration: 140 }, (finished) => {
+          translateX.value = withTiming(resolvedDirection * swipeOutDistance, { duration: 180 }, (finished) => {
             'worklet';
             if (!finished) {
               isAutoDeleting.value = false;
@@ -228,7 +230,12 @@ export function SwipeableWrapper({
   );
 
   return (
-    <View style={[styles.container, borderRadiusStyle]}>
+    <View
+      style={[styles.container, borderRadiusStyle]}
+      onLayout={(event) => {
+        containerWidth.value = event.nativeEvent.layout.width;
+      }}
+    >
       {!deleteOnSwipeOpen ? (
         <>
           {/* Left delete background (swipe right) */}

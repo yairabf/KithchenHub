@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { render, waitFor, act } from '@testing-library/react-native';
+import { render, waitFor, act, fireEvent } from '@testing-library/react-native';
 import { ShoppingListsScreen } from '../ShoppingListsScreen';
 import { createShoppingService } from '../../services/shoppingService';
 import { createI18nMock } from '../../../../common/__tests__/utils/i18nMock';
@@ -65,6 +65,25 @@ jest.mock('../../../../common/hooks', () => ({
 jest.mock('../../hooks/useShoppingRealtime', () => ({
   useShoppingRealtime: () => ({ error: null }),
 }));
+
+jest.mock('../../components/ShoppingListPanel', () => {
+  const React = require('react');
+  const { Text, TouchableOpacity, View } = require('react-native');
+  return {
+    ShoppingListPanel: ({ filteredItems, onDeleteItem }: { filteredItems: Array<{ id: string; name: string }>; onDeleteItem: (id: string) => void }) => (
+      <View>
+        {filteredItems.map((item) => (
+          <View key={item.id}>
+            <Text>{item.name}</Text>
+            <TouchableOpacity testID={`delete-${item.id}`} onPress={() => onDeleteItem(item.id)}>
+              <Text>{`delete-${item.id}`}</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    ),
+  };
+});
 
 // Per-test mocks — each has a single, focused responsibility.
 const mockDeleteItem = jest.fn();
@@ -203,14 +222,18 @@ describe('ShoppingListsScreen - Item Deletion', () => {
         })
       );
 
-      const { queryByText } = render(<ShoppingListsScreen />);
+      const { getByTestId, queryByText } = render(<ShoppingListsScreen />);
 
       await waitFor(() => {
         expect(mockFindAllLists).toHaveBeenCalled();
       });
 
-      // After triggering delete, item should be removed immediately
-      // Then API call completes
+      expect(queryByText('Eggs')).toBeTruthy();
+
+      fireEvent.press(getByTestId('delete-server-456'));
+
+      expect(queryByText('Eggs')).toBeNull();
+
       // @ts-ignore
       act(() => resolveDelete());
     });
