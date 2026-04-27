@@ -19,22 +19,27 @@ export const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.backdrop,
   },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xxl,
-    padding: spacing.lg,
+  modalFrame: {
     width: '85%',
     maxWidth: 400,
     maxHeight: '90%',
     ...boxShadow(4, 12, 'rgba(0, 0, 0, 0.15)'),
   },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xxl,
+    padding: spacing.lg,
+    overflow: 'hidden',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
   title: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
@@ -46,10 +51,12 @@ export const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     flexShrink: 1,
     minHeight: 0,
+    overflow: 'hidden',
   },
   actions: {
     flexDirection: 'row',
     gap: spacing.md,
+    flexShrink: 0,
   },
   cancelButton: {
     flex: 1,

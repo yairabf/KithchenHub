@@ -3,7 +3,7 @@ import { colors, spacing, borderRadius } from '../../../../theme';
 
 export const styles = StyleSheet.create({
   formScrollView: {
-    flexGrow: 0,
+    flexShrink: 1,
     minHeight: 0,
   },
   formScrollContent: {

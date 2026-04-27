@@ -146,11 +146,11 @@ export function CenteredModal({
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <Animated.View
-            style={[styles.modalContent, animatedModalStyle]}
+            style={[styles.modalFrame, animatedModalStyle]}
             accessibilityViewIsModal={true}
             importantForAccessibility="yes"
           >
-            <Pressable onPress={(e) => e.stopPropagation()}>
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
               {/* Header */}
               <View style={styles.header}>
                 <Text
