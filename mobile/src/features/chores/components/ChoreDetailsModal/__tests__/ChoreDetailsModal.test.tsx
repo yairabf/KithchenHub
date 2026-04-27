@@ -150,6 +150,11 @@ describe('ChoreDetailsModal', () => {
         />,
       );
 
+    it('renders the form inside a scroll view for keyboard-safe editing', () => {
+      const { getByTestId } = renderAddModal();
+      expect(getByTestId('chore-details-scroll-view')).toBeTruthy();
+    });
+
     it('shows empty name input on open', () => {
       const { getByPlaceholderText } = renderAddModal();
       const input = getByPlaceholderText('Chore name');

@@ -259,7 +259,9 @@ export function AddRecipeModal({
       submitLoading={isSaving}
     >
       <ScrollView
+        testID="add-recipe-scroll-view"
         style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContentContainer}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

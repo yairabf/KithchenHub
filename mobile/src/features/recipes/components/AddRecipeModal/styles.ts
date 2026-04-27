@@ -21,7 +21,11 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
   scrollContent: {
-    maxHeight: 400,
+    flexGrow: 0,
+    minHeight: 0,
+  },
+  scrollContentContainer: {
+    paddingBottom: spacing.sm,
   },
   section: {
     marginBottom: spacing.md,

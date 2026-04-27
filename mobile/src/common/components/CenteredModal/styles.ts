@@ -7,6 +7,13 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: spacing.lg,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -18,6 +25,7 @@ export const styles = StyleSheet.create({
     padding: spacing.lg,
     width: '85%',
     maxWidth: 400,
+    maxHeight: '90%',
     ...boxShadow(4, 12, 'rgba(0, 0, 0, 0.15)'),
   },
   header: {
@@ -36,6 +44,8 @@ export const styles = StyleSheet.create({
   },
   content: {
     marginBottom: spacing.lg,
+    flexShrink: 1,
+    minHeight: 0,
   },
   actions: {
     flexDirection: 'row',

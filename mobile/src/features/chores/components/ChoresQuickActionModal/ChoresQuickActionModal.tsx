@@ -172,129 +172,137 @@ export function ChoresQuickActionModal({ visible, onClose, onAddChore }: ChoresQ
       title={t('quickActionModal.title')}
       showActions={false}
     >
-      {/* Quick Add Form */}
-      <View style={styles.addFormContainer}>
-        <View style={styles.addForm}>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder={t('quickActionModal.choreNamePlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            value={newChoreText}
-            onChangeText={setNewChoreText}
-            onSubmitEditing={handleAddChore}
-            returnKeyType="done"
-          />
-          {newChoreText.length > 0 && (
+      <ScrollView
+        testID="chores-quick-action-scroll-view"
+        style={styles.formScrollView}
+        contentContainerStyle={styles.formScrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Quick Add Form */}
+        <View style={styles.addFormContainer}>
+          <View style={styles.addForm}>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder={t('quickActionModal.choreNamePlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              value={newChoreText}
+              onChangeText={setNewChoreText}
+              onSubmitEditing={handleAddChore}
+              returnKeyType="done"
+            />
+            {newChoreText.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  setNewChoreText('');
+                  setShowSearchDropdown(false);
+                }}
+              >
+                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => {
-                setNewChoreText('');
-                setShowSearchDropdown(false);
-              }}
+              testID="chores-quick-action-add"
+              style={[styles.addButton, { backgroundColor: colors.chores }]}
+              onPress={handleAddChore}
             >
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              <Ionicons name="add" size={24} color={colors.textLight} />
             </TouchableOpacity>
+          </View>
+
+          {/* Search Results Dropdown */}
+          {showSearchDropdown && (
+            <View style={styles.searchDropdown}>
+              <ScrollView
+                style={styles.searchDropdownScroll}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+              >
+                {searchResults.map((chore) => (
+                  <TouchableOpacity
+                    key={chore.id}
+                    style={styles.searchResultItem}
+                    onPress={() => handleSelectChoreTemplate(chore)}
+                  >
+                    <Text style={styles.searchResultIcon}>{chore.icon}</Text>
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName}>{chore.name}</Text>
+                      <Text style={styles.searchResultCategory}>{chore.category}</Text>
+                    </View>
+                    <Ionicons name={getDirectionalIcon('arrow-forward')} size={20} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           )}
-          <TouchableOpacity
-            testID="chores-quick-action-add"
-            style={[styles.addButton, { backgroundColor: colors.chores }]}
-            onPress={handleAddChore}
-          >
-            <Ionicons name="add" size={24} color={colors.textLight} />
-          </TouchableOpacity>
         </View>
 
-        {/* Search Results Dropdown */}
-        {showSearchDropdown && (
-          <View style={styles.searchDropdown}>
-            <ScrollView
-              style={styles.searchDropdownScroll}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-            >
-              {searchResults.map((chore) => (
-                <TouchableOpacity
-                  key={chore.id}
-                  style={styles.searchResultItem}
-                  onPress={() => handleSelectChoreTemplate(chore)}
-                >
-                  <Text style={styles.searchResultIcon}>{chore.icon}</Text>
-                  <View style={styles.searchResultInfo}>
-                    <Text style={styles.searchResultName}>{chore.name}</Text>
-                    <Text style={styles.searchResultCategory}>{chore.category}</Text>
-                  </View>
-                  <Ionicons name={getDirectionalIcon('arrow-forward')} size={20} color={colors.textMuted} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-      </View>
+        {/* Due Date & Time Selector */}
+        <View style={styles.dueDateSection}>
+          <DateTimePicker
+            value={selectedDateTime}
+            onChange={setSelectedDateTime}
+            label="Due Date & Time"
+            placeholder="Select date and time..."
+            minDate={new Date()}
+            accentColor={colors.chores}
+            displayFormat="MMM D, YYYY h:mm A"
+          />
+        </View>
 
-      {/* Due Date & Time Selector */}
-      <View style={styles.dueDateSection}>
-        <DateTimePicker
-          value={selectedDateTime}
-          onChange={setSelectedDateTime}
-          label="Due Date & Time"
-          placeholder="Select date and time..."
-          minDate={new Date()}
-          accentColor={colors.chores}
-          displayFormat="MMM D, YYYY h:mm A"
-        />
-      </View>
-
-      {/* Assignee Selector */}
-      <View style={styles.assigneeSection}>
-        <Text style={styles.assigneeLabel}>{t('quickActionModal.assignLabel')}</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.assigneeScroll}
-          contentContainerStyle={styles.assigneeScrollContent}
-        >
-          <TouchableOpacity
-            style={[
-              styles.assigneeChip,
-              !selectedAssigneeName && styles.assigneeChipSelected,
-            ]}
-            onPress={handleClearAssignee}
+        {/* Assignee Selector */}
+        <View style={styles.assigneeSection}>
+          <Text style={styles.assigneeLabel}>{t('quickActionModal.assignLabel')}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.assigneeScroll}
+            contentContainerStyle={styles.assigneeScrollContent}
           >
-            <Text style={[
-              styles.assigneeChipText,
-              !selectedAssigneeName && styles.assigneeChipTextSelected,
-            ]}>
-              {t('quickActionModal.unassigned')}
-            </Text>
-          </TouchableOpacity>
-          {members.map(member => (
             <TouchableOpacity
-              key={member.id}
               style={[
                 styles.assigneeChip,
-                selectedAssigneeName === member.name && styles.assigneeChipSelected,
-                { borderColor: member.color || colors.textMuted },
+                !selectedAssigneeName && styles.assigneeChipSelected,
               ]}
-              onPress={() => handleSelectAssignee(member.id, member.name)}
+              onPress={handleClearAssignee}
             >
               <Text style={[
                 styles.assigneeChipText,
-                selectedAssigneeName === member.name && styles.assigneeChipTextSelected,
+                !selectedAssigneeName && styles.assigneeChipTextSelected,
               ]}>
-                {member.name}
+                {t('quickActionModal.unassigned')}
               </Text>
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={[styles.assigneeChip, styles.assigneeChipManage]}
-            onPress={() => setShowManageHousehold(true)}
-          >
-            <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
-            <Text style={styles.assigneeChipText}>{t('quickActionModal.manage')}</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+            {members.map(member => (
+              <TouchableOpacity
+                key={member.id}
+                style={[
+                  styles.assigneeChip,
+                  selectedAssigneeName === member.name && styles.assigneeChipSelected,
+                  { borderColor: member.color || colors.textMuted },
+                ]}
+                onPress={() => handleSelectAssignee(member.id, member.name)}
+              >
+                <Text style={[
+                  styles.assigneeChipText,
+                  selectedAssigneeName === member.name && styles.assigneeChipTextSelected,
+                ]}>
+                  {member.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.assigneeChip, styles.assigneeChipManage]}
+              onPress={() => setShowManageHousehold(true)}
+            >
+              <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.assigneeChipText}>{t('quickActionModal.manage')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </ScrollView>
 
 
       <ManageHouseholdModal

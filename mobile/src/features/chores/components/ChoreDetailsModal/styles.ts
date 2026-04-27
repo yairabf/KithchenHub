@@ -2,6 +2,13 @@ import { StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius } from '../../../../theme';
 
 export const styles = StyleSheet.create({
+  formScrollView: {
+    flexGrow: 0,
+    minHeight: 0,
+  },
+  formScrollContent: {
+    paddingBottom: spacing.sm,
+  },
   addFormContainer: {
     marginBottom: spacing.md,
     position: 'relative',
