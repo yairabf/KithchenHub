@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { borderRadius, colors, spacing } from '../../../theme';
+import { shadows } from '../../../theme/shadows';
 
 export const styles = StyleSheet.create({
   modal: {
@@ -24,10 +25,13 @@ export const styles = StyleSheet.create({
     maxHeight: '92%',
     minHeight: '72%',
     overflow: 'hidden',
+    ...shadows.float,
   },
   dragHandleContainer: {
     alignItems: 'center',
     paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.surface,
   },
   dragHandle: {
     width: 36,
@@ -37,41 +41,48 @@ export const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    backgroundColor: colors.surface,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 56,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.divider,
+    backgroundColor: colors.surface,
     gap: spacing.md,
   },
   headerSide: {
-    minWidth: 72,
+    minWidth: 76,
   },
   headerSideEnd: {
     alignItems: 'flex-end',
   },
   closeButton: {
+    minHeight: 32,
+    justifyContent: 'center',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
     alignSelf: 'flex-start',
   },
   closeButtonText: {
     color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '500',
   },
   title: {
     flex: 1,
     color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
   },
   submitButton: {
+    minHeight: 32,
+    justifyContent: 'center',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
   },
@@ -79,13 +90,14 @@ export const styles = StyleSheet.create({
     opacity: 0.45,
   },
   submitButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
   },
   body: {
     flex: 1,
     minHeight: 0,
     overflow: 'hidden',
+    backgroundColor: colors.surface,
   },
   footer: {
     flexDirection: 'row',

@@ -7,10 +7,12 @@ export const styles = StyleSheet.create({
     minHeight: 0,
   },
   formScrollContent: {
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
   addFormContainer: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     position: 'relative',
     zIndex: 1000,
   },

@@ -25,10 +25,12 @@ export const styles = StyleSheet.create({
     minHeight: 0,
   },
   scrollContentContainer: {
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
   section: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   label: {
     fontSize: 12,
