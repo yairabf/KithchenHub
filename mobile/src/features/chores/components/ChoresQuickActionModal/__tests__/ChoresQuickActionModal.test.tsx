@@ -73,6 +73,11 @@ describe('ChoresQuickActionModal', () => {
       expect(getByText('quickActionModal.title')).toBeTruthy();
     });
 
+    it('renders the form inside a scroll view for keyboard-safe input', () => {
+      const { getByTestId } = render(<ChoresQuickActionModal {...defaultProps} />);
+      expect(getByTestId('chores-quick-action-scroll-view')).toBeTruthy();
+    });
+
     it('does not render content when not visible', () => {
       const { queryByText } = render(
         <ChoresQuickActionModal {...defaultProps} visible={false} />

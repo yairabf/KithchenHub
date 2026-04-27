@@ -257,9 +257,12 @@ export function AddRecipeModal({
       submitColor={colors.recipes}
       submitDisabled={!isValid || isSaving}
       submitLoading={isSaving}
+      presentation="fullScreen"
     >
       <ScrollView
+        testID="add-recipe-scroll-view"
         style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContentContainer}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

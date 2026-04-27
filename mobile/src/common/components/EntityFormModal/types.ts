@@ -1,3 +1,5 @@
+import type { FormPresentationMode } from '../FormPresentationModal';
+
 export type EntityFormModalMode = 'add' | 'edit';
 
 export interface EntityFormModalProps {
@@ -20,4 +22,6 @@ export interface EntityFormModalProps {
   submitDisabled?: boolean;
   submitLoading?: boolean;
   cancelText?: string;
+  presentation?: FormPresentationMode;
+  showFooter?: boolean;
 }

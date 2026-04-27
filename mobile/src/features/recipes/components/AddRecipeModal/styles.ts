@@ -21,10 +21,16 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
   scrollContent: {
-    maxHeight: 400,
+    flex: 1,
+    minHeight: 0,
+  },
+  scrollContentContainer: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
   section: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   label: {
     fontSize: 12,

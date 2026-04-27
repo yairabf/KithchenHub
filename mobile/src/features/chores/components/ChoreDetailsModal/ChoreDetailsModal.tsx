@@ -191,134 +191,143 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
       onSubmit={handleSubmit}
       submitColor={colors.chores}
       submitDisabled={submitDisabled}
+      presentation="fullScreen"
     >
-      <View style={[styles.addFormContainer, isRtlLayout && styles.modalSectionRtl]}>
-        <View style={[styles.addForm, isRtlLayout && styles.addFormRtl]}>
-          <TextInput
-            ref={inputRef}
-            style={[styles.input, isRtlLayout && styles.inputRtl, isRtlLayout && styles.modalTextRtl]}
-            placeholder={t('modal.choreNamePlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            value={choreName}
-            onChangeText={setChoreName}
-            onSubmitEditing={handleSubmit}
-            returnKeyType="done"
-          />
-          {choreName.length > 0 && (
-            <TouchableOpacity
-              style={[styles.clearButton, isRtlLayout && styles.clearButtonRtl]}
-              onPress={() => setChoreName('')}
-            >
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      <View style={[styles.iconSelectionSection, isRtlLayout && styles.modalSectionRtl]}>
-        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
-          <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.iconLabel')}</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.iconList, isRtlLayout && styles.pickerContentRtl]}>
-          {CHORE_ICONS.map((icon) => (
-            <TouchableOpacity
-              key={icon}
-              style={[styles.iconOption, selectedIcon === icon && styles.iconOptionSelected]}
-              onPress={() => setSelectedIcon(icon)}
-            >
-              <Text style={styles.iconOptionText}>{icon}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={[styles.recurrenceSection, isRtlLayout && styles.modalSectionRtl]}>
-        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
-          <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.repeatLabel')}</Text>
-        </View>
-        <View style={[styles.recurrenceOptions, isRtlLayout && styles.recurrenceOptionsRtl]}>
-          {recurrenceOptions.map(({ value, labelKey }) => (
-            <TouchableOpacity
-              key={labelKey}
-              style={[styles.recurrenceOption, isRtlLayout && styles.recurrenceOptionRtl, recurrencePattern === value && styles.recurrenceOptionSelected]}
-              onPress={() => setRecurrencePattern(value)}
-            >
-              <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
-                <Text
-                  style={[
-                    styles.recurrenceOptionText,
-                    isRtlLayout && styles.modalTextRtl,
-                    recurrencePattern === value && styles.recurrenceOptionTextSelected,
-                  ]}
-                >
-                  {t(labelKey)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.dueDateSection}>
-        <DateTimePicker
-          value={selectedDateTime}
-          onChange={setSelectedDateTime}
-          label={t('modal.dueDateLabel')}
-          placeholder={t('modal.dueDatePlaceholder')}
-          minDate={new Date()}
-          accentColor={colors.chores}
-          displayFormat="MMM D, YYYY h:mm A"
-        />
-      </View>
-
-      <View style={[styles.assigneeSection, isRtlLayout && styles.modalSectionRtl]}>
-        <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
-          <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.assignLabel')}</Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.assigneeScroll}
-          contentContainerStyle={[styles.assigneeScrollContent, isRtlLayout && styles.pickerContentRtl]}
-        >
-          <TouchableOpacity
-            style={[styles.assigneeChip, !selectedAssignee && styles.assigneeChipSelected]}
-            onPress={() => setSelectedAssignee(undefined)}
-          >
-            <Text style={[styles.assigneeChipText, isRtlLayout && styles.modalTextRtl, !selectedAssignee && styles.assigneeChipTextSelected]}>
-              {t('modal.assigneeUnassigned')}
-            </Text>
-          </TouchableOpacity>
-          {members.map((member) => (
-            <TouchableOpacity
-              key={member.id}
-              style={[
-                styles.assigneeChip,
-                selectedAssignee === member.name && styles.assigneeChipSelected,
-                { borderColor: member.color || colors.textMuted },
-              ]}
-              onPress={() => setSelectedAssignee(member.name)}
-            >
-              <Text
-                style={[
-                  styles.assigneeChipText,
-                  isRtlLayout && styles.modalTextRtl,
-                  selectedAssignee === member.name && styles.assigneeChipTextSelected,
-                ]}
+      <ScrollView
+        testID="chore-details-scroll-view"
+        style={styles.formScrollView}
+        contentContainerStyle={styles.formScrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={[styles.addFormContainer, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={[styles.addForm, isRtlLayout && styles.addFormRtl]}>
+            <TextInput
+              ref={inputRef}
+              style={[styles.input, isRtlLayout && styles.inputRtl, isRtlLayout && styles.modalTextRtl]}
+              placeholder={t('modal.choreNamePlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              value={choreName}
+              onChangeText={setChoreName}
+              onSubmitEditing={handleSubmit}
+              returnKeyType="done"
+            />
+            {choreName.length > 0 && (
+              <TouchableOpacity
+                style={[styles.clearButton, isRtlLayout && styles.clearButtonRtl]}
+                onPress={() => setChoreName('')}
               >
-                {member.name}
+                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={[styles.iconSelectionSection, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.iconLabel')}</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.iconList, isRtlLayout && styles.pickerContentRtl]}>
+            {CHORE_ICONS.map((icon) => (
+              <TouchableOpacity
+                key={icon}
+                style={[styles.iconOption, selectedIcon === icon && styles.iconOptionSelected]}
+                onPress={() => setSelectedIcon(icon)}
+              >
+                <Text style={styles.iconOptionText}>{icon}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={[styles.recurrenceSection, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.repeatLabel')}</Text>
+          </View>
+          <View style={[styles.recurrenceOptions, isRtlLayout && styles.recurrenceOptionsRtl]}>
+            {recurrenceOptions.map(({ value, labelKey }) => (
+              <TouchableOpacity
+                key={labelKey}
+                style={[styles.recurrenceOption, isRtlLayout && styles.recurrenceOptionRtl, recurrencePattern === value && styles.recurrenceOptionSelected]}
+                onPress={() => setRecurrencePattern(value)}
+              >
+                <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+                  <Text
+                    style={[
+                      styles.recurrenceOptionText,
+                      isRtlLayout && styles.modalTextRtl,
+                      recurrencePattern === value && styles.recurrenceOptionTextSelected,
+                    ]}
+                  >
+                    {t(labelKey)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.dueDateSection}>
+          <DateTimePicker
+            value={selectedDateTime}
+            onChange={setSelectedDateTime}
+            label={t('modal.dueDateLabel')}
+            placeholder={t('modal.dueDatePlaceholder')}
+            minDate={new Date()}
+            accentColor={colors.chores}
+            displayFormat="MMM D, YYYY h:mm A"
+          />
+        </View>
+
+        <View style={[styles.assigneeSection, isRtlLayout && styles.modalSectionRtl]}>
+          <View style={isRtlLayout ? styles.rtlTextRow : undefined}>
+            <Text style={[styles.assigneeLabel, isRtlLayout && styles.modalTextRtl]}>{t('modal.assignLabel')}</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.assigneeScroll}
+            contentContainerStyle={[styles.assigneeScrollContent, isRtlLayout && styles.pickerContentRtl]}
+          >
+            <TouchableOpacity
+              style={[styles.assigneeChip, !selectedAssignee && styles.assigneeChipSelected]}
+              onPress={() => setSelectedAssignee(undefined)}
+            >
+              <Text style={[styles.assigneeChipText, isRtlLayout && styles.modalTextRtl, !selectedAssignee && styles.assigneeChipTextSelected]}>
+                {t('modal.assigneeUnassigned')}
               </Text>
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={[styles.assigneeChip, styles.assigneeChipManage]}
-            onPress={() => setShowManageHousehold(true)}
-          >
-            <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
-            <Text style={[styles.assigneeChipText, isRtlLayout && styles.modalTextRtl]}>{t('modal.assigneeManage')}</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+            {members.map((member) => (
+              <TouchableOpacity
+                key={member.id}
+                style={[
+                  styles.assigneeChip,
+                  selectedAssignee === member.name && styles.assigneeChipSelected,
+                  { borderColor: member.color || colors.textMuted },
+                ]}
+                onPress={() => setSelectedAssignee(member.name)}
+              >
+                <Text
+                  style={[
+                    styles.assigneeChipText,
+                    isRtlLayout && styles.modalTextRtl,
+                    selectedAssignee === member.name && styles.assigneeChipTextSelected,
+                  ]}
+                >
+                  {member.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.assigneeChip, styles.assigneeChipManage]}
+              onPress={() => setShowManageHousehold(true)}
+            >
+              <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
+              <Text style={[styles.assigneeChipText, isRtlLayout && styles.modalTextRtl]}>{t('modal.assigneeManage')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </ScrollView>
 
       <ManageHouseholdModal visible={showManageHousehold} onClose={() => setShowManageHousehold(false)} />
     </EntityFormModal>

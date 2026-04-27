@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   AccessibilityInfo,
   findNodeHandle,
+  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import Animated, {
@@ -140,64 +141,69 @@ export function CenteredModal({
           <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
         </Animated.View>
 
-        <Animated.View
-          style={[styles.modalContent, animatedModalStyle]}
-          accessibilityViewIsModal={true}
-          importantForAccessibility="yes"
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <Pressable onPress={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text
-                ref={modalTitleRef}
-                style={styles.title}
-                accessibilityRole="header"
-                accessible={true}
-              >
-                {title}
-              </Text>
-              <TouchableOpacity
-                onPress={handleClose}
-                style={styles.closeButton}
-                accessibilityLabel={t('accessibility.closeModal')}
-                accessibilityRole="button"
-              >
-                <Ionicons name="close" size={24} color={colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Content */}
-            <View style={styles.content}>{children}</View>
-
-            {/* Actions */}
-            {showActions && (
-              <View style={styles.actions}>
+          <Animated.View
+            style={[styles.modalFrame, animatedModalStyle]}
+            accessibilityViewIsModal={true}
+            importantForAccessibility="yes"
+          >
+            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <View style={styles.header}>
+                <Text
+                  ref={modalTitleRef}
+                  style={styles.title}
+                  accessibilityRole="header"
+                  accessible={true}
+                >
+                  {title}
+                </Text>
                 <TouchableOpacity
-                  style={styles.cancelButton}
                   onPress={handleClose}
+                  style={styles.closeButton}
+                  accessibilityLabel={t('accessibility.closeModal')}
+                  accessibilityRole="button"
                 >
-                  <Text style={styles.cancelText}>{resolvedCancelText}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.confirmButton,
-                    { backgroundColor: confirmColor },
-                    (confirmDisabled || confirmLoading) && styles.confirmButtonDisabled,
-                  ]}
-                  onPress={onConfirm}
-                  disabled={confirmDisabled || confirmLoading}
-                >
-                  <View style={styles.confirmContent}>
-                    {confirmLoading ? (
-                      <ActivityIndicator size="small" color={colors.textLight} />
-                    ) : null}
-                    <Text style={styles.confirmText}>{resolvedConfirmText}</Text>
-                  </View>
+                  <Ionicons name="close" size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
               </View>
-            )}
-          </Pressable>
-        </Animated.View>
+
+              {/* Content */}
+              <View style={styles.content}>{children}</View>
+
+              {/* Actions */}
+              {showActions && (
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={handleClose}
+                  >
+                    <Text style={styles.cancelText}>{resolvedCancelText}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmButton,
+                      { backgroundColor: confirmColor },
+                      (confirmDisabled || confirmLoading) && styles.confirmButtonDisabled,
+                    ]}
+                    onPress={onConfirm}
+                    disabled={confirmDisabled || confirmLoading}
+                  >
+                    <View style={styles.confirmContent}>
+                      {confirmLoading ? (
+                        <ActivityIndicator size="small" color={colors.textLight} />
+                      ) : null}
+                      <Text style={styles.confirmText}>{resolvedConfirmText}</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </Pressable>
+          </Animated.View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CenteredModal } from '../CenteredModal';
+import { FormPresentationModal } from '../FormPresentationModal';
 import { colors } from '../../../theme';
 import type { EntityFormModalProps } from './types';
 
@@ -32,20 +32,24 @@ export function EntityFormModal({
   submitDisabled = false,
   submitLoading = false,
   cancelText = 'Cancel',
+  presentation = 'fullScreen',
+  showFooter = false,
 }: EntityFormModalProps) {
   return (
-    <CenteredModal
+    <FormPresentationModal
       visible={visible}
       onClose={onClose}
       title={title}
-      confirmText={submitText}
+      submitText={submitText}
       cancelText={cancelText}
-      onConfirm={onSubmit}
-      confirmColor={submitColor}
-      confirmDisabled={submitDisabled}
-      confirmLoading={submitLoading}
+      onSubmit={onSubmit}
+      submitColor={submitColor}
+      submitDisabled={submitDisabled}
+      submitLoading={submitLoading}
+      presentation={presentation}
+      showFooter={showFooter}
     >
       {children}
-    </CenteredModal>
+    </FormPresentationModal>
   );
 }

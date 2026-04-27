@@ -63,26 +63,26 @@ jest.mock('../../../../settings/components/ManageHouseholdModal', () => ({
   ManageHouseholdModal: () => null,
 }));
 
-jest.mock('../../../../../common/components/CenteredModal', () => {
+jest.mock('../../../../../common/components/FormPresentationModal', () => {
   const { Text, TouchableOpacity, View } = require('react-native');
   return {
-    CenteredModal: ({ children, title, confirmText, onConfirm, confirmDisabled }: {
+    FormPresentationModal: ({ children, title, submitText, onSubmit, submitDisabled }: {
       children: React.ReactNode;
       title: string;
-      confirmText?: string;
-      onConfirm?: () => void;
-      confirmDisabled?: boolean;
+      submitText?: string;
+      onSubmit?: () => void;
+      submitDisabled?: boolean;
     }) => (
       <View>
         <Text>{title}</Text>
         <View>{children}</View>
         <TouchableOpacity
-          onPress={onConfirm}
-          disabled={confirmDisabled}
-          accessibilityLabel={confirmText}
+          onPress={onSubmit}
+          disabled={submitDisabled}
+          accessibilityLabel={submitText}
           testID="submit-button"
         >
-          <Text>{confirmText}</Text>
+          <Text>{submitText}</Text>
         </TouchableOpacity>
       </View>
     ),
@@ -149,6 +149,11 @@ describe('ChoreDetailsModal', () => {
           onAddChore={onAddChore}
         />,
       );
+
+    it('renders the form inside a scroll view for keyboard-safe editing', () => {
+      const { getByTestId } = renderAddModal();
+      expect(getByTestId('chore-details-scroll-view')).toBeTruthy();
+    });
 
     it('shows empty name input on open', () => {
       const { getByPlaceholderText } = renderAddModal();

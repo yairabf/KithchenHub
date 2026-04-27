@@ -7,26 +7,39 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: spacing.lg,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.backdrop,
   },
+  modalFrame: {
+    width: '85%',
+    maxWidth: 400,
+    maxHeight: '90%',
+    ...boxShadow(4, 12, 'rgba(0, 0, 0, 0.15)'),
+  },
   modalContent: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.xxl,
     padding: spacing.lg,
-    width: '85%',
-    maxWidth: 400,
-    ...boxShadow(4, 12, 'rgba(0, 0, 0, 0.15)'),
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
   title: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
@@ -36,10 +49,14 @@ export const styles = StyleSheet.create({
   },
   content: {
     marginBottom: spacing.lg,
+    flexShrink: 1,
+    minHeight: 0,
+    overflow: 'hidden',
   },
   actions: {
     flexDirection: 'row',
     gap: spacing.md,
+    flexShrink: 0,
   },
   cancelButton: {
     flex: 1,
