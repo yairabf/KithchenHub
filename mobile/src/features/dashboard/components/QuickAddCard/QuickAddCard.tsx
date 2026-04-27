@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   I18nManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,10 +21,7 @@ export function QuickAddCard({
   searchResults,
   onSelectItem,
   onQuickAddItem,
-  showSuggestedItems,
-  onToggleSuggestedItems,
-  suggestedItems,
-  onSuggestionPress,
+  showMainListBadge = true,
 }: QuickAddCardProps) {
   const { t } = useTranslation("dashboard");
   const isRtlLayout = isRtl ?? I18nManager.isRTL;
@@ -50,11 +46,13 @@ export function QuickAddCard({
           subtitleStyle={styles.shoppingCardSubtitle}
           subtitleRtlStyle={styles.shoppingCardSubtitleIosRtl}
         />
-        <View style={styles.mainListBadge}>
-          <Text style={[styles.mainListBadgeText, isRtlLayout && styles.mainListBadgeTextRtl]}>
-            {t("quickAdd.mainListBadge")}
-          </Text>
-        </View>
+        {showMainListBadge ? (
+          <View style={styles.mainListBadge}>
+            <Text style={[styles.mainListBadgeText, isRtlLayout && styles.mainListBadgeTextRtl]}>
+              {t("quickAdd.mainListBadge")}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.inputRowWithDropdown}>
@@ -85,59 +83,6 @@ export function QuickAddCard({
             color={colors.textMuted}
           />
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.suggestedSection}>
-        <View style={styles.suggestedHeader}>
-          <Text style={[styles.suggestedLabel, isRtlLayout && styles.suggestedLabelRtl]}>
-            {t("quickAdd.suggestedItems")}
-          </Text>
-          <TouchableOpacity
-            onPress={onToggleSuggestedItems}
-            activeOpacity={0.7}
-            accessibilityLabel={
-              showSuggestedItems
-                ? t("quickAdd.hide")
-                : t("quickAdd.show")
-            }
-            accessibilityRole="button"
-            accessibilityHint={t("quickAdd.toggleSuggestedHint")}
-          >
-            <Text style={styles.suggestedToggleText}>
-              {showSuggestedItems ? t("quickAdd.hide") : t("quickAdd.show")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {showSuggestedItems ? (
-          <ScrollView
-            style={styles.suggestionScrollArea}
-            contentContainerStyle={styles.suggestionChipsRow}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={false}
-          >
-            {suggestedItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.suggestionChip}
-                onPress={() => onSuggestionPress(item)}
-                activeOpacity={0.7}
-                accessibilityLabel={t("quickAdd.addItemLabel", { name: item.name })}
-                accessibilityRole="button"
-                accessibilityHint={t("quickAdd.addItemHint", { name: item.name })}
-              >
-                <Ionicons
-                  name="add"
-                  size={14}
-                  color={colors.textSecondary}
-                />
-                <Text style={styles.suggestionChipText}>
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        ) : null}
       </View>
     </View>
   );

@@ -18,13 +18,12 @@
     "subtitle": "أضف المشتريات خلال ثوانٍ.",
     "mainListBadge": "القائمة الرئيسية",
     "voiceInput": "إدخال صوتي",
-    "voiceInputHint": "إضافة عناصر باستخدام الصوت",
-    "suggestedItems": "عناصر مقترحة",
-    "show": "إظهار",
-    "hide": "إخفاء",
-    "toggleSuggestedHint": "تبديل عرض العناصر المقترحة",
-    "addItemLabel": "إضافة {{name}}",
-    "addItemHint": "يضيف {{name}} إلى قائمة التسوق"
+    "voiceInputHint": "إضافة عناصر باستخدام الصوت"
+  },
+  "frequentlyAdded": {
+    "title": "تُضاف كثيراً",
+    "subtitle": "عناصر متكررة لقائمتك التالية",
+    "addItemAccessibility": "أضف {{name}} إلى القائمة"
   },
   "choresPanel": {
     "title": "مهام مهمة",

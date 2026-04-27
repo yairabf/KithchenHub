@@ -18,13 +18,12 @@
     "subtitle": "Add groceries in seconds.",
     "mainListBadge": "Main List",
     "voiceInput": "Voice input",
-    "voiceInputHint": "Add items using voice",
-    "suggestedItems": "Suggested Items",
-    "show": "Show",
-    "hide": "Hide",
-    "toggleSuggestedHint": "Toggles suggested shopping items",
-    "addItemLabel": "Add {{name}}",
-    "addItemHint": "Adds {{name}} to shopping list"
+    "voiceInputHint": "Add items using voice"
+  },
+  "frequentlyAdded": {
+    "title": "Frequently Added",
+    "subtitle": "Repeat items for your next list",
+    "addItemAccessibility": "Add {{name}} to list"
   },
   "choresPanel": {
     "title": "Important Chores",
