@@ -21,7 +21,7 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
   scrollContent: {
-    flexShrink: 1,
+    flex: 1,
     minHeight: 0,
   },
   scrollContentContainer: {

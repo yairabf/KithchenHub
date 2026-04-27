@@ -191,6 +191,7 @@ export function ChoreDetailsModal(props: ChoreDetailsModalProps) {
       onSubmit={handleSubmit}
       submitColor={colors.chores}
       submitDisabled={submitDisabled}
+      presentation="fullScreen"
     >
       <ScrollView
         testID="chore-details-scroll-view"
