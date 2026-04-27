@@ -28,18 +28,13 @@ import { SafeImage } from "../../../common/components/SafeImage";
 import { Toast } from "../../../common/components/Toast";
 import { ScreenHeader } from "../../../common/components/ScreenHeader";
 import type { GroceryItem } from "../../shopping/components/GrocerySearchBar";
+import { FrequentlyAddedSection } from "../components/FrequentlyAddedSection";
 import { ImportantChoresCard } from "../components/ImportantChoresCard";
 import { QuickAddCard } from "../components/QuickAddCard";
-import { QuickStatsRow } from "../components/QuickStats";
-import type { QuickStatItem } from "../components/QuickStats";
 import type { ShoppingItem, ShoppingList } from "../../../mocks/shopping";
 import { useDashboardChores } from "../hooks/useDashboardChores";
-import { useRecipes } from "../../recipes/hooks/useRecipes";
 import { createShoppingService } from "../../shopping/services/shoppingService";
-import {
-  getActiveListId,
-  getMainList,
-} from "../../shopping/utils/selectionUtils";
+import { getMainList } from "../../shopping/utils/selectionUtils";
 import { createShoppingItem } from "../../shopping/utils/shoppingFactory";
 import {
   DEFAULT_CATEGORY,
@@ -48,11 +43,12 @@ import {
 import { quickAddItem } from "../../shopping/utils/quickAddUtils";
 import { getAssigneeAvatarUri } from "../../../common/utils/avatarUtils";
 import { config } from "../../../config";
+import { buildDashboardFrequentItems } from "../utils/dashboardFrequentItems";
 import { styles } from "./styles";
 import type { DashboardScreenProps } from "./types";
 import { useTranslation } from "react-i18next";
 
-const SUGGESTED_ITEMS_MAX = 8;
+const FREQUENT_ITEMS_MAX = 8;
 
 function isCustomGroceryItem(item: GroceryItem): boolean {
   return typeof item.id === "string" && item.id.startsWith("custom-");
@@ -75,10 +71,7 @@ export function DashboardScreen({
   const isRtl = i18n.dir() === 'rtl';
   const { user } = useAuth();
   const { isTablet } = useResponsive();
-  const isMobile = !isTablet;
   const [searchValue, setSearchValue] = useState("");
-  const [showSuggestedItems, setShowSuggestedItems] = useState(!isMobile);
-  const shoppingButtonRef = useRef<View>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
@@ -91,7 +84,7 @@ export function DashboardScreen({
     setToastVisible(false);
   }, []);
 
-  const { groceryItems, frequentlyAddedItems, searchGroceries } = useCatalog();
+  const { searchGroceries } = useCatalog();
   const { results: searchResults } = useDebouncedRemoteSearch<GroceryItem>({
     query: searchValue,
     searchFn: searchGroceries,
@@ -99,11 +92,6 @@ export function DashboardScreen({
       console.error("Search failed:", error);
     },
   });
-
-  const suggestedItems =
-    frequentlyAddedItems.length > 0
-      ? frequentlyAddedItems.slice(0, SUGGESTED_ITEMS_MAX)
-      : groceryItems.slice(0, SUGGESTED_ITEMS_MAX);
   const {
     todayChores,
     toggleChore,
@@ -117,12 +105,14 @@ export function DashboardScreen({
     () => createShoppingService(shouldUseMockData ? "guest" : "signed-in"),
     [shouldUseMockData],
   );
-  const { recipes, refresh: refreshRecipes } = useRecipes();
-  const [activeListId, setActiveListId] = useState<string | null>(null);
-  const [shoppingListsCount, setShoppingListsCount] = useState(0);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
   const [mainList, setMainList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const dashboardFrequentItems = useMemo(
+    () => buildDashboardFrequentItems(allItems, FREQUENT_ITEMS_MAX),
+    [allItems],
+  );
 
   // Always-current snapshot of allItems, read synchronously inside event handlers
   // to avoid stale closure captures during rapid concurrent taps.
@@ -139,15 +129,9 @@ export function DashboardScreen({
       // so item names are returned in the active locale. i18n.language is listed as
       // a dependency so this callback is recreated (and re-run) on language changes.
       const data = await shoppingService.getShoppingData();
-      setActiveListId((current) =>
-        getActiveListId(data.shoppingLists, current),
-      );
-      setShoppingListsCount(data.shoppingLists.length);
       setAllItems(data.shoppingItems);
       setMainList(getMainList(data.shoppingLists));
     } catch (_err) {
-      setActiveListId(null);
-      setShoppingListsCount(0);
       setAllItems([]);
       setMainList(null);
     }
@@ -158,13 +142,12 @@ export function DashboardScreen({
     try {
       await Promise.allSettled([
         loadShoppingData(),
-        refreshRecipes(),
         refreshChores(),
       ]);
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadShoppingData, refreshRecipes, refreshChores]);
+  }, [loadShoppingData, refreshChores]);
 
   useEffect(() => {
     loadShoppingData();
@@ -174,29 +157,6 @@ export function DashboardScreen({
     useCallback(() => {
       loadShoppingData();
     }, [loadShoppingData]),
-  );
-
-  const quickStats = useMemo<QuickStatItem[]>(
-    () => [
-      {
-        icon: "basket-outline",
-        label: t("quickStats.shoppingLists"),
-        value:
-          shoppingListsCount === 1
-            ? t("quickStats.active", { count: 1 })
-            : t("quickStats.active", { count: shoppingListsCount }),
-        route: "Shopping",
-        iconBgStyle: "shopping",
-      },
-      {
-        icon: "book-outline",
-        label: t("quickStats.savedRecipes"),
-        value: recipes.length === 1 ? t("quickStats.item", { count: 1 }) : t("quickStats.items", { count: recipes.length }),
-        route: "Recipes",
-        iconBgStyle: "recipes",
-      },
-    ],
-    [shoppingListsCount, recipes.length, t],
   );
 
   const displayName = user?.name ?? t("header.roleGuest");
@@ -221,20 +181,9 @@ export function DashboardScreen({
   const formattedTime = formatTimeForDisplay(currentTime);
   const formattedDate = formatDateForDisplay(currentTime);
 
-  /** Opens the quick-add shopping modal, measuring the trigger button position for animation when ref is attached. */
+  /** Opens the quick-add shopping modal. */
   const openShoppingModal = () => {
-    if (shoppingButtonRef.current) {
-      shoppingButtonRef.current.measureInWindow((x, y, width, height) => {
-        onOpenShoppingModal({ x, y, width, height });
-      });
-    } else {
-      onOpenShoppingModal();
-    }
-  };
-
-  const handleAddToShopping = () => {
-    setSearchValue("");
-    openShoppingModal();
+    onOpenShoppingModal();
   };
 
   const handleSelectGroceryItem = async (item: GroceryItem) => {
@@ -249,7 +198,8 @@ export function DashboardScreen({
       const mainList = getMainList(data.shoppingLists);
 
       if (!mainList) {
-          showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
+        showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
+        openShoppingModal();
         return;
       }
 
@@ -288,6 +238,8 @@ export function DashboardScreen({
         await shoppingService.createItem(newItemData);
         showToast(t("detail.toasts.ingredientAdded", { ns: "recipes", name: item.name, listName: mainList.name }));
       }
+
+      await loadShoppingData();
       // Don't clear search value - keep dropdown open for multiple additions
     } catch (error) {
       console.error("Failed to add item to shopping list:", error);
@@ -324,6 +276,7 @@ export function DashboardScreen({
   const handleQuickAddGroceryItem = async (item: GroceryItem) => {
     if (!mainList) {
       showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
+      openShoppingModal();
       return;
     }
 
@@ -362,82 +315,6 @@ export function DashboardScreen({
       });
     } finally {
       pendingQuickAddKeys.current.delete(addKey);
-    }
-  };
-
-  /**
-   * Adds a suggested grocery item to the shopping list.
-   * If the item already exists in the list, increments its quantity by 1.
-   * Otherwise creates a new item with quantity 1.
-   * Opens the shopping modal if there is no active list, or if the operation fails.
-   *
-   * @param item - The grocery item to add
-   */
-  /**
-   * Handles adding a suggested grocery item to the shopping list.
-   * If the item already exists, increments its quantity by 1.
-   * Otherwise creates a new item with quantity 1.
-   * Opens the shopping modal only if there's no active list or if the operation fails due to missing list.
-   *
-   * @param item - The grocery item to add
-   */
-  const handleSuggestionPress = async (item: GroceryItem) => {
-    if (!activeListId) {
-      openShoppingModal();
-      return;
-    }
-    const trimmedItemName = item.name?.trim();
-    if (!trimmedItemName) {
-      showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
-      return;
-    }
-
-    const addQuantity = 1;
-    try {
-      const data = await shoppingService.getShoppingData();
-      const normalizedItemName = trimmedItemName.toLowerCase();
-      const existingInList = data.shoppingItems.find(
-        (i) =>
-          i.listId === activeListId &&
-          i.name.trim().toLowerCase() === normalizedItemName,
-      );
-      if (existingInList) {
-        const currentQuantity =
-          typeof existingInList.quantity === "number"
-            ? existingInList.quantity
-            : 0;
-        await shoppingService.updateItem(existingInList.id, {
-          quantity: currentQuantity + addQuantity,
-        });
-        showToast(t("detail.toasts.ingredientUpdated", { ns: "recipes", name: item.name }));
-      } else {
-        const newItemData: Partial<ShoppingItem> = {
-          listId: activeListId,
-          name: trimmedItemName,
-          quantity: 1,
-          category: getSafeGroceryCategory(item),
-          image: item.image ?? "",
-        };
-        await shoppingService.createItem(newItemData);
-        showToast(t("detail.toasts.ingredientAdded", { ns: "recipes", name: item.name, listName: t("quickStats.shoppingLists") }));
-      }
-      // Refresh shopping data to update the UI immediately
-      await loadShoppingData();
-    } catch (error) {
-      console.error("Failed to add item to shopping list:", error);
-      showToast(t("detail.toasts.ingredientAddFailed", { ns: "recipes" }));
-      // Only open modal if error is related to missing list, not other errors
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("list") || errorMessage.includes("List")) {
-        openShoppingModal();
-      }
-    }
-  };
-
-  const handleStatPress = (route: QuickStatItem["route"]) => {
-    if (route) {
-      onNavigateToTab(route);
     }
   };
 
@@ -506,9 +383,7 @@ export function DashboardScreen({
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
       >
-        {/* Two-column layout */}
         <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
-          {/* Left column: Shopping widget + Quick stats */}
           <View
             style={[styles.leftColumn, !isTablet && styles.fullWidthColumn]}
           >
@@ -521,16 +396,14 @@ export function DashboardScreen({
                 searchResults={searchResults}
                 onSelectItem={handleSelectGroceryItem}
                 onQuickAddItem={handleQuickAddGroceryItem}
-                showSuggestedItems={showSuggestedItems}
-                onToggleSuggestedItems={() => setShowSuggestedItems((current) => !current)}
-                suggestedItems={suggestedItems}
-                onSuggestionPress={handleSuggestionPress}
+                showMainListBadge={mainList != null}
               />
 
-              <QuickStatsRow
-                stats={quickStats}
+              <FrequentlyAddedSection
+                isTablet={isTablet}
                 isRtl={isRtl}
-                onPressStat={handleStatPress}
+                items={dashboardFrequentItems}
+                onItemPress={handleQuickAddGroceryItem}
               />
             </View>
           </View>
