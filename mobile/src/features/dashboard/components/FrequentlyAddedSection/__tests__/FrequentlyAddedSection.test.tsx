@@ -9,6 +9,8 @@ jest.mock('react-i18next', () => ({
       const translations: Record<string, string> = {
         'frequentlyAdded.title': 'Frequently Added',
         'frequentlyAdded.subtitle': 'Repeat items for your next list',
+        'frequentlyAdded.emptyTitle': 'Your frequently added items will show up here',
+        'frequentlyAdded.emptySubtitle': 'Once the backend is ready, this area will surface the items you add the most.',
         'frequentlyAdded.addItemAccessibility': options?.name
           ? `Add ${options.name} to list`
           : 'Add item to list',
@@ -67,8 +69,8 @@ describe('FrequentlyAddedSection', () => {
     expect(onItemPress).toHaveBeenCalledWith(items[0]);
   });
 
-  it('renders nothing when there are no frequent items yet', () => {
-    const { queryByText } = render(
+  it('renders an in-UI placeholder when there are no frequent items yet', () => {
+    const { getByText, queryByText } = render(
       <FrequentlyAddedSection
         isTablet={true}
         isRtl={false}
@@ -77,6 +79,11 @@ describe('FrequentlyAddedSection', () => {
       />,
     );
 
-    expect(queryByText('Frequently Added')).toBeNull();
+    expect(getByText('Frequently Added')).toBeTruthy();
+    expect(getByText('Your frequently added items will show up here')).toBeTruthy();
+    expect(
+      getByText('Once the backend is ready, this area will surface the items you add the most.'),
+    ).toBeTruthy();
+    expect(queryByText('Milk')).toBeNull();
   });
 });

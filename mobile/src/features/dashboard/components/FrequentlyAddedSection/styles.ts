@@ -40,6 +40,42 @@ export const styles = StyleSheet.create({
   subtitleRtl: {
     writingDirection: 'rtl',
   },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    borderRadius: borderRadius.xxl,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.borderDashed,
+    backgroundColor: colors.pastel.cyan,
+    gap: spacing.sm,
+  },
+  emptyIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.pastel.cyan,
+  },
+  emptyTitle: {
+    ...typography.labelBold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  emptyTitleRtl: {
+    writingDirection: 'rtl',
+  },
+  emptySubtitle: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  emptySubtitleRtl: {
+    writingDirection: 'rtl',
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

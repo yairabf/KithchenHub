@@ -23,6 +23,8 @@
   "frequentlyAdded": {
     "title": "Frequently Added",
     "subtitle": "Repeat items for your next list",
+    "emptyTitle": "Your frequently added items will show up here",
+    "emptySubtitle": "Once the backend is ready, this area will surface the items you add the most.",
     "addItemAccessibility": "Add {{name}} to list"
   },
   "choresPanel": {
