@@ -42,6 +42,9 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
             findCustomItemByName: jest.fn(),
             createCustomItem: jest.fn(),
             findCustomItems: jest.fn(),
+            incrementHouseholdItemFrequencyForAdd: jest.fn(),
+            incrementHouseholdItemFrequencyForQuantityIncrease: jest.fn(),
+            findTopHouseholdFrequentItems: jest.fn(),
           },
         },
         {
@@ -754,6 +757,152 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       );
 
       expect(result[0]?.name).toBe('Tomato Canonical');
+    });
+  });
+
+  describe('household item frequency', () => {
+    it('increments base frequency only when adding a quantity-1 item', async () => {
+      const mockList = {
+        id: mockListId,
+        householdId: mockHouseholdId,
+        name: 'Main List',
+        color: null,
+        icon: null,
+        isMain: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+      const createdItem = {
+        id: mockItemId,
+        listId: mockListId,
+        catalogItemId: 'catalog-1',
+        customItemId: null,
+        name: 'Milk',
+        quantity: 1,
+        unit: null,
+        isChecked: false,
+        category: 'Dairy',
+        image: 'milk.png',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.spyOn(repository, 'findListById').mockResolvedValue(mockList as any);
+      jest
+        .spyOn(service, 'createItemFromInput')
+        .mockResolvedValue(createdItem as any);
+
+      await service.addItems(mockListId, mockHouseholdId, {
+        items: [{ catalogItemId: 'catalog-1', quantity: 1 }],
+      });
+
+      expect(
+        repository.incrementHouseholdItemFrequencyForAdd,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          householdId: mockHouseholdId,
+          catalogItemId: 'catalog-1',
+          customItemId: undefined,
+          name: 'Milk',
+          category: 'Dairy',
+          image: 'milk.png',
+          quantity: 1,
+        }),
+      );
+    });
+
+    it('increments manual quantity increase frequency when quantity rises', async () => {
+      const existingItem = {
+        id: mockItemId,
+        listId: mockListId,
+        catalogItemId: 'catalog-1',
+        customItemId: null,
+        name: 'Milk',
+        quantity: 1,
+        unit: null,
+        isChecked: false,
+        category: 'Dairy',
+        image: 'milk.png',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+      const mockList = {
+        id: mockListId,
+        householdId: mockHouseholdId,
+        name: 'Main List',
+        color: null,
+        icon: null,
+        isMain: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+      const updatedItem = { ...existingItem, quantity: 3 };
+
+      jest
+        .spyOn(repository, 'findItemById')
+        .mockResolvedValue(existingItem as any);
+      jest.spyOn(repository, 'findListById').mockResolvedValue(mockList as any);
+      jest
+        .spyOn(repository, 'updateItem')
+        .mockResolvedValue(updatedItem as any);
+
+      await service.updateItem(mockItemId, mockHouseholdId, { quantity: 3 });
+
+      expect(
+        repository.incrementHouseholdItemFrequencyForQuantityIncrease,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          householdId: mockHouseholdId,
+          catalogItemId: 'catalog-1',
+          customItemId: undefined,
+          name: 'Milk',
+          category: 'Dairy',
+          image: 'milk.png',
+        }),
+      );
+    });
+
+    it('returns top household frequent items in dashboard-ready shape', async () => {
+      jest
+        .spyOn(repository, 'findTopHouseholdFrequentItems')
+        .mockResolvedValue([
+          {
+            id: 'freq-1',
+            householdId: mockHouseholdId,
+            catalogItemId: 'catalog-1',
+            customItemId: null,
+            name: 'Milk',
+            category: 'Dairy',
+            image: 'milk.png',
+            addEventCount: 3,
+            quantityBonusCount: 1,
+            manualQuantityIncreaseCount: 2,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ] as any);
+
+      const result = await service.getFrequentItems(mockHouseholdId, 10);
+
+      expect(repository.findTopHouseholdFrequentItems).toHaveBeenCalledWith(
+        mockHouseholdId,
+        10,
+      );
+      expect(result).toEqual({
+        items: [
+          {
+            id: 'catalog-1',
+            name: 'Milk',
+            category: 'Dairy',
+            image: 'milk.png',
+            sourceType: 'catalog',
+          },
+        ],
+      });
     });
   });
 

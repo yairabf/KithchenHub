@@ -230,6 +230,22 @@ export class ShoppingItemsController {
     return this.shoppingService.getCustomItems(user.householdId);
   }
 
+  @Get('frequent')
+  async getFrequentItems(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('limit') limit?: string,
+  ) {
+    if (!user.householdId) {
+      throw new BadRequestException('User must belong to a household');
+    }
+
+    const parsedLimit = Number(limit);
+    return this.shoppingService.getFrequentItems(
+      user.householdId,
+      Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    );
+  }
+
   @Patch(':id')
   async updateItem(
     @CurrentUser() user: CurrentUserPayload,

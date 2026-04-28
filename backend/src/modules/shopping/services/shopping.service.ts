@@ -19,6 +19,8 @@ import {
   UpdateItemDto,
   UpdateListDto,
   ShoppingItemDto,
+  FrequentShoppingItemDto,
+  FrequentShoppingItemsResponseDto,
 } from '../dtos';
 import { readCatalogIconsBaseUrlFromEnv } from '../../../config/configuration';
 import { MemoryCacheService } from '../../../infrastructure/cache';
@@ -651,6 +653,92 @@ export class ShoppingService {
     };
   }
 
+  private normalizeFrequentItemsLimit(limit?: number): number {
+    const DEFAULT_LIMIT = 10;
+    const MAX_LIMIT = 20;
+
+    if (!Number.isFinite(limit)) {
+      return DEFAULT_LIMIT;
+    }
+
+    const normalizedLimit = Math.trunc(limit as number);
+    if (normalizedLimit <= 0) {
+      return DEFAULT_LIMIT;
+    }
+
+    return Math.min(normalizedLimit, MAX_LIMIT);
+  }
+
+  private async recordFrequentItemAdd(item: {
+    householdId: string;
+    catalogItemId?: string | null;
+    customItemId?: string | null;
+    name: string;
+    category?: string | null;
+    image?: string | null;
+    quantity: number;
+  }): Promise<void> {
+    if (!item.catalogItemId && !item.customItemId) {
+      return;
+    }
+
+    await this.shoppingRepository.incrementHouseholdItemFrequencyForAdd({
+      householdId: item.householdId,
+      catalogItemId: item.catalogItemId ?? undefined,
+      customItemId: item.customItemId ?? undefined,
+      name: item.name,
+      category: item.category ?? undefined,
+      image: item.image ?? undefined,
+      quantity: item.quantity,
+    });
+  }
+
+  private async recordFrequentItemQuantityIncrease(item: {
+    householdId: string;
+    catalogItemId?: string | null;
+    customItemId?: string | null;
+    name: string;
+    category?: string | null;
+    image?: string | null;
+  }): Promise<void> {
+    if (!item.catalogItemId && !item.customItemId) {
+      return;
+    }
+
+    await this.shoppingRepository.incrementHouseholdItemFrequencyForQuantityIncrease(
+      {
+        householdId: item.householdId,
+        catalogItemId: item.catalogItemId ?? undefined,
+        customItemId: item.customItemId ?? undefined,
+        name: item.name,
+        category: item.category ?? undefined,
+        image: item.image ?? undefined,
+      },
+    );
+  }
+
+  async getFrequentItems(
+    householdId: string,
+    limit?: number,
+  ): Promise<FrequentShoppingItemsResponseDto> {
+    const normalizedLimit = this.normalizeFrequentItemsLimit(limit);
+    const frequentItems =
+      await this.shoppingRepository.findTopHouseholdFrequentItems(
+        householdId,
+        normalizedLimit,
+      );
+
+    return {
+      items: frequentItems.map<FrequentShoppingItemDto>((item) => ({
+        id: item.catalogItemId ?? item.customItemId ?? item.id,
+        name: item.name,
+        category: item.category ?? undefined,
+        image: item.image ?? undefined,
+        sourceType: item.catalogItemId ? 'catalog' : 'custom',
+      })),
+    };
+  }
+
   /**
    * Updates a shopping list.
    *
@@ -727,6 +815,20 @@ export class ShoppingService {
       ),
     );
 
+    await Promise.all(
+      addedItems.map((item) =>
+        this.recordFrequentItemAdd({
+          householdId,
+          catalogItemId: item.catalogItemId,
+          customItemId: item.customItemId,
+          name: item.name,
+          category: item.category,
+          image: item.image,
+          quantity: item.quantity,
+        }),
+      ),
+    );
+
     return {
       addedItems: addedItems.map((item) => ({
         id: item.id,
@@ -769,6 +871,17 @@ export class ShoppingService {
     }
 
     const updatedItem = await this.shoppingRepository.updateItem(itemId, dto);
+
+    if (typeof dto.quantity === 'number' && dto.quantity > item.quantity) {
+      await this.recordFrequentItemQuantityIncrease({
+        householdId,
+        catalogItemId: item.catalogItemId,
+        customItemId: item.customItemId,
+        name: updatedItem.name,
+        category: updatedItem.category,
+        image: updatedItem.image,
+      });
+    }
 
     return {
       updatedItem: {

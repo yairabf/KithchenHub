@@ -43,12 +43,10 @@ import {
 import { quickAddItem } from "../../shopping/utils/quickAddUtils";
 import { getAssigneeAvatarUri } from "../../../common/utils/avatarUtils";
 import { config } from "../../../config";
-import { buildDashboardFrequentItems } from "../utils/dashboardFrequentItems";
 import { styles } from "./styles";
 import type { DashboardScreenProps } from "./types";
 import { useTranslation } from "react-i18next";
 
-const FREQUENT_ITEMS_MAX = 8;
 
 function isCustomGroceryItem(item: GroceryItem): boolean {
   return typeof item.id === "string" && item.id.startsWith("custom-");
@@ -106,13 +104,9 @@ export function DashboardScreen({
     [shouldUseMockData],
   );
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
+  const [frequentItems, setFrequentItems] = useState<GroceryItem[]>([]);
   const [mainList, setMainList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const dashboardFrequentItems = useMemo(
-    () => buildDashboardFrequentItems(allItems, FREQUENT_ITEMS_MAX),
-    [allItems],
-  );
 
   // Always-current snapshot of allItems, read synchronously inside event handlers
   // to avoid stale closure captures during rapid concurrent taps.
@@ -130,9 +124,11 @@ export function DashboardScreen({
       // a dependency so this callback is recreated (and re-run) on language changes.
       const data = await shoppingService.getShoppingData();
       setAllItems(data.shoppingItems);
+      setFrequentItems(data.frequentlyAddedItems);
       setMainList(getMainList(data.shoppingLists));
     } catch (_err) {
       setAllItems([]);
+      setFrequentItems([]);
       setMainList(null);
     }
   }, [shoppingService, i18n.language]);
@@ -402,7 +398,7 @@ export function DashboardScreen({
               <FrequentlyAddedSection
                 isTablet={isTablet}
                 isRtl={isRtl}
-                items={dashboardFrequentItems}
+                items={frequentItems}
                 onItemPress={handleQuickAddGroceryItem}
               />
             </View>
