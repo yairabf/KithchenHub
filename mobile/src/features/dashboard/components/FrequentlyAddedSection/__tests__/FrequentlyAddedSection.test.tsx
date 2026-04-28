@@ -1,7 +1,10 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import { Vibration } from 'react-native';
 import type { GroceryItem } from '../../QuickAddCard';
 import { FrequentlyAddedSection } from '../FrequentlyAddedSection';
+
+jest.spyOn(Vibration, 'vibrate').mockImplementation(() => undefined);
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -54,7 +57,7 @@ describe('FrequentlyAddedSection', () => {
     expect(getByText('Bread')).toBeTruthy();
   });
 
-  it('calls onItemPress with the tapped item', () => {
+  it('calls onItemPress with the tapped item and vibrates for clearer feedback', () => {
     const onItemPress = jest.fn();
     const { getByLabelText } = render(
       <FrequentlyAddedSection
@@ -66,7 +69,9 @@ describe('FrequentlyAddedSection', () => {
     );
 
     fireEvent.press(getByLabelText('Add Milk to list'));
+
     expect(onItemPress).toHaveBeenCalledWith(items[0]);
+    expect(Vibration.vibrate).toHaveBeenCalledWith(10);
   });
 
   it('renders an in-UI placeholder when there are no frequent items yet', () => {
