@@ -24,12 +24,13 @@ model Household {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  users         User[]
-  shoppingLists ShoppingList[]
-  recipes       Recipe[]
-  chores        Chore[]
-  customItems   CustomItem[]
-  invites       HouseholdInvite[]
+  users                 User[]
+  shoppingLists         ShoppingList[]
+  recipes               Recipe[]
+  chores                Chore[]
+  customItems           CustomItem[]
+  householdItemFrequencies HouseholdItemFrequency[]
+  invites               HouseholdInvite[]
 
   @@map("households")
 }
@@ -127,15 +128,42 @@ model ShoppingItem {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  list        ShoppingList         @relation(fields: [listId], references: [id], onDelete: Cascade)
+  list        ShoppingList          @relation(fields: [listId], references: [id], onDelete: Cascade)
   catalogItem MasterGroceryCatalog? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
-  customItem  CustomItem?          @relation(fields: [customItemId], references: [id], onDelete: SetNull)
+  customItem  CustomItem?           @relation(fields: [customItemId], references: [id], onDelete: SetNull)
 
   @@index([listId])
   @@index([listId, isChecked])
   @@index([catalogItemId])
   @@index([customItemId])
   @@map("shopping_items")
+}
+
+model HouseholdItemFrequency {
+  id                           String   @id @default(cuid())
+  householdId                  String   @map("household_id")
+  identityKey                  String   @map("identity_key")
+  catalogItemId                String?  @map("catalog_item_id")
+  customItemId                 String?  @map("custom_item_id")
+  name                         String
+  category                     String?
+  image                        String?  @map("image")
+  score                        Int      @default(0)
+  addEventCount                Int      @default(0) @map("add_event_count")
+  quantityBonusCount           Int      @default(0) @map("quantity_bonus_count")
+  manualQuantityIncreaseCount  Int      @default(0) @map("manual_quantity_increase_count")
+  createdAt                    DateTime @default(now()) @map("created_at")
+  updatedAt                    DateTime @updatedAt @map("updated_at")
+
+  household  Household           @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  catalogItem MasterGroceryCatalog? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  customItem  CustomItem?           @relation(fields: [customItemId], references: [id], onDelete: SetNull)
+
+  @@unique([householdId, identityKey])
+  @@index([householdId, score])
+  @@index([catalogItemId])
+  @@index([customItemId])
+  @@map("household_item_frequency")
 }
 
 model MasterGroceryCatalog {
@@ -149,8 +177,9 @@ model MasterGroceryCatalog {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  shoppingItems ShoppingItem[]
-  aliases       CatalogItemAlias[]
+  shoppingItems            ShoppingItem[]
+  householdItemFrequencies HouseholdItemFrequency[]
+  aliases                  CatalogItemAlias[]
   translations  CatalogItemI18n[]
   tags          CatalogItemTag[]
 
@@ -232,8 +261,9 @@ model CustomItem {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  household     Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  shoppingItems ShoppingItem[]
+  household                Household                @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  shoppingItems            ShoppingItem[]
+  householdItemFrequencies HouseholdItemFrequency[]
 
   @@index([householdId, name])
   @@index([householdId])

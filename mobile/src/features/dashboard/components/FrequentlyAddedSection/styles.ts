@@ -90,27 +90,34 @@ export const styles = StyleSheet.create({
     ...shadows.md,
   },
   itemTileTablet: {
-    width: '23%',
+    width: '22.5%',
   },
   itemTilePhone: {
-    width: '48%',
+    width: '46.5%',
+  },
+  itemPressable: {
+    flex: 1,
   },
   itemImageContainer: {
-    aspectRatio: 1,
+    aspectRatio: 0.92,
     backgroundColor: colors.pastel.cyan,
   },
   itemImage: {
     width: '100%',
     height: '100%',
   },
+  itemFeedbackOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.primary,
+  },
   itemFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.xs,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    minHeight: 54,
+    paddingVertical: spacing.xs,
+    minHeight: 48,
   },
   itemFooterRtl: {
     flexDirection: 'row-reverse',
@@ -123,5 +130,15 @@ export const styles = StyleSheet.create({
   itemNameRtl: {
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  itemAddIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.pastel.cyan,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

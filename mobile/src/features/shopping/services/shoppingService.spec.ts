@@ -187,13 +187,37 @@ describe('Shopping Services', () => {
                     });
                 }
 
+                if (url === '/shopping-items/frequent?limit=8') {
+                    return Promise.resolve({
+                        items: [
+                            {
+                                id: 'catalog-1',
+                                name: 'Milk',
+                                category: 'Dairy',
+                                image: 'milk.png',
+                                sourceType: 'catalog',
+                            },
+                        ],
+                    });
+                }
+
                 return Promise.resolve([]);
             });
 
             const data = await service.getShoppingData();
 
             expect(api.get).toHaveBeenCalledWith('/shopping-lists/aggregate?lang=he-il');
+            expect(api.get).toHaveBeenCalledWith('/shopping-items/frequent?limit=8');
             expect(data.shoppingItems[0]?.name).toBe('עגבנייה');
+            expect(data.frequentlyAddedItems).toEqual([
+                {
+                    id: 'catalog-1',
+                    name: 'Milk',
+                    category: 'Dairy',
+                    image: 'milk.png',
+                    defaultQuantity: 1,
+                },
+            ]);
         });
 
         it('getShoppingData falls back to legacy per-list fetch when aggregate returns 404', async () => {

@@ -7,7 +7,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CurrentUserPayload } from '../../../common/decorators';
 import { JwtAuthGuard, HouseholdGuard } from '../../../common/guards';
 import { ShoppingService } from '../services/shopping.service';
-import { ShoppingListsController } from './shopping.controller';
+import {
+  ShoppingItemsController,
+  ShoppingListsController,
+} from './shopping.controller';
 
 describe('ShoppingListsController', () => {
   let controller: ShoppingListsController;
@@ -15,6 +18,7 @@ describe('ShoppingListsController', () => {
   const mockShoppingService = {
     getShoppingData: jest.fn(),
     deleteList: jest.fn(),
+    getFrequentItems: jest.fn(),
   };
 
   const mockUser: CurrentUserPayload = {
@@ -152,6 +156,79 @@ describe('ShoppingListsController', () => {
           serviceError,
         );
       });
+    });
+  });
+});
+
+describe('ShoppingItemsController', () => {
+  let controller: ShoppingItemsController;
+
+  const mockShoppingService = {
+    getFrequentItems: jest.fn(),
+  };
+
+  const mockUser: CurrentUserPayload = {
+    userId: 'user-123',
+    householdId: 'household-123',
+    email: 'test@example.com',
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [ShoppingItemsController],
+      providers: [
+        {
+          provide: ShoppingService,
+          useValue: mockShoppingService,
+        },
+      ],
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(HouseholdGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
+
+    controller = module.get<ShoppingItemsController>(ShoppingItemsController);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('getFrequentItems', () => {
+    it('throws BadRequestException and does not call service when user has no household', async () => {
+      await expect(
+        controller.getFrequentItems(
+          { ...mockUser, householdId: undefined },
+          '10',
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockShoppingService.getFrequentItems).not.toHaveBeenCalled();
+    });
+
+    it('delegates to ShoppingService with parsed limit and returns the payload', async () => {
+      const payload = {
+        items: [
+          {
+            id: 'catalog-1',
+            name: 'Milk',
+            category: 'Dairy',
+            image: 'milk.png',
+            sourceType: 'catalog',
+          },
+        ],
+      };
+      mockShoppingService.getFrequentItems.mockResolvedValue(payload);
+
+      const result = await controller.getFrequentItems(mockUser, '10');
+
+      expect(mockShoppingService.getFrequentItems).toHaveBeenCalledWith(
+        mockUser.householdId,
+        10,
+      );
+      expect(result).toEqual(payload);
     });
   });
 });

@@ -1,5 +1,12 @@
-import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import {
+  Animated,
+  Easing,
+  Pressable,
+  Text,
+  Vibration,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { SafeImage } from '../../../../common/components/SafeImage';
@@ -7,6 +14,102 @@ import { TextBlock } from '../../../../common/components/TextBlock';
 import { colors } from '../../../../theme';
 import { styles } from './styles';
 import type { FrequentlyAddedSectionProps } from './types';
+import type { GroceryItem } from '../../../shopping/components/GrocerySearchBar';
+
+type FrequentItemTileProps = {
+  isRtl: boolean;
+  isTablet: boolean;
+  item: GroceryItem;
+  onItemPress: (item: GroceryItem) => void;
+  accessibilityLabel: string;
+};
+
+function FrequentItemTile({
+  accessibilityLabel,
+  isRtl,
+  isTablet,
+  item,
+  onItemPress,
+}: FrequentItemTileProps) {
+  const feedbackAnimation = useRef(new Animated.Value(0)).current;
+
+  const runPressFeedback = useCallback(() => {
+    feedbackAnimation.stopAnimation();
+    feedbackAnimation.setValue(0);
+
+    Animated.sequence([
+      Animated.timing(feedbackAnimation, {
+        toValue: 1,
+        duration: 120,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(feedbackAnimation, {
+        toValue: 0,
+        duration: 190,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [feedbackAnimation]);
+
+  const handlePress = useCallback(() => {
+    Vibration.vibrate(10);
+    runPressFeedback();
+    onItemPress(item);
+  }, [item, onItemPress, runPressFeedback]);
+
+  const tileScale = feedbackAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0.96],
+  });
+
+  const iconScale = feedbackAnimation.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.12, 1.04],
+  });
+
+  const feedbackOverlayOpacity = feedbackAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.18],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.itemTile,
+        isTablet ? styles.itemTileTablet : styles.itemTilePhone,
+        { transform: [{ scale: tileScale }] },
+      ]}
+    >
+      <Pressable
+        onPress={handlePress}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        style={styles.itemPressable}
+      >
+        <View style={styles.itemImageContainer}>
+          <SafeImage uri={item.image} style={styles.itemImage} />
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.itemFeedbackOverlay,
+              { opacity: feedbackOverlayOpacity },
+            ]}
+          />
+        </View>
+        <View style={[styles.itemFooter, isRtl && styles.itemFooterRtl]}>
+          <Text style={[styles.itemName, isRtl && styles.itemNameRtl]} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <Animated.View style={[styles.itemAddIconWrap, { transform: [{ scale: iconScale }] }]}>
+            <Ionicons name="add" size={14} color={colors.primary} />
+          </Animated.View>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export function FrequentlyAddedSection({
   isTablet,
@@ -36,24 +139,14 @@ export function FrequentlyAddedSection({
       {hasItems ? (
         <View style={styles.grid}>
           {items.map((item) => (
-            <TouchableOpacity
+            <FrequentItemTile
               key={item.id}
-              style={[styles.itemTile, isTablet ? styles.itemTileTablet : styles.itemTilePhone]}
-              onPress={() => onItemPress(item)}
-              activeOpacity={0.8}
+              item={item}
+              isTablet={isTablet}
+              isRtl={isRtl}
+              onItemPress={onItemPress}
               accessibilityLabel={t('frequentlyAdded.addItemAccessibility', { name: item.name })}
-              accessibilityRole="button"
-            >
-              <View style={styles.itemImageContainer}>
-                <SafeImage uri={item.image} style={styles.itemImage} />
-              </View>
-              <View style={[styles.itemFooter, isRtl && styles.itemFooterRtl]}>
-                <Text style={[styles.itemName, isRtl && styles.itemNameRtl]} numberOfLines={2}>
-                  {item.name}
-                </Text>
-                <Ionicons name="add-circle" size={16} color={colors.primary} />
-              </View>
-            </TouchableOpacity>
+            />
           ))}
         </View>
       ) : (

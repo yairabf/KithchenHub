@@ -15,7 +15,6 @@ import type { GroceryItem } from "../components/GrocerySearchBar";
 import type { ShoppingData, IShoppingService } from "./shoppingService";
 import {
   buildCategoriesFromGroceries,
-  buildFrequentlyAddedItems,
 } from "../../../common/utils/catalogUtils";
 import { catalogService } from "../../../common/services/catalogService";
 import {
@@ -83,6 +82,14 @@ type ShoppingListDetailDto = {
 type ShoppingDataDto = {
   lists: ShoppingListSummaryDto[];
   items: Array<ShoppingListDetailDto["items"][0] & { listId: string }>;
+};
+
+type FrequentShoppingItemDto = {
+  id: string;
+  name: string;
+  category?: string | null;
+  image?: string | null;
+  sourceType: 'catalog' | 'custom';
 };
 
 const DEFAULT_LIST_ICON: ShoppingList["icon"] = "cart-outline";
@@ -194,6 +201,18 @@ const mapItemResponseToShoppingItem = (
   };
 };
 
+const createFrequentGroceryItems = (
+  frequentItems: FrequentShoppingItemDto[],
+): GroceryItem[] => {
+  return frequentItems.map((item) => ({
+    id: item.id,
+    name: item.name,
+    category: resolveCategory(item.category),
+    image: item.image ?? '',
+    defaultQuantity: 1,
+  }));
+};
+
 /**
  * Remote shopping service for signed-in users.
  *
@@ -254,7 +273,22 @@ export class RemoteShoppingService implements IShoppingService {
     }
 
     const categories = buildCategoriesFromGroceries(groceryItems);
-    const frequentlyAddedItems = buildFrequentlyAddedItems(groceryItems);
+    let frequentlyAddedItems: GroceryItem[] = [];
+
+    try {
+      const frequentResponse = await api.get<{ items: FrequentShoppingItemDto[] }>(
+        `/shopping-items/frequent?limit=${FREQUENTLY_ADDED_ITEMS_LIMIT}`,
+      );
+      frequentlyAddedItems = createFrequentGroceryItems(
+        Array.isArray(frequentResponse?.items) ? frequentResponse.items : [],
+      );
+    } catch (error) {
+      if (!is404Error(error)) {
+        logger.warn(
+          '[RemoteShoppingService] Frequent-items endpoint unavailable; using empty dashboard placeholder state',
+        );
+      }
+    }
 
     return {
       shoppingLists,

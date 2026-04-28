@@ -1,7 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
-import { ShoppingList, ShoppingItem, CustomItem } from '@prisma/client';
+import {
+  CustomItem,
+  HouseholdItemFrequency,
+  ShoppingItem,
+  ShoppingList,
+} from '@prisma/client';
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
+
+interface HouseholdFrequencyIdentityInput {
+  householdId: string;
+  catalogItemId?: string;
+  customItemId?: string;
+  name: string;
+  category?: string;
+  image?: string;
+}
+
+interface HouseholdFrequencyAddInput extends HouseholdFrequencyIdentityInput {
+  quantity: number;
+}
 
 @Injectable()
 export class ShoppingRepository {
@@ -279,6 +297,109 @@ export class ShoppingRepository {
         listId,
         ...ACTIVE_RECORDS_FILTER,
       },
+    });
+  }
+
+  private buildHouseholdFrequencyIdentityKey(
+    input: Pick<
+      HouseholdFrequencyIdentityInput,
+      'catalogItemId' | 'customItemId'
+    >,
+  ): string {
+    if (input.catalogItemId) {
+      return `catalog:${input.catalogItemId}`;
+    }
+
+    if (input.customItemId) {
+      return `custom:${input.customItemId}`;
+    }
+
+    throw new Error(
+      'Household item frequency requires a catalogItemId or customItemId',
+    );
+  }
+
+  async incrementHouseholdItemFrequencyForAdd(
+    input: HouseholdFrequencyAddInput,
+  ): Promise<HouseholdItemFrequency> {
+    const identityKey = this.buildHouseholdFrequencyIdentityKey(input);
+    const quantityBonus = input.quantity > 1 ? 1 : 0;
+
+    return this.prisma.householdItemFrequency.upsert({
+      where: {
+        householdId_identityKey: {
+          householdId: input.householdId,
+          identityKey,
+        },
+      },
+      create: {
+        householdId: input.householdId,
+        identityKey,
+        catalogItemId: input.catalogItemId,
+        customItemId: input.customItemId,
+        name: input.name,
+        category: input.category,
+        image: input.image,
+        score: 1 + quantityBonus,
+        addEventCount: 1,
+        quantityBonusCount: quantityBonus,
+      },
+      update: {
+        catalogItemId: input.catalogItemId,
+        customItemId: input.customItemId,
+        name: input.name,
+        category: input.category,
+        image: input.image,
+        score: { increment: 1 + quantityBonus },
+        addEventCount: { increment: 1 },
+        quantityBonusCount: { increment: quantityBonus },
+      },
+    });
+  }
+
+  async incrementHouseholdItemFrequencyForQuantityIncrease(
+    input: HouseholdFrequencyIdentityInput,
+  ): Promise<HouseholdItemFrequency> {
+    const identityKey = this.buildHouseholdFrequencyIdentityKey(input);
+
+    return this.prisma.householdItemFrequency.upsert({
+      where: {
+        householdId_identityKey: {
+          householdId: input.householdId,
+          identityKey,
+        },
+      },
+      create: {
+        householdId: input.householdId,
+        identityKey,
+        catalogItemId: input.catalogItemId,
+        customItemId: input.customItemId,
+        name: input.name,
+        category: input.category,
+        image: input.image,
+        score: 1,
+        manualQuantityIncreaseCount: 1,
+      },
+      update: {
+        catalogItemId: input.catalogItemId,
+        customItemId: input.customItemId,
+        name: input.name,
+        category: input.category,
+        image: input.image,
+        score: { increment: 1 },
+        manualQuantityIncreaseCount: { increment: 1 },
+      },
+    });
+  }
+
+  async findTopHouseholdFrequentItems(
+    householdId: string,
+    limit: number,
+  ): Promise<HouseholdItemFrequency[]> {
+    return this.prisma.householdItemFrequency.findMany({
+      where: { householdId },
+      orderBy: [{ score: 'desc' }, { updatedAt: 'desc' }],
+      take: limit,
     });
   }
 

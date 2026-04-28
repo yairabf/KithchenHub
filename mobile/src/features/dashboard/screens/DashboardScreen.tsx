@@ -43,12 +43,16 @@ import {
 import { quickAddItem } from "../../shopping/utils/quickAddUtils";
 import { getAssigneeAvatarUri } from "../../../common/utils/avatarUtils";
 import { config } from "../../../config";
-import { buildDashboardFrequentItems } from "../utils/dashboardFrequentItems";
+import { determineUserDataMode } from "../../../common/types/dataModes";
+import {
+  CacheAwareShoppingRepository,
+  type ICacheAwareShoppingRepository,
+} from "../../../common/repositories/cacheAwareShoppingRepository";
+import { cacheEvents } from "../../../common/utils/cacheEvents";
 import { styles } from "./styles";
 import type { DashboardScreenProps } from "./types";
 import { useTranslation } from "react-i18next";
 
-const FREQUENT_ITEMS_MAX = 8;
 
 function isCustomGroceryItem(item: GroceryItem): boolean {
   return typeof item.id === "string" && item.id.startsWith("custom-");
@@ -101,18 +105,27 @@ export function DashboardScreen({
 
   const shouldUseMockData =
     config.mockData.enabled || !user || user?.isGuest === true;
+  const userMode = useMemo(() => {
+    if (config.mockData.enabled) {
+      return 'guest' as const;
+    }
+    return determineUserDataMode(user);
+  }, [user]);
   const shoppingService = useMemo(
-    () => createShoppingService(shouldUseMockData ? "guest" : "signed-in"),
-    [shouldUseMockData],
+    () => createShoppingService(userMode),
+    [userMode],
   );
+  const shoppingRepository = useMemo<ICacheAwareShoppingRepository | null>(() => {
+    if (shouldUseMockData || userMode !== 'signed-in') {
+      return null;
+    }
+
+    return new CacheAwareShoppingRepository(shoppingService);
+  }, [shouldUseMockData, shoppingService, userMode]);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
+  const [frequentItems, setFrequentItems] = useState<GroceryItem[]>([]);
   const [mainList, setMainList] = useState<ShoppingList | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const dashboardFrequentItems = useMemo(
-    () => buildDashboardFrequentItems(allItems, FREQUENT_ITEMS_MAX),
-    [allItems],
-  );
 
   // Always-current snapshot of allItems, read synchronously inside event handlers
   // to avoid stale closure captures during rapid concurrent taps.
@@ -122,20 +135,53 @@ export function DashboardScreen({
   // Tracks catalog IDs / names of items currently being added to prevent
   // concurrent rapid taps of the same item from racing past the dedup check.
   const pendingQuickAddKeys = useRef<Set<string>>(new Set());
+  const loadRequestIdRef = useRef(0);
+
+  const loadShoppingCacheState = useCallback(async () => {
+    if (!shoppingRepository) {
+      return;
+    }
+
+    const [shoppingLists, shoppingItems] = await Promise.all([
+      shoppingRepository.findAllLists(),
+      shoppingRepository.findAllItems(),
+    ]);
+
+    setAllItems(shoppingItems);
+    setMainList(getMainList(shoppingLists));
+  }, [shoppingRepository]);
 
   const loadShoppingData = useCallback(async () => {
+    const requestId = ++loadRequestIdRef.current;
+
     try {
-      // getShoppingData passes the current i18n.language to the aggregate endpoint,
-      // so item names are returned in the active locale. i18n.language is listed as
-      // a dependency so this callback is recreated (and re-run) on language changes.
-      const data = await shoppingService.getShoppingData();
-      setAllItems(data.shoppingItems);
-      setMainList(getMainList(data.shoppingLists));
+      const frequentItemsPromise = shoppingService.getShoppingData();
+
+      if (shoppingRepository) {
+        await loadShoppingCacheState();
+      }
+
+      const data = await frequentItemsPromise;
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
+
+      if (!shoppingRepository) {
+        setAllItems(data.shoppingItems);
+        setMainList(getMainList(data.shoppingLists));
+      }
+
+      setFrequentItems(data.frequentlyAddedItems);
     } catch (_err) {
+      if (requestId !== loadRequestIdRef.current) {
+        return;
+      }
+
       setAllItems([]);
+      setFrequentItems([]);
       setMainList(null);
     }
-  }, [shoppingService, i18n.language]);
+  }, [loadShoppingCacheState, shoppingRepository, shoppingService]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -158,6 +204,26 @@ export function DashboardScreen({
       loadShoppingData();
     }, [loadShoppingData]),
   );
+
+  useEffect(() => {
+    if (!shoppingRepository) {
+      return undefined;
+    }
+
+    const reloadShoppingState = () => {
+      loadShoppingData().catch((error) => {
+        console.error('Failed to reload dashboard shopping state:', error);
+      });
+    };
+
+    const unsubscribeItems = cacheEvents.onCacheChange('shoppingItems', reloadShoppingState);
+    const unsubscribeLists = cacheEvents.onCacheChange('shoppingLists', reloadShoppingState);
+
+    return () => {
+      unsubscribeItems();
+      unsubscribeLists();
+    };
+  }, [loadShoppingData, shoppingRepository]);
 
   const displayName = user?.name ?? t("header.roleGuest");
   const userRole = user?.isGuest ? t("header.roleGuest") : t("header.roleKitchenLead");
@@ -254,6 +320,10 @@ export function DashboardScreen({
   };
 
   const createItem = async (item: ShoppingItemWithCatalog) => {
+    if (shoppingRepository) {
+      return await shoppingRepository.createItem(item);
+    }
+
     return await shoppingService.createItem(item);
   };
 
@@ -295,6 +365,10 @@ export function DashboardScreen({
         createItem,
         updateItem: async (itemId, updates) => {
           try {
+            if (shoppingRepository) {
+              return await shoppingRepository.updateItem(itemId, updates);
+            }
+
             return await shoppingService.updateItem(itemId, updates);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -402,7 +476,7 @@ export function DashboardScreen({
               <FrequentlyAddedSection
                 isTablet={isTablet}
                 isRtl={isRtl}
-                items={dashboardFrequentItems}
+                items={frequentItems}
                 onItemPress={handleQuickAddGroceryItem}
               />
             </View>
