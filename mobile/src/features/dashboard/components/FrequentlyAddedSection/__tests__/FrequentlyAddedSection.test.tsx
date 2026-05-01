@@ -4,6 +4,17 @@ import { Vibration } from 'react-native';
 import type { GroceryItem } from '../../QuickAddCard';
 import { FrequentlyAddedSection } from '../FrequentlyAddedSection';
 
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return {
+    Ionicons: ({ name, testID }: { name: string; testID?: string }) => (
+      <Text testID={testID ?? `ionicon-${name}`}>{name}</Text>
+    ),
+  };
+});
+
 jest.spyOn(Vibration, 'vibrate').mockImplementation(() => undefined);
 
 jest.mock('../../../../shopping/utils/categoryImage', () => ({
@@ -72,8 +83,8 @@ describe('FrequentlyAddedSection', () => {
     expect(getByText('Bread')).toBeTruthy();
   });
 
-  it('renders category fallback imagery when a frequent item has no remote image', () => {
-    const { getByTestId } = render(
+  it('renders the compact frequent-item layout with centered names and no add badge', () => {
+    const { getByTestId, queryByTestId } = render(
       <FrequentlyAddedSection
         isTablet={true}
         isRtl={false}
@@ -84,6 +95,10 @@ describe('FrequentlyAddedSection', () => {
 
     expect(getByTestId('frequent-item-category-image-1')).toBeTruthy();
     expect(getByTestId('frequent-item-category-image-2')).toBeTruthy();
+    expect(getByTestId('frequent-item-name-1').props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ textAlign: 'center' })]),
+    );
+    expect(queryByTestId('frequent-item-add-icon-1')).toBeNull();
   });
 
   it('calls onItemPress with the tapped item and vibrates for clearer feedback', () => {
