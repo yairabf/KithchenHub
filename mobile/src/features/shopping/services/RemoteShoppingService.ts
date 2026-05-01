@@ -224,19 +224,23 @@ const createFrequentGroceryItems = (
  */
 export class RemoteShoppingService implements IShoppingService {
   async getShoppingData(): Promise<ShoppingData> {
-    const groceryItems = await this.getGroceryItems();
-    const groceryLookup = createGroceryLookup(groceryItems);
-
     const lang = i18n.language?.trim().toLowerCase() || "en";
     const encodedLang = encodeURIComponent(lang);
+
+    const groceryItemsPromise = this.getGroceryItems();
+    const frequentItemsPromise = this.getFrequentItems(
+      FREQUENTLY_ADDED_ITEMS_LIMIT,
+    );
 
     let shoppingLists: ShoppingList[];
     let shoppingItems: ShoppingItem[];
 
     try {
-      const aggregate = await api.get<ShoppingDataDto>(
-        `/shopping-lists/aggregate?lang=${encodedLang}`,
-      );
+      const [aggregate, groceryItems] = await Promise.all([
+        api.get<ShoppingDataDto>(`/shopping-lists/aggregate?lang=${encodedLang}`),
+        groceryItemsPromise,
+      ]);
+      const groceryLookup = createGroceryLookup(groceryItems);
       const aggregateLists = Array.isArray(aggregate?.lists)
         ? aggregate.lists
         : [];
@@ -256,6 +260,17 @@ export class RemoteShoppingService implements IShoppingService {
           matchingGrocery?.category,
         );
       });
+
+      const categories = buildCategoriesFromGroceries(groceryItems);
+      const frequentlyAddedItems = await frequentItemsPromise;
+
+      return {
+        shoppingLists,
+        shoppingItems,
+        categories,
+        groceryItems,
+        frequentlyAddedItems,
+      };
     } catch (error) {
       if (!is404Error(error)) {
         throw error;
@@ -264,31 +279,19 @@ export class RemoteShoppingService implements IShoppingService {
       logger.warn(
         "[RemoteShoppingService] Aggregate endpoint unavailable; using legacy list-detail fetch path",
       );
-      shoppingLists = await this.getShoppingLists();
-      shoppingItems = await this.getShoppingItems(
-        shoppingLists,
-        groceryLookup,
-        encodedLang,
-      );
     }
+
+    const groceryItems = await groceryItemsPromise;
+    const groceryLookup = createGroceryLookup(groceryItems);
+    shoppingLists = await this.getShoppingLists();
+    shoppingItems = await this.getShoppingItems(
+      shoppingLists,
+      groceryLookup,
+      encodedLang,
+    );
 
     const categories = buildCategoriesFromGroceries(groceryItems);
-    let frequentlyAddedItems: GroceryItem[] = [];
-
-    try {
-      const frequentResponse = await api.get<{ items: FrequentShoppingItemDto[] }>(
-        `/shopping-items/frequent?limit=${FREQUENTLY_ADDED_ITEMS_LIMIT}`,
-      );
-      frequentlyAddedItems = createFrequentGroceryItems(
-        Array.isArray(frequentResponse?.items) ? frequentResponse.items : [],
-      );
-    } catch (error) {
-      if (!is404Error(error)) {
-        logger.warn(
-          '[RemoteShoppingService] Frequent-items endpoint unavailable; using empty dashboard placeholder state',
-        );
-      }
-    }
+    const frequentlyAddedItems = await frequentItemsPromise;
 
     return {
       shoppingLists,
@@ -297,6 +300,32 @@ export class RemoteShoppingService implements IShoppingService {
       groceryItems,
       frequentlyAddedItems,
     };
+  }
+
+  async getMainList(): Promise<ShoppingList | null> {
+    const response = await api.get<ShoppingListSummaryDto | null>('/shopping-lists/main');
+    return response ? mapShoppingListSummary(response) : null;
+  }
+
+  async getFrequentItems(
+    limit = FREQUENTLY_ADDED_ITEMS_LIMIT,
+  ): Promise<GroceryItem[]> {
+    try {
+      const frequentResponse = await api.get<{ items: FrequentShoppingItemDto[] }>(
+        `/shopping-items/frequent?limit=${limit}`,
+      );
+      return createFrequentGroceryItems(
+        Array.isArray(frequentResponse?.items) ? frequentResponse.items : [],
+      );
+    } catch (error) {
+      if (!is404Error(error)) {
+        logger.warn(
+          '[RemoteShoppingService] Frequent-items endpoint unavailable; using empty dashboard placeholder state',
+        );
+      }
+
+      return [];
+    }
   }
 
   /**

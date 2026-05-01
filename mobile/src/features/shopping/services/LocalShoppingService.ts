@@ -102,6 +102,18 @@ export class LocalShoppingService implements IShoppingService {
     };
   }
 
+  async getMainList(): Promise<ShoppingList | null> {
+    const guestLists = await guestStorage.getShoppingLists();
+    const activeLists = guestLists.filter(isEntityActive);
+
+    return activeLists.find((list) => list.isMain) ?? null;
+  }
+
+  async getFrequentItems(): Promise<GroceryItem[]> {
+    const catalogData = await catalogService.getCatalogData();
+    return catalogData.frequentlyAddedItems;
+  }
+
   async createList(list: Partial<ShoppingList>): Promise<ShoppingList> {
     const newList = createShoppingList(
       list.name || 'New List',

@@ -8,6 +8,8 @@ jest.mock('expo-crypto', () => ({
 
 const mockService = {
   getShoppingData: jest.fn(),
+  getMainList: jest.fn(),
+  getFrequentItems: jest.fn(),
   createList: jest.fn(),
   updateList: jest.fn(),
   deleteList: jest.fn(),
@@ -15,6 +17,10 @@ const mockService = {
   updateItem: jest.fn(),
   deleteItem: jest.fn(),
   toggleItem: jest.fn(),
+};
+
+const mockApi = {
+  get: jest.fn(),
 };
 
 const mockRepository = {
@@ -129,6 +135,10 @@ jest.mock('../../../../common/repositories/cacheAwareShoppingRepository', () => 
   CacheAwareShoppingRepository: jest.fn(() => mockRepository),
 }));
 
+jest.mock('../../../../services/api', () => ({
+  api: mockApi,
+}));
+
 jest.mock('../../../../common/utils/cacheEvents', () => ({
   cacheEvents: {
     onCacheChange: jest.fn((entityType: 'shoppingItems' | 'shoppingLists', handler: () => void) => {
@@ -191,6 +201,30 @@ describe('DashboardScreen frequent item adds', () => {
       isChecked: false,
     });
 
+    mockApi.get.mockImplementation((url: string) => {
+      throw new Error(`Unexpected direct API call in DashboardScreen test: ${url}`);
+    });
+
+    mockService.getMainList.mockResolvedValue({
+      id: 'list-1',
+      localId: 'list-1',
+      name: 'Main List',
+      itemCount: 0,
+      icon: 'cart-outline',
+      color: '#10B981',
+      isMain: true,
+    });
+
+    mockService.getFrequentItems.mockResolvedValue([
+      {
+        id: 'milk-1',
+        name: 'Milk',
+        category: 'Dairy',
+        image: '',
+        defaultQuantity: 1,
+      },
+    ]);
+
     mockService.getShoppingData.mockResolvedValue({
       shoppingLists: [
         {
@@ -219,22 +253,23 @@ describe('DashboardScreen frequent item adds', () => {
   });
 
   it('ignores stale frequent-item responses when overlapping reloads resolve out of order', async () => {
-    let resolveFirstRequest: ((value: any) => void) | undefined;
-    let resolveSecondRequest: ((value: any) => void) | undefined;
+    let resolveFirstFrequentRequest: ((value: Array<{ id: string; name: string; category: string; image: string; defaultQuantity: number }>) => void) | undefined;
+    let resolveSecondFrequentRequest: ((value: Array<{ id: string; name: string; category: string; image: string; defaultQuantity: number }>) => void) | undefined;
+    let frequentCallCount = 0;
 
-    mockService.getShoppingData
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolveFirstRequest = resolve;
-          }),
-      )
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolveSecondRequest = resolve;
-          }),
-      );
+    mockService.getFrequentItems.mockImplementation(() => {
+      frequentCallCount += 1;
+
+      if (frequentCallCount === 1) {
+        return new Promise((resolve) => {
+          resolveFirstFrequentRequest = resolve;
+        });
+      }
+
+      return new Promise((resolve) => {
+        resolveSecondFrequentRequest = resolve;
+      });
+    });
 
     const { queryByText, getByText } = render(
       <DashboardScreen
@@ -252,36 +287,16 @@ describe('DashboardScreen frequent item adds', () => {
       mockCacheChangeHandlers.shoppingItems[0]?.();
     });
 
-    await waitFor(() => {
-      expect(mockService.getShoppingData).toHaveBeenCalledTimes(2);
-    });
-
     await act(async () => {
-      resolveSecondRequest?.({
-        shoppingLists: [
-          {
-            id: 'list-1',
-            localId: 'list-1',
-            name: 'Main List',
-            itemCount: 1,
-            icon: 'cart-outline',
-            color: '#10B981',
-            isMain: true,
-          },
-        ],
-        shoppingItems: [],
-        categories: [],
-        groceryItems: [],
-        frequentlyAddedItems: [
-          {
-            id: 'milk-1',
-            name: 'Milk',
-            category: 'Dairy',
-            image: '',
-            defaultQuantity: 1,
-          },
-        ],
-      });
+      resolveSecondFrequentRequest?.([
+        {
+          id: 'milk-1',
+          name: 'Milk',
+          category: 'Dairy',
+          image: '',
+          defaultQuantity: 1,
+        },
+      ]);
     });
 
     await waitFor(() => {
@@ -289,71 +304,43 @@ describe('DashboardScreen frequent item adds', () => {
     });
 
     await act(async () => {
-      resolveFirstRequest?.({
-        shoppingLists: [
-          {
-            id: 'list-1',
-            localId: 'list-1',
-            name: 'Main List',
-            itemCount: 0,
-            icon: 'cart-outline',
-            color: '#10B981',
-            isMain: true,
-          },
-        ],
-        shoppingItems: [],
-        categories: [],
-        groceryItems: [],
-        frequentlyAddedItems: [],
-      });
+      resolveFirstFrequentRequest?.([]);
     });
 
     expect(queryByText('Milk')).toBeTruthy();
   });
 
   it('refetches backend frequent items when shopping cache changes so newly counted items appear on the dashboard', async () => {
-    mockService.getShoppingData
+    mockService.getFrequentItems
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'milk-1',
+          name: 'Milk',
+          category: 'Dairy',
+          image: '',
+          defaultQuantity: 1,
+        },
+      ]);
+
+    mockService.getMainList
       .mockResolvedValueOnce({
-        shoppingLists: [
-          {
-            id: 'list-1',
-            localId: 'list-1',
-            name: 'Main List',
-            itemCount: 0,
-            icon: 'cart-outline',
-            color: '#10B981',
-            isMain: true,
-          },
-        ],
-        shoppingItems: [],
-        categories: [],
-        groceryItems: [],
-        frequentlyAddedItems: [],
+        id: 'list-1',
+        localId: 'list-1',
+        name: 'Main List',
+        itemCount: 0,
+        icon: 'cart-outline',
+        color: '#10B981',
+        isMain: true,
       })
       .mockResolvedValueOnce({
-        shoppingLists: [
-          {
-            id: 'list-1',
-            localId: 'list-1',
-            name: 'Main List',
-            itemCount: 1,
-            icon: 'cart-outline',
-            color: '#10B981',
-            isMain: true,
-          },
-        ],
-        shoppingItems: [],
-        categories: [],
-        groceryItems: [],
-        frequentlyAddedItems: [
-          {
-            id: 'milk-1',
-            name: 'Milk',
-            category: 'Dairy',
-            image: '',
-            defaultQuantity: 1,
-          },
-        ],
+        id: 'list-1',
+        localId: 'list-1',
+        name: 'Main List',
+        itemCount: 1,
+        icon: 'cart-outline',
+        color: '#10B981',
+        isMain: true,
       });
 
     const { queryByText, getByText } = render(
@@ -365,7 +352,7 @@ describe('DashboardScreen frequent item adds', () => {
     );
 
     await waitFor(() => {
-      expect(mockService.getShoppingData).toHaveBeenCalledTimes(1);
+      expect(mockService.getFrequentItems).toHaveBeenCalledWith(8);
     });
     expect(queryByText('Milk')).toBeNull();
 
@@ -376,12 +363,23 @@ describe('DashboardScreen frequent item adds', () => {
     mockCacheChangeHandlers.shoppingItems[0]?.();
 
     await waitFor(() => {
-      expect(mockService.getShoppingData).toHaveBeenCalledTimes(2);
       expect(getByText('Milk')).toBeTruthy();
     });
   });
 
-  it('uses the shared shopping repository for signed-in frequent-item taps so shopping tab state updates immediately', async () => {
+  it('falls back to the backend main list when cached signed-in list metadata is stale', async () => {
+    mockRepository.findAllLists.mockResolvedValue([
+      {
+        id: 'list-1',
+        localId: 'list-1',
+        name: 'Main List',
+        itemCount: 0,
+        icon: 'cart-outline',
+        color: '#10B981',
+        isMain: false,
+      },
+    ]);
+
     const { getByLabelText } = render(
       <DashboardScreen
         onOpenShoppingModal={jest.fn()}
@@ -391,8 +389,8 @@ describe('DashboardScreen frequent item adds', () => {
     );
 
     await waitFor(() => {
-      expect(mockRepository.findAllLists).toHaveBeenCalled();
-      expect(mockService.getShoppingData).toHaveBeenCalled();
+      expect(mockService.getMainList).toHaveBeenCalled();
+      expect(mockService.getFrequentItems).toHaveBeenCalledWith(8);
     });
 
     fireEvent.press(getByLabelText('press frequent item'));
