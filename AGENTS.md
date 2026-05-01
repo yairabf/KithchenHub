@@ -158,9 +158,53 @@ npm run verify:eas
 ## 6) Copilot Rules
 - No `.github/copilot-instructions.md` was found in this repo.
 
-## 7) Agent Defaults
+## 7) Project-Local Context Files
+- Read `docs/project/PROJECT_OVERVIEW.md` at the start of a fresh session for durable project overview and stable product constraints.
+- Read `docs/project/RECENT_CHANGES.md` for the most relevant recent workstreams and documentation pointers.
+- Read `.hermes/START_HERE.md` when resuming after context loss or when handing the repo to a different LLM.
+- Read `.hermes/SESSION_LOG.md` for a rolling record of major recent LLM milestones.
+- Use `.hermes/templates/PLAN_TEMPLATE.md` as the starting point for new dated files under `.hermes/plans/`.
+- Check `.hermes/plans/*.md` for task-specific recovery plans before continuing a multi-step effort.
+- If project conventions or active workstreams change materially, update the relevant docs/project and `.hermes/*` context files.
+
+## 8) Agent Defaults
 - Make small, targeted changes; avoid broad refactors unless requested.
 - Respect existing module boundaries and architecture.
 - Never change app IDs, OTA runtime policy, or EAS channel/build semantics without explicit approval.
 - Run relevant checks for each changed surface (mobile/backend) before finishing.
 - If workflows or commands change, update this file.
+
+## 9) KitchenHub Product Priorities and UX Bias
+- Prioritize **mobile UX** first. Tablet support still matters, but mobile is the primary usage mode.
+- Tablet should remain functional and polished, but do not optimize tablet at the expense of mobile responsiveness, smoothness, or correctness.
+- Product priority order is: **shopping first, then recipes, then chores, then dashboard/home**.
+- Treat the dashboard as a lightweight utility surface for quick access and quick add, not the main value of the app.
+- Preserve a **native iOS/Android feel**. Avoid solutions that feel web-like, clunky, or overbuilt.
+- Optimize for **speed, snappiness, and low loading time** wherever practical.
+
+## 10) Preferred Implementation Style
+- Prefer small, targeted edits over broad rewrites.
+- Reuse existing components and patterns before creating new ones.
+- Prefer **abstraction over duplication** when it improves readability and maintainability.
+- Keep code human-readable: small focused functions, clear naming, and straightforward control flow.
+- Favor maintainable structure that follows SOLID-style reasoning where appropriate.
+- Avoid unnecessary new files unless they clearly improve the design.
+
+## 11) What to Verify After UI Changes
+- Mobile layouts still behave correctly and remain responsive.
+- Animations still work as expected and feel smooth.
+- Interaction performance remains fast and snappy.
+- State persistence still works across sessions/app restarts when relevant.
+- Tablet layouts still function correctly, even if mobile remains the higher priority.
+- Changes do not break scrolling, modal behavior, keyboard interactions, or other surrounding UI flows.
+
+## 12) What to Avoid
+- Duplicate code paths.
+- Hard-to-read or hard-to-maintain code.
+- Unnecessary new files or abstractions that do not pay for themselves.
+- Regressions in persistence, animation smoothness, responsiveness, or perceived performance.
+- Letting dashboard/home work overshadow more important shopping/recipe/chore flows.
+
+## 13) Ambiguity Rule
+- If a task is ambiguous or an important product/UX decision is unclear, ask Yair instead of guessing.
+- When unsure, preserve current behavior unless there is a clear reason to change it.
