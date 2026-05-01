@@ -208,7 +208,7 @@ describe('ShoppingItemsController', () => {
       expect(mockShoppingService.getFrequentItems).not.toHaveBeenCalled();
     });
 
-    it('delegates to ShoppingService with parsed limit and returns the payload', async () => {
+    it('delegates to ShoppingService with parsed limit, lang, and returns the payload', async () => {
       const payload = {
         items: [
           {
@@ -222,11 +222,12 @@ describe('ShoppingItemsController', () => {
       };
       mockShoppingService.getFrequentItems.mockResolvedValue(payload);
 
-      const result = await controller.getFrequentItems(mockUser, '10');
+      const result = await controller.getFrequentItems(mockUser, '10', 'he');
 
       expect(mockShoppingService.getFrequentItems).toHaveBeenCalledWith(
         mockUser.householdId,
         10,
+        'he',
       );
       expect(result).toEqual(payload);
     });

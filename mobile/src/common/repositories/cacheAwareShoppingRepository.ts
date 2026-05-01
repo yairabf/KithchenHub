@@ -38,6 +38,8 @@ type ShoppingListSummaryDto = {
   id: string;
   name: string;
   color?: string | null;
+  icon?: string | null;
+  isMain?: boolean | null;
   itemCount?: number | null;
 };
 
@@ -124,9 +126,9 @@ const mapShoppingListSummary = (list: ShoppingListSummaryDto): ShoppingList => (
   localId: list.id,
   name: list.name,
   itemCount: list.itemCount ?? 0,
-  icon: DEFAULT_LIST_ICON,
+  icon: (list.icon as ShoppingList['icon']) ?? DEFAULT_LIST_ICON,
   color: list.color ?? DEFAULT_LIST_COLOR,
-  isMain: false,
+  isMain: list.isMain ?? false,
 });
 
 const buildShoppingItemsFromDetails = (

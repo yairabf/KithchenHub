@@ -20,6 +20,8 @@ export interface ShoppingData {
 
 export interface IShoppingService {
   getShoppingData(): Promise<ShoppingData>;
+  getMainList(): Promise<ShoppingList | null>;
+  getFrequentItems(limit?: number): Promise<GroceryItem[]>;
   // CRUD methods
   createList(list: Partial<ShoppingList>): Promise<ShoppingList>;
   updateList(listId: string, updates: Partial<ShoppingList>): Promise<ShoppingList>;

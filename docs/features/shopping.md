@@ -1,901 +1,233 @@
 # Shopping Feature
 
-**Exports** (from `mobile/src/features/shopping/index.ts`): `ShoppingListsScreen`, `CategoryModal`, `AllItemsModal`, `ShoppingQuickActionModal`, `GrocerySearchBar`, `IngredientConflictModal`, `GroceryItem` (type from GrocerySearchBar).
-
-**Source**: `mobile/src/features/shopping/` — 1 screen (ShoppingListsScreen), 9 components (ShoppingListPanel, GrocerySearchBar, CategoriesGrid, FrequentlyAddedGrid, CategoryModal, AllItemsModal, ShoppingQuickActionModal, CategoryPicker, IngredientConflictModal), hooks (useShoppingRealtime, useClickOutside), services, utils (quickAddUtils, selectionUtils).
-
-## Overview
-
-The Shopping feature provides comprehensive shopping list management with the ability to create multiple lists, browse groceries by category, search and add items, and track quantities. It's the most complex feature in the app with multiple components and modals.
-
-## Screenshots
-
-### Main Shopping View
-![Shopping Main](../screenshots/shopping/shopping-main.png)
-
-### Quick Add Modal
-![Quick Add Modal](../screenshots/shopping/shopping-quick-add-modal.png)
-
-### Search Dropdown
-![Search Dropdown](../screenshots/shopping/shopping-search-dropdown.png)
-
-### Category Modal
-![Category Modal](../screenshots/shopping/shopping-category-modal.png)
-
-### All Items Modal
-![All Items Modal](../screenshots/shopping/shopping-all-items-modal.png)
-
-### New List Modal
-![New List Modal](../screenshots/shopping/shopping-new-list-modal.png)
-
-## Screens
-
-### ShoppingListsScreen
-
-- **File**: `mobile/src/features/shopping/screens/ShoppingListsScreen.tsx`
-- **Purpose**: Complex shopping list management with two-column layout
-- **Key functionality**:
-  - Header showing selected list name and total item count
-  - Two-column layout: shopping lists & items (left), categories discovery (right)
-  - Multiple modal interactions (quantity, create list, category, all items, quick add)
-  - Floating action button for quick add
-  - **Guest Support**: Loads private list data from local storage (AsyncStorage) for guest users while signed-in users use the API
-  - **Add-item quantity**: New items are added with quantity 1; adding an item that already exists in the list increments its quantity. Quantity input resets to 1 after add.
-  - **Tab-based Refresh**: Accepts `isActive` prop to detect when tab becomes active and refresh data
-    - Uses `useEffect` with `prevIsActiveRef` to detect transition from inactive to active
-    - Triggers `loadShoppingData()` only when tab transitions from inactive to active
-    - Prevents unnecessary refreshes on every render
-  - **Direct State Management**: Uses `useState` hooks for all modes (no cache layer)
-    - `shoppingLists` and `allItems` state managed directly via `useState`
-    - Data loaded via `shoppingService.getShoppingData()` on mount and refresh
-    - **Realtime Sync**: Uses `useShoppingRealtime` hook for instant cross-device synchronization
-      - Hook manages Supabase subscriptions and updates state directly
-      - State updates trigger UI re-renders automatically
-      - Subscriptions are filtered by household ID for security (RLS)
-  - **Service Integration**: All CRUD operations (toggle, delete, update, create) always call service methods directly
-  - **Optimistic UI Updates**: All operations use optimistic updates with automatic revert on error via `executeWithOptimisticUpdate` helper
-    - Optimistic updates work for both guest and signed-in modes
-    - Rapid quantity increments use `latestQuantity` tracking to prevent race conditions
-  - **Quick Add Utility**: Uses `quickAddItem` utility function for reusable item addition logic
-    - Extracted from screen handlers for code reuse
-    - Used by both `ShoppingListsScreen` and `DashboardScreen`
-    - Handles existing item detection and quantity increment
-    - Supports optimistic updates with error handling
-
-#### Code Snippet - Service and State Initialization
-
-```typescript
-// Determine data mode based on user authentication state
-const userMode = useMemo(() => {
-  if (config.mockData.enabled) {
-    return 'guest' as const;
-  }
-  return determineUserDataMode(user);
-}, [user]);
-
-const isSignedIn = userMode === 'signed-in';
-
-// Create service - use directly for all modes
-const shoppingService = useMemo(
-  () => createShoppingService(userMode),
-  [userMode]
-);
-
-// Use state management for all modes (no cache)
-const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
-const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
-const [isListsLoading, setIsListsLoading] = useState(false);
-const [isItemsLoading, setIsItemsLoading] = useState(false);
-
-// Load shopping data for all modes (direct API calls, no cache)
-useEffect(() => {
-  if (isAuthLoading) return;
-  
-  const loadShoppingData = async () => {
-    setIsListsLoading(true);
-    setIsItemsLoading(true);
-    try {
-      const data = await shoppingService.getShoppingData();
-      setShoppingLists(data.shoppingLists);
-      setAllItems(data.shoppingItems);
-      setSelectedList((current) => getSelectedList(data.shoppingLists, current?.id));
-    } catch (error) {
-      console.error('Failed to load shopping data:', error);
-    } finally {
-      setIsListsLoading(false);
-      setIsItemsLoading(false);
-    }
-  };
-  loadShoppingData();
-}, [shoppingService, isAuthLoading]);
-```
-
-## Hooks
-
-### useShoppingRealtime
-
-- **File**: `mobile/src/features/shopping/hooks/useShoppingRealtime.ts`
-- **Purpose**: Custom hook for managing Supabase realtime subscriptions
-- **Features**:
-  - Sets up subscriptions for shopping lists and items
-  - Filters by household ID for RLS compliance
-  - Updates state directly via callbacks for all modes (no cache layer)
-  - Handles cleanup and error states
-  - Memoizes dependencies to prevent unnecessary re-subscriptions
-- **Usage**: Used by `ShoppingListsScreen` to enable instant cross-device synchronization
-- **Interface**: Accepts `onListChange` and `onItemChange` callbacks that update state directly
-
-### useClickOutside (Shared Hook)
-
-- **File**: `mobile/src/common/hooks/useClickOutside.ts`
-- **Purpose**: Reusable hook for detecting clicks outside a container element (web platform only)
-- **Usage**: Used by `GrocerySearchBar` to handle dropdown close behavior
-- **Features**:
-  - Detects clicks outside container and dropdown elements
-  - Supports nested containers (container + dropdown)
-  - Platform-aware (only works on web)
-  - Error handling with fallback behavior
-- **Interface**: Accepts `enabled`, `onOutsideClick`, `containerRef`, `testId`, `dropdownRef`, `dropdownTestId`
-
-## Components
-
-### ShoppingListPanel
-
-- **File**: `mobile/src/features/shopping/components/ShoppingListPanel/`
-- **Purpose**: Left column containing list selector and shopping items
-- **Features**:
-  - Horizontal drawer showing all shopping lists
-  - Search bar for finding groceries
-  - Swipeable shopping item rows with quantity controls
-  - "New List" button
-  - **Note:** In-card sync status indicator was removed from shopping item rows; sync is still handled by the API when signed in. Sync status can be surfaced elsewhere (e.g. global or list-level) if needed.
-
-### GrocerySearchBar
-
-- **File**: `mobile/src/features/shopping/components/GrocerySearchBar/`
-- **Purpose**: Smart search component with dropdown results and intelligent sorting
-- **Props**:
-
-```typescript
-interface GrocerySearchBarProps {
-  items: GroceryItem[];
-  onSelectItem: (item: GroceryItem) => void;
-  onQuickAddItem: (item: GroceryItem) => void;
-
-  placeholder?: string;
-  variant?: 'surface' | 'background';
-  showShadow?: boolean;
-  maxResults?: number;  // default: 8
-  allowCustomItems?: boolean;  // allow adding items not in database
-
-  // Controlled state
-  value?: string;
-  onChangeText?: (text: string) => void;
-
-  containerStyle?: ViewStyle;
-  dropdownStyle?: ViewStyle;
-}
-```
-
-- **Features**:
-  - Filter by name or category
-  - **Intelligent Search Sorting**: Prioritizes custom items (household-defined) over catalog items
-    - Exact match custom items appear first
-    - Then exact match catalog items
-    - Then starts-with matches (custom items prioritized)
-    - Then partial matches (custom items prioritized)
-    - Alphabetical sorting within same priority group
-    - Uses `searchSortingUtils.ts` for sorting logic
-  - Support for custom item creation
-  - Quick-add buttons for rapid multi-item addition
-  - Dropdown showing up to 8 results
-  - **Custom Items Integration**: Custom items (prefixed with `custom-` ID) are merged with catalog items and appear in search results
-  - **Click-Outside Detection**: Uses `useClickOutside` hook for reliable dropdown close behavior
-    - Dropdown stays open when clicking + button (for rapid multi-item addition)
-    - Dropdown closes when clicking outside container or dropdown
-    - Platform-aware (web only)
-    - Handles nested container and dropdown elements
-
-### CategoriesGrid
-
-- **File**: `mobile/src/features/shopping/components/CategoriesGrid/`
-- **Purpose**: Visual category tiles for browsing groceries
-- **Props**:
-
-```typescript
-interface CategoriesGridProps {
-  categories: Category[];
-  onCategoryPress: (categoryName: string) => void;
-  onSeeAllPress: () => void;
-}
-```
-
-- **Features**:
-  - Grid of category cards with images and item counts
-  - **Show more/less**: Uses `INITIAL_CATEGORIES_LIMIT = 9`; displays up to 9 categories initially; "Show more" / "Show less" toggle reveals or collapses the rest (pill-style button with chevron)
-  - "See all" button for full item view
-  - **CategoryOverlay Component**: Extracted reusable overlay component (`CategoryOverlay`) that displays item count and name over category background, used consistently across icon, image, and placeholder rendering paths
-  - **Icon Loading**: Uses `getCategoryIcon()` function to load category icons from bundled assets (`mobile/assets/categories/`) based on normalized category ID
-    - Supports 19 consolidated categories: fruits, vegetables, dairy, meat, seafood, bakery, grains, snacks, nuts, other, beverages, baking, canned, spreads, freezer, dips, condiments, spices, household
-    - Returns `null` if icon doesn't exist (falls back to placeholder)
-    - Includes error handling with `console.warn` for failed icon loads
-  - **Deduplication**: Defensive deduplication logic using `React.useMemo` to filter duplicate categories by ID (prevents duplicates from other data sources even though `buildCategoriesFromGroceries` already deduplicates)
-  - **Image Validation**: Uses `isValidImageUrl()` utility to validate category images before rendering
-  - **Conditional Rendering**: Renders `ImageBackground` when category has icon asset, falls back to `ImageBackground` with URI when category has valid image URL, or plain `View` with background color when neither is available
-  - **Test IDs**: Includes `testID` attributes for testing (`category-icon-background-{id}`, `category-image-background-{id}`, and `category-no-image-{id}`)
-  - **Styling**: Uses `CATEGORY_OVERLAY_OPACITY = 0.6` constant for semi-transparent overlay background
-
-### FrequentlyAddedGrid
-
-- **File**: `mobile/src/features/shopping/components/FrequentlyAddedGrid/`
-- **Purpose**: Quick access grid showing frequently added items
-- **Props**:
-
-```typescript
-interface FrequentlyAddedGridProps {
-  items: GroceryItem[];
-  onItemPress: (item: GroceryItem) => void;
-}
-```
-
-- **Features**:
-  - Displays up to 8 frequently added items
-  - Grid layout with item images and names
-  - Quick add functionality with tap
-  - Auto-hides when no items available
-
-### CategoryModal
-
-- **File**: `mobile/src/features/shopping/components/CategoryModal/`
-- **Purpose**: Modal showing all items within a selected category
-- **Features**:
-  - Scrollable list of items
-  - Item selection and quick-add options
-
-### AllItemsModal
-
-- **File**: `mobile/src/features/shopping/components/AllItemsModal/`
-- **Purpose**: Complete grocery database browser
-- **Features**:
-  - View all available groceries (111 items in database)
-  - Search/filter functionality
-  - Expandable category accordions
-  - Select or quick-add items
-
-### ShoppingQuickActionModal
-
-- **File**: `mobile/src/features/shopping/components/ShoppingQuickActionModal/`
-- **Purpose**: Quick add modal accessible from floating button
-- **Features**:
-  - List switcher (bubble buttons to select list)
-  - Integrated grocery search bar
-  - Rapid item additions
-
-### CategoryPicker
-
-- **File**: `mobile/src/features/shopping/components/CategoryPicker/`
-- **Purpose**: Horizontal scrollable category selector for custom item creation
-- **Props**:
-
-```typescript
-interface CategoryPickerProps {
-  selectedCategory: string;
-  onSelectCategory: (category: string) => void;
-  categories: string[];
-}
-```
-
-- **Features**:
-  - Horizontal scrollable list of shopping categories
-  - Displays category icons from bundled assets (`mobile/assets/categories/`)
-  - Shows translated category names via i18n
-  - Highlights selected category
-  - Used in custom item creation modals for category selection
-  - Icons are generated via `sandbox/generate_category_icons.py` and bundled with app for offline availability
-
-### IngredientConflictModal
-
-- **File**: `mobile/src/features/shopping/components/IngredientConflictModal/`
-- **Purpose**: Handles quantity conflicts when adding recipe ingredients to a shopping list
-- **Props**:
-
-```typescript
-interface IngredientConflictModalProps {
-  visible: boolean;
-  onDismiss: () => void;
-  ingredient: {
-    name: string;
-    existingQuantity: number;
-    newQuantity: number;
-    unit?: string;
-  };
-  onReplace: () => void;
-  onAdd: () => void;
-}
-```
-
-- **Features**:
-  - Shows when adding recipe ingredient that already exists in shopping list
-  - Displays existing and new quantity with unit
-  - **Replace**: Replaces existing quantity with new quantity
-  - **Add**: Adds new quantity to existing quantity
-  - **Cancel**: Dismisses modal without changes
-  - Clear visual comparison of quantities
-  - Supports optional units (e.g., "2 cups" vs "3 cups")
-
-## Utilities
-
-### Entity Creation (Factory Pattern)
-
-The feature implementation uses a Factory Pattern to separate business logic from UI components and ensure TDD compliance.
-
-- **Factory**: `mobile/src/features/shopping/utils/shoppingFactory.ts`
-- **Tests**: `mobile/src/features/shopping/utils/__tests__/shoppingFactory.test.ts`
-- **Logic**: Generates `localId` using `expo-crypto` UUIDs.
-
-```typescript
-// Example usage
-import { createShoppingItem } from '../utils/shoppingFactory';
-const newItem = createShoppingItem(groceryItem, listId, quantity);
-```
-
-### Quick Add Utility
-
-- **File**: `mobile/src/features/shopping/utils/quickAddUtils.ts`
-- **Purpose**: Reusable utility function for adding grocery items to shopping lists
-- **Features**:
-  - Checks if item already exists in the list
-  - Increments quantity if item exists, creates new item otherwise
-  - Uses optimistic updates for responsive UI
-  - Handles both catalog items and custom items
-  - Supports rapid multi-item addition (keeps dropdown open)
-- **Usage**: Used by both `ShoppingListsScreen` and `DashboardScreen` for consistent item addition behavior
-- **Interface**: 
-  ```typescript
-  export async function quickAddItem(
-    groceryItem: GroceryItem,
-    selectedList: ShoppingList,
-    dependencies: QuickAddDependencies
-  ): Promise<void>
-  ```
-- **Dependencies**: Requires `allItems`, `setAllItems`, `createItem`, `updateItem`, `executeWithOptimisticUpdate`, `logShoppingError`
-
-## Key Types
-
-```typescript
-// Entity interfaces now extend BaseEntity with shared metadata
-import type { BaseEntity } from '../../../common/types/entityMetadata';
-
-interface ShoppingItem extends BaseEntity {
-  // BaseEntity provides: id, localId, createdAt?, updatedAt?, deletedAt?
-  name: string;
-  image: string;
-  quantity: number;
-  unit?: string;
-  category: string;
-  listId: string;
-  isChecked: boolean;
-}
-
-interface ShoppingList extends BaseEntity {
-  // BaseEntity provides: id, localId, createdAt?, updatedAt?, deletedAt?
-  name: string;
-  itemCount: number;
-  icon: IoniconsName;
-  color: string;
-}
-
-interface Category extends BaseEntity {
-  // BaseEntity provides: id, localId, createdAt?, updatedAt?, deletedAt?
-  name: string;
-  itemCount: number;
-  image: string;
-  backgroundColor: string;
-}
-
-interface GroceryItem {
-  id: string;
-  name: string;
-  image: string;
-  category: string;
-  defaultQuantity: number;
-}
-```
-
-**Entity Metadata (from `BaseEntity`):**
-- `id: string` - Legacy/Display ID for UI
-- `localId: string` - Stable UUID for sync/merge operations
-- `createdAt?: Date | string` - Creation timestamp
-- `updatedAt?: Date | string` - Last modification timestamp
-- `deletedAt?: Date | string` - Soft-delete timestamp (tombstone pattern)
-
-See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for shared entity metadata interfaces and helpers.
-
-## State Management
-
-- **Direct State Management** (all modes):
-  - Uses `useState` hooks for all modes (no cache layer)
-    - `shoppingLists` - All shopping lists (active only - deleted items filtered by service)
-    - `allItems` - All shopping items across lists (active only - deleted items filtered by service)
-    - `isListsLoading` / `isItemsLoading` - Loading states
-    - `selectedList` - Currently active list
-    - Various modal visibility states
-  - Data loaded via `shoppingService.getShoppingData()` on mount and refresh
-  - **Realtime Sync**: Uses `useShoppingRealtime` hook for instant cross-device synchronization
-    - Hook manages Supabase subscriptions and updates state directly via callbacks
-    - State updates trigger UI re-renders automatically
-    - Subscriptions filtered by household ID for RLS compliance
-- **Service**: `createShoppingService(mode)` factory creates service instance based on data mode
-  - Loads all data via `shoppingService.getShoppingData()` on mount and refresh
-  - Mode determined by `determineUserDataMode()`: 'guest' for guest users or when `config.mockData.enabled` is true, 'signed-in' for authenticated users
-  - **Service handles mode internally**: Screen handlers always call service methods; service implementation (LocalShoppingService vs RemoteShoppingService) handles guest vs signed-in logic
-- **Catalog Data**: Uses `catalogService.getGroceryItems()` with API → Cache → Mock fallback strategy
-  - Fetches both catalog items and custom items (household-scoped)
-  - Merges custom items with catalog items, deduplicating by name (catalog items take precedence)
-  - Custom items prefixed with `custom-` ID for identification
-  - Delegates to centralized `CatalogService` for consistent catalog fetching
-- **Computed values**: `activeList` memoized from selectedList or first list, `filteredItems` filtered by selected list
-- **Optimistic Updates**: All CRUD operations use `executeWithOptimisticUpdate()` helper for responsive UX with automatic error revert
-  - Works for both guest and signed-in modes
-  - Rapid quantity increments use `latestQuantity` variable tracking to prevent race conditions
-  - Functional state updates ensure latest state is used for API calls
-
-## Service Layer
-
-The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle data fetching, switching transparently between local guest storage and backend API based on user authentication state.
-
-- **Factory**: `createShoppingService(mode: 'guest' | 'signed-in')` (`mobile/src/features/shopping/services/shoppingService.ts`)
-  - Returns `LocalShoppingService` when mode is 'guest'
-  - Returns `RemoteShoppingService` when mode is 'signed-in'
-  - Validates service compatibility with data mode
-- **Interface**: `IShoppingService`
-  - `getShoppingData(): Promise<ShoppingData>` - Returns all shopping-related data
-  - **CRUD Methods**:
-    - `createList(list: Partial<ShoppingList>): Promise<ShoppingList>` - Create new shopping list
-    - `updateList(listId: string, updates: Partial<ShoppingList>): Promise<ShoppingList>` - Update existing list
-    - `deleteList(listId: string): Promise<void>` - Soft-delete shopping list
-    - `createItem(item: Partial<ShoppingItem>): Promise<ShoppingItem>` - Create new shopping item
-    - `updateItem(itemId: string, updates: Partial<ShoppingItem>): Promise<ShoppingItem>` - Update existing item
-    - `deleteItem(itemId: string): Promise<void>` - Soft-delete shopping item
-    - `toggleItem(itemId: string): Promise<ShoppingItem>` - Toggle item checked status
-- **ShoppingData**: Includes `shoppingLists`, `shoppingItems`, `categories`, `groceryItems`, `frequentlyAddedItems`
-- **Service Classes** (extracted into separate files):
-  - `LocalShoppingService` (`mobile/src/features/shopping/services/LocalShoppingService.ts`): 
-    - Reads lists and items from `guestStorage` (AsyncStorage) instead of mocks
-    - **Filters deleted items**: `getShoppingData()` uses `isEntityActive()` to filter out soft-deleted items (tombstone pattern)
-    - Returns empty arrays when no guest data exists (not mock data)
-    - **Mock Data Seeding**: Automatically seeds mock shopping lists and items when storage is empty (dev mode or when `config.mockData.enabled` is true)
-      - Only seeds when storage is truly empty (no records at all, including soft-deleted)
-      - Uses `seedShoppingDataIfEmpty()` private method to handle seeding logic
-      - Seeds mock data with proper `createdAt` timestamps via `withCreatedAt()` helper
-      - **Graceful Error Handling**: If seeding fails, logs error in dev mode but continues with empty arrays (seeding is a convenience feature, not critical)
-      - Idempotent: won't re-seed after user deletes all lists/items (tombstones remain)
-    - **Catalog Data**: Uses `catalogService.getCatalogData()` to fetch reference data (categories, groceryItems, frequentlyAddedItems) with API → Cache → Mock fallback strategy
-    - Uses `entityOperations` utility (`findEntityIndex`, `updateEntityInStorage`) to reduce code duplication
-    - **Timestamp Management**:
-      - `createList()` and `createItem()`: Set both `createdAt` and `updatedAt` (via factory functions using `withCreatedAtAndUpdatedAt()`)
-      - `updateList()` and `updateItem()`: Update `updatedAt` using `withUpdatedAt()` helper
-      - `deleteList()` and `deleteItem()`: Set `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
-      - `toggleItem()`: Updates `updatedAt` using `withUpdatedAt()` helper
-    - **ID Matching**: Service methods accept both `id` and `localId` via `findEntityIndex()` which checks both identifiers
-  - `RemoteShoppingService` (`mobile/src/features/shopping/services/RemoteShoppingService.ts`): 
-    - Calls backend via `api.ts` (`/shopping-lists`, `/shopping-lists/{id}` endpoints)
-    - **Catalog Data**: Uses `catalogService.getGroceryItems()` with API → Cache → Mock fallback strategy
-      - Fetches custom items from `/shopping-items/custom` endpoint (household-scoped)
-      - Merges custom items with catalog items (catalog items take precedence on name conflicts)
-      - Custom items are mapped to `GroceryItem` format with `custom-` prefix IDs
-      - Delegates to centralized `CatalogService` for consistent catalog fetching
-      - Uses shared `catalogUtils` functions (`buildCategoriesFromGroceries`, `buildFrequentlyAddedItems`) for consistency
-      - No duplicate type definitions or mapping functions (uses shared types from `common/types/catalog.ts`)
-    - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
-    - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
-    - All CRUD operations fetch existing entities before updating to prevent data loss
-    - Server timestamps are authoritative and overwrite client timestamps on response
-    - **Timestamp Management**:
-      - `createList()` and `createItem()`: Set both `createdAt` and `updatedAt` using `withCreatedAtAndUpdatedAt()` helper
-      - `updateList()`, `updateItem()`, `toggleItem()`: Update `updatedAt` using `withUpdatedAt()` helper
-      - `deleteList()` and `deleteItem()`: Set `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
-      - Handles missing server timestamps gracefully (falls back to optimistic timestamps if API doesn't return them)
-    - **Cache Updates**: All CRUD operations update local cache after successful API calls
-      - Uses `addEntityToCache()` for create operations
-      - Uses `updateEntityInCache()` for update/delete/toggle operations
-      - Cache updates are best-effort (failures are logged but don't throw)
-    - **Guest Mode Protection**: Service factory prevents guest mode from creating this service. All methods require authentication (JWT tokens), providing defense-in-depth against guest data syncing.
-- **Guest Storage**: `mobile/src/common/utils/guestStorage.ts`
-  - Storage keys are centrally managed via `getGuestStorageKey(ENTITY_TYPES.*)` from `dataModeStorage.ts`
-  - Uses envelope format internally: `{ version: 1, updatedAt: string, data: T[] }` for versioning support
-  - `getShoppingLists()`: Retrieves lists from AsyncStorage (key: `@kitchen_hub_guest_shopping_lists`)
-    - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
-    - Automatically upgrades legacy array format to envelope format on read
-  - `getShoppingItems()`: Retrieves items from AsyncStorage (key: `@kitchen_hub_guest_shopping_items`)
-    - Normalizes timestamps from ISO strings to Date objects (shallow normalization)
-    - Automatically upgrades legacy array format to envelope format on read
-  - `saveShoppingLists(lists)`: Persists lists to AsyncStorage as envelope format
-    - Serializes timestamps from Date objects to ISO strings (shallow serialization)
-    - Creates envelope with version 1 and current timestamp
-  - `saveShoppingItems(items)`: Persists items to AsyncStorage as envelope format
-    - Serializes timestamps from Date objects to ISO strings (shallow serialization)
-    - Creates envelope with version 1 and current timestamp
-  - Returns empty arrays when no data exists or on parse errors (graceful degradation)
-  - Validates data format and filters invalid entities
-  - **Internal Helpers**: Uses `readEntityEnvelope()` and `writeEntityEnvelope()` from `guestStorageHelpers.ts` for type-safe operations
-- **Entity Factories**: `mobile/src/features/shopping/utils/shoppingFactory.ts`
-  - `createShoppingList()`: Creates new shopping list objects
-    - **Automatically populates `createdAt` and `updatedAt`** using `withCreatedAtAndUpdatedAt()` helper
-  - `createShoppingItem()`: Creates new shopping item objects
-    - **Automatically populates `createdAt` and `updatedAt`** using `withCreatedAtAndUpdatedAt()` helper
-- **Timestamp Utilities**: `mobile/src/common/utils/timestamps.ts`
-  - `withCreatedAtAndUpdatedAt()`: Auto-populates `createdAt` (if missing) and always sets `updatedAt` on entity creation
-    - Recommended helper for all create operations
-    - Preserves existing `createdAt` if provided, always sets `updatedAt` to current time
-  - `withCreatedAt()`: Auto-populates `createdAt` on entity creation (legacy, use `withCreatedAtAndUpdatedAt()` for new code)
-  - `withUpdatedAt()`: Auto-updates `updatedAt` on entity modification
-  - `markDeleted()`: Sets `deletedAt` for soft-delete operations
-  - `normalizeTimestampsFromApi()`: Centralized utility for normalizing API response timestamps (handles camelCase and snake_case formats)
-  - `toSupabaseTimestamps()`: Converts camelCase timestamps to snake_case for API payloads
-  - See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/entityMetadata.ts) for serialization helpers
-- **Entity Operations Utility**: `mobile/src/common/utils/entityOperations.ts`
-  - `findEntityIndex()`: Finds entity by ID or localId with error handling
-  - `updateEntityInStorage()`: Centralized helper for updating entities in storage arrays
-  - Reduces code duplication across local services by ~60 lines
-- **Configuration**: `config.mockData.enabled` (`mobile/src/config/index.ts`)
-  - Controlled by `EXPO_PUBLIC_USE_MOCK_DATA` environment variable
-  - When enabled, forces 'guest' mode regardless of user authentication state
-  - Guest users always use 'guest' mode (local service)
-- **API Client**: `mobile/src/services/api.ts` - Generic HTTP client wrapper
-
-## Guest User Data Separation
-
-The shopping feature implements guest user data separation to ensure guest users use local storage while signed-in users use cloud sync, preventing API call failures in production.
-
-### Service Selection Pattern
-
-Service selection is determined by data mode based on user authentication state:
-
-```typescript
-const { user } = useAuth();
-const userMode = useMemo(() => {
-  if (config.mockData.enabled) {
-    return 'guest' as const;
-  }
-  return determineUserDataMode(user);
-}, [user]);
-
-const shoppingService = useMemo(
-  () => createShoppingService(userMode),
-  [userMode]
-);
-```
-
-**Behavior**:
-- **Development** (`config.mockData.enabled = true`): Always uses `LocalShoppingService` (guest mode) regardless of auth state
-- **Production + Guest User** (`config.mockData.enabled = false` + `user.isGuest = true`): Uses `LocalShoppingService` which reads from AsyncStorage (no API calls)
-- **Production + Signed-in User** (`config.mockData.enabled = false` + authenticated): Uses `RemoteShoppingService` (cloud sync)
-
-### Handler Implementation Pattern
-
-All screen handlers follow a consistent pattern that eliminates userMode branching:
-
-- **Always call service methods**: Handlers never branch on `userMode` - they always call `shoppingService` methods
-- **Service handles mode internally**: `LocalShoppingService` writes to AsyncStorage, `RemoteShoppingService` calls API
-- **Optimistic UI updates**: All operations use `executeWithOptimisticUpdate()` helper for responsive UX
-- **Automatic error revert**: Failed operations automatically revert optimistic state changes
-- **ID matching**: Handlers support both `id` and `localId` for consistent entity identification
-
-**Helper Function**: `executeWithOptimisticUpdate<T>()`
-- Eliminates code duplication across handlers (~90 lines reduced)
-- Provides consistent error handling and revert logic
-- Maintains responsive UX with optimistic updates
-
-**Example Handler Pattern**:
-```typescript
-const handleToggleItemChecked = async (itemId: string) => {
-  const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
-  if (!targetItem) return;
-
-  const previousChecked = targetItem.isChecked;
-  const nextChecked = !previousChecked;
-
-  await executeWithOptimisticUpdate(
-    () => shoppingService.toggleItem(itemId),  // Always call service
-    () => { /* optimistic update */ },
-    () => { /* revert on error */ },
-    'Failed to toggle shopping item:'
-  );
-};
-```
-
-**Create Operations**: Use temporary items for instant UI feedback:
-- Create temp item with `createShoppingItem()` for immediate display
-- Call `shoppingService.createItem()` to persist
-- Replace temp item with real item from service on success
-- Remove temp item on error
-
-### List Selection Utilities
-
-To prevent stale list state when switching between mock and remote data sources, the feature uses selection utilities:
-
-- **File**: `mobile/src/features/shopping/utils/selectionUtils.ts`
-- **Functions**:
-  - `getSelectedList()`: Selects the best matching list, preserving the current selection when valid, falling back to first list
-  - `getActiveListId()`: Validates and preserves active list ID when switching data sources
-- **Tests**: `mobile/src/features/shopping/utils/__tests__/selectionUtils.test.ts` - Parameterized tests covering all scenarios
-
-This ensures that when a user switches from guest (local) to signed-in (remote), the selected list remains valid or gracefully falls back to the first available list.
-
-## Conflict Resolution & Realtime Sync
-
-The shopping feature implements timestamp-based conflict resolution for offline-first sync scenarios using Last-Write-Wins (LWW) and tombstone handling, with instant realtime synchronization across devices.
-
-### Realtime Sync Hook
-
-**File**: `mobile/src/features/shopping/hooks/useShoppingRealtime.ts`
-
-A custom React hook that manages Supabase realtime subscriptions for shopping lists and items, following composition patterns to decouple subscription logic from UI components.
-
-**Features**:
-- Sets up Supabase `postgres_changes` subscriptions for `shopping_lists` and `shopping_items` tables
-- Filters subscriptions by `household_id` for Row-Level Security (RLS) compliance
-- Updates cache for signed-in users via `CacheAwareShoppingRepository` methods
-- Updates local state for guest users via callbacks
-- Handles cleanup on unmount or dependency changes
-- Memoizes dependencies to prevent unnecessary re-subscriptions
-
-**Usage**:
-```typescript
-const { error: realtimeError } = useShoppingRealtime({
-  isRealtimeEnabled: isRealtimeEnabled,
-  householdId: user?.householdId ?? null,
-  isSignedIn,
-  repository,
-  groceryItems,
-  listIds: shoppingLists.map((list) => list.id),
-  onListChange: (lists) => {
-    // Guest mode callback: update local state
-    if (!isSignedIn) {
-      setGuestLists(lists);
-    }
-  },
-  onItemChange: (items) => {
-    // Guest mode callback: update local state
-    if (!isSignedIn) {
-      setGuestItems(items);
-    }
-  },
-});
-```
-
-**Interface**:
-```typescript
-interface UseShoppingRealtimeOptions {
-  isRealtimeEnabled: boolean;
-  householdId: string | null;
-  isSignedIn: boolean;
-  repository: ICacheAwareShoppingRepository | null;
-  groceryItems: GroceryItem[];
-  listIds: string[];
-  onListChange?: (lists: ShoppingList[]) => void;
-  onItemChange?: (items: ShoppingItem[]) => void;
-}
-
-interface UseShoppingRealtimeReturn {
-  isSubscribed: boolean;
-  error: Error | null;
-}
-```
-
-### Realtime Sync Utilities
-
-**File**: `mobile/src/features/shopping/utils/shoppingRealtime.ts`
-
-Utility functions for applying realtime changes to local state:
-
-- **`applyShoppingListChange()`**: Merges realtime list updates using `mergeEntitiesWithTombstones()`
-  - Compares timestamps before applying changes
-  - Respects `deletedAt` tombstones (delete always wins unless recreate)
-  - Filters out deleted entities from results
-- **`applyShoppingItemChange()`**: Merges realtime item updates using `mergeEntitiesWithTombstones()`
-  - Same conflict resolution logic as lists
-  - Handles new items, updates, and deletions deterministically
-- **`buildListIdFilter()`**: Builds Supabase filter string for item subscriptions based on list IDs
-
-**Timestamp Normalization**:
-- Realtime payloads are normalized from snake_case (database) to camelCase Date objects
-- Uses `fromSupabaseTimestamps()` helper for consistent conversion
-- Handles both snake_case and camelCase formats for backward compatibility
-
-### Repository Realtime Methods
-
-**File**: `mobile/src/common/repositories/cacheAwareShoppingRepository.ts`
-
-The `CacheAwareShoppingRepository` provides methods to apply realtime changes to the cache:
-
-- **`applyRealtimeListChange()`**: Applies realtime list changes to cache
-  - Reads current cache state
-  - Applies change using `applyShoppingListChange()` utility
-  - Writes updated data back to cache
-  - Emits cache event to trigger UI updates via `useCachedEntities`
-  - Handles errors gracefully (logs but doesn't throw)
-- **`applyRealtimeItemChange()`**: Applies realtime item changes to cache
-  - Same pattern as list changes
-  - Includes grocery items for matching item metadata (images, categories)
-
-### Conflict Resolution Utilities
-
-**File**: `mobile/src/common/utils/conflictResolution.ts`
-
-Shared utilities for resolving conflicts between local and remote state:
-
-- **`compareTimestamps()`**: Compares two timestamps (Date or ISO string), normalizes to Date objects
-- **`determineConflictWinner()`**: Determines winner based on `updatedAt` (LWW strategy)
-  - Returns `'local'` if local is newer, `'remote'` if remote is newer or equal (tie-breaker)
-- **`mergeEntitiesLWW()`**: Merges two entities using Last-Write-Wins
-  - Winner record wins wholesale (entire entity, not partial field mixing)
-  - Preserves local-only fields (e.g., `localId`) from local side
-- **`mergeEntitiesWithTombstones()`**: Merges entities with tombstone awareness
-  - **Resurrection Policy**: Delete always wins unless recreate (new entity with new ID)
-  - Once deleted, always deleted (regardless of timestamp ordering)
-  - Returns `null` if both sides agree on deletion
-- **`mergeEntityArrays()`**: Merges arrays of entities using LWW + tombstone rules
-  - Handles additions (new entities are always added)
-  - Handles updates (merged using LWW)
-  - Handles deletions (filtered out from result)
-  - Time complexity: O(n + m)
-
-### Sync Application
-
-**File**: `mobile/src/common/utils/syncApplication.ts`
-
-Utility for applying remote updates to local cached state:
-
-- **`applyRemoteUpdatesToLocal()`**: Merges remote entities with local cache
-  - Reads from signed-in cache (AsyncStorage)
-  - Merges using `mergeEntityArrays()` with conflict resolution
-  - Persists merged result back to cache
-  - Should be called in sync pipeline/repository layer, NOT inside Remote*Service methods
-  - **Defense-in-Depth Guardrail**: Validates storage key mode to ensure only signed-in cache keys are used. Throws error if called with guest or unknown storage keys, preventing programming errors.
-
-**Note**: Conflict resolution is client-side. The backend sync endpoint (`POST /auth/sync`) performs simple upsert operations and returns conflicts. Client-side utilities handle timestamp-based merging.
-
-### Partial Batch Recovery & Checkpointing
-
-**File**: `mobile/src/common/utils/syncQueue/processor/index.ts`
-
-The sync queue processor implements **partial batch recovery** and **crash-safe checkpointing** to efficiently retry only failed items and guarantee forward progress after app restarts.
-
-**Partial batch recovery features**:
-- **Granular Results**: Backend returns per-entity success/failure status with `operationId` mapping
-  - `succeeded` array lists successful entities with `operationId`, `entityType`, `id`, and optional `clientLocalId`
-  - `conflicts` array includes `operationId` for precise failure tracking
-- **Safety-First Logic**: Never deletes queue items without explicit confirmation
-  - Items removed only when `operationId` is in `succeeded[]`
-  - Items kept when `operationId` is in `conflicts[]` (for retry)
-  - Unknown items (not in either array) are kept for retry (prevents data loss)
-- **Confirmed Response Handling**: Processes result body even on error status codes
-  - Distinguishes between confirmed response (server processed some items) vs no confirmation (network error)
-  - Only retries all items when no confirmation received
-- **Backward Compatibility**: Handles old servers gracefully
-  - If `succeeded` array missing and `status === 'synced'`: removes all items (old behavior)
-  - If `succeeded` array missing and `status !== 'synced'`: keeps all items (safe fallback)
-- **Invariant Enforcement**: Backend ensures every `operationId` appears exactly once in results
-  - Logs error if invariant violated (doesn't break sync)
-  - Helps catch bugs early in development
-
-**Checkpointing features**:
-- **Lightweight in-flight markers**: Before sending a batch, the processor saves a `SyncCheckpoint` that records:
-  - `requestId` for observability
-  - `inFlightOperationIds` for that batch
-  - `createdAt`, `attemptCount`, `lastAttemptAt`, and `ttlMs` for backoff + staleness
-- **Crash-safe recovery**:
-  - On worker start, if a checkpoint exists, the worker **re-drives that exact batch first**
-  - If the checkpoint items were compacted away, the checkpoint is cleared and normal processing resumes
-- **Per-checkpoint backoff**:
-  - `attemptCount` + `lastAttemptAt` drive exponential backoff for the checkpoint itself
-  - Prevents hot loops if the same batch keeps failing
-- **TTL-based staleness**:
-  - When `now - createdAt > ttlMs`, the checkpoint is cleared and normal queue processing resumes
-  - Safe because writes are idempotent via `operationId`
-
-**Benefits**:
-- Reduces unnecessary retries (only failed items retried, not entire batch)
-- Prevents duplicate processing (idempotency keys ensure exactly-once semantics)
-- Improves sync efficiency and reduces server load
-- Prevents data loss from incomplete responses
-- Guarantees forward progress after crashes by re-driving in-flight batches instead of deadlocking
-
-### Conflict Resolution Validation & Test Coverage
-
-**Comprehensive Test Coverage**:
-
-1. **Unit Tests** (`mobile/src/common/utils/__tests__/conflictResolution.test.ts`):
-   - LWW scalar conflicts (local newer, remote newer, equal timestamps)
-   - Tombstone handling (delete always wins policy)
-   - Recreate after delete scenarios (tombstone resistance)
-   - Deterministic outcome validation
-   - Timestamp edge cases (millisecond precision, timezone normalization)
-
-2. **Integration Tests** (`mobile/src/common/utils/__tests__/syncApplication.test.ts`):
-   - Offline rename vs online rename scenarios
-   - Additions never removed during merge
-   - Concurrent modification scenarios
-   - Offline toggle vs online delete
-   - Delete vs update ordering
-
-3. **Full Sync Flow Tests** (`mobile/src/common/utils/__tests__/syncApplication.integration.test.ts`):
-   - Complete sync flow with multiple conflict types
-   - Multiple entity types sync (recipes, shopping lists, chores)
-   - Cache state validation after complex merges
-
-**Deterministic Outcome Guarantees**:
-- All conflict scenarios resolve deterministically
-- Same inputs always produce same outputs
-- Order-independent merge results
-- UTC timezone normalization ensures consistent comparison
-
-**Timezone Normalization Policy**:
-- All timestamps stored and compared in UTC
-- ISO strings are parsed as UTC (no timezone conversion)
-- `compareTimestamps()` normalizes to UTC internally
-- Server timestamps are always UTC
-- Client timestamps generated in UTC
-- `normalizeToUtc()` helper ensures consistent UTC representation
-
-## Key Dependencies
-
-- `react-native-gesture-handler` - GestureDetector for swipe interactions
-- `react-native-reanimated` - Smooth swipe animations
-- `config` - Application configuration (`mobile/src/config/index.ts`) for mock data toggle
-- `createShoppingService` - Service factory for selecting guest/signed-in data source based on mode
-- `guestStorage` - Guest data persistence utilities (`mobile/src/common/utils/guestStorage.ts`)
-- `isEntityActive` - Utility to filter active entities (`mobile/src/common/types/entityMetadata.ts`) - used by `LocalShoppingService.getShoppingData()` to filter deleted items
-- `determineUserDataMode` - Utility to determine data mode from user state (`mobile/src/common/types/dataModes.ts`)
-- `getSelectedList`, `getActiveListId` - Selection utilities from `utils/selectionUtils.ts` for preventing stale list state
-- `catalogService` - Catalog service (`mobile/src/common/services/catalogService.ts`) - Provides catalog data with API → Cache → Mock fallback strategy
-  - Fetches custom items from `/shopping-items/custom` endpoint (household-scoped)
-  - Merges custom items with catalog items using `mergeGroceryItems()` utility
-  - Custom items prefixed with `custom-` ID and mapped to `GroceryItem` format
-  - Deduplicates items by name (catalog items take precedence over custom items)
-  - Used by all shopping services for consistent catalog fetching
-- `catalogUtils` - Catalog utilities (`mobile/src/common/utils/catalogUtils.ts`) - Shared functions for building categories and frequently added items. Used by all services for consistent data transformation
-  - **`normalizeCategoryName()`**: Normalizes deprecated category names to consolidated categories (teas → beverages, oils → condiments, sweets → bakery, supplies → household). Case-insensitive, trims whitespace. Used by `buildCategoriesFromGroceries()` to prevent duplicate categories
-  - **`buildCategoriesFromGroceries()`**: Builds category list from grocery items with normalization, deduplication, and deterministic UUID generation. Normalizes category names using `normalizeCategoryName()`, generates stable `localId` using UUID v5, and deduplicates by category ID
-- `GrocerySearchItemDto` - Shared type (`mobile/src/common/types/catalog.ts`) - Centralized DTO type for catalog API responses, preventing code duplication
-- `isValidImageUrl` - Image validation utility (`mobile/src/common/utils/imageUtils.ts`) - Validates image URL strings (handles empty strings, whitespace-only strings, null/undefined). Used by `CategoriesGrid` to determine if category images should be rendered
-- `mockGroceriesDB` - Grocery database with images and categories (fallback data for catalog service)
-- `mockShoppingLists`, `mockItems`, `mockCategories` - Mock data (used by LocalShoppingService for seeding)
-- `isDevMode` - Development mode detection utility (`mobile/src/common/utils/devMode.ts`) - Wrapper around React Native `__DEV__` constant for testability. Used by `LocalShoppingService` to determine if dev-only seeding should occur
-- `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
-- `useAuth` - Auth context hook for determining user state
-- `CenteredModal` - Shared modal component
-- `ScreenHeader` - Shared header component
-- `useResponsive` - Responsive layout hook
-- `conflictResolution` - Conflict resolution utilities (`mobile/src/common/utils/conflictResolution.ts`)
-- `syncApplication` - Sync application utilities (`mobile/src/common/utils/syncApplication.ts`)
-- `guestNoSyncGuardrails` - Guest mode sync guardrails (`mobile/src/common/guards/guestNoSyncGuardrails.ts`) - Runtime assertions preventing guest data from syncing remotely
-- `syncQueueStorage` - Offline write queue storage (`mobile/src/common/utils/syncQueue/storage`) - Manages queued write operations for offline sync with status tracking (`PENDING`, `RETRYING`, `FAILED_PERMANENT`) and crash-safe checkpoints (`SyncCheckpoint`)
-- `syncQueueProcessor` - Queue processor (`mobile/src/common/utils/syncQueue/processor`) - Background worker loop that continuously drains the sync queue with exponential backoff retry logic. Processes ready items only, respects per-item and per-checkpoint backoff delays, and handles error classification (network/auth/validation/server errors). **Partial Batch Recovery**: Retries only failed items after partial failures by matching `operationId`s from backend response. **Checkpointing**: Uses lightweight `SyncCheckpoint` records to re-drive in-flight batches after crashes without deadlocking. Safety-first logic: never deletes queue items without explicit confirmation in `succeeded` array. Handles confirmed responses even on error status codes. Backward compatible with old servers (missing `succeeded` array)
-- `useSyncQueue` - Sync queue hook (`mobile/src/common/hooks/useSyncQueue.ts`) - React hook that manages worker loop lifecycle, starting/stopping based on network status and app foreground/background state
-- `useEntitySyncStatusWithEntity` - Entity sync status hook (`mobile/src/common/hooks/useSyncStatus.ts`) - React hook that provides sync status (pending/confirmed/failed) for individual entities. Not currently used in ShoppingItemCard (in-card sync indicator was removed); available for list-level or global sync UI if needed.
-- `searchSortingUtils` - Search sorting utilities (`mobile/src/features/shopping/components/GrocerySearchBar/searchSortingUtils.ts`) - Provides intelligent sorting for search results
-  - `compareGroceryItemsForSearch()` - Main comparison function for sorting grocery items
-  - Prioritizes custom items over catalog items, especially exact matches
-  - Sort order: exact matches (custom first) > starts-with matches (custom first) > partial matches (custom first) > alphabetical
-  - Includes comprehensive parameterized tests (13 test cases)
-- `quickAddUtils` - Quick add utility (`mobile/src/features/shopping/utils/quickAddUtils.ts`) - Reusable function for adding items to shopping lists with quantity management and optimistic updates. Used by both ShoppingListsScreen and DashboardScreen
-- `useClickOutside` - Click-outside detection hook (`mobile/src/common/hooks/useClickOutside.ts`) - Reusable hook for detecting clicks outside container elements (web platform only). Used by GrocerySearchBar for dropdown close behavior
-- `useShoppingRealtime` - Realtime sync hook (`mobile/src/features/shopping/hooks/useShoppingRealtime.ts`) - Custom hook that manages Supabase realtime subscriptions for shopping lists and items. Handles both signed-in (cache-based) and guest (state-based) modes. Used by ShoppingListsScreen for instant cross-device synchronization
-- `SHOPPING_CATEGORIES` - Category constants (`mobile/src/features/shopping/constants/categories.ts`) - Defines available shopping categories for custom items
-  - Categories: fruits, vegetables, dairy, meat, seafood, bakery, grains, snacks, nuts, other
-  - Includes `normalizeShoppingCategory()` utility for category validation
-  - Used by CategoryPicker component and custom item creation flows
-- `SyncStatusIndicator` - Sync status indicator component (`mobile/src/common/components/SyncStatusIndicator/`) - Visual indicator component showing pending, confirmed, or failed sync status. Not used on shopping item cards; available for list-level or global sync UI.
-- `determineIndicatorStatus` - Status determination utility (`mobile/src/common/utils/syncStatusUtils.ts`) - Utility function that determines indicator status from sync status flags (failed > pending > confirmed priority)
-
-## UI Flow
-
-1. User selects a shopping list from horizontal drawer
-2. Items in that list appear below with quantity controls
-3. User can search for groceries or browse categories
-4. Clicking an item opens quantity modal to confirm addition
-5. Quick-add button adds items with default quantity instantly
-6. Swipe items to delete them from the list
+**Feature area:** `mobile/src/features/shopping/`
+
+## Purpose
+
+The shopping feature is the highest-priority feature in KitchenHub.
+
+In simple product terms, it allows users to manage their grocery lists quickly and reliably.
+Users can:
+- manage multiple shopping lists
+- keep one list as the main day-to-day list
+- add grocery items from the app’s item database
+- browse by category when they are not sure what they are looking for
+- remove items quickly
+- track what they already picked up while shopping
+
+This feature needs to work especially well in real-life grocery shopping situations.
+
+---
+
+## Why shopping is the top priority
+
+Shopping is the most important product area because it is the most repeatedly used and the most central to day-to-day household value.
+
+The core value of KitchenHub depends heavily on making grocery management feel:
+- fast
+- reliable
+- low-friction
+- easy to understand
+- easy to use while moving through a store
+
+If shopping feels slow, fragile, or overcomplicated, the product loses a large part of its practical value.
+
+---
+
+## Main product model
+
+### Shopping lists at the top
+The feature is organized around shopping lists.
+At the top, users can manage their lists, including a **main list**.
+
+Important list-level actions include:
+- creating lists
+- deleting lists
+- switching between lists
+- using the main list as the primary target for quick add flows from elsewhere in the app
+
+### Items database and search
+Users can add grocery items from the app’s item database.
+Search is an important part of the experience and is still an area to improve further for speed and responsiveness.
+
+### Category browsing
+Below the list experience, the shopping flow includes categories.
+These allow users to browse items by category when they are not sure what specific item they want.
+Each category can surface a large number of items, so future pagination or performance improvements may become relevant.
+
+---
+
+## Most important user flows
+
+The highest-value shopping flows are:
+
+1. **easy adding to the item list / quick add**
+2. **swiping to remove items**
+3. **creating lists**
+4. **deleting lists**
+
+Other important flows include:
+- viewing the main list
+- searching for items from the grocery database
+- browsing categories
+- checking whether items are already in the grocery bag / already handled
+- refreshing to get the latest synced state
+
+---
+
+## Shared behavior with other features
+
+The shopping feature is deeply connected to other parts of the app.
+
+### Shared with recipes
+- the search bar / item search experience is shared with recipe-related flows
+- recipe ingredient selection uses the same grocery item database/search concepts
+- recipes can quick-add ingredients into the main shopping list
+- “add all ingredients” type behavior depends on shopping being reliable
+
+### Shared with dashboard
+- dashboard quick add depends on the shopping quick-add path
+- dashboard Frequently Added is related to shopping activity and shopping behavior
+
+### Shared interaction patterns
+- swipe interactions are shared with other features
+- list/item manipulation patterns can affect other screens if shared components are changed
+
+Because of this, shopping changes can easily ripple into recipes, dashboard, and other flows.
+
+---
+
+## UX style
+
+Shopping should feel:
+- **snappy**
+- **fast**
+- **easy to handle**
+- **easy to understand**
+- **easy to scan**
+- **mobile-first**
+
+A key usage context is being physically in the grocery store and using the app to monitor what is already in the cart/bag and what still needs to be picked up.
+
+The shopping experience should minimize friction and reduce the amount of tapping required to complete a task.
+
+---
+
+## What shopping should not become
+
+Shopping should **not** become:
+- complicated
+- slow
+- multi-step for simple tasks
+- cluttered
+- tap-heavy for common actions
+
+If a user has to perform too many taps to add, remove, or manage items, the feature is losing its purpose.
+
+---
+
+## Fragile / easy-to-break areas
+
+A fresh LLM should be especially careful with the following:
+
+### 1. Sync and persistence
+One of the most fragile areas is making sure shopping changes:
+- appear quickly in the UI
+- persist correctly
+- reflect correctly in the database
+- remain correct across reloads and devices
+
+### 2. Deletion behavior
+Swipe-to-delete is fragile, especially when combined with:
+- optimistic UI updates
+- persistence
+- syncing
+- refresh/pull-to-refresh behavior
+- multi-device consistency expectations
+
+### 3. Reloading / latest-state behavior
+When users pull down to reload, the app needs to reflect the latest known database state correctly.
+This makes refresh behavior and state reconciliation important.
+
+### 4. Search and item addition
+Search is central and currently still not as fast as desired.
+Changes here can affect:
+- quick add speed
+- search clarity
+- cross-feature item addition flows
+- recipe-related ingredient flows
+
+### 5. Category browsing performance
+Categories may load many items at once.
+This can create future performance pressure and may require pagination or optimization later.
+
+---
+
+## Current / recent workstreams
+
+Important recent or active themes in shopping include:
+- persistence behavior
+- caching behavior
+- synchronization correctness
+- swipe deletion stability
+- making sure item state stays correct after deletion and refresh
+- improving the overall reliability of the feature
+
+These are more important right now than speculative new complexity.
+
+---
+
+## Future directions
+
+A fresh LLM should know these future directions exist:
+
+### Assistant-driven item addition
+The shopping feature should eventually support assistant-based flows, where users can tell an assistant to add items rather than manually typing everything.
+
+### Better search speed
+Search is important and still a likely candidate for further speed/performance improvements.
+
+### Category scalability improvements
+If categories continue to surface very large item sets, pagination or other performance strategies may be needed.
+
+### Better syncing and multi-device continuity
+The feature needs strong persistence and syncing behavior so users trust the list state everywhere.
+
+---
+
+## What must be verified after changing shopping
+
+Before finishing shopping work, verify that:
+
+- persistence still works correctly
+- syncing behavior is not broken
+- deletion state stays correct after swipe/delete flows
+- the UI updates quickly after changes
+- pull-to-refresh or reload still reflects the latest state properly
+- cross-feature flows that depend on shopping still work
+  - dashboard quick add
+  - recipe ingredient add
+  - recipe add-all-to-shopping flows
+- the feature still feels fast and low-friction on mobile
+
+---
+
+## Suggested reading before editing this feature
+
+1. `AGENTS.md`
+2. `docs/project/PROJECT_OVERVIEW.md`
+3. `docs/project/RECENT_CHANGES.md`
+4. `docs/features/recipes.md`
+5. `docs/features/dashboard.md`
+6. shopping source files under `mobile/src/features/shopping/`
+
+---
+
+## Guidance for future LLMs
+
+When changing shopping:
+- keep common actions extremely fast
+- avoid adding unnecessary steps
+- protect persistence and sync correctness
+- remember that shopping is the highest-priority product surface
+- treat search, deletion, reload, and quick-add behavior as high-risk areas

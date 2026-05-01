@@ -53,6 +53,7 @@ import { styles } from "./styles";
 import type { DashboardScreenProps } from "./types";
 import { useTranslation } from "react-i18next";
 
+const DASHBOARD_FREQUENT_ITEMS_LIMIT = 8;
 
 function isCustomGroceryItem(item: GroceryItem): boolean {
   return typeof item.id === "string" && item.id.startsWith("custom-");
@@ -155,22 +156,29 @@ export function DashboardScreen({
     const requestId = ++loadRequestIdRef.current;
 
     try {
-      const frequentItemsPromise = shoppingService.getShoppingData();
-
       if (shoppingRepository) {
-        await loadShoppingCacheState();
+        const [frequentItemsFromService, mainListFromService] = await Promise.all([
+          shoppingService.getFrequentItems(DASHBOARD_FREQUENT_ITEMS_LIMIT),
+          shoppingService.getMainList(),
+          loadShoppingCacheState(),
+        ]).then(([frequentItems, mainList]) => [frequentItems, mainList] as const);
+
+        if (requestId !== loadRequestIdRef.current) {
+          return;
+        }
+
+        setFrequentItems(frequentItemsFromService);
+        setMainList((currentMainList) => currentMainList ?? mainListFromService);
+        return;
       }
 
-      const data = await frequentItemsPromise;
+      const data = await shoppingService.getShoppingData();
       if (requestId !== loadRequestIdRef.current) {
         return;
       }
 
-      if (!shoppingRepository) {
-        setAllItems(data.shoppingItems);
-        setMainList(getMainList(data.shoppingLists));
-      }
-
+      setAllItems(data.shoppingItems);
+      setMainList(getMainList(data.shoppingLists));
       setFrequentItems(data.frequentlyAddedItems);
     } catch (_err) {
       if (requestId !== loadRequestIdRef.current) {
@@ -344,7 +352,16 @@ export function DashboardScreen({
   };
 
   const handleQuickAddGroceryItem = async (item: GroceryItem) => {
-    if (!mainList) {
+    let resolvedMainList = mainList;
+
+    if (!resolvedMainList && shoppingRepository) {
+      resolvedMainList = await shoppingService.getMainList();
+      if (resolvedMainList) {
+        setMainList(resolvedMainList);
+      }
+    }
+
+    if (!resolvedMainList) {
       showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
       openShoppingModal();
       return;
@@ -359,7 +376,7 @@ export function DashboardScreen({
     try {
       // Read from the ref (not the closure) so we always see the latest allItems,
       // including in-flight optimistic items added by the very first tap.
-      await quickAddItem(item, mainList, {
+      await quickAddItem(item, resolvedMainList, {
         allItems: allItemsRef.current,
         setAllItems,
         createItem,

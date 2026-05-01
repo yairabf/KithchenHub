@@ -7,11 +7,13 @@ import {
   Vibration,
   View,
 } from 'react-native';
+import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { SafeImage } from '../../../../common/components/SafeImage';
 import { TextBlock } from '../../../../common/components/TextBlock';
 import { colors } from '../../../../theme';
+import { getCategoryImageSource, isValidItemImage } from '../../../shopping/utils/categoryImage';
 import { styles } from './styles';
 import type { FrequentlyAddedSectionProps } from './types';
 import type { GroceryItem } from '../../../shopping/components/GrocerySearchBar';
@@ -64,10 +66,8 @@ function FrequentItemTile({
     outputRange: [1, 0.96],
   });
 
-  const iconScale = feedbackAnimation.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.12, 1.04],
-  });
+  const fallbackCategoryImage = getCategoryImageSource(item.category);
+  const hasRemoteImage = isValidItemImage(item.image);
 
   const feedbackOverlayOpacity = feedbackAnimation.interpolate({
     inputRange: [0, 1],
@@ -76,6 +76,7 @@ function FrequentItemTile({
 
   return (
     <Animated.View
+      testID={`frequent-item-tile-${item.id}`}
       style={[
         styles.itemTile,
         isTablet ? styles.itemTileTablet : styles.itemTilePhone,
@@ -89,7 +90,23 @@ function FrequentItemTile({
         style={styles.itemPressable}
       >
         <View style={styles.itemImageContainer}>
-          <SafeImage uri={item.image} style={styles.itemImage} />
+          <View style={styles.itemImageBadge}>
+            <SafeImage
+              uri={item.image}
+              testID={`frequent-item-image-${item.id}`}
+              style={styles.itemImage}
+              fallbackIcon={
+                !hasRemoteImage && fallbackCategoryImage ? (
+                  <Image
+                    source={fallbackCategoryImage}
+                    style={styles.itemImage}
+                    resizeMode="contain"
+                    testID={`frequent-item-category-image-${item.id}`}
+                  />
+                ) : undefined
+              }
+            />
+          </View>
           <Animated.View
             pointerEvents="none"
             style={[
@@ -98,13 +115,14 @@ function FrequentItemTile({
             ]}
           />
         </View>
-        <View style={[styles.itemFooter, isRtl && styles.itemFooterRtl]}>
-          <Text style={[styles.itemName, isRtl && styles.itemNameRtl]} numberOfLines={2}>
+        <View style={styles.itemFooter}>
+          <Text
+            testID={`frequent-item-name-${item.id}`}
+            style={[styles.itemName, isRtl && styles.itemNameRtl]}
+            numberOfLines={2}
+          >
             {item.name}
           </Text>
-          <Animated.View style={[styles.itemAddIconWrap, { transform: [{ scale: iconScale }] }]}>
-            <Ionicons name="add" size={14} color={colors.primary} />
-          </Animated.View>
         </View>
       </Pressable>
     </Animated.View>

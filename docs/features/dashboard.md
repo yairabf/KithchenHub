@@ -1,156 +1,195 @@
 # Dashboard Feature
 
-**Exports** (from `mobile/src/features/dashboard/index.ts`): `DashboardScreen`, `useDashboardChores`, `UseDashboardChoresReturn`.
+**Feature area:** `mobile/src/features/dashboard/`
 
-**Source**: `mobile/src/features/dashboard/` — screens (DashboardScreen), hooks (useDashboardChores). No feature-specific components; uses GrocerySearchBar and SafeImage from shopping and common.
+## Purpose
 
-## Overview
+The dashboard is a **lightweight utility surface** for KitchenHub.
+It is not the center of the product and it is not meant to be a full home-management control center.
 
-The Dashboard feature serves as the home screen of Kitchen Hub, providing users with a quick overview of their household management tasks and quick-action widgets. It displays a header with clock and date, an "Add to Shopping List" card with search and suggested items, quick stat cards (Shopping Lists, Saved Recipes), and an "Important Chores" section with today's chores. No separate greeting section is shown.
+Its job is mainly to provide:
+- **quick adding to the main shopping list**
+- **frequently added items** for fast repeat additions
+- **important chores visibility** so users can quickly see what must be done today
 
-## Screenshot
+The dashboard should act like a convenient lens into the most time-sensitive household actions, especially in a kitchen setting.
 
-![Dashboard Screen](../screenshots/dashboard/dashboard-main.png)
+---
 
-## Screens
+## Product intent
 
-### DashboardScreen
+A key use case for the dashboard is a **shared tablet in the kitchen** or attached near the fridge.
+In that environment, the dashboard should make it very easy to:
+- add shopping items quickly
+- use frequently added items to reduce friction
+- eventually interact through assistant/voice-driven flows
+- glance at important chores that need attention today
 
-- **File**: `mobile/src/features/dashboard/screens/DashboardScreen.tsx`
-- **Purpose**: Main dashboard with shopping widget, quick stats, and today's chores
-- **Key functionality**:
-  - Header with Kitchen Hub logo, live clock and date (time on all devices; full date on tablet), notification button, and user profile (role: "KITCHEN LEAD" or "Guest", display name, avatar)
-  - "Add to Shopping List" card with GrocerySearchBar, mic button, add button, and suggested item chips (from catalog/frequently added); tapping a suggestion adds the item to the active list (quantity 1) or increments existing
-    - Uses `quickAddItem` utility function for consistent item addition behavior
-    - GrocerySearchBar supports custom items and quick-add functionality
-    - Refreshes shopping data after adding items to ensure UI is up-to-date
-  - Quick stat cards: Shopping Lists, Saved Recipes (each navigates to the corresponding tab)
-  - "Important Chores" list: today's chores with avatar, name, status (Done/Pending), assignee, due date/time; tap to toggle completion; "View All" and "Add Household Task" open Chores tab or chore modal
-  - Two-column responsive layout (tablet: 7/5 flex; phone: single column)
+This is the one area of KitchenHub that is more **tablet-friendly by intent**, even though the rest of the product overall still needs strong mobile support.
 
-#### Props Interface
+---
 
-Defined in `mobile/src/features/dashboard/screens/types.ts`:
+## What the dashboard should do
 
-```typescript
-import type { TabKey } from '../../../common/components/BottomPillNav';
+Right now, the dashboard is supposed to:
 
-export interface DashboardScreenProps {
-  onOpenShoppingModal: (buttonPosition?: { x: number; y: number; width: number; height: number }) => void;
-  onOpenChoresModal: () => void;
-  onNavigateToTab: (tab: TabKey) => void;
-}
-```
+1. provide a fast **Quick Add** path into the main shopping list
+2. expose **Frequently Added** items as a fast-add surface
+3. show **Important Chores** in a simple, high-visibility way
+4. stay easy to understand at a glance
+5. feel smooth, light, and low-friction
 
-#### Code Snippet - Quick Stats
+### Current key elements
+- **Quick Add** to the main shopping list
+- **Frequently Added** section
+  - currently includes placeholder behavior until backend-driven per-user support is ready
+- **Important Chores** section
 
-```typescript
-const QUICK_STATS = [
-  { icon: 'basket-outline' as const, label: 'Shopping Lists', value: '2 Active', route: 'Shopping' as TabKey, iconBgStyle: 'shopping' as const },
-  { icon: 'book-outline' as const, label: 'Saved Recipes', value: '12 Items', route: 'Recipes' as TabKey, iconBgStyle: 'recipes' as const },
-];
-```
+Among these, the highest-value parts are:
+1. Quick Add
+2. Frequently Added
+3. Important Chores
 
-#### Code Snippet - Clock and Date
+---
 
-Time and date use shared utilities and a mounted-safe interval:
+## What the dashboard should not do
 
-```typescript
-const [currentTime, setCurrentTime] = useState(() => new Date());
-const isMountedRef = useRef(true);
-useEffect(() => {
-  isMountedRef.current = true;
-  const timer = setInterval(() => {
-    if (isMountedRef.current) setCurrentTime(new Date());
-  }, 1000);
-  return () => { isMountedRef.current = false; clearInterval(timer); };
-}, []);
-const formattedTime = formatTimeForDisplay(currentTime);
-const formattedDate = formatDateForDisplay(currentTime);
-```
+The dashboard is **not** supposed to:
+- be the main product experience
+- become a cluttered home page full of stats and secondary information
+- act like a smart-home control center
+- focus on household-member overview or unrelated summary widgets
+- overshadow the core feature areas of shopping, recipes, and chores
 
-## Hooks
+It should remain a practical launch/utility surface, not a complex destination.
 
-### useDashboardChores
+---
 
-- **File**: `mobile/src/features/dashboard/hooks/useDashboardChores.ts`
-- **Purpose**: Load today's chores and toggle completion for the dashboard. Uses the same data source as ChoresScreen: signed-in uses `CacheAwareChoreRepository` and `useCachedEntities('chores')`; guest uses `createChoresService('guest')` and local state. Today's list is filtered by `section === 'today'` (filterTodayChores).
-- **Returns**: Exported as `UseDashboardChoresReturn`: `{ todayChores, toggleChore, isLoading }`
-- **Data mode**: `determineUserDataMode(user)` and `config.mockData.enabled` drive `userMode`; `createChoresService(userMode)` and (when signed-in) `CacheAwareChoreRepository` are used internally. Today's list is filtered by `section === 'today'` via internal `filterTodayChores(chores)`.
+## Priority relative to other features
 
-## Components
+The dashboard is the **least important** of the four main product areas.
 
-The dashboard screen composes:
+Priority order:
+1. **Shopping**
+2. **Recipes**
+3. **Chores**
+4. **Dashboard / Home**
 
-- **GrocerySearchBar** (from `features/shopping`) – search and quick-add for groceries in the "Add to Shopping List" card
-  - Supports custom items (`allowCustomItems={true}`)
-  - Uses `useClickOutside` hook for dropdown behavior
-  - Integrated with `quickAddItem` utility for item addition
-- **SafeImage** (from `common/components`) – avatar and chore assignee images
+This means dashboard work should usually support the core shopping/recipe/chore flows rather than compete with them.
 
-All other UI is inline in DashboardScreen.
+---
 
-## Utilities
+## Recent direction changes
 
-### Quick Add Integration
+The dashboard recently became simpler and more focused.
 
-- **File**: `mobile/src/features/shopping/utils/quickAddUtils.ts`
-- **Usage**: DashboardScreen uses `quickAddItem` utility function for adding items to the main shopping list
-- **Behavior**: 
-  - Checks if item already exists in the list
-  - Increments quantity if exists, creates new item otherwise
-  - Uses optimistic updates for responsive UI
-  - Refreshes shopping data after successful addition to ensure UI consistency
+### What was removed / downgraded
+These older dashboard ideas are no longer important for the homepage:
+- showing how many shopping lists you have
+- showing how many recipes you have
+- list/recipe count summary cards or similar stats-heavy widgets
 
-## UI Sections
+### What became more important
+- Quick Add
+- Frequently Added items
+- Important Chores
 
-### Header
+The dashboard moved away from summary/stat widgets and toward **fast action + useful visibility**.
 
-- Kitchen Hub logo (grid icon in dark rounded square); "Kitchen Hub" text on tablet only
-- Live clock (12h format) and full date on tablet
-- Notification bell with red badge
-- Vertical separator
-- User profile: role label ("KITCHEN LEAD" or "Guest"), display name (tablet only), avatar (Google photo or DiceBear fallback)
+---
 
-### Add to Shopping List Card (Left Column)
+## UX style
 
-- Title "Add to Shopping List", subtitle "Running low on something? Put it down now.", "Main List" badge
-- GrocerySearchBar with mic and add buttons
-- "Suggested Items" label and chips (from catalog/frequently added); tap adds to list or increments quantity
+The dashboard should feel:
+- **quick**
+- **lightweight**
+- **very easy to understand**
+- **tablet-friendly**
+- **low-friction**
+- **utility-focused**
 
-### Quick Stats Row
+It should not feel:
+- cluttered
+- overloaded
+- stats-heavy
+- confusing
+- slow
 
-- Shopping Lists card – navigates to Shopping tab
-- Saved Recipes card – navigates to Recipes tab
+This is the one feature area where the UI should strongly support the **shared kitchen-tablet** use case.
 
-### Important Chores (Right Column)
+---
 
-- Section title, subtitle, "View All" link
-- List of today's chores: avatar, name, status badge (Done/Pending), assignee, due date/time; tap toggles completion
-- "Add Household Task" button (dashed border)
+## Important behavior and UX rules
 
-## State Management
+### Quick Add is the most important dashboard action
+Quick Add should feel immediate and reliable.
+This is one of the main reasons the dashboard exists.
 
-- **AuthContext**: User data via `useAuth()` for display name, role, avatar
-- **useCatalog**: `groceryItems`, `frequentlyAddedItems` for search and suggestions (suggested items: up to `SUGGESTED_ITEMS_MAX` = 8 from frequently added, else from catalog)
-- **useDashboardChores**: `todayChores`, `toggleChore`, `isLoading` for chores section; signed-in path uses `CacheAwareChoreRepository` and `useCachedEntities('chores')`; guest path uses `createChoresService('guest')` and local `guestChores`/`guestLoading`; data mode from `determineUserDataMode(user)` and `config.mockData.enabled`
-- **createShoppingService** + **getActiveListId**: Active list id for adding suggested items; service created with `shouldUseMockData ? 'guest' : 'signed-in'` where `shouldUseMockData = config.mockData.enabled || !user || user?.isGuest`; `activeListId` is set in `useEffect` via `shoppingService.getShoppingData()` then `getActiveListId(data.shoppingLists, current)`
-- **Local state**: `searchValue`, `activeListId`, `currentTime` (for clock); `shoppingButtonRef` for modal position (used in `openShoppingModal` with `measureInWindow`)
+### Frequently Added should reduce friction
+Frequently Added is meant to make repeat additions extremely easy.
+It should feel like a natural shortcut, not decorative content.
 
-## Key Dependencies
+### Important Chores should be glanceable
+Important Chores are included so users can instantly see whether something important must be done today.
+This should stay simple and obvious.
 
-- `@expo/vector-icons` – Ionicons
-- `dayjs` – via `formatTimeForDisplay` / `formatDateForDisplay` from `common/utils/dateTimeUtils`
-- **Hooks**: `useAuth`, `useResponsive`, `useCatalog`, `useDashboardChores`
-- **Components**: `GrocerySearchBar`, `SafeImage` (shopping feature + common)
-- **Services/utils**: `createShoppingService`, `getActiveListId` (shopping); `createChoresService`, `CacheAwareChoreRepository`, `useCachedEntities` (chores, used inside useDashboardChores)
-- **Config**: `config.mockData.enabled`; types: `TabKey` (BottomPillNav), `GroceryItem`, `ShoppingItem`
-- Theme: `colors`, `spacing`, `borderRadius`, `typography`, `shadows`, `componentSize`, `zIndex`
+### Keep placeholders when backend support is incomplete
+If per-user Frequently Added data is not fully available yet, a placeholder state is acceptable and useful.
+The area should still communicate the intended future behavior clearly.
 
-## Layout Notes
+---
 
-- Two-column grid: left column flex 7, right column flex 5 on tablet; single column on phone
-- Left: Add to Shopping List card, then quick stats row
-- Right: Important Chores card
-- Content padding: horizontal lg, top lg, bottom 120px for bottom nav
-- Dropdown z-index: input row uses `zIndex.dropdown + 1` so GrocerySearchBar dropdown stays above suggested items
+## Fragile / easy-to-break areas
+
+A fresh LLM should be careful with:
+- Quick Add behavior
+- Frequently Added item behavior and ranking/display logic
+- responsiveness and layout balance
+- modal opening flows
+- animation smoothness
+- state persistence / continuity
+- overall dashboard simplicity
+
+Because the dashboard is intended to feel effortless, small regressions in:
+- smoothness
+- responsiveness
+- interaction speed
+- visual clarity
+
+can significantly reduce its value.
+
+---
+
+## Upcoming changes / active dashboard work
+
+### Per-user Frequently Added backend support
+This is the main upcoming dashboard-related change.
+
+Goal:
+- add backend support so each user can see their own Frequently Added items
+- replace or enrich placeholder behavior with real per-user data
+- keep the add flow easy and fast once that support is available
+
+Important implication:
+- do not treat generic or fake data as a substitute for true per-user frequency behavior unless explicitly intended as a temporary placeholder
+
+---
+
+## Suggested reading before editing this feature
+
+1. `AGENTS.md`
+2. `docs/project/PROJECT_OVERVIEW.md`
+3. `docs/project/RECENT_CHANGES.md`
+4. `.hermes/plans/2026-04-28_0502-home-tab-frequent-items-recovery-plan.md`
+5. dashboard source files under `mobile/src/features/dashboard/`
+
+---
+
+## Guidance for future LLMs
+
+When changing the dashboard:
+- keep it simple
+- prioritize Quick Add and Frequently Added
+- do not reintroduce unnecessary stats or home-page clutter
+- remember that this is a **tablet-friendly utility surface**
+- verify that the experience still feels fast, smooth, and easy to understand

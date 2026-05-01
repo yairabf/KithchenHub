@@ -234,6 +234,7 @@ export class ShoppingItemsController {
   async getFrequentItems(
     @CurrentUser() user: CurrentUserPayload,
     @Query('limit') limit?: string,
+    @Query('lang') lang?: string,
   ) {
     if (!user.householdId) {
       throw new BadRequestException('User must belong to a household');
@@ -243,6 +244,7 @@ export class ShoppingItemsController {
     return this.shoppingService.getFrequentItems(
       user.householdId,
       Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+      lang,
     );
   }
 
