@@ -311,8 +311,10 @@ export class RemoteShoppingService implements IShoppingService {
     limit = FREQUENTLY_ADDED_ITEMS_LIMIT,
   ): Promise<GroceryItem[]> {
     try {
+      const lang = i18n.language?.trim().toLowerCase() || 'en';
+      const encodedLang = encodeURIComponent(lang);
       const frequentResponse = await api.get<{ items: FrequentShoppingItemDto[] }>(
-        `/shopping-items/frequent?limit=${limit}`,
+        `/shopping-items/frequent?limit=${limit}&lang=${encodedLang}`,
       );
       return createFrequentGroceryItems(
         Array.isArray(frequentResponse?.items) ? frequentResponse.items : [],

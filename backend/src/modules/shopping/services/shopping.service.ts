@@ -720,6 +720,7 @@ export class ShoppingService {
   async getFrequentItems(
     householdId: string,
     limit?: number,
+    lang?: string,
   ): Promise<FrequentShoppingItemsResponseDto> {
     const normalizedLimit = this.normalizeFrequentItemsLimit(limit);
     const frequentItems =
@@ -728,10 +729,27 @@ export class ShoppingService {
         normalizedLimit,
       );
 
+    let localizedCatalogNames = new Map<string, string>();
+    if (lang != null && lang.trim() !== '') {
+      const catalogIds = frequentItems
+        .map((item) => item.catalogItemId)
+        .filter((id): id is string => id != null && id.trim() !== '');
+
+      if (catalogIds.length > 0) {
+        const resolved = await this.getCatalogDisplayNames(catalogIds, lang);
+        localizedCatalogNames = new Map(
+          resolved.map((entry) => [entry.id, entry.name]),
+        );
+      }
+    }
+
     return {
       items: frequentItems.map<FrequentShoppingItemDto>((item) => ({
         id: item.catalogItemId ?? item.customItemId ?? item.id,
-        name: item.name,
+        name:
+          (item.catalogItemId != null
+            ? localizedCatalogNames.get(item.catalogItemId)
+            : undefined) ?? item.name,
         category: item.category ?? undefined,
         image: item.image ?? undefined,
         sourceType: item.catalogItemId ? 'catalog' : 'custom',

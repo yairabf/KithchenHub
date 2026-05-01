@@ -6,6 +6,21 @@ import { FrequentlyAddedSection } from '../FrequentlyAddedSection';
 
 jest.spyOn(Vibration, 'vibrate').mockImplementation(() => undefined);
 
+jest.mock('../../../../shopping/utils/categoryImage', () => ({
+  getCategoryImageSource: jest.fn((category: string) => {
+    if (category === 'dairy') {
+      return 123;
+    }
+
+    if (category === 'bakery') {
+      return 456;
+    }
+
+    return null;
+  }),
+  isValidItemImage: jest.fn((value?: string) => typeof value === 'string' && value.trim().length > 0),
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { name?: string }) => {
@@ -55,6 +70,20 @@ describe('FrequentlyAddedSection', () => {
     expect(getByText('Repeat items for your next list')).toBeTruthy();
     expect(getByText('Milk')).toBeTruthy();
     expect(getByText('Bread')).toBeTruthy();
+  });
+
+  it('renders category fallback imagery when a frequent item has no remote image', () => {
+    const { getByTestId } = render(
+      <FrequentlyAddedSection
+        isTablet={true}
+        isRtl={false}
+        items={items}
+        onItemPress={jest.fn()}
+      />,
+    );
+
+    expect(getByTestId('frequent-item-category-image-1')).toBeTruthy();
+    expect(getByTestId('frequent-item-category-image-2')).toBeTruthy();
   });
 
   it('calls onItemPress with the tapped item and vibrates for clearer feedback', () => {

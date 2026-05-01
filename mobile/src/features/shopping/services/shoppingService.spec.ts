@@ -187,12 +187,12 @@ describe('Shopping Services', () => {
                     });
                 }
 
-                if (url === '/shopping-items/frequent?limit=8') {
+                if (url === '/shopping-items/frequent?limit=8&lang=he-il') {
                     return Promise.resolve({
                         items: [
                             {
                                 id: 'catalog-1',
-                                name: 'Milk',
+                                name: 'חלב',
                                 category: 'Dairy',
                                 image: 'milk.png',
                                 sourceType: 'catalog',
@@ -207,12 +207,12 @@ describe('Shopping Services', () => {
             const data = await service.getShoppingData();
 
             expect(api.get).toHaveBeenCalledWith('/shopping-lists/aggregate?lang=he-il');
-            expect(api.get).toHaveBeenCalledWith('/shopping-items/frequent?limit=8');
+            expect(api.get).toHaveBeenCalledWith('/shopping-items/frequent?limit=8&lang=he-il');
             expect(data.shoppingItems[0]?.name).toBe('עגבנייה');
             expect(data.frequentlyAddedItems).toEqual([
                 {
                     id: 'catalog-1',
-                    name: 'Milk',
+                    name: 'חלב',
                     category: 'Dairy',
                     image: 'milk.png',
                     defaultQuantity: 1,
