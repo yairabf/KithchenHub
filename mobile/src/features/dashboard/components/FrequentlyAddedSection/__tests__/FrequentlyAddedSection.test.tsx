@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { Vibration } from 'react-native';
 import type { GroceryItem } from '../../QuickAddCard';
 import { FrequentlyAddedSection } from '../FrequentlyAddedSection';
@@ -99,6 +99,33 @@ describe('FrequentlyAddedSection', () => {
       expect.arrayContaining([expect.objectContaining({ textAlign: 'center' })]),
     );
     expect(queryByTestId('frequent-item-add-icon-1')).toBeNull();
+  });
+
+  it('falls back to the category image when a valid remote image fails to load', () => {
+    const itemWithBrokenRemoteImage: GroceryItem = {
+      id: '3',
+      name: 'Yogurt',
+      image: 'https://example.com/broken-yogurt.png',
+      category: 'dairy',
+      defaultQuantity: 1,
+    };
+
+    const { getByTestId, queryByTestId } = render(
+      <FrequentlyAddedSection
+        isTablet={false}
+        isRtl={false}
+        items={[itemWithBrokenRemoteImage]}
+        onItemPress={jest.fn()}
+      />,
+    );
+
+    expect(queryByTestId('frequent-item-category-image-3')).toBeNull();
+
+    act(() => {
+      getByTestId('frequent-item-image-3').props.onError();
+    });
+
+    expect(getByTestId('frequent-item-category-image-3')).toBeTruthy();
   });
 
   it('calls onItemPress with the tapped item and vibrates for clearer feedback', () => {

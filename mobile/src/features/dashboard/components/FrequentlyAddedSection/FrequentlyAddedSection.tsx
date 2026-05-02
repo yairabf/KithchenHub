@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeImage } from '../../../../common/components/SafeImage';
 import { TextBlock } from '../../../../common/components/TextBlock';
 import { colors } from '../../../../theme';
-import { getCategoryImageSource, isValidItemImage } from '../../../shopping/utils/categoryImage';
+import { getCategoryImageSource } from '../../../shopping/utils/categoryImage';
 import { styles } from './styles';
 import type { FrequentlyAddedSectionProps } from './types';
 import type { GroceryItem } from '../../../shopping/components/GrocerySearchBar';
@@ -67,7 +67,6 @@ function FrequentItemTile({
   });
 
   const fallbackCategoryImage = getCategoryImageSource(item.category);
-  const hasRemoteImage = isValidItemImage(item.image);
 
   const feedbackOverlayOpacity = feedbackAnimation.interpolate({
     inputRange: [0, 1],
@@ -96,7 +95,7 @@ function FrequentItemTile({
               testID={`frequent-item-image-${item.id}`}
               style={styles.itemImage}
               fallbackIcon={
-                !hasRemoteImage && fallbackCategoryImage ? (
+                fallbackCategoryImage ? (
                   <Image
                     source={fallbackCategoryImage}
                     style={styles.itemImage}
