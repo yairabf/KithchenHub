@@ -24,15 +24,99 @@ model Household {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  users                 User[]
-  shoppingLists         ShoppingList[]
-  recipes               Recipe[]
-  chores                Chore[]
-  customItems           CustomItem[]
+  users                    User[]
+  shoppingLists            ShoppingList[]
+  recipes                  Recipe[]
+  chores                   Chore[]
+  customItems              CustomItem[]
   householdItemFrequencies HouseholdItemFrequency[]
-  invites               HouseholdInvite[]
+  subscriptions            HouseholdSubscription[]
+  entitlementOverrides     HouseholdEntitlementOverride[]
+  billingProviderEvents    BillingProviderEvent[]
+  invites                  HouseholdInvite[]
 
   @@map("households")
+}
+
+model HouseholdSubscription {
+  id                     String    @id @default(cuid())
+  householdId            String    @map("household_id")
+  purchaserUserId        String?   @map("purchaser_user_id") @db.Uuid
+  planKey                String    @map("plan_key")
+  billingInterval        String?   @map("billing_interval")
+  status                 String
+  provider               String
+  store                  String?
+  providerAppUserId      String?   @map("provider_app_user_id")
+  providerCustomerId     String?   @map("provider_customer_id")
+  providerSubscriptionId String?   @map("provider_subscription_id")
+  providerProductId      String?   @map("provider_product_id")
+  providerEntitlementKey String?   @map("provider_entitlement_key")
+  providerEnvironment    String?   @map("provider_environment")
+  isTrial                Boolean   @default(false) @map("is_trial")
+  trialStartsAt          DateTime? @map("trial_starts_at")
+  trialEndsAt            DateTime? @map("trial_ends_at")
+  currentPeriodStartsAt  DateTime? @map("current_period_starts_at")
+  currentPeriodEndsAt    DateTime? @map("current_period_ends_at")
+  cancelAtPeriodEnd      Boolean?  @map("cancel_at_period_end")
+  canceledAt             DateTime? @map("canceled_at")
+  endsAt                 DateTime? @map("ends_at")
+  lastSyncedAt           DateTime? @map("last_synced_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  purchaser User?     @relation("SubscriptionPurchaser", fields: [purchaserUserId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerSubscriptionId])
+  @@index([householdId, status])
+  @@index([householdId, currentPeriodEndsAt])
+  @@index([provider, providerCustomerId])
+  @@index([provider, providerAppUserId])
+  @@index([purchaserUserId])
+  @@map("household_subscriptions")
+}
+
+model HouseholdEntitlementOverride {
+  id          String    @id @default(cuid())
+  householdId String    @map("household_id")
+  key         String
+  isEnabled   Boolean   @default(true) @map("is_enabled")
+  source      String
+  reason      String?
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, key])
+  @@index([householdId, expiresAt])
+  @@map("household_entitlement_overrides")
+}
+
+model BillingProviderEvent {
+  id                     String    @id @default(cuid())
+  householdId            String?   @map("household_id")
+  provider               String
+  providerEventId        String    @map("provider_event_id")
+  eventType              String    @map("event_type")
+  providerAppUserId      String?   @map("provider_app_user_id")
+  providerCustomerId     String?   @map("provider_customer_id")
+  providerSubscriptionId String?   @map("provider_subscription_id")
+  payload                Json      @db.JsonB
+  receivedAt             DateTime  @default(now()) @map("received_at")
+  processedAt            DateTime? @map("processed_at")
+  processingError        String?   @map("processing_error")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  household Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, providerEventId])
+  @@index([householdId, receivedAt])
+  @@index([provider, processedAt])
+  @@map("billing_provider_events")
 }
 
 model User {
@@ -52,15 +136,16 @@ model User {
   createdAt                   DateTime  @default(now()) @map("created_at")
   updatedAt                   DateTime  @updatedAt @map("updated_at")
 
-  household           Household?            @relation(fields: [householdId], references: [id], onDelete: SetNull)
-  refreshTokens       RefreshToken[]
-  assignedChores      Chore[]              @relation("ChoreAssignee")
-  importBatches        ImportBatch[]
-  importMappings      ImportMapping[]
-  syncIdempotencyKeys SyncIdempotencyKey[]
-  createdInvites      HouseholdInvite[]    @relation("CreatedInvites")
-  joinedViaInviteId   String?              @map("joined_via_invite_id")
-  joinedViaInvite     HouseholdInvite?     @relation("UsedInvite", fields: [joinedViaInviteId], references: [id], onDelete: SetNull)
+  household              Household?               @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  refreshTokens          RefreshToken[]
+  assignedChores         Chore[]                  @relation("ChoreAssignee")
+  importBatches          ImportBatch[]
+  importMappings         ImportMapping[]
+  syncIdempotencyKeys    SyncIdempotencyKey[]
+  createdInvites         HouseholdInvite[]        @relation("CreatedInvites")
+  purchasedSubscriptions HouseholdSubscription[]  @relation("SubscriptionPurchaser")
+  joinedViaInviteId      String?                  @map("joined_via_invite_id")
+  joinedViaInvite        HouseholdInvite?         @relation("UsedInvite", fields: [joinedViaInviteId], references: [id], onDelete: SetNull)
 
   @@index([householdId])
   @@map("users")
