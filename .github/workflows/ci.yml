@@ -67,6 +67,12 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kitchen_hub_test
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/kitchen_hub_test
+      JWT_SECRET: ci-test-jwt-secret-12345678901234567890
+      JWT_REFRESH_SECRET: ci-test-jwt-refresh-secret-12345678901234567890
+      AUTH_BACKEND_BASE_URL: http://localhost:3000
+      AUTH_STATE_SECRET: ci-test-auth-state-secret-12345678901234567890
+      SUPABASE_URL: https://ci-test.supabase.co
+      SUPABASE_ANON_KEY: ci-test-anon-key
 
     steps:
       - name: Checkout

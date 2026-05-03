@@ -38,7 +38,9 @@ export class RevenueCatBillingProviderService implements BillingProviderService 
 
   private extractEvent(payload: unknown): Record<string, unknown> {
     if (!payload || typeof payload !== 'object') {
-      throw new BadRequestException('RevenueCat webhook payload must be an object');
+      throw new BadRequestException(
+        'RevenueCat webhook payload must be an object',
+      );
     }
 
     const { event } = payload as RevenueCatWebhookPayload;
@@ -102,7 +104,11 @@ export class RevenueCatBillingProviderService implements BillingProviderService 
   ): string | null {
     const subscriber = source.subscriber;
 
-    if (!subscriber || typeof subscriber !== 'object' || Array.isArray(subscriber)) {
+    if (
+      !subscriber ||
+      typeof subscriber !== 'object' ||
+      Array.isArray(subscriber)
+    ) {
       return null;
     }
 
