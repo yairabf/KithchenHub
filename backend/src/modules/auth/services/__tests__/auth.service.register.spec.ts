@@ -8,6 +8,7 @@ import { UuidService } from '../../../../common/services/uuid.service';
 import { EmailService } from '../email.service';
 import { RegisterDto } from '../../dtos';
 import { JwtService } from '@nestjs/jwt';
+import { SubscriptionsService } from '../../../subscriptions/services/subscriptions.service';
 
 // Create a variable to hold the mock config that can be modified per test
 const mockLoadConfiguration = jest.fn();
@@ -56,6 +57,16 @@ describe('AuthService - Register', () => {
     get: jest.fn(),
   };
 
+  const mockSubscriptionsService = {
+    getPremiumStatusForHousehold: jest.fn().mockResolvedValue({
+      isPremium: false,
+      status: 'inactive',
+      trialEndsAt: null,
+      currentPeriodEndsAt: null,
+      override: null,
+    }),
+  };
+
   // Helper to set config for tests
   const setMockConfig = (skipEmailVerification: boolean) => {
     mockLoadConfiguration.mockReturnValue({
@@ -91,6 +102,10 @@ describe('AuthService - Register', () => {
         { provide: HouseholdsService, useValue: mockHouseholdsService },
         { provide: EmailService, useValue: mockEmailService },
         { provide: ConfigService, useValue: mockConfigService },
+        {
+          provide: SubscriptionsService,
+          useValue: mockSubscriptionsService,
+        },
       ],
     }).compile();
 
@@ -163,6 +178,10 @@ describe('AuthService - Register', () => {
             { provide: HouseholdsService, useValue: mockHouseholdsService },
             { provide: EmailService, useValue: mockEmailService },
             { provide: ConfigService, useValue: mockConfigService },
+            {
+              provide: SubscriptionsService,
+              useValue: mockSubscriptionsService,
+            },
           ],
         }).compile();
 

@@ -8,6 +8,7 @@ import { PrismaService } from '../../../../infrastructure/database/prisma/prisma
 import { UuidService } from '../../../../common/services/uuid.service';
 import { EmailService } from '../email.service';
 import { SyncDataDto, UserCreationHouseholdDto } from '../../dtos';
+import { SubscriptionsService } from '../../../subscriptions/services/subscriptions.service';
 
 /** Interface used to cast AuthService when testing private methods (avoids intersection with private members). */
 interface AuthServicePrivateTestAccess {
@@ -86,6 +87,16 @@ describe('AuthService - Idempotency', () => {
     sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockSubscriptionsService = {
+    getPremiumStatusForHousehold: jest.fn().mockResolvedValue({
+      isPremium: false,
+      status: 'inactive',
+      trialEndsAt: null,
+      currentPeriodEndsAt: null,
+      override: null,
+    }),
+  };
+
   const userId = 'user-123';
   const householdId = 'household-123';
   const mockUser = {
@@ -122,6 +133,10 @@ describe('AuthService - Idempotency', () => {
         {
           provide: EmailService,
           useValue: mockEmailService,
+        },
+        {
+          provide: SubscriptionsService,
+          useValue: mockSubscriptionsService,
         },
       ],
     }).compile();
@@ -902,6 +917,8 @@ describe('AuthService - authenticateGoogle household payload', () => {
     findUserById: jest.fn(),
     findUserByEmail: jest.fn(),
     findUserByGoogleId: jest.fn(),
+    findUserByEmailVerificationToken: jest.fn(),
+    updateUserEmailVerification: jest.fn(),
     createUser: jest.fn(),
     updateUser: jest.fn(),
     createRefreshToken: jest.fn(),
@@ -919,6 +936,16 @@ describe('AuthService - authenticateGoogle household payload', () => {
     sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockSubscriptionsService = {
+    getPremiumStatusForHousehold: jest.fn().mockResolvedValue({
+      isPremium: false,
+      status: 'inactive',
+      trialEndsAt: null,
+      currentPeriodEndsAt: null,
+      override: null,
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -929,6 +956,10 @@ describe('AuthService - authenticateGoogle household payload', () => {
         { provide: UuidService, useValue: mockUuidService },
         { provide: HouseholdsService, useValue: mockHouseholdsService },
         { provide: EmailService, useValue: mockEmailService },
+        {
+          provide: SubscriptionsService,
+          useValue: mockSubscriptionsService,
+        },
       ],
     }).compile();
 
@@ -1248,6 +1279,126 @@ describe('AuthService - authenticateGoogle household payload', () => {
         mockHouseholdsService.createHouseholdForNewUser,
       ).not.toHaveBeenCalled();
       expect(mockHouseholdsService.addUserToHousehold).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('premium summary bootstrap', () => {
+    const premiumSummary = {
+      isPremium: true,
+      status: 'active',
+      trialEndsAt: null,
+      currentPeriodEndsAt: '2099-02-01T00:00:00.000Z',
+      override: null,
+    };
+
+    beforeEach(() => {
+      mockSubscriptionsService.getPremiumStatusForHousehold.mockResolvedValue(
+        premiumSummary,
+      );
+    });
+
+    it('includes premium summary in login responses', async () => {
+      const loginUser = {
+        id: mockUserId,
+        email: 'test@example.com',
+        name: 'Test User',
+        avatarUrl: null,
+        role: 'Member',
+        isGuest: false,
+        householdId: mockHouseholdId,
+        household: {
+          id: mockHouseholdId,
+          name: 'Test Household',
+        },
+        passwordHash: 'hashed-password',
+        emailVerified: true,
+      };
+
+      mockAuthRepository.findUserByEmail = jest
+        .fn()
+        .mockResolvedValue(loginUser);
+      jest.spyOn(service as any, 'verifyPassword').mockResolvedValue(true);
+      jest.spyOn(service as any, 'generateTokens').mockResolvedValue({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      });
+
+      const result = await service.login({
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      expect(result.user.premium).toEqual({
+        isPremium: true,
+        status: 'active',
+        trialEndsAt: null,
+        currentPeriodEndsAt: '2099-02-01T00:00:00.000Z',
+      });
+      expect(
+        mockSubscriptionsService.getPremiumStatusForHousehold,
+      ).toHaveBeenCalledWith(mockHouseholdId);
+    });
+
+    it('includes premium summary in verify-email responses', async () => {
+      const verifiedUser = {
+        id: mockUserId,
+        email: 'test@example.com',
+        name: 'Verified User',
+        avatarUrl: null,
+        role: 'Member',
+        isGuest: false,
+        householdId: mockHouseholdId,
+        household: {
+          id: mockHouseholdId,
+          name: 'Verified Household',
+        },
+        emailVerified: true,
+      };
+
+      mockAuthRepository.findUserByEmailVerificationToken = jest
+        .fn()
+        .mockResolvedValue(verifiedUser);
+      mockAuthRepository.updateUserEmailVerification = jest
+        .fn()
+        .mockResolvedValue(verifiedUser);
+      jest.spyOn(service as any, 'generateTokens').mockResolvedValue({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      });
+
+      const result = await service.verifyEmail({ token: 'verify-token' });
+
+      expect(result.user.premium).toEqual({
+        isPremium: true,
+        status: 'active',
+        trialEndsAt: null,
+        currentPeriodEndsAt: '2099-02-01T00:00:00.000Z',
+      });
+    });
+
+    it('includes premium summary in current-user bootstrap responses', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: mockUserId,
+        email: 'test@example.com',
+        name: 'Current User',
+        avatarUrl: null,
+        role: 'Member',
+        isGuest: false,
+        householdId: mockHouseholdId,
+        household: {
+          id: mockHouseholdId,
+          name: 'Current Household',
+        },
+      });
+
+      const result = await service.getCurrentUser(mockUserId);
+
+      expect(result.premium).toEqual({
+        isPremium: true,
+        status: 'active',
+        trialEndsAt: null,
+        currentPeriodEndsAt: '2099-02-01T00:00:00.000Z',
+      });
     });
   });
 });
