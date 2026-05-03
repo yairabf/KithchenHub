@@ -1,4 +1,4 @@
-import { UserResponse } from '../services/authApi';
+import { UserResponse, PremiumStatusSummary } from '../services/authApi';
 import { User } from '../../../contexts/AuthContext';
 
 /**
@@ -58,6 +58,21 @@ export function verifyHouseholdIsNewlyCreated(
   }
 }
 
+function clonePremiumSummary(
+  premium: PremiumStatusSummary | undefined,
+): PremiumStatusSummary | undefined {
+  if (!premium) {
+    return undefined;
+  }
+
+  return {
+    isPremium: premium.isPremium,
+    status: premium.status,
+    trialEndsAt: premium.trialEndsAt,
+    currentPeriodEndsAt: premium.currentPeriodEndsAt,
+  };
+}
+
 /**
  * Maps UserResponse from API to User type for application state management.
  * 
@@ -83,6 +98,7 @@ export function mapUserResponseToUser(userResponse: UserResponse): User {
     householdId: userResponse.householdId || undefined,
     isGuest: userResponse.isGuest,
     role: userResponse.role,
+    premium: clonePremiumSummary(userResponse.premium),
   };
 }
 
