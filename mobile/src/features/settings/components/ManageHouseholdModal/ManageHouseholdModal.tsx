@@ -1,30 +1,31 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  TextInput,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { useHousehold } from '../../../../contexts/HouseholdContext';
 import { CenteredModal } from '../../../../common/components/CenteredModal';
 import { styles } from './styles';
 import { ManageHouseholdModalProps } from './types';
 
+function getRoleLabel(role: string, t: (key: string) => string): string {
+  return role.toLowerCase() === 'admin'
+    ? t('manageHouseholdModal.adminRole')
+    : t('manageHouseholdModal.memberRole');
+}
+
 export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalProps) {
   const { t } = useTranslation('settings');
-  const { members, addMember, removeMember } = useHousehold();
-  const [newMemberName, setNewMemberName] = useState('');
-  const inputRef = useRef<TextInput>(null);
-
-  const handleAddMember = async () => {
-    if (!newMemberName.trim()) return;
-    await addMember(newMemberName.trim());
-    setNewMemberName('');
-  };
+  const { user } = useAuth();
+  const { members, isLoading, removeMember } = useHousehold();
+  const canManageMembers = user?.role?.toLowerCase() === 'admin';
 
   const handleRemoveMember = async (id: string) => {
     await removeMember(id);
@@ -38,59 +39,63 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
       showActions={false}
     >
       <View style={styles.contentContainer}>
-        {/* Add Member Form */}
-        <View style={styles.addForm}>
-          <TextInput
-            ref={inputRef}
-            style={styles.input}
-            placeholder={t('manageHouseholdModal.addMemberPlaceholder')}
-            placeholderTextColor={colors.textMuted}
-            value={newMemberName}
-            onChangeText={setNewMemberName}
-            onSubmitEditing={handleAddMember}
-            returnKeyType="done"
-          />
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: colors.chores }]}
-            onPress={handleAddMember}
-          >
-            <Ionicons name="add" size={24} color={colors.textLight} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Members List */}
         <ScrollView style={styles.membersList} showsVerticalScrollIndicator={false}>
           <Text style={styles.sectionTitle}>{t('manageHouseholdModal.membersSectionTitle')}</Text>
-          {members.map(member => (
-            <View key={member.id} style={styles.memberRow}>
-              <View style={[styles.memberColorDot, { backgroundColor: member.color || colors.textMuted }]} />
-              <Text style={styles.memberName}>{member.name}</Text>
-              {member.isDefault && (
-                <View style={styles.defaultBadge}>
-                  <Text style={styles.defaultBadgeText}>{t('manageHouseholdModal.defaultBadge')}</Text>
-                </View>
-              )}
-              <TouchableOpacity
-                style={[styles.deleteButton, member.isDefault && styles.deleteButtonDisabled]}
-                onPress={() => handleRemoveMember(member.id)}
-                disabled={member.isDefault}
-              >
-                <Ionicons
-                  name="trash-outline"
-                  size={20}
-                  color={member.isDefault ? colors.textMuted : colors.error}
-                />
-              </TouchableOpacity>
+
+          {isLoading ? (
+            <View style={styles.stateContainer}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.stateText}>{t('manageHouseholdModal.loading')}</Text>
             </View>
-          ))}
+          ) : members.length === 0 ? (
+            <View style={styles.stateContainer}>
+              <Text style={styles.stateText}>{t('manageHouseholdModal.emptyState')}</Text>
+            </View>
+          ) : (
+            members.map((member) => {
+              const isRemoveDisabled = !canManageMembers || member.isCurrentUser;
+
+              return (
+              <View key={member.id} style={styles.memberRow}>
+                <View style={[styles.memberColorDot, { backgroundColor: member.color || colors.textMuted }]} />
+                <View style={styles.memberTextColumn}>
+                  <View style={styles.memberHeaderRow}>
+                    <Text style={styles.memberName}>{member.name}</Text>
+                    {member.isCurrentUser ? (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{t('manageHouseholdModal.currentUserBadge')}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  {member.email ? (
+                    <Text style={styles.memberEmail}>{member.email}</Text>
+                  ) : null}
+                  <Text style={styles.memberRole}>{getRoleLabel(member.role, t)}</Text>
+                </View>
+                <TouchableOpacity
+                  accessibilityLabel={t('manageHouseholdModal.removeMember')}
+                  style={[styles.deleteButton, isRemoveDisabled && styles.deleteButtonDisabled]}
+                  onPress={() => handleRemoveMember(member.id)}
+                  disabled={isRemoveDisabled}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={20}
+                    color={isRemoveDisabled ? colors.textMuted : colors.error}
+                  />
+                </TouchableOpacity>
+              </View>
+            )})
+          )}
         </ScrollView>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {t('manageHouseholdModal.defaultMembersCannotBeRemoved')}
+            {canManageMembers
+              ? t('manageHouseholdModal.cannotRemoveYourself')
+              : t('manageHouseholdModal.onlyAdminsCanRemoveMembers')}
           </Text>
         </View>
-
       </View>
     </CenteredModal>
   );

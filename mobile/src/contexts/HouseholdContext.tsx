@@ -1,132 +1,99 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { i18n } from '../i18n';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
+import { householdService } from '../services/householdService';
 
 export interface HouseholdMember {
   id: string;
   name: string;
-  isDefault: boolean;
+  email?: string;
+  role: string;
+  avatarUrl?: string;
   color?: string;
+  isCurrentUser: boolean;
 }
 
 interface HouseholdContextType {
   members: HouseholdMember[];
   isLoading: boolean;
-  addMember: (name: string, color?: string) => Promise<void>;
   removeMember: (id: string) => Promise<void>;
   getMemberById: (id: string) => HouseholdMember | undefined;
 }
 
 const HouseholdContext = createContext<HouseholdContextType | undefined>(undefined);
 
-export const STORAGE_KEY = '@kitchen_hub_household_members';
+const MEMBER_COLORS = ['#FFB5A7', '#B8E6E1', '#FFD4A3', '#D4C5F9', '#C5E8B7'];
 
-const DEFAULT_MEMBER_TEMPLATES = [
-  { id: 'default-mom', nameKey: 'mom', fallback: 'Mom', color: '#FFB5A7' },
-  { id: 'default-dad', nameKey: 'dad', fallback: 'Dad', color: '#B8E6E1' },
-  { id: 'default-kids', nameKey: 'kids', fallback: 'Kids', color: '#FFD4A3' },
-  { id: 'default-all', nameKey: 'all', fallback: 'All', color: '#D4C5F9' },
-];
+function getMemberDisplayName(name: string | undefined, email: string | undefined): string {
+  const trimmedName = name?.trim();
+  if (trimmedName) {
+    return trimmedName;
+  }
 
-function getDefaultMembers(): HouseholdMember[] {
-  return DEFAULT_MEMBER_TEMPLATES.map(member => ({
-    id: member.id,
-    name: i18n.t(`settings:householdMembers.${member.nameKey}`, { defaultValue: member.fallback }),
-    isDefault: true,
-    color: member.color,
-  }));
+  const trimmedEmail = email?.trim();
+  if (trimmedEmail) {
+    return trimmedEmail;
+  }
+
+  return 'KitchenHub User';
 }
 
 export function HouseholdProvider({ children }: { children: ReactNode }) {
-  const [members, setMembers] = useState<HouseholdMember[]>(() => getDefaultMembers());
+  const { user } = useAuth();
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadMembers();
-  }, []);
-
-  useEffect(() => {
-    const handleLanguageChange = () => {
-      setMembers(prevMembers => {
-        const customMembers = prevMembers.filter(member => !member.isDefault);
-        return [...getDefaultMembers(), ...customMembers];
-      });
-    };
-
-    i18n.on('languageChanged', handleLanguageChange);
-    return () => {
-      i18n.off('languageChanged', handleLanguageChange);
-    };
-  }, []);
-
-  const loadMembers = async () => {
-    try {
-      const defaultMembers = getDefaultMembers();
-      const storedMembers = await AsyncStorage.getItem(STORAGE_KEY);
-      if (storedMembers) {
-        const customMembers: HouseholdMember[] = JSON.parse(storedMembers);
-        // Combine default members with custom members
-        setMembers([...defaultMembers, ...customMembers]);
-      } else {
-        setMembers(defaultMembers);
-      }
-    } catch (error) {
-      console.error('Error loading household members:', error);
-    } finally {
+  const loadMembers = useCallback(async () => {
+    if (!user?.id || !user.householdId) {
+      setMembers([]);
       setIsLoading(false);
-    }
-  };
-
-  const saveCustomMembers = async (customMembers: HouseholdMember[]) => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(customMembers));
-    } catch (error) {
-      console.error('Error saving household members:', error);
-    }
-  };
-
-  const addMember = async (name: string, color?: string) => {
-    const newMember: HouseholdMember = {
-      id: `custom-${Date.now()}`,
-      name: name.trim(),
-      isDefault: false,
-      color: color || '#C5E8B7',
-    };
-
-    const updatedMembers = [...members, newMember];
-    setMembers(updatedMembers);
-
-    // Save only custom members
-    const customMembers = updatedMembers.filter(m => !m.isDefault);
-    await saveCustomMembers(customMembers);
-  };
-
-  const removeMember = async (id: string) => {
-    // Prevent removing default members
-    const memberToRemove = members.find(m => m.id === id);
-    if (memberToRemove?.isDefault) {
-      console.warn('Cannot remove default household members');
       return;
     }
 
-    const updatedMembers = members.filter(m => m.id !== id);
-    setMembers(updatedMembers);
+    try {
+      setIsLoading(true);
+      const household = await householdService.getHousehold();
+      setMembers(
+        household.members.map((member, index) => ({
+          id: member.id,
+          name: getMemberDisplayName(member.name, member.email),
+          email: member.email?.trim() || undefined,
+          role: member.role,
+          avatarUrl: member.avatarUrl,
+          color: MEMBER_COLORS[index % MEMBER_COLORS.length],
+          isCurrentUser: member.id === user.id,
+        })),
+      );
+    } catch (error) {
+      console.error('Error loading household members:', error);
+      setMembers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.householdId, user?.id]);
 
-    // Save only custom members
-    const customMembers = updatedMembers.filter(m => !m.isDefault);
-    await saveCustomMembers(customMembers);
-  };
+  useEffect(() => {
+    void loadMembers();
+  }, [loadMembers]);
 
-  const getMemberById = (id: string) => {
-    return members.find(m => m.id === id);
-  };
+  const removeMember = useCallback(async (id: string) => {
+    const memberToRemove = members.find((member) => member.id === id);
+    if (!memberToRemove || memberToRemove.isCurrentUser) {
+      return;
+    }
+
+    await householdService.removeMember(id);
+    await loadMembers();
+  }, [loadMembers, members]);
+
+  const getMemberById = useCallback((id: string) => {
+    return members.find((member) => member.id === id);
+  }, [members]);
 
   return (
     <HouseholdContext.Provider
       value={{
         members,
         isLoading,
-        addMember,
         removeMember,
         getMemberById,
       }}

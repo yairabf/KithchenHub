@@ -42,10 +42,15 @@
   },
   "manageHouseholdModal": {
     "title": "Manage Household",
-    "addMemberPlaceholder": "Add new member...",
     "membersSectionTitle": "Household Members",
-    "defaultBadge": "Default",
-    "defaultMembersCannotBeRemoved": "Default members cannot be removed"
+    "loading": "Loading household members...",
+    "emptyState": "No household members yet.",
+    "currentUserBadge": "You",
+    "adminRole": "Admin",
+    "memberRole": "Member",
+    "removeMember": "Remove member",
+    "cannotRemoveYourself": "You cannot remove yourself from this screen.",
+    "onlyAdminsCanRemoveMembers": "Only household admins can remove members."
   },
   "inviteMemberModal": {
     "title": "Invite to Household",

@@ -2,8 +2,8 @@ import { api } from './api';
 
 export interface HouseholdMember {
     id: string;
-    email: string;
-    name: string;
+    email?: string;
+    name?: string;
     avatarUrl?: string;
     role: string;
 }
@@ -42,5 +42,12 @@ export const householdService = {
      */
     getHousehold: async (): Promise<Household> => {
         return api.get<Household>('/household');
+    },
+
+    /**
+     * Removes a member from the current household.
+     */
+    removeMember: async (memberId: string): Promise<{ success: boolean }> => {
+        return api.delete<{ success: boolean }>(`/household/members/${memberId}`);
     },
 };
