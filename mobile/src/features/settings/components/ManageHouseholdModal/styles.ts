@@ -5,30 +5,8 @@ export const styles = StyleSheet.create({
   contentContainer: {
     maxHeight: 400,
   },
-  addForm: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  input: {
-    flex: 1,
-    height: 48,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   membersList: {
-    maxHeight: 250,
+    maxHeight: 280,
   },
   sectionTitle: {
     fontSize: 12,
@@ -51,20 +29,38 @@ export const styles = StyleSheet.create({
     borderRadius: 6,
     marginEnd: spacing.sm,
   },
-  memberName: {
+  memberTextColumn: {
     flex: 1,
+    gap: 2,
+  },
+  memberHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  memberName: {
+    flexShrink: 1,
     fontSize: 16,
     color: colors.textPrimary,
     fontWeight: '500',
   },
-  defaultBadge: {
+  memberEmail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  memberRole: {
+    fontSize: 12,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  badge: {
     backgroundColor: colors.background,
     borderRadius: borderRadius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    marginEnd: spacing.sm,
   },
-  defaultBadgeText: {
+  badgeText: {
     fontSize: 10,
     fontWeight: '600',
     color: colors.textMuted,
@@ -85,6 +81,17 @@ export const styles = StyleSheet.create({
   footerText: {
     fontSize: 12,
     color: colors.textMuted,
+    textAlign: 'center',
+  },
+  stateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
+    gap: spacing.sm,
+  },
+  stateText: {
+    fontSize: 14,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   inviteSection: {

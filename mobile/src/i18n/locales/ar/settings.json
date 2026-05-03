@@ -42,11 +42,16 @@
   },
   "manageHouseholdModal": {
     "title": "إدارة المنزل",
-    "addMemberPlaceholder": "أضف عضوا جديدا...",
     "membersSectionTitle": "أعضاء المنزل",
-    "defaultBadge": "افتراضي",
-    "defaultMembersCannotBeRemoved": "لا يمكن إزالة الأعضاء الافتراضيين"
-  },
+    "loading": "جار تحميل أعضاء المنزل...",
+    "emptyState": "لا يوجد أعضاء منزل بعد.",
+    "currentUserBadge": "أنت",
+    "adminRole": "مشرف",
+    "memberRole": "عضو",
+    "removeMember": "إزالة العضو",
+    "cannotRemoveYourself": "لا يمكنك إزالة نفسك من هذه الشاشة.",
+    "onlyAdminsCanRemoveMembers": "يمكن لمشرفي المنزل فقط إزالة الأعضاء."},
+
   "inviteMemberModal": {
     "title": "دعوة إلى المنزل",
     "description": "شارك هذا الرمز مع أفراد عائلتك. يمكنهم إدخاله أثناء التسجيل للانضمام إلى منزلك.",

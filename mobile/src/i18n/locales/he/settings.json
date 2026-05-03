@@ -42,11 +42,16 @@
   },
   "manageHouseholdModal": {
     "title": "ניהול משק בית",
-    "addMemberPlaceholder": "הוסף חבר חדש...",
     "membersSectionTitle": "חברי משק בית",
-    "defaultBadge": "ברירת מחדל",
-    "defaultMembersCannotBeRemoved": "לא ניתן להסיר חברי ברירת מחדל"
-  },
+    "loading": "טוען את חברי משק הבית...",
+    "emptyState": "עדיין אין חברי משק בית.",
+    "currentUserBadge": "את/ה",
+    "adminRole": "מנהל",
+    "memberRole": "חבר",
+    "removeMember": "הסר חבר",
+    "cannotRemoveYourself": "לא ניתן להסיר את עצמך מהמסך הזה.",
+    "onlyAdminsCanRemoveMembers": "רק מנהלי משק הבית יכולים להסיר חברים."},
+
   "inviteMemberModal": {
     "title": "הזמנה למשק בית",
     "description": "שתפו את הקוד הזה עם בני המשפחה. הם יכולים להזין אותו בזמן ההרשמה כדי להצטרף למשק הבית שלכם.",
