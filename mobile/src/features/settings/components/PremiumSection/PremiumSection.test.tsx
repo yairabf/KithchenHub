@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { PremiumSection } from './PremiumSection';
 
 jest.mock('react-i18next', () => ({
@@ -21,6 +21,7 @@ jest.mock('react-i18next', () => ({
         'premium.renewsLabel': 'Renews on',
         'premium.expiresLabel': 'Access until',
         'premium.comingSoon': 'Billing, upgrades, and restore controls are coming soon.',
+        'premium.viewPlans': 'View plans',
       }[key] ?? key),
   }),
 }));
@@ -70,5 +71,14 @@ describe('PremiumSection', () => {
     expect(getAllByText('Premium').length).toBeGreaterThanOrEqual(1);
     expect(getByText('Status: Active')).toBeTruthy();
     expect(getByText('Renews on: Jun 3, 2026')).toBeTruthy();
+  });
+
+  it('calls onOpenPaywall when the action button is pressed', () => {
+    const onOpenPaywall = jest.fn();
+    const { getByText } = render(<PremiumSection onOpenPaywall={onOpenPaywall} />);
+
+    fireEvent.press(getByText('View plans'));
+
+    expect(onOpenPaywall).toHaveBeenCalledTimes(1);
   });
 });

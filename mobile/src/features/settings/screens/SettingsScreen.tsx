@@ -14,8 +14,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../../contexts/AuthContext';
 import { colors, spacing, borderRadius, typography, shadows, boxShadow } from '../../../theme';
+import type { MainStackParamList } from '../../../navigation/types';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
 import { ManageHouseholdModal } from '../components/ManageHouseholdModal';
 import { InviteMemberModal } from '../components/InviteMemberModal';
@@ -38,6 +41,8 @@ const SHOW_EXPORT_DATA_SETTING = false;
 
 export function SettingsScreen() {
   const { t, i18n } = useTranslation('settings');
+  const navigation =
+    useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { privacyPolicyUrl, termsOfServiceUrl } = useLegalLinks();
   const { user, signOut } = useAuth();
   const [pushNotifications, setPushNotifications] = React.useState(true);
@@ -57,6 +62,10 @@ export function SettingsScreen() {
   const handleSignOut = async () => {
     await signOut();
   };
+
+  const handleOpenPremiumPaywall = React.useCallback(() => {
+    navigation.navigate('PremiumPaywall');
+  }, [navigation]);
 
   const handleDeleteAccount = async () => {
     if (isDeletingAccount) {
@@ -190,7 +199,10 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        <PremiumSection premium={user?.premium} />
+        <PremiumSection
+          premium={user?.premium}
+          onOpenPaywall={handleOpenPremiumPaywall}
+        />
 
         {/* Notifications Section - hidden until push notifications are implemented */}
         {SHOW_PUSH_NOTIFICATIONS_SETTING && (
