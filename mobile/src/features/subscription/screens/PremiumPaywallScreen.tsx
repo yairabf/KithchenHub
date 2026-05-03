@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +20,7 @@ import {
   spacing,
   typography,
 } from '../../../theme';
+import { purchaseService } from '../services/purchaseService';
 
 const FEATURE_KEYS = [
   'premium.featureVoiceAdd',
@@ -41,6 +43,74 @@ export function PremiumPaywallScreen() {
   const { t } = useTranslation('settings');
   const navigation =
     useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [defaultPackageId, setDefaultPackageId] = useState<string>('monthly');
+
+  const purchaseUnavailable = useMemo(() => !purchaseService.isAvailable(), []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOfferings() {
+      if (purchaseUnavailable) {
+        return;
+      }
+
+      try {
+        const offerings = await purchaseService.getOfferings();
+        if (!isMounted || !offerings || offerings.packages.length === 0) {
+          return;
+        }
+
+        const monthlyPackage = offerings.packages.find(
+          (pkg) => pkg.period === 'monthly',
+        );
+
+        setDefaultPackageId(monthlyPackage?.id ?? offerings.packages[0].id);
+      } catch {
+        // Keep default monthly fallback; UI remains usable.
+      }
+    }
+
+    loadOfferings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [purchaseUnavailable]);
+
+  const handleStartTrial = async () => {
+    if (purchaseUnavailable || isPurchasing || isRestoring) {
+      return;
+    }
+
+    try {
+      setIsPurchasing(true);
+      await purchaseService.purchasePackage(defaultPackageId);
+      Alert.alert('Premium', 'Purchase started successfully.');
+    } catch {
+      Alert.alert('Premium', 'Unable to start purchase right now. Please try again.');
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    if (purchaseUnavailable || isPurchasing || isRestoring) {
+      return;
+    }
+
+    try {
+      setIsRestoring(true);
+      await purchaseService.restorePurchases();
+      Alert.alert('Premium', 'Restore completed successfully.');
+    } catch {
+      Alert.alert('Premium', 'Unable to restore purchases right now. Please try again.');
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -86,11 +156,21 @@ export function PremiumPaywallScreen() {
           <Text style={styles.infoSubtext}>{t('premium.purchaseComingSoon')}</Text>
         </View>
 
-        <TouchableOpacity style={styles.primaryButton} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          activeOpacity={0.85}
+          onPress={handleStartTrial}
+          disabled={purchaseUnavailable || isPurchasing || isRestoring}
+        >
           <Text style={styles.primaryButtonText}>{t('premium.startTrialCta')}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          activeOpacity={0.85}
+          onPress={handleRestorePurchases}
+          disabled={purchaseUnavailable || isPurchasing || isRestoring}
+        >
           <Text style={styles.secondaryButtonText}>
             {t('premium.restorePurchasesCta')}
           </Text>
