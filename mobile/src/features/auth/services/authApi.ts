@@ -3,6 +3,13 @@ import { api } from "../../../services/api";
 /**
  * User response from the backend
  */
+export interface PremiumStatusSummary {
+  isPremium: boolean;
+  status: string;
+  trialEndsAt: string | null;
+  currentPeriodEndsAt: string | null;
+}
+
 export interface UserResponse {
   id: string;
   email?: string;
@@ -16,12 +23,7 @@ export interface UserResponse {
     name: string;
     createdAt: string;
   };
-  premium?: {
-    isPremium: boolean;
-    status: string;
-    trialEndsAt: string | null;
-    currentPeriodEndsAt: string | null;
-  };
+  premium?: PremiumStatusSummary;
 }
 
 /**

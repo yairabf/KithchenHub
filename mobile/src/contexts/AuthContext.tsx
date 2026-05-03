@@ -21,6 +21,7 @@ import {
   verifyUserExists,
   verifyHouseholdDataConsistency,
 } from '../features/auth/utils/userVerification';
+import type { PremiumStatusSummary } from '../features/auth/services/authApi';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,6 +33,7 @@ export interface User {
   householdId?: string;
   isGuest: boolean;
   role: string;
+  premium?: PremiumStatusSummary;
 }
 
 interface AuthContextType {
@@ -82,15 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authApi.getCurrentUser();
 
-      return {
-        id: response.id,
-        email: response.email || '',
-        name: response.name || 'Kitchen User',
-        avatarUrl: response.avatarUrl,
-        householdId: response.householdId || undefined,
-        isGuest: response.isGuest,
-        role: response.role,
-      };
+      return mapUserResponseToUser(response);
     } catch (error) {
       logger.error('Error fetching current user:', error);
       throw new Error('Failed to fetch user information');
@@ -151,15 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Fetch current user from backend to ensure session is valid
           const userData = await authApi.getCurrentUser();
           logger.debug('[AuthContext] Startup restore via /auth/me succeeded');
-          const userToSet: User = {
-            id: userData.id,
-            email: userData.email || '',
-            name: userData.name || 'Kitchen User',
-            avatarUrl: userData.avatarUrl,
-            householdId: userData.householdId || undefined,
-            isGuest: userData.isGuest,
-            role: userData.role,
-          };
+          const userToSet = mapUserResponseToUser(userData);
           setUser(userToSet);
           didRestoreAuthenticatedUser = true;
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userToSet));
@@ -174,15 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               logger.debug('[AuthContext] Refresh succeeded, loading user again');
               try {
                 const refreshedUser = await authApi.getCurrentUser();
-                const refreshedUserToSet: User = {
-                  id: refreshedUser.id,
-                  email: refreshedUser.email || '',
-                  name: refreshedUser.name || 'Kitchen User',
-                  avatarUrl: refreshedUser.avatarUrl,
-                  householdId: refreshedUser.householdId || undefined,
-                  isGuest: refreshedUser.isGuest,
-                  role: refreshedUser.role,
-                };
+                const refreshedUserToSet = mapUserResponseToUser(refreshedUser);
                 setUser(refreshedUserToSet);
                 didRestoreAuthenticatedUser = true;
                 await AsyncStorage.setItem(
