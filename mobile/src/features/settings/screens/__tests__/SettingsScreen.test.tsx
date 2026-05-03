@@ -29,7 +29,14 @@ jest.mock(manageHouseholdModalPath, () => ({
   ManageHouseholdModal: () => null,
 }));
 
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({
+    navigate: mockNavigate,
+  }),
+}));
+
 const mockDeleteMyAccount = jest.fn();
+const mockNavigate = jest.fn();
 jest.mock('../../services/accountService', () => ({
   accountService: {
     deleteMyAccount: () => mockDeleteMyAccount(),
@@ -80,6 +87,7 @@ jest.mock('react-i18next', () => ({
         'premium.renewsLabel': 'Renews on',
         'premium.expiresLabel': 'Access until',
         'premium.comingSoon': 'Billing, upgrades, and restore controls are coming soon.',
+        'premium.viewPlans': 'View plans',
         deleteAccount: 'Delete account',
         deleteAccountConfirmTitle: 'Delete account?',
         deleteAccountConfirmMessage:
@@ -209,6 +217,14 @@ describe('SettingsScreen', () => {
     expect(getAllByText('Premium').length).toBeGreaterThanOrEqual(1);
     expect(getByText('Status: Trialing')).toBeTruthy();
     expect(getByText('Trial ends: May 8, 2026')).toBeTruthy();
+  });
+
+  it('navigates to the premium paywall screen when View plans is pressed', () => {
+    const { getByText } = render(<SettingsScreen />);
+
+    fireEvent.press(getByText('View plans'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('PremiumPaywall');
   });
 
   describe('Language selector', () => {

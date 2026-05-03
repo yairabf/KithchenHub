@@ -1,5 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   borderRadius,
@@ -12,6 +17,7 @@ import type { PremiumStatusSummary } from '../../../auth/services/authApi';
 
 interface PremiumSectionProps {
   premium?: PremiumStatusSummary;
+  onOpenPaywall?: () => void;
 }
 
 function formatDate(dateValue: string): string {
@@ -66,7 +72,10 @@ function getDateLabel(
   return null;
 }
 
-export function PremiumSection({ premium }: PremiumSectionProps) {
+export function PremiumSection({
+  premium,
+  onOpenPaywall,
+}: PremiumSectionProps) {
   const { t } = useTranslation('settings');
   const dateLabel = getDateLabel(premium, t);
 
@@ -90,6 +99,16 @@ export function PremiumSection({ premium }: PremiumSectionProps) {
 
         <Text style={styles.description}>{t('premium.householdScope')}</Text>
         <Text style={styles.footerNote}>{t('premium.comingSoon')}</Text>
+
+        {onOpenPaywall ? (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={onOpenPaywall}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionButtonText}>{t('premium.viewPlans')}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
@@ -152,5 +171,17 @@ const styles = StyleSheet.create({
   footerNote: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  actionButton: {
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  actionButtonText: {
+    ...typography.labelBold,
+    color: colors.surface,
   },
 });

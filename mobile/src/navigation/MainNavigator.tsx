@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { MainTabsScreen } from './MainTabsScreen';
 import { MainStackParamList } from './types';
+import { PremiumPaywallScreen } from '../features/subscription/screens/PremiumPaywallScreen';
 import { NetworkProvider } from '../contexts/NetworkContext';
 import { AppLifecycleProvider } from '../contexts/AppLifecycleContext';
 import { useSyncQueue } from '../common/hooks/useSyncQueue';
@@ -29,6 +30,11 @@ function MainNavigatorContent() {
         name="MainTabs"
         component={MainTabsScreen}
         options={{ title: t('navigation.home') }}
+      />
+      <Stack.Screen
+        name="PremiumPaywall"
+        component={PremiumPaywallScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
