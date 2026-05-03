@@ -16,13 +16,15 @@ import { HouseholdsService } from '../../households/services/households.service'
 import { UuidService } from '../../../common/services/uuid.service';
 import { EmailService } from './email.service';
 import { loadConfiguration } from '../../../config/configuration';
-import { User, Household } from '@prisma/client';
+import { Household, User } from '@prisma/client';
+import { SubscriptionsService } from '../../subscriptions/services/subscriptions.service';
 import {
   GoogleAuthDto,
   SyncDataDto,
   RefreshTokenDto,
   AuthResponseDto,
   UserResponseDto,
+  PremiumStatusSummaryDto,
   SyncShoppingListDto,
   SyncRecipeDto,
   SyncChoreDto,
@@ -89,6 +91,7 @@ export class AuthService {
     private uuidService: UuidService,
     private householdsService: HouseholdsService,
     private emailService: EmailService,
+    private subscriptionsService: SubscriptionsService,
   ) {
     const config = loadConfiguration();
     if (config.google.clientId && config.google.clientSecret) {
@@ -160,7 +163,7 @@ export class AuthService {
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        user: this.mapUserToResponse(user),
+        user: await this.mapUserToResponse(user),
         householdId: user.householdId,
         isNewUser,
         isNewHousehold,
@@ -287,7 +290,7 @@ export class AuthService {
       return {
         accessToken: jwtTokens.accessToken,
         refreshToken: jwtTokens.refreshToken,
-        user: this.mapUserToResponse(user),
+        user: await this.mapUserToResponse(user),
         householdId: user.householdId,
         isNewUser,
         isNewHousehold,
@@ -551,7 +554,7 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    return this.mapUserToResponse(user as UserWithHousehold);
+    return await this.mapUserToResponse(user as UserWithHousehold);
   }
 
   /**
@@ -1267,9 +1270,11 @@ export class AuthService {
   /**
    * Maps user entity to response DTO.
    */
-  private mapUserToResponse(
+  private async mapUserToResponse(
     user: User & { household: Household | null },
-  ): UserResponseDto {
+  ): Promise<UserResponseDto> {
+    const premium = await this.buildPremiumStatusSummary(user.householdId);
+
     return {
       id: user.id,
       email: user.email ?? undefined,
@@ -1278,6 +1283,21 @@ export class AuthService {
       role: user.role,
       isGuest: user.isGuest,
       householdId: user.householdId,
+      premium,
+    };
+  }
+
+  private async buildPremiumStatusSummary(
+    householdId?: string | null,
+  ): Promise<PremiumStatusSummaryDto> {
+    const premium =
+      await this.subscriptionsService.getPremiumStatusForHousehold(householdId);
+
+    return {
+      isPremium: premium.isPremium,
+      status: premium.status,
+      trialEndsAt: premium.trialEndsAt,
+      currentPeriodEndsAt: premium.currentPeriodEndsAt,
     };
   }
 
@@ -1391,7 +1411,7 @@ export class AuthService {
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: this.mapUserToResponse(userWithHousehold),
+      user: await this.mapUserToResponse(userWithHousehold),
       householdId: userWithHousehold.householdId,
       isNewUser: false,
       isNewHousehold: false,
@@ -1435,7 +1455,7 @@ export class AuthService {
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: this.mapUserToResponse(verifiedUser),
+      user: await this.mapUserToResponse(verifiedUser),
       householdId: verifiedUser.householdId,
       isNewUser: true,
       isNewHousehold: false,

@@ -1,3 +1,10 @@
+export class PremiumStatusSummaryDto {
+  isPremium: boolean;
+  status: string;
+  trialEndsAt: string | null;
+  currentPeriodEndsAt: string | null;
+}
+
 export class UserResponseDto {
   id: string;
   email?: string;
@@ -6,6 +13,7 @@ export class UserResponseDto {
   role: string;
   isGuest: boolean;
   householdId?: string | null;
+  premium?: PremiumStatusSummaryDto;
 }
 
 export class HouseholdSummaryDto {

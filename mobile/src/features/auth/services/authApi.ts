@@ -1,4 +1,4 @@
-import { api } from '../../../services/api';
+import { api } from "../../../services/api";
 
 /**
  * User response from the backend
@@ -87,11 +87,11 @@ export interface AuthResponse {
 
 /**
  * Authentication API service.
- * 
+ *
  * Provides typed wrappers around authentication endpoints.
  * All methods use the global API client which automatically includes
  * the JWT token when available.
- * 
+ *
  * @example
  * ```typescript
  * // Fetch current user
@@ -103,14 +103,14 @@ export const authApi = {
    * Registers a new user with email and password
    */
   register: (data: RegisterRequest): Promise<RegisterResponse> => {
-    return api.post<RegisterResponse>('/auth/register', data);
+    return api.post<RegisterResponse>("/auth/register", data);
   },
 
   /**
    * Logs in a user with email and password
    */
   login: (data: LoginRequest): Promise<AuthResponse> => {
-    return api.post<AuthResponse>('/auth/login', data);
+    return api.post<AuthResponse>("/auth/login", data);
   },
 
   /**
@@ -119,7 +119,7 @@ export const authApi = {
   refreshToken: (
     data: RefreshTokenRequest,
   ): Promise<{ accessToken: string }> => {
-    return api.post<{ accessToken: string }>('/auth/refresh', data);
+    return api.post<{ accessToken: string }>("/auth/refresh", data);
   },
 
   /**
@@ -140,6 +140,6 @@ export const authApi = {
    * ```
    */
   getCurrentUser: (): Promise<UserResponse> => {
-    return api.get<UserResponse>('/auth/me');
+    return api.get<UserResponse>("/auth/me");
   },
 };
