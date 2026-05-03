@@ -88,11 +88,18 @@ describe('mapUserResponseToUser', () => {
       name: 'Test User',
       avatarUrl: 'https://example.com/avatar.jpg',
       isGuest: false,
+      role: 'Admin',
       householdId: 'household-123',
       household: {
         id: 'household-123',
         name: 'Test Household',
         createdAt: '2024-01-01T00:00:00Z',
+      },
+      premium: {
+        isPremium: true,
+        status: 'active',
+        trialEndsAt: null,
+        currentPeriodEndsAt: '2026-06-03T00:00:00.000Z',
       },
     };
 
@@ -105,6 +112,36 @@ describe('mapUserResponseToUser', () => {
       avatarUrl: 'https://example.com/avatar.jpg',
       householdId: 'household-123',
       isGuest: false,
+      role: 'Admin',
+      premium: {
+        isPremium: true,
+        status: 'active',
+        trialEndsAt: null,
+        currentPeriodEndsAt: '2026-06-03T00:00:00.000Z',
+      },
+    });
+  });
+
+  it('should preserve premium summary when provided', () => {
+    const userResponse: UserResponse = {
+      id: 'user-123',
+      isGuest: false,
+      role: 'Member',
+      premium: {
+        isPremium: true,
+        status: 'trialing',
+        trialEndsAt: '2026-05-08T00:00:00.000Z',
+        currentPeriodEndsAt: null,
+      },
+    };
+
+    const user = mapUserResponseToUser(userResponse);
+
+    expect(user.premium).toEqual({
+      isPremium: true,
+      status: 'trialing',
+      trialEndsAt: '2026-05-08T00:00:00.000Z',
+      currentPeriodEndsAt: null,
     });
   });
 
@@ -112,6 +149,7 @@ describe('mapUserResponseToUser', () => {
     const userResponse: UserResponse = {
       id: 'user-123',
       isGuest: false,
+      role: 'Member',
     };
 
     const user = mapUserResponseToUser(userResponse);
@@ -123,6 +161,8 @@ describe('mapUserResponseToUser', () => {
       avatarUrl: undefined,
       householdId: undefined,
       isGuest: false,
+      role: 'Member',
+      premium: undefined,
     });
   });
 
@@ -131,6 +171,7 @@ describe('mapUserResponseToUser', () => {
       id: 'user-123',
       householdId: null,
       isGuest: false,
+      role: 'Member',
     };
 
     const user = mapUserResponseToUser(userResponse);
@@ -144,6 +185,7 @@ describe('verifyUserExists', () => {
     const userResponse: UserResponse = {
       id: 'user-123',
       isGuest: false,
+      role: 'Member',
     };
 
     expect(() => verifyUserExists(userResponse)).not.toThrow();
@@ -175,6 +217,7 @@ describe('verifyHouseholdDataConsistency', () => {
         createdAt: '2024-01-01T00:00:00Z',
       },
       isGuest: false,
+      role: 'Admin',
     };
 
     verifyHouseholdDataConsistency(userResponse);
@@ -189,6 +232,7 @@ describe('verifyHouseholdDataConsistency', () => {
       id: 'user-123',
       householdId: null,
       isGuest: false,
+      role: 'Member',
     };
 
     verifyHouseholdDataConsistency(userResponse);
@@ -203,6 +247,7 @@ describe('verifyHouseholdDataConsistency', () => {
       id: 'user-123',
       householdId: 'household-123',
       isGuest: false,
+      role: 'Member',
     };
 
     verifyHouseholdDataConsistency(userResponse);

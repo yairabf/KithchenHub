@@ -34,6 +34,23 @@
   "privacyPolicy": "מדיניות פרטיות",
   "termsOfService": "תנאי שירות",
   "opensExternalLink": "(נפתח בקישור חיצוני)",
+  "premium": {
+    "title": "פרימיום",
+    "cardTitle": "KitchenHub Premium",
+    "planFree": "חינם",
+    "planPremium": "פרימיום",
+    "statusLabel": "סטטוס",
+    "statusInactive": "לא פעיל",
+    "statusActive": "פעיל",
+    "statusTrialing": "בתקופת ניסיון",
+    "statusPastDue": "באיחור תשלום",
+    "statusCanceled": "בוטל",
+    "householdScope": "פרימיום חל על כל משק הבית שלך.",
+    "trialEndsLabel": "תקופת הניסיון מסתיימת",
+    "renewsLabel": "מתחדש בתאריך",
+    "expiresLabel": "הגישה פעילה עד",
+    "comingSoon": "חיוב, שדרוגים ושחזור רכישות יגיעו בקרוב."
+  },
   "householdMembers": {
     "mom": "אמא",
     "dad": "אבא",

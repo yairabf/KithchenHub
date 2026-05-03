@@ -34,6 +34,23 @@
   "privacyPolicy": "Privacy Policy",
   "termsOfService": "Terms of Service",
   "opensExternalLink": "(opens external link)",
+  "premium": {
+    "title": "Premium",
+    "cardTitle": "KitchenHub Premium",
+    "planFree": "Free",
+    "planPremium": "Premium",
+    "statusLabel": "Status",
+    "statusInactive": "Inactive",
+    "statusActive": "Active",
+    "statusTrialing": "Trialing",
+    "statusPastDue": "Past due",
+    "statusCanceled": "Canceled",
+    "householdScope": "Premium applies to your whole household.",
+    "trialEndsLabel": "Trial ends",
+    "renewsLabel": "Renews on",
+    "expiresLabel": "Access until",
+    "comingSoon": "Billing, upgrades, and restore controls are coming soon."
+  },
   "householdMembers": {
     "mom": "Mom",
     "dad": "Dad",

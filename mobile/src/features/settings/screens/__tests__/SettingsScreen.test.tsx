@@ -65,6 +65,21 @@ jest.mock('react-i18next', () => ({
         privacyPolicy: 'Privacy Policy',
         termsOfService: 'Terms of Service',
         opensExternalLink: '(opens external link)',
+        'premium.title': 'Premium',
+        'premium.cardTitle': 'KitchenHub Premium',
+        'premium.planFree': 'Free',
+        'premium.planPremium': 'Premium',
+        'premium.statusLabel': 'Status',
+        'premium.statusInactive': 'Inactive',
+        'premium.statusActive': 'Active',
+        'premium.statusTrialing': 'Trialing',
+        'premium.statusCanceled': 'Canceled',
+        'premium.statusPastDue': 'Past due',
+        'premium.householdScope': 'Premium applies to your whole household.',
+        'premium.trialEndsLabel': 'Trial ends',
+        'premium.renewsLabel': 'Renews on',
+        'premium.expiresLabel': 'Access until',
+        'premium.comingSoon': 'Billing, upgrades, and restore controls are coming soon.',
         deleteAccount: 'Delete account',
         deleteAccountConfirmTitle: 'Delete account?',
         deleteAccountConfirmMessage:
@@ -165,6 +180,35 @@ describe('SettingsScreen', () => {
   afterAll(() => {
     consoleWarnSpy.mockRestore();
     alertSpy.mockRestore();
+  });
+
+  it('renders the premium settings surface for a free household by default', () => {
+    const { getByText } = render(<SettingsScreen />);
+
+    expect(getByText('Premium')).toBeTruthy();
+    expect(getByText('Free')).toBeTruthy();
+    expect(getByText('Status: Inactive')).toBeTruthy();
+  });
+
+  it('renders the premium settings surface using the authenticated household premium summary', () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      ...defaultAuthContext,
+      user: {
+        ...defaultAuthContext.user,
+        premium: {
+          isPremium: true,
+          status: 'trialing',
+          trialEndsAt: '2026-05-08T00:00:00.000Z',
+          currentPeriodEndsAt: null,
+        },
+      },
+    });
+
+    const { getAllByText, getByText } = render(<SettingsScreen />);
+
+    expect(getAllByText('Premium').length).toBeGreaterThanOrEqual(1);
+    expect(getByText('Status: Trialing')).toBeTruthy();
+    expect(getByText('Trial ends: May 8, 2026')).toBeTruthy();
   });
 
   describe('Language selector', () => {

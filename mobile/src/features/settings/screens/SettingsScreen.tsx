@@ -28,6 +28,7 @@ import { openLegalUrl } from '../../../common/utils/legalLinks';
 import { useLegalLinks } from '../../../contexts/LegalLinksContext';
 import { accountService } from '../services/accountService';
 import { getDeleteAccountErrorMessage } from '../utils/errorMessages';
+import { PremiumSection } from '../components/PremiumSection';
 
 /** Set to true when push notifications are implemented. */
 const SHOW_PUSH_NOTIFICATIONS_SETTING = false;
@@ -188,6 +189,8 @@ export function SettingsScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        <PremiumSection premium={user?.premium} />
 
         {/* Notifications Section - hidden until push notifications are implemented */}
         {SHOW_PUSH_NOTIFICATIONS_SETTING && (
