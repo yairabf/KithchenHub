@@ -6,6 +6,7 @@ import { HouseholdsService } from '../../../households/services/households.servi
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service';
 import { UuidService } from '../../../../common/services/uuid.service';
 import { EmailService } from '../email.service';
+import { SubscriptionsService } from '../../../subscriptions/services/subscriptions.service';
 import { RegisterDto } from '../../dtos';
 import { JwtService } from '@nestjs/jwt';
 
@@ -52,6 +53,16 @@ describe('AuthService - Register', () => {
     sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockSubscriptionsService = {
+    getSummaryForHousehold: jest.fn().mockResolvedValue({
+      planKey: 'free',
+      status: 'inactive',
+      entitlements: [],
+      trialEndsAt: null,
+      currentPeriodEndsAt: null,
+    }),
+  };
+
   const mockConfigService = {
     get: jest.fn(),
   };
@@ -90,6 +101,7 @@ describe('AuthService - Register', () => {
         { provide: UuidService, useValue: mockUuidService },
         { provide: HouseholdsService, useValue: mockHouseholdsService },
         { provide: EmailService, useValue: mockEmailService },
+        { provide: SubscriptionsService, useValue: mockSubscriptionsService },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();

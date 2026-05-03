@@ -34,6 +34,23 @@
   "privacyPolicy": "מדיניות פרטיות",
   "termsOfService": "תנאי שירות",
   "opensExternalLink": "(נפתח בקישור חיצוני)",
+  "premium": {
+    "title": "פרימיום",
+    "cardTitle": "KitchenHub Premium",
+    "planFree": "תוכנית חינמית",
+    "planPremium": "תוכנית פרימיום",
+    "statusLabel": "סטטוס",
+    "statusInactive": "לא פעיל",
+    "statusActive": "פעיל",
+    "statusTrialing": "בתקופת ניסיון",
+    "statusPastDue": "תשלום באיחור",
+    "statusCanceled": "בוטל",
+    "description": "פתחו יכולות בית חכמות מבוססות AI.",
+    "featureVoiceAdd": "הוספת מצרכים קולית",
+    "featureSmartMatching": "התאמת מצרכים חכמה",
+    "featureRecipeImport": "ייבוא מתכונים בעזרת AI",
+    "comingSoon": "שדרוג וניהול חיוב יתווספו בקרוב."
+  },
   "householdMembers": {
     "mom": "אמא",
     "dad": "אבא",

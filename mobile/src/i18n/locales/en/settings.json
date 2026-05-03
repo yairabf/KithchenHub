@@ -34,6 +34,23 @@
   "privacyPolicy": "Privacy Policy",
   "termsOfService": "Terms of Service",
   "opensExternalLink": "(opens external link)",
+  "premium": {
+    "title": "Premium",
+    "cardTitle": "KitchenHub Premium",
+    "planFree": "Free plan",
+    "planPremium": "Premium plan",
+    "statusLabel": "Status",
+    "statusInactive": "Inactive",
+    "statusActive": "Active",
+    "statusTrialing": "Trialing",
+    "statusPastDue": "Past due",
+    "statusCanceled": "Canceled",
+    "description": "Unlock AI-powered household features.",
+    "featureVoiceAdd": "Voice grocery add",
+    "featureSmartMatching": "Smart grocery matching",
+    "featureRecipeImport": "AI recipe import",
+    "comingSoon": "Upgrade and billing controls are coming soon."
+  },
   "householdMembers": {
     "mom": "Mom",
     "dad": "Dad",

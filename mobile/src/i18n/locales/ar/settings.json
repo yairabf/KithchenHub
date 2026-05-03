@@ -34,6 +34,23 @@
   "privacyPolicy": "سياسة الخصوصية",
   "termsOfService": "شروط الخدمة",
   "opensExternalLink": "(يفتح في رابط خارجي)",
+  "premium": {
+    "title": "بريميوم",
+    "cardTitle": "KitchenHub Premium",
+    "planFree": "الخطة المجانية",
+    "planPremium": "خطة بريميوم",
+    "statusLabel": "الحالة",
+    "statusInactive": "غير نشط",
+    "statusActive": "نشط",
+    "statusTrialing": "فترة تجريبية",
+    "statusPastDue": "دفعة متأخرة",
+    "statusCanceled": "ملغاة",
+    "description": "افتح ميزات منزلية ذكية مدعومة بالذكاء الاصطناعي.",
+    "featureVoiceAdd": "إضافة البقالة بالصوت",
+    "featureSmartMatching": "مطابقة ذكية للبقالة",
+    "featureRecipeImport": "استيراد الوصفات بالذكاء الاصطناعي",
+    "comingSoon": "سيتم توفير الترقية وإدارة الفوترة قريبًا."
+  },
   "householdMembers": {
     "mom": "الأم",
     "dad": "الأب",

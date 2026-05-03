@@ -1,3 +1,11 @@
+export class SubscriptionSummaryDto {
+  planKey: string;
+  status: string;
+  entitlements: string[];
+  trialEndsAt: string | null;
+  currentPeriodEndsAt: string | null;
+}
+
 export class UserResponseDto {
   id: string;
   email?: string;
@@ -6,6 +14,7 @@ export class UserResponseDto {
   role: string;
   isGuest: boolean;
   householdId?: string | null;
+  subscription?: SubscriptionSummaryDto;
 }
 
 export class HouseholdSummaryDto {

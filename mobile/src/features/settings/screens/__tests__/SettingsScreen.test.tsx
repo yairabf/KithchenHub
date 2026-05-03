@@ -78,6 +78,22 @@ jest.mock('react-i18next', () => ({
         deleteAccountErrorRateLimit: 'Too many attempts. Please wait a moment and try again.',
         deleteAccountErrorServer: 'Server error while deleting your account. Please try again shortly.',
         deleteAccountErrorGeneric: 'Something went wrong while deleting your account. Please try again.',
+        premium: 'Premium',
+        'premium.title': 'Premium',
+        'premium.cardTitle': 'KitchenHub Premium',
+        'premium.planFree': 'Free plan',
+        'premium.planPremium': 'Premium plan',
+        'premium.statusLabel': 'Status',
+        'premium.statusInactive': 'Inactive',
+        'premium.statusActive': 'Active',
+        'premium.statusTrialing': 'Trialing',
+        'premium.statusPastDue': 'Past due',
+        'premium.statusCanceled': 'Canceled',
+        'premium.description': 'Unlock AI-powered household features.',
+        'premium.featureVoiceAdd': 'Voice grocery add',
+        'premium.featureSmartMatching': 'Smart grocery matching',
+        'premium.featureRecipeImport': 'AI recipe import',
+        'premium.comingSoon': 'Upgrade and billing controls are coming soon.',
       }[key] ?? key),
     i18n: { language: 'en', dir: () => 'ltr' },
   }),
@@ -146,7 +162,18 @@ describe('SettingsScreen', () => {
   const alertSpy = jest.spyOn(Alert, 'alert');
 
   const defaultAuthContext = {
-    user: { id: '1', email: 'test@example.com', name: 'Test User', isGuest: false, role: 'Admin' },
+    user: {
+      id: '1',
+      email: 'test@example.com',
+      name: 'Test User',
+      isGuest: false,
+      role: 'Admin',
+      subscription: {
+        planKey: 'free',
+        status: 'inactive',
+        entitlements: [],
+      },
+    },
     signOut: mockSignOut,
   };
 
@@ -168,6 +195,14 @@ describe('SettingsScreen', () => {
   });
 
   describe('Language selector', () => {
+    it('renders the premium section for a free user', () => {
+      const { getByText } = render(<SettingsScreen />);
+
+      expect(getByText('Premium')).toBeTruthy();
+      expect(getByText('Free plan')).toBeTruthy();
+      expect(getByText('Status: Inactive')).toBeTruthy();
+    });
+
     it('renders Language row with current language native name (English)', () => {
       const { getAllByText, getByText } = render(<SettingsScreen />);
       expect(getAllByText('Language').length).toBeGreaterThanOrEqual(1);

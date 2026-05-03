@@ -16,6 +16,13 @@ export interface UserResponse {
     name: string;
     createdAt: string;
   };
+  subscription?: {
+    planKey: string;
+    status: string;
+    entitlements: string[];
+    trialEndsAt?: string | null;
+    currentPeriodEndsAt?: string | null;
+  };
 }
 
 /**

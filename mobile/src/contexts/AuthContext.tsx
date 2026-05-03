@@ -32,6 +32,13 @@ export interface User {
   householdId?: string;
   isGuest: boolean;
   role: string;
+  subscription?: {
+    planKey: string;
+    status: string;
+    entitlements: string[];
+    trialEndsAt?: string | null;
+    currentPeriodEndsAt?: string | null;
+  };
 }
 
 interface AuthContextType {
@@ -70,6 +77,34 @@ function isTransientSessionError(error: unknown): boolean {
   );
 }
 
+function mapAuthUserToStoredUser(response: {
+  id: string;
+  email?: string;
+  name?: string;
+  avatarUrl?: string;
+  householdId?: string | null;
+  isGuest: boolean;
+  role: string;
+  subscription?: {
+    planKey: string;
+    status: string;
+    entitlements: string[];
+    trialEndsAt?: string | null;
+    currentPeriodEndsAt?: string | null;
+  };
+}): User {
+  return {
+    id: response.id,
+    email: response.email || '',
+    name: response.name || 'Kitchen User',
+    avatarUrl: response.avatarUrl,
+    householdId: response.householdId || undefined,
+    isGuest: response.isGuest,
+    role: response.role,
+    subscription: response.subscription,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,15 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authApi.getCurrentUser();
 
-      return {
-        id: response.id,
-        email: response.email || '',
-        name: response.name || 'Kitchen User',
-        avatarUrl: response.avatarUrl,
-        householdId: response.householdId || undefined,
-        isGuest: response.isGuest,
-        role: response.role,
-      };
+      return mapAuthUserToStoredUser(response);
     } catch (error) {
       logger.error('Error fetching current user:', error);
       throw new Error('Failed to fetch user information');
@@ -151,15 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Fetch current user from backend to ensure session is valid
           const userData = await authApi.getCurrentUser();
           logger.debug('[AuthContext] Startup restore via /auth/me succeeded');
-          const userToSet: User = {
-            id: userData.id,
-            email: userData.email || '',
-            name: userData.name || 'Kitchen User',
-            avatarUrl: userData.avatarUrl,
-            householdId: userData.householdId || undefined,
-            isGuest: userData.isGuest,
-            role: userData.role,
-          };
+          const userToSet = mapAuthUserToStoredUser(userData);
           setUser(userToSet);
           didRestoreAuthenticatedUser = true;
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userToSet));
@@ -174,15 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               logger.debug('[AuthContext] Refresh succeeded, loading user again');
               try {
                 const refreshedUser = await authApi.getCurrentUser();
-                const refreshedUserToSet: User = {
-                  id: refreshedUser.id,
-                  email: refreshedUser.email || '',
-                  name: refreshedUser.name || 'Kitchen User',
-                  avatarUrl: refreshedUser.avatarUrl,
-                  householdId: refreshedUser.householdId || undefined,
-                  isGuest: refreshedUser.isGuest,
-                  role: refreshedUser.role,
-                };
+                const refreshedUserToSet = mapAuthUserToStoredUser(refreshedUser);
                 setUser(refreshedUserToSet);
                 didRestoreAuthenticatedUser = true;
                 await AsyncStorage.setItem(
@@ -505,15 +516,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       api.setAuthToken(response.accessToken);
 
       // Map user data
-      const userData: User = {
-        id: response.user.id,
-        email: response.user.email || '',
-        name: response.user.name || 'Kitchen User',
-        avatarUrl: response.user.avatarUrl,
-        householdId: response.user.householdId || undefined,
-        isGuest: response.user.isGuest,
-        role: response.user.role,
-      };
+      const userData = mapAuthUserToStoredUser(response.user);
 
       // Save user data
       try {

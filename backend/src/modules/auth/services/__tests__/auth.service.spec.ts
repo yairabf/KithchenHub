@@ -7,6 +7,7 @@ import { HouseholdsService } from '../../../households/services/households.servi
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service';
 import { UuidService } from '../../../../common/services/uuid.service';
 import { EmailService } from '../email.service';
+import { SubscriptionsService } from '../../../subscriptions/services/subscriptions.service';
 import { SyncDataDto, UserCreationHouseholdDto } from '../../dtos';
 
 /** Interface used to cast AuthService when testing private methods (avoids intersection with private members). */
@@ -86,6 +87,16 @@ describe('AuthService - Idempotency', () => {
     sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockSubscriptionsService = {
+    getSummaryForHousehold: jest.fn().mockResolvedValue({
+      planKey: 'free',
+      status: 'inactive',
+      entitlements: [],
+      trialEndsAt: null,
+      currentPeriodEndsAt: null,
+    }),
+  };
+
   const userId = 'user-123';
   const householdId = 'household-123';
   const mockUser = {
@@ -123,6 +134,10 @@ describe('AuthService - Idempotency', () => {
           provide: EmailService,
           useValue: mockEmailService,
         },
+        {
+          provide: SubscriptionsService,
+          useValue: mockSubscriptionsService,
+        },
       ],
     }).compile();
 
@@ -136,6 +151,36 @@ describe('AuthService - Idempotency', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('getCurrentUser', () => {
+    it('includes subscription summary in the user response', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        avatarUrl: null,
+        role: 'Admin',
+        isGuest: false,
+        household: null,
+      });
+
+      mockSubscriptionsService.getSummaryForHousehold.mockResolvedValue({
+        planKey: 'premium',
+        status: 'active',
+        entitlements: ['ai_voice_add'],
+        trialEndsAt: null,
+        currentPeriodEndsAt: null,
+      });
+
+      await expect(service.getCurrentUser(userId)).resolves.toMatchObject({
+        id: userId,
+        householdId,
+        subscription: {
+          planKey: 'premium',
+          status: 'active',
+          entitlements: ['ai_voice_add'],
+        },
+      });
+    });
   });
 
   describe('processEntityWithIdempotency - atomic idempotency checking', () => {

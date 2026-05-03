@@ -17,6 +17,7 @@ import { UuidService } from '../../../common/services/uuid.service';
 import { EmailService } from './email.service';
 import { loadConfiguration } from '../../../config/configuration';
 import { User, Household } from '@prisma/client';
+import { SubscriptionsService } from '../../subscriptions/services/subscriptions.service';
 import {
   GoogleAuthDto,
   SyncDataDto,
@@ -89,6 +90,7 @@ export class AuthService {
     private uuidService: UuidService,
     private householdsService: HouseholdsService,
     private emailService: EmailService,
+    private subscriptionsService: SubscriptionsService,
   ) {
     const config = loadConfiguration();
     if (config.google.clientId && config.google.clientSecret) {
@@ -160,7 +162,7 @@ export class AuthService {
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        user: this.mapUserToResponse(user),
+        user: await this.mapUserToResponse(user),
         householdId: user.householdId,
         isNewUser,
         isNewHousehold,
@@ -287,7 +289,7 @@ export class AuthService {
       return {
         accessToken: jwtTokens.accessToken,
         refreshToken: jwtTokens.refreshToken,
-        user: this.mapUserToResponse(user),
+        user: await this.mapUserToResponse(user),
         householdId: user.householdId,
         isNewUser,
         isNewHousehold,
@@ -1267,9 +1269,13 @@ export class AuthService {
   /**
    * Maps user entity to response DTO.
    */
-  private mapUserToResponse(
+  private async mapUserToResponse(
     user: User & { household: Household | null },
-  ): UserResponseDto {
+  ): Promise<UserResponseDto> {
+    const subscription = await this.subscriptionsService.getSummaryForHousehold(
+      user.householdId,
+    );
+
     return {
       id: user.id,
       email: user.email ?? undefined,
@@ -1278,6 +1284,7 @@ export class AuthService {
       role: user.role,
       isGuest: user.isGuest,
       householdId: user.householdId,
+      subscription,
     };
   }
 
@@ -1391,7 +1398,7 @@ export class AuthService {
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: this.mapUserToResponse(userWithHousehold),
+      user: await this.mapUserToResponse(userWithHousehold),
       householdId: userWithHousehold.householdId,
       isNewUser: false,
       isNewHousehold: false,
@@ -1435,7 +1442,7 @@ export class AuthService {
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: this.mapUserToResponse(verifiedUser),
+      user: await this.mapUserToResponse(verifiedUser),
       householdId: verifiedUser.householdId,
       isNewUser: true,
       isNewHousehold: false,
