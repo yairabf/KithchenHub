@@ -885,9 +885,9 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
             updatedAt: new Date(),
           },
         ] as any);
-      jest.spyOn(service, 'getCatalogDisplayNames').mockResolvedValue([
-        { id: 'catalog-1', name: 'חלב' },
-      ]);
+      jest
+        .spyOn(service, 'getCatalogDisplayNames')
+        .mockResolvedValue([{ id: 'catalog-1', name: 'חלב' }]);
 
       const result = await service.getFrequentItems(mockHouseholdId, 10, 'he');
 
@@ -895,7 +895,10 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
         mockHouseholdId,
         10,
       );
-      expect(service.getCatalogDisplayNames).toHaveBeenCalledWith(['catalog-1'], 'he');
+      expect(service.getCatalogDisplayNames).toHaveBeenCalledWith(
+        ['catalog-1'],
+        'he',
+      );
       expect(result).toEqual({
         items: [
           {
