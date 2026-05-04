@@ -6,6 +6,8 @@ import { PremiumPaywallScreen } from '../PremiumPaywallScreen';
 const mockGetOfferings = jest.fn();
 const mockPurchasePackage = jest.fn();
 const mockRestorePurchases = jest.fn();
+const mockReconcileCustomerState = jest.fn();
+const mockRefreshUser = jest.fn();
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -42,6 +44,19 @@ jest.mock('../../services/purchaseService', () => ({
     purchasePackage: (...args: unknown[]) => mockPurchasePackage(...args),
     restorePurchases: (...args: unknown[]) => mockRestorePurchases(...args),
   },
+}));
+
+jest.mock('../../services/subscriptionApi', () => ({
+  subscriptionApi: {
+    reconcileCustomerState: (...args: unknown[]) =>
+      mockReconcileCustomerState(...args),
+  },
+}));
+
+jest.mock('../../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    refreshUser: (...args: unknown[]) => mockRefreshUser(...args),
+  }),
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -85,6 +100,8 @@ describe('PremiumPaywallScreen', () => {
         latestExpirationDate: '2026-06-01T00:00:00.000Z',
       },
     });
+    mockReconcileCustomerState.mockResolvedValue({ accepted: true, reconciled: true });
+    mockRefreshUser.mockResolvedValue(undefined);
     jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   });
 
@@ -112,6 +129,15 @@ describe('PremiumPaywallScreen', () => {
     await waitFor(() => {
       expect(mockPurchasePackage).toHaveBeenCalledWith('monthly');
     });
+
+    expect(mockReconcileCustomerState).toHaveBeenCalledWith('revenuecat', {
+      appUserId: 'household-user',
+      originalAppUserId: 'household-user',
+      activeEntitlementIds: ['premium'],
+      activeSubscriptionProductIds: ['kitchenhub.monthly'],
+      latestExpirationDate: '2026-06-01T00:00:00.000Z',
+    });
+    expect(mockRefreshUser).toHaveBeenCalledTimes(1);
   });
 
   it('starts restore flow when pressing Restore purchases', async () => {
@@ -122,5 +148,14 @@ describe('PremiumPaywallScreen', () => {
     await waitFor(() => {
       expect(mockRestorePurchases).toHaveBeenCalledTimes(1);
     });
+
+    expect(mockReconcileCustomerState).toHaveBeenCalledWith('revenuecat', {
+      appUserId: 'household-user',
+      originalAppUserId: 'household-user',
+      activeEntitlementIds: ['premium'],
+      activeSubscriptionProductIds: ['kitchenhub.monthly'],
+      latestExpirationDate: '2026-06-01T00:00:00.000Z',
+    });
+    expect(mockRefreshUser).toHaveBeenCalledTimes(1);
   });
 });
