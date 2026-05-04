@@ -7,6 +7,30 @@ It should stay short and practical.
 
 ## Current important workstreams
 
+### 0. Premium foundation (subscriptions + entitlement gating)
+Status: active implementation stream
+
+Current state:
+- household premium foundation is in place across backend + mobile
+- webhook sync/reconciliation + support override + entitlement guard are implemented
+- Settings now includes a premium-gated demo placeholder slice for verification
+- E2E verification runbook added for Tasks 10–18 validation
+
+Primary references:
+- `docs/implementation/premium-foundation-e2e-runbook.md`
+- `backend/src/modules/subscriptions/`
+- `backend/src/common/guards/entitlement.guard.ts`
+- `backend/src/modules/premium-demo/`
+- `mobile/src/features/subscription/`
+- `mobile/src/features/settings/components/PremiumDemoSection.tsx`
+
+Important instruction for future LLMs:
+- keep premium checks household-scoped
+- prefer extending the existing entitlement guard/decorator model
+- preserve visible in-UI placeholders for backend-dependent premium surfaces
+
+---
+
 ### 1. Production stabilization and QA bug fixing
 Status: active top-priority workstream
 
