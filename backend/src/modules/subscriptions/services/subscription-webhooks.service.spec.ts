@@ -40,7 +40,9 @@ describe('SubscriptionWebhooksService', () => {
       ],
     }).compile();
 
-    service = module.get<SubscriptionWebhooksService>(SubscriptionWebhooksService);
+    service = module.get<SubscriptionWebhooksService>(
+      SubscriptionWebhooksService,
+    );
     jest.clearAllMocks();
   });
 
@@ -70,7 +72,9 @@ describe('SubscriptionWebhooksService', () => {
       eventId: 'existing-event',
     });
 
-    expect(mockSubscriptionsRepository.createBillingEvent).not.toHaveBeenCalled();
+    expect(
+      mockSubscriptionsRepository.createBillingEvent,
+    ).not.toHaveBeenCalled();
     expect(
       mockSubscriptionsRepository.upsertHouseholdSubscription,
     ).not.toHaveBeenCalled();
@@ -91,7 +95,9 @@ describe('SubscriptionWebhooksService', () => {
     });
 
     mockSubscriptionsRepository.findBillingEvent.mockResolvedValue(null);
-    mockSubscriptionsRepository.findUserHouseholdId.mockResolvedValue('household-1');
+    mockSubscriptionsRepository.findUserHouseholdId.mockResolvedValue(
+      'household-1',
+    );
     mockSubscriptionsRepository.createBillingEvent.mockResolvedValue({
       id: 'event-2',
     });

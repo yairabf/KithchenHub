@@ -26,10 +26,13 @@ export class SubscriptionReconciliationService {
     customerState: ReconcileCustomerStateInput,
   ): Promise<ReconcileCustomerStateResult> {
     if (provider !== 'revenuecat') {
-      throw new BadRequestException(`Unsupported billing provider: ${provider}`);
+      throw new BadRequestException(
+        `Unsupported billing provider: ${provider}`,
+      );
     }
 
-    const householdId = await this.subscriptionsRepository.findUserHouseholdId(userId);
+    const householdId =
+      await this.subscriptionsRepository.findUserHouseholdId(userId);
     if (!householdId) {
       return { accepted: false, reconciled: false };
     }
@@ -62,7 +65,10 @@ export class SubscriptionReconciliationService {
     }
 
     const normalizedProductId = productId.toLowerCase();
-    if (normalizedProductId.includes('year') || normalizedProductId.includes('annual')) {
+    if (
+      normalizedProductId.includes('year') ||
+      normalizedProductId.includes('annual')
+    ) {
       return 'yearly';
     }
 

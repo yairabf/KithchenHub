@@ -28,15 +28,21 @@ describe('SubscriptionReconciliationService', () => {
   });
 
   it('upserts active premium subscription snapshot for revenuecat customer state', async () => {
-    mockSubscriptionsRepository.findUserHouseholdId.mockResolvedValue('household-1');
+    mockSubscriptionsRepository.findUserHouseholdId.mockResolvedValue(
+      'household-1',
+    );
 
-    const result = await service.reconcileCustomerState('user-1', 'revenuecat', {
-      appUserId: 'user-1',
-      originalAppUserId: 'user-1',
-      activeEntitlementIds: ['premium'],
-      activeSubscriptionProductIds: ['kitchenhub_premium_monthly'],
-      latestExpirationDate: '2026-05-30T00:00:00.000Z',
-    });
+    const result = await service.reconcileCustomerState(
+      'user-1',
+      'revenuecat',
+      {
+        appUserId: 'user-1',
+        originalAppUserId: 'user-1',
+        activeEntitlementIds: ['premium'],
+        activeSubscriptionProductIds: ['kitchenhub_premium_monthly'],
+        latestExpirationDate: '2026-05-30T00:00:00.000Z',
+      },
+    );
 
     expect(result).toEqual({ accepted: true, reconciled: true });
     expect(

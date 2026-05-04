@@ -37,6 +37,12 @@ export async function cleanupTestUserData(
         where: { householdId },
       });
 
+      // Delete item frequency snapshots before custom items to avoid check-constraint violations
+      // when custom-item relations are nulled during deletion.
+      await prisma.householdItemFrequency.deleteMany({
+        where: { householdId },
+      });
+
       // Delete custom items (household-scoped)
       await prisma.customItem.deleteMany({
         where: { householdId },

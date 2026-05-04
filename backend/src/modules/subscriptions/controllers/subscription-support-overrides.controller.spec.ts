@@ -41,14 +41,16 @@ describe('SubscriptionSupportOverridesController', () => {
       expiresAt: '2026-06-01T00:00:00.000Z',
     };
 
-    mockSubscriptionSupportOverridesService.setPremiumOverride.mockResolvedValue({
-      householdId: 'household-1',
-      key: 'premium_status',
-      isPremium: true,
-      source: 'support',
-      reason: 'manual support grant',
-      expiresAt: '2026-06-01T00:00:00.000Z',
-    });
+    mockSubscriptionSupportOverridesService.setPremiumOverride.mockResolvedValue(
+      {
+        householdId: 'household-1',
+        key: 'premium_status',
+        isPremium: true,
+        source: 'support',
+        reason: 'manual support grant',
+        expiresAt: '2026-06-01T00:00:00.000Z',
+      },
+    );
 
     await expect(
       controller.setPremiumOverride('household-1', user, payload),
@@ -73,9 +75,11 @@ describe('SubscriptionSupportOverridesController', () => {
       email: 'user@example.com',
     };
 
-    mockSubscriptionSupportOverridesService.clearPremiumOverride.mockResolvedValue({
-      cleared: true,
-    });
+    mockSubscriptionSupportOverridesService.clearPremiumOverride.mockResolvedValue(
+      {
+        cleared: true,
+      },
+    );
 
     await expect(
       controller.clearPremiumOverride('household-1', user),
