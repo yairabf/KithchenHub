@@ -84,7 +84,12 @@ export function PremiumPaywallScreen() {
   }, [purchaseUnavailable]);
 
   const handleStartTrial = async () => {
-    if (purchaseUnavailable || isPurchasing || isRestoring) {
+    if (purchaseUnavailable) {
+      Alert.alert('Premium', t('premium.purchaseUnavailable'));
+      return;
+    }
+
+    if (isPurchasing || isRestoring) {
       return;
     }
 
@@ -105,7 +110,12 @@ export function PremiumPaywallScreen() {
   };
 
   const handleRestorePurchases = async () => {
-    if (purchaseUnavailable || isPurchasing || isRestoring) {
+    if (purchaseUnavailable) {
+      Alert.alert('Premium', t('premium.purchaseUnavailable'));
+      return;
+    }
+
+    if (isPurchasing || isRestoring) {
       return;
     }
 
@@ -173,7 +183,7 @@ export function PremiumPaywallScreen() {
           style={styles.primaryButton}
           activeOpacity={0.85}
           onPress={handleStartTrial}
-          disabled={purchaseUnavailable || isPurchasing || isRestoring}
+          disabled={isPurchasing || isRestoring}
         >
           <Text style={styles.primaryButtonText}>{t('premium.startTrialCta')}</Text>
         </TouchableOpacity>
@@ -182,7 +192,7 @@ export function PremiumPaywallScreen() {
           style={styles.secondaryButton}
           activeOpacity={0.85}
           onPress={handleRestorePurchases}
-          disabled={purchaseUnavailable || isPurchasing || isRestoring}
+          disabled={isPurchasing || isRestoring}
         >
           <Text style={styles.secondaryButtonText}>
             {t('premium.restorePurchasesCta')}
