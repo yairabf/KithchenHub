@@ -26,8 +26,9 @@ describe('SubscriptionWebhooksController', () => {
     jest.clearAllMocks();
   });
 
-  it('delegates provider webhook payloads to subscription webhook service', async () => {
+  it('delegates provider webhook payloads and headers to subscription webhook service', async () => {
     const payload = { event: { id: 'evt_1' } };
+    const headers = { 'x-revenuecat-signature': 'signature-value' };
     mockSubscriptionWebhooksService.processWebhook.mockResolvedValue({
       accepted: true,
       duplicate: false,
@@ -35,7 +36,7 @@ describe('SubscriptionWebhooksController', () => {
     });
 
     await expect(
-      controller.handleProviderWebhook('revenuecat', payload),
+      controller.handleProviderWebhook('revenuecat', payload, headers),
     ).resolves.toEqual({
       accepted: true,
       duplicate: false,
@@ -45,6 +46,7 @@ describe('SubscriptionWebhooksController', () => {
     expect(mockSubscriptionWebhooksService.processWebhook).toHaveBeenCalledWith(
       'revenuecat',
       payload,
+      headers,
     );
   });
 });

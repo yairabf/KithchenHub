@@ -67,4 +67,36 @@ describe('validateEnv', () => {
 
     expect(() => validateEnv()).toThrow('Invalid environment variables');
   });
+
+  it('rejects env when webhook auth header is set without webhook auth secret', () => {
+    process.env = buildBaseEnv({
+      SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER: 'x-revenuecat-signature',
+      SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET: undefined,
+    }) as Record<string, string>;
+
+    expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
+
+  it('rejects env when webhook auth secret is set without webhook auth header', () => {
+    process.env = buildBaseEnv({
+      SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER: undefined,
+      SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET: 'secret',
+    }) as Record<string, string>;
+
+    expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
+
+  it('accepts env when webhook auth header and secret are both set', () => {
+    process.env = buildBaseEnv({
+      SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER: 'x-revenuecat-signature',
+      SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET: 'secret',
+    }) as Record<string, string>;
+
+    const env = validateEnv();
+
+    expect(env.SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER).toBe(
+      'x-revenuecat-signature',
+    );
+    expect(env.SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET).toBe('secret');
+  });
 });

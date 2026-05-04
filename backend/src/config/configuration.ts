@@ -34,6 +34,12 @@ export interface AppConfig {
     level: string;
     format: 'json' | 'pretty';
   };
+  subscriptions?: {
+    revenuecat?: {
+      webhookAuthHeader?: string;
+      webhookAuthSecret?: string;
+    };
+  };
   sentry?: {
     dsn?: string;
     environment?: string;
@@ -108,6 +114,14 @@ export const loadConfiguration = (): AppConfig => {
       level: env.LOG_LEVEL,
       format: env.LOG_FORMAT,
     },
+    subscriptions: {
+      revenuecat: {
+        webhookAuthHeader:
+          env.SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER?.trim() || undefined,
+        webhookAuthSecret:
+          env.SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET?.trim() || undefined,
+      },
+    },
     sentry: env.SENTRY_DSN
       ? {
           dsn: env.SENTRY_DSN,
@@ -132,3 +146,7 @@ export const loadConfiguration = (): AppConfig => {
 
   return config;
 };
+
+export function resetConfigurationCacheForTests(): void {
+  config = null;
+}
