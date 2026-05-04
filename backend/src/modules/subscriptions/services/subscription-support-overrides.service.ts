@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { SubscriptionsRepository } from '../repositories/subscriptions.repository';
 import { PREMIUM_STATUS_OVERRIDE_KEY } from './subscriptions.service';
 import { SetPremiumOverrideDto } from '../dtos/set-premium-override.dto';
@@ -62,12 +66,17 @@ export class SubscriptionSupportOverridesService {
     return parsed;
   }
 
-  private async assertAdminOnHousehold(actorUserId: string, householdId: string) {
+  private async assertAdminOnHousehold(
+    actorUserId: string,
+    householdId: string,
+  ) {
     const membership =
       await this.subscriptionsRepository.findUserMembership(actorUserId);
 
     if (!membership || membership.householdId !== householdId) {
-      throw new ForbiddenException('You are not allowed to manage this household');
+      throw new ForbiddenException(
+        'You are not allowed to manage this household',
+      );
     }
 
     if (membership.role !== 'Admin') {

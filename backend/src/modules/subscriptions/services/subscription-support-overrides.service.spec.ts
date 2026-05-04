@@ -35,14 +35,16 @@ describe('SubscriptionSupportOverridesService', () => {
       role: 'Admin',
     });
 
-    mockSubscriptionsRepository.upsertHouseholdEntitlementOverride.mockResolvedValue({
-      householdId: 'household-1',
-      key: 'premium_status',
-      isEnabled: true,
-      source: 'support',
-      reason: 'manual support grant',
-      expiresAt: new Date('2026-06-01T00:00:00.000Z'),
-    });
+    mockSubscriptionsRepository.upsertHouseholdEntitlementOverride.mockResolvedValue(
+      {
+        householdId: 'household-1',
+        key: 'premium_status',
+        isEnabled: true,
+        source: 'support',
+        reason: 'manual support grant',
+        expiresAt: new Date('2026-06-01T00:00:00.000Z'),
+      },
+    );
 
     await expect(
       service.setPremiumOverride('user-1', 'household-1', {

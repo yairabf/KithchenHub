@@ -60,7 +60,9 @@ describe('EntitlementGuard', () => {
 
   it('throws when premium is not active for required premium entitlement', async () => {
     (mockReflector.getAllAndOverride as jest.Mock).mockReturnValue(['premium']);
-    (mockSubscriptionsService.getPremiumStatusForHousehold as jest.Mock).mockResolvedValue({
+    (
+      mockSubscriptionsService.getPremiumStatusForHousehold as jest.Mock
+    ).mockResolvedValue({
       isPremium: false,
     });
 
@@ -71,7 +73,9 @@ describe('EntitlementGuard', () => {
 
   it('allows when premium is active for required premium entitlement', async () => {
     (mockReflector.getAllAndOverride as jest.Mock).mockReturnValue(['premium']);
-    (mockSubscriptionsService.getPremiumStatusForHousehold as jest.Mock).mockResolvedValue({
+    (
+      mockSubscriptionsService.getPremiumStatusForHousehold as jest.Mock
+    ).mockResolvedValue({
       isPremium: true,
     });
 

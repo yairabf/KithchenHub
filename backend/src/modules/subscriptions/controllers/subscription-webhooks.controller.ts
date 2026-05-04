@@ -10,7 +10,10 @@ export class SubscriptionWebhooksController {
 
   @Public()
   @Post(':provider')
-  handleProviderWebhook(@Param('provider') provider: string, @Body() payload: unknown) {
+  handleProviderWebhook(
+    @Param('provider') provider: string,
+    @Body() payload: unknown,
+  ) {
     return this.subscriptionWebhooksService.processWebhook(provider, payload);
   }
 }

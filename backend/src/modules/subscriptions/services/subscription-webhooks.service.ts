@@ -60,9 +60,13 @@ export class SubscriptionWebhooksService {
       if (householdId && this.isPremiumEvent(normalizedEvent)) {
         await this.subscriptionsRepository.upsertHouseholdSubscription({
           householdId,
-          purchaserUserId: this.asValidUserId(normalizedEvent.providerAppUserId),
+          purchaserUserId: this.asValidUserId(
+            normalizedEvent.providerAppUserId,
+          ),
           planKey: PREMIUM_PLAN_KEY,
-          billingInterval: this.resolveBillingInterval(normalizedEvent.productId),
+          billingInterval: this.resolveBillingInterval(
+            normalizedEvent.productId,
+          ),
           status: this.resolveSubscriptionStatus(normalizedEvent.eventType),
           provider: normalizedEvent.provider,
           store: normalizedEvent.store,
@@ -85,10 +89,14 @@ export class SubscriptionWebhooksService {
         });
       }
 
-      await this.subscriptionsRepository.markBillingEventProcessed(createdEvent.id);
+      await this.subscriptionsRepository.markBillingEventProcessed(
+        createdEvent.id,
+      );
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown webhook processing error';
+        error instanceof Error
+          ? error.message
+          : 'Unknown webhook processing error';
       await this.subscriptionsRepository.markBillingEventFailed(
         createdEvent.id,
         errorMessage,
@@ -143,7 +151,9 @@ export class SubscriptionWebhooksService {
   }): boolean {
     return (
       normalizedEvent.entitlementKeys.includes(PREMIUM_PLAN_KEY) ||
-      Boolean(normalizedEvent.productId?.toLowerCase().includes(PREMIUM_PLAN_KEY))
+      Boolean(
+        normalizedEvent.productId?.toLowerCase().includes(PREMIUM_PLAN_KEY),
+      )
     );
   }
 

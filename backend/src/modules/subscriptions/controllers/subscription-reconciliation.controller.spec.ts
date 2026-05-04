@@ -42,10 +42,12 @@ describe('SubscriptionReconciliationController', () => {
       latestExpirationDate: null,
     };
 
-    mockSubscriptionReconciliationService.reconcileCustomerState.mockResolvedValue({
-      accepted: true,
-      reconciled: true,
-    });
+    mockSubscriptionReconciliationService.reconcileCustomerState.mockResolvedValue(
+      {
+        accepted: true,
+        reconciled: true,
+      },
+    );
 
     await expect(
       controller.reconcileProviderState('revenuecat', user, payload),

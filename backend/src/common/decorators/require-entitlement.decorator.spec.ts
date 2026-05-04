@@ -1,4 +1,7 @@
-import { REQUIRE_ENTITLEMENTS_KEY, RequireEntitlement } from './require-entitlement.decorator';
+import {
+  REQUIRE_ENTITLEMENTS_KEY,
+  RequireEntitlement,
+} from './require-entitlement.decorator';
 
 describe('RequireEntitlement', () => {
   it('stores required entitlement keys metadata', () => {
