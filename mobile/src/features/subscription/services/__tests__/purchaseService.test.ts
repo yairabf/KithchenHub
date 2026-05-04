@@ -27,6 +27,28 @@ describe('createPurchaseService', () => {
     expect(service).toBeInstanceOf(RevenueCatPurchaseService);
     expect(service.isAvailable()).toBe(true);
   });
+
+  it('returns a RevenueCat service when an SDK factory can resolve a configured native adapter', () => {
+    const sdk = createRevenueCatSdkStub();
+
+    const service = createPurchaseService({
+      platformOs: 'ios',
+      revenueCatApiKey: 'appl_test_key',
+      revenueCatSdkFactory: () => sdk,
+    });
+
+    expect(service).toBeInstanceOf(RevenueCatPurchaseService);
+    expect(service.isAvailable()).toBe(true);
+  });
+
+  it('returns an unavailable service on native when RevenueCat key is missing', () => {
+    const service = createPurchaseService({
+      platformOs: 'android',
+      revenueCatSdkFactory: () => createRevenueCatSdkStub(),
+    });
+
+    expect(service.isAvailable()).toBe(false);
+  });
 });
 
 describe('RevenueCatPurchaseService', () => {
