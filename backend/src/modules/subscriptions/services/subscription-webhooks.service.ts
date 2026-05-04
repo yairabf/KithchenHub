@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { loadConfiguration } from '../../../config/configuration';
 import { BillingProviderRegistryService } from '../providers/billing-provider-registry.service';
 import type { BillingProviderKey } from '../providers/billing-provider.types';
 import { SubscriptionsRepository } from '../repositories/subscriptions.repository';
@@ -17,6 +18,8 @@ export interface WebhookProcessingResult {
 
 @Injectable()
 export class SubscriptionWebhooksService {
+  private readonly logger = new Logger(SubscriptionWebhooksService.name);
+
   constructor(
     private readonly billingProviderRegistryService: BillingProviderRegistryService,
     private readonly subscriptionsRepository: SubscriptionsRepository,
@@ -25,7 +28,10 @@ export class SubscriptionWebhooksService {
   async processWebhook(
     provider: string,
     payload: unknown,
+    headers: Record<string, string | string[] | undefined> = {},
   ): Promise<WebhookProcessingResult> {
+    this.assertProviderWebhookIsAuthorized(provider, headers);
+
     const providerService =
       this.billingProviderRegistryService.getProvider(provider);
     const normalizedEvent = providerService.parseWebhookEvent(payload);
@@ -94,9 +100,11 @@ export class SubscriptionWebhooksService {
       );
     } catch (error) {
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Unknown webhook processing error';
+        error instanceof Error ? error.message : 'Unknown webhook processing error';
+      this.logger.error(
+        `Webhook processing failed for provider=${provider}, eventId=${createdEvent.id}`,
+        error instanceof Error ? error.stack : undefined,
+      );
       await this.subscriptionsRepository.markBillingEventFailed(
         createdEvent.id,
         errorMessage,
@@ -109,6 +117,37 @@ export class SubscriptionWebhooksService {
       duplicate: false,
       eventId: createdEvent.id,
     };
+  }
+
+  private assertProviderWebhookIsAuthorized(
+    provider: string,
+    headers: Record<string, string | string[] | undefined>,
+  ): void {
+    const config = loadConfiguration();
+
+    if (provider !== 'revenuecat') {
+      return;
+    }
+
+    const headerName = config.subscriptions?.revenuecat?.webhookAuthHeader;
+    const expectedSecret = config.subscriptions?.revenuecat?.webhookAuthSecret;
+
+    if (!headerName || !expectedSecret) {
+      return;
+    }
+
+    const normalizedHeaderName = headerName.toLowerCase();
+    const providedSecret = headers[normalizedHeaderName];
+    const providedSecretValue = Array.isArray(providedSecret)
+      ? providedSecret[0]
+      : providedSecret;
+
+    if (providedSecretValue !== expectedSecret) {
+      this.logger.warn(
+        `Rejected unauthorized webhook request for provider=${provider} (missing or invalid auth header: ${normalizedHeaderName})`,
+      );
+      throw new UnauthorizedException('Webhook authorization failed');
+    }
   }
 
   private async resolveHouseholdId(normalizedEvent: {

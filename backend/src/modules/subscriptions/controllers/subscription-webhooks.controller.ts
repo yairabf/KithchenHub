@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Headers, Param, Post } from '@nestjs/common';
 import { Public } from '../../../common/decorators';
 import { SubscriptionWebhooksService } from '../services/subscription-webhooks.service';
 
@@ -13,7 +13,12 @@ export class SubscriptionWebhooksController {
   handleProviderWebhook(
     @Param('provider') provider: string,
     @Body() payload: unknown,
+    @Headers() headers: Record<string, string | string[] | undefined>,
   ) {
-    return this.subscriptionWebhooksService.processWebhook(provider, payload);
+    return this.subscriptionWebhooksService.processWebhook(
+      provider,
+      payload,
+      headers,
+    );
   }
 }

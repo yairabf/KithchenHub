@@ -1,8 +1,26 @@
+import { UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BillingProviderRegistryService } from '../providers/billing-provider-registry.service';
 import type { BillingProviderService } from '../providers/billing-provider.interface';
 import { SubscriptionsRepository } from '../repositories/subscriptions.repository';
+import { resetConfigurationCacheForTests } from '../../../config/configuration';
 import { SubscriptionWebhooksService } from './subscription-webhooks.service';
+
+function buildBaseEnv(overrides: Record<string, string | undefined> = {}) {
+  return {
+    NODE_ENV: 'test',
+    PORT: '3000',
+    DATABASE_URL: 'postgresql://user:***@localhost:5432/db?schema=public',
+    JWT_SECRET: 'x'.repeat(32),
+    JWT_REFRESH_SECRET: 'y'.repeat(32),
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_ANON_KEY: 'anon-key',
+    AUTH_BACKEND_BASE_URL: 'http://localhost:3000',
+    AUTH_APP_SCHEME: 'kitchen-hub',
+    AUTH_STATE_SECRET: 'test-secret-key-for-validation-only',
+    ...overrides,
+  } as Record<string, string | undefined>;
+}
 
 describe('SubscriptionWebhooksService', () => {
   let service: SubscriptionWebhooksService;
@@ -25,7 +43,17 @@ describe('SubscriptionWebhooksService', () => {
     markBillingEventFailed: jest.fn(),
   };
 
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    resetConfigurationCacheForTests();
+  });
+
   beforeEach(async () => {
+    process.env = buildBaseEnv() as Record<string, string>;
+    resetConfigurationCacheForTests();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SubscriptionWebhooksService,
@@ -44,6 +72,22 @@ describe('SubscriptionWebhooksService', () => {
       SubscriptionWebhooksService,
     );
     jest.clearAllMocks();
+  });
+
+  it('rejects webhook when configured auth header secret does not match', async () => {
+    process.env = buildBaseEnv({
+      SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER: 'x-revenuecat-signature',
+      SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET: 'expected-secret',
+    }) as Record<string, string>;
+    resetConfigurationCacheForTests();
+
+    await expect(
+      service.processWebhook('revenuecat', { event: { id: 'evt_1' } }, {
+        'x-revenuecat-signature': 'wrong-secret',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(mockSubscriptionsRepository.findBillingEvent).not.toHaveBeenCalled();
   });
 
   it('returns duplicate response when provider event already exists', async () => {

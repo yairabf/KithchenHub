@@ -105,6 +105,8 @@ const envSchema = z
      */
     LEGAL_PRIVACY_POLICY_URL: z.string().url().optional(),
     LEGAL_TERMS_OF_SERVICE_URL: z.string().url().optional(),
+    SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER: z.string().min(1).optional(),
+    SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET: z.string().min(1).optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.AUTH_SKIP_EMAIL_VERIFICATION) {
@@ -112,6 +114,18 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['AUTH_SKIP_EMAIL_VERIFICATION'],
         message: 'AUTH_SKIP_EMAIL_VERIFICATION cannot be true in production',
+      });
+    }
+
+    if (
+      Boolean(env.SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER) !==
+      Boolean(env.SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER'],
+        message:
+          'SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER and SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_SECRET must be set together',
       });
     }
   });
