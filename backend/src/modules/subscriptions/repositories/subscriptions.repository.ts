@@ -37,6 +37,15 @@ interface UpsertHouseholdSubscriptionInput {
   endsAt?: Date | null;
 }
 
+interface UpsertHouseholdEntitlementOverrideInput {
+  householdId: string;
+  key: string;
+  isEnabled: boolean;
+  source: string;
+  reason?: string | null;
+  expiresAt?: Date | null;
+}
+
 @Injectable()
 export class SubscriptionsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -85,13 +94,25 @@ export class SubscriptionsRepository {
     });
   }
 
-  async findUserHouseholdId(userId: string) {
+  async findUserMembership(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { householdId: true },
+      select: { householdId: true, role: true },
     });
 
-    return user?.householdId ?? null;
+    if (!user || !user.householdId) {
+      return null;
+    }
+
+    return {
+      householdId: user.householdId,
+      role: user.role,
+    };
+  }
+
+  async findUserHouseholdId(userId: string) {
+    const membership = await this.findUserMembership(userId);
+    return membership?.householdId ?? null;
   }
 
   async upsertHouseholdSubscription(input: UpsertHouseholdSubscriptionInput) {
@@ -135,6 +156,42 @@ export class SubscriptionsRepository {
 
     return this.prisma.householdSubscription.create({
       data: baseData,
+    });
+  }
+
+  async upsertHouseholdEntitlementOverride(
+    input: UpsertHouseholdEntitlementOverrideInput,
+  ) {
+    return this.prisma.householdEntitlementOverride.upsert({
+      where: {
+        householdId_key: {
+          householdId: input.householdId,
+          key: input.key,
+        },
+      },
+      create: {
+        householdId: input.householdId,
+        key: input.key,
+        isEnabled: input.isEnabled,
+        source: input.source,
+        reason: input.reason ?? null,
+        expiresAt: input.expiresAt ?? null,
+      },
+      update: {
+        isEnabled: input.isEnabled,
+        source: input.source,
+        reason: input.reason ?? null,
+        expiresAt: input.expiresAt ?? null,
+      },
+    });
+  }
+
+  async deleteHouseholdEntitlementOverride(householdId: string, key: string) {
+    await this.prisma.householdEntitlementOverride.deleteMany({
+      where: {
+        householdId,
+        key,
+      },
     });
   }
 
