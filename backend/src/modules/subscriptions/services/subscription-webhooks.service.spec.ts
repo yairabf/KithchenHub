@@ -82,9 +82,13 @@ describe('SubscriptionWebhooksService', () => {
     resetConfigurationCacheForTests();
 
     await expect(
-      service.processWebhook('revenuecat', { event: { id: 'evt_1' } }, {
-        'x-revenuecat-signature': 'wrong-secret',
-      }),
+      service.processWebhook(
+        'revenuecat',
+        { event: { id: 'evt_1' } },
+        {
+          'x-revenuecat-signature': 'wrong-secret',
+        },
+      ),
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
     expect(mockSubscriptionsRepository.findBillingEvent).not.toHaveBeenCalled();

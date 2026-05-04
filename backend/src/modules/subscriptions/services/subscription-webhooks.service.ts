@@ -100,7 +100,9 @@ export class SubscriptionWebhooksService {
       );
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown webhook processing error';
+        error instanceof Error
+          ? error.message
+          : 'Unknown webhook processing error';
       this.logger.error(
         `Webhook processing failed for provider=${provider}, eventId=${createdEvent.id}`,
         error instanceof Error ? error.stack : undefined,
