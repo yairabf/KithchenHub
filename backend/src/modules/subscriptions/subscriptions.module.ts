@@ -6,14 +6,20 @@ import { RevenueCatBillingProviderService } from './providers/revenuecat-billing
 import { SubscriptionsService } from './services/subscriptions.service';
 import { SubscriptionWebhooksService } from './services/subscription-webhooks.service';
 import { SubscriptionWebhooksController } from './controllers/subscription-webhooks.controller';
+import { SubscriptionReconciliationService } from './services/subscription-reconciliation.service';
+import { SubscriptionReconciliationController } from './controllers/subscription-reconciliation.controller';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [SubscriptionWebhooksController],
+  controllers: [
+    SubscriptionWebhooksController,
+    SubscriptionReconciliationController,
+  ],
   providers: [
     SubscriptionsRepository,
     SubscriptionsService,
     SubscriptionWebhooksService,
+    SubscriptionReconciliationService,
     RevenueCatBillingProviderService,
     BillingProviderRegistryService,
   ],
@@ -21,6 +27,7 @@ import { SubscriptionWebhooksController } from './controllers/subscription-webho
     SubscriptionsRepository,
     SubscriptionsService,
     SubscriptionWebhooksService,
+    SubscriptionReconciliationService,
     RevenueCatBillingProviderService,
     BillingProviderRegistryService,
   ],
