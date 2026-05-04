@@ -20,7 +20,9 @@ import {
   spacing,
   typography,
 } from '../../../theme';
+import { useAuth } from '../../../contexts/AuthContext';
 import { purchaseService } from '../services/purchaseService';
+import { subscriptionApi } from '../services/subscriptionApi';
 
 const FEATURE_KEYS = [
   'premium.featureVoiceAdd',
@@ -41,6 +43,7 @@ const PLAN_KEYS = [
 
 export function PremiumPaywallScreen() {
   const { t } = useTranslation('settings');
+  const { refreshUser } = useAuth();
   const navigation =
     useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -87,7 +90,12 @@ export function PremiumPaywallScreen() {
 
     try {
       setIsPurchasing(true);
-      await purchaseService.purchasePackage(defaultPackageId);
+      const purchaseResult = await purchaseService.purchasePackage(defaultPackageId);
+      await subscriptionApi.reconcileCustomerState(
+        purchaseResult.provider,
+        purchaseResult.customerState,
+      );
+      await refreshUser();
       Alert.alert('Premium', 'Purchase started successfully.');
     } catch {
       Alert.alert('Premium', 'Unable to start purchase right now. Please try again.');
@@ -103,7 +111,12 @@ export function PremiumPaywallScreen() {
 
     try {
       setIsRestoring(true);
-      await purchaseService.restorePurchases();
+      const restoreResult = await purchaseService.restorePurchases();
+      await subscriptionApi.reconcileCustomerState(
+        restoreResult.provider,
+        restoreResult.customerState,
+      );
+      await refreshUser();
       Alert.alert('Premium', 'Restore completed successfully.');
     } catch {
       Alert.alert('Premium', 'Unable to restore purchases right now. Please try again.');
