@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { createRevenueCatSdk } from './revenueCatNativeAdapter';
 
 export type PurchaseProvider = 'revenuecat';
 export type PurchasePackageId = 'monthly' | 'yearly' | string;
@@ -108,6 +109,8 @@ export interface RevenueCatSdk {
 interface CreatePurchaseServiceOptions {
   platformOs?: string;
   revenueCatSdk?: RevenueCatSdk | null;
+  revenueCatApiKey?: string;
+  revenueCatSdkFactory?: (apiKey: string) => RevenueCatSdk | null;
 }
 
 class UnsupportedPurchaseService implements PurchaseService {
@@ -247,6 +250,21 @@ function normalizeCustomerState(
   };
 }
 
+export function resolveRevenueCatApiKey(platformOs: string): string | null {
+  const iosKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY?.trim();
+  const androidKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY?.trim();
+
+  if (platformOs === 'ios') {
+    return iosKey || null;
+  }
+
+  if (platformOs === 'android') {
+    return androidKey || null;
+  }
+
+  return null;
+}
+
 export function createPurchaseService(
   options: CreatePurchaseServiceOptions = {},
 ): PurchaseService {
@@ -260,6 +278,22 @@ export function createPurchaseService(
 
   if (options.revenueCatSdk) {
     return new RevenueCatPurchaseService(options.revenueCatSdk);
+  }
+
+  const revenueCatApiKey =
+    options.revenueCatApiKey ?? resolveRevenueCatApiKey(platformOs);
+
+  if (!revenueCatApiKey) {
+    return new UnsupportedPurchaseService(
+      'Purchase service is not configured for this app build.',
+    );
+  }
+
+  const sdkFactory = options.revenueCatSdkFactory ?? createRevenueCatSdk;
+  const sdk = sdkFactory(revenueCatApiKey);
+
+  if (sdk) {
+    return new RevenueCatPurchaseService(sdk);
   }
 
   return new UnsupportedPurchaseService(
