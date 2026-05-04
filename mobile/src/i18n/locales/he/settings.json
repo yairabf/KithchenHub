@@ -65,7 +65,11 @@
     "storeBillingNote": "הרכישות ינוהלו דרך Apple App Store ו-Google Play.",
     "purchaseComingSoon": "רכישה ושחזור רכישות יגיעו בקרוב.",
     "startTrialCta": "התחל ניסיון חינם",
-    "restorePurchasesCta": "שחזור רכישות"
+    "restorePurchasesCta": "שחזור רכישות",
+    "demoTitle": "דמו פרימיום",
+    "demoLocked": "שדרגו לפרימיום כדי לגשת לפיצ'ר הדמו הזה.",
+    "demoError": "לא ניתן לטעון את דמו הפרימיום כרגע.",
+    "demoRefresh": "רענון דמו"
   },
   "householdMembers": {
     "mom": "אמא",

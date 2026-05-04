@@ -65,7 +65,11 @@
     "storeBillingNote": "ستتم معالجة المشتريات عبر Apple App Store وGoogle Play.",
     "purchaseComingSoon": "ستتوفر إجراءات الشراء واستعادة المشتريات قريبًا.",
     "startTrialCta": "ابدأ التجربة المجانية",
-    "restorePurchasesCta": "استعادة المشتريات"
+    "restorePurchasesCta": "استعادة المشتريات",
+    "demoTitle": "عرض بريميوم",
+    "demoLocked": "قم بالترقية إلى بريميوم للوصول إلى ميزة العرض هذه.",
+    "demoError": "تعذر تحميل عرض بريميوم الآن.",
+    "demoRefresh": "تحديث العرض"
   },
   "householdMembers": {
     "mom": "الأم",
