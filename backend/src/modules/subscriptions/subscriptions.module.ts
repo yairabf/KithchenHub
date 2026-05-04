@@ -8,18 +8,22 @@ import { SubscriptionWebhooksService } from './services/subscription-webhooks.se
 import { SubscriptionWebhooksController } from './controllers/subscription-webhooks.controller';
 import { SubscriptionReconciliationService } from './services/subscription-reconciliation.service';
 import { SubscriptionReconciliationController } from './controllers/subscription-reconciliation.controller';
+import { SubscriptionSupportOverridesController } from './controllers/subscription-support-overrides.controller';
+import { SubscriptionSupportOverridesService } from './services/subscription-support-overrides.service';
 
 @Module({
   imports: [PrismaModule],
   controllers: [
     SubscriptionWebhooksController,
     SubscriptionReconciliationController,
+    SubscriptionSupportOverridesController,
   ],
   providers: [
     SubscriptionsRepository,
     SubscriptionsService,
     SubscriptionWebhooksService,
     SubscriptionReconciliationService,
+    SubscriptionSupportOverridesService,
     RevenueCatBillingProviderService,
     BillingProviderRegistryService,
   ],
