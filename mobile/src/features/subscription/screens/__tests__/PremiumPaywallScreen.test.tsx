@@ -8,6 +8,7 @@ const mockPurchasePackage = jest.fn();
 const mockRestorePurchases = jest.fn();
 const mockReconcileCustomerState = jest.fn();
 const mockRefreshUser = jest.fn();
+const mockIsAvailable = jest.fn(() => true);
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -33,13 +34,15 @@ jest.mock('react-i18next', () => ({
         'premium.purchaseComingSoon': 'Purchase and restore actions are coming soon.',
         'premium.startTrialCta': 'Start free trial',
         'premium.restorePurchasesCta': 'Restore purchases',
+        'premium.purchaseUnavailable':
+          'Purchases are not configured on this app build. Please contact support.',
       }[key] ?? key),
   }),
 }));
 
 jest.mock('../../services/purchaseService', () => ({
   purchaseService: {
-    isAvailable: jest.fn(() => true),
+    isAvailable: (...args: unknown[]) => mockIsAvailable(...args),
     getOfferings: (...args: unknown[]) => mockGetOfferings(...args),
     purchasePackage: (...args: unknown[]) => mockPurchasePackage(...args),
     restorePurchases: (...args: unknown[]) => mockRestorePurchases(...args),
@@ -102,6 +105,7 @@ describe('PremiumPaywallScreen', () => {
     });
     mockReconcileCustomerState.mockResolvedValue({ accepted: true, reconciled: true });
     mockRefreshUser.mockResolvedValue(undefined);
+    mockIsAvailable.mockReturnValue(true);
     jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   });
 
@@ -138,6 +142,24 @@ describe('PremiumPaywallScreen', () => {
       latestExpirationDate: '2026-06-01T00:00:00.000Z',
     });
     expect(mockRefreshUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an explicit alert when purchases are unavailable for this build', async () => {
+    mockIsAvailable.mockReturnValue(false);
+
+    const { getByText } = render(<PremiumPaywallScreen />);
+
+    fireEvent.press(getByText('Start free trial'));
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Premium',
+        'Purchases are not configured on this app build. Please contact support.',
+      );
+    });
+
+    expect(mockPurchasePackage).not.toHaveBeenCalled();
+    expect(mockReconcileCustomerState).not.toHaveBeenCalled();
   });
 
   it('starts restore flow when pressing Restore purchases', async () => {

@@ -66,6 +66,7 @@
     "purchaseComingSoon": "Purchase and restore actions are coming soon.",
     "startTrialCta": "Start free trial",
     "restorePurchasesCta": "Restore purchases",
+    "purchaseUnavailable": "Purchases are not configured on this app build. Please contact support.",
     "demoTitle": "Premium demo",
     "demoLocked": "Unlock Premium to access this demo feature.",
     "demoError": "Unable to load premium demo right now.",
