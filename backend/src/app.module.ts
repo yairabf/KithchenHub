@@ -13,6 +13,7 @@ import { HealthModule } from './modules/health/health.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { UsersModule } from './modules/users/users.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { PremiumDemoModule } from './modules/premium-demo/premium-demo.module';
 import { TransformInterceptor } from './common/interceptors';
 import { RequestContextInterceptor } from './common/interceptors';
 import { LoggingInterceptor } from './common/interceptors';
@@ -42,6 +43,7 @@ import { CacheModule } from './infrastructure/cache';
     AuditModule,
     UsersModule,
     SubscriptionsModule,
+    PremiumDemoModule,
     SupabaseModule,
     StorageModule,
   ],
