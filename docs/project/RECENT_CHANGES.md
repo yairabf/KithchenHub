@@ -10,6 +10,9 @@ It should stay short and practical.
 ### 0. Premium foundation (subscriptions + entitlement gating)
 Status: active implementation stream
 
+Current next execution plan:
+- `.hermes/plans/2026-05-05-premium-real-sdk-go-live-plan.md` (wire real native SDK, verify end-to-end purchase/restore, and keep fallback alert only for unavailable mode)
+
 Current state:
 - household premium foundation is in place across backend + mobile
 - webhook sync/reconciliation + support override + entitlement guard are implemented

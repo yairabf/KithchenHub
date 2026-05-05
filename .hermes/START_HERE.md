@@ -45,6 +45,7 @@ Copy this into a new dated file under `.hermes/plans/` for future multi-step wor
 
 ## Current saved plan files
 
+- `.hermes/plans/2026-05-05-premium-real-sdk-go-live-plan.md` **(current primary plan for premium SDK production wiring)**
 - `.hermes/plans/2026-04-28_0502-home-tab-frequent-items-recovery-plan.md`
 - `.hermes/plans/2026-04-27_095926-ios-form-presentation-rework.md`
 - `.hermes/plans/2026-04-27_055530-mobile-modal-keyboard-scroll-plan.md`
