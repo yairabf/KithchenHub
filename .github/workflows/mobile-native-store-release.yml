@@ -3,6 +3,8 @@
 #
 # Required repository secrets:
 #   EXPO_PUBLIC_API_URL              Production API base URL (not localhost)
+#   EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
+#   EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY
 #   ASC_KEY_ID, ASC_ISSUER_ID        App Store Connect API key metadata
 #   ASC_KEY_P8                       Contents of the .p8 private key file
 #   ANDROID_KEYSTORE_BASE64        Release keystore file, base64-encoded
@@ -56,6 +58,8 @@ jobs:
       - name: Validate Android secrets
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -63,6 +67,8 @@ jobs:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           if [ -z "$EXPO_PUBLIC_API_URL" ]; then echo "Missing EXPO_PUBLIC_API_URL"; exit 1; fi
+          if [ -z "$EXPO_PUBLIC_REVENUECAT_IOS_API_KEY" ]; then echo "Missing EXPO_PUBLIC_REVENUECAT_IOS_API_KEY"; exit 1; fi
+          if [ -z "$EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY" ]; then echo "Missing EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY"; exit 1; fi
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; fi
           if [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; fi
           if [ -z "$ANDROID_KEY_ALIAS" ]; then echo "Missing ANDROID_KEY_ALIAS"; exit 1; fi
@@ -107,6 +113,8 @@ jobs:
           CI: "1"
           EXPO_NO_TELEMETRY: "1"
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
         run: npx expo prebuild --platform android --clean --no-install
 
       - name: Increase Gradle JVM memory
@@ -125,6 +133,8 @@ jobs:
         working-directory: mobile
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
           SUPPLY_JSON_KEY: ${{ runner.temp }}/play-api.json
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -138,6 +148,8 @@ jobs:
         working-directory: mobile
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
           SUPPLY_JSON_KEY: ${{ runner.temp }}/play-api.json
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -162,6 +174,8 @@ jobs:
       - name: Validate iOS secrets
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
@@ -169,6 +183,8 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
           if [ -z "$EXPO_PUBLIC_API_URL" ]; then echo "Missing EXPO_PUBLIC_API_URL"; exit 1; fi
+          if [ -z "$EXPO_PUBLIC_REVENUECAT_IOS_API_KEY" ]; then echo "Missing EXPO_PUBLIC_REVENUECAT_IOS_API_KEY"; exit 1; fi
+          if [ -z "$EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY" ]; then echo "Missing EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY"; exit 1; fi
           if [ -z "$ASC_KEY_ID" ]; then echo "Missing ASC_KEY_ID"; exit 1; fi
           if [ -z "$ASC_ISSUER_ID" ]; then echo "Missing ASC_ISSUER_ID"; exit 1; fi
           if [ -z "$ASC_KEY_P8" ]; then echo "Missing ASC_KEY_P8"; exit 1; fi
@@ -209,12 +225,16 @@ jobs:
           CI: "1"
           EXPO_NO_TELEMETRY: "1"
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
         run: npx expo prebuild --platform ios --clean --no-install
 
       - name: Fastlane iOS internal (TestFlight)
         working-directory: mobile
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
@@ -237,6 +257,8 @@ jobs:
         working-directory: mobile
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
