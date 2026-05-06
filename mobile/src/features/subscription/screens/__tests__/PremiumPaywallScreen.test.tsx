@@ -36,6 +36,13 @@ jest.mock('react-i18next', () => ({
         'premium.restorePurchasesCta': 'Restore purchases',
         'premium.purchaseUnavailable':
           'Purchases are not configured on this app build. Please contact support.',
+        'premium.alertTitle': 'Premium',
+        'premium.purchaseSuccess': 'Purchase started successfully.',
+        'premium.purchaseFailed':
+          'Unable to start purchase right now. Please try again.',
+        'premium.restoreSuccess': 'Restore completed successfully.',
+        'premium.restoreFailed':
+          'Unable to restore purchases right now. Please try again.',
       }[key] ?? key),
   }),
 }));
