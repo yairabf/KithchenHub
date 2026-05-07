@@ -85,7 +85,10 @@ export function PremiumPaywallScreen() {
 
   const handleStartTrial = async () => {
     if (purchaseUnavailable) {
-      Alert.alert('Premium', t('premium.purchaseUnavailable'));
+      Alert.alert(
+        t('premium.alertTitle'),
+        t('premium.purchaseUnavailable'),
+      );
       return;
     }
 
@@ -101,9 +104,15 @@ export function PremiumPaywallScreen() {
         purchaseResult.customerState,
       );
       await refreshUser();
-      Alert.alert('Premium', 'Purchase started successfully.');
+      Alert.alert(
+        t('premium.alertTitle'),
+        t('premium.purchaseSuccess'),
+      );
     } catch {
-      Alert.alert('Premium', 'Unable to start purchase right now. Please try again.');
+      Alert.alert(
+        t('premium.alertTitle'),
+        t('premium.purchaseFailed'),
+      );
     } finally {
       setIsPurchasing(false);
     }
@@ -111,7 +120,10 @@ export function PremiumPaywallScreen() {
 
   const handleRestorePurchases = async () => {
     if (purchaseUnavailable) {
-      Alert.alert('Premium', t('premium.purchaseUnavailable'));
+      Alert.alert(
+        t('premium.alertTitle'),
+        t('premium.purchaseUnavailable'),
+      );
       return;
     }
 
@@ -127,9 +139,15 @@ export function PremiumPaywallScreen() {
         restoreResult.customerState,
       );
       await refreshUser();
-      Alert.alert('Premium', 'Restore completed successfully.');
+      Alert.alert(
+        t('premium.alertTitle'),
+        t('premium.restoreSuccess'),
+      );
     } catch {
-      Alert.alert('Premium', 'Unable to restore purchases right now. Please try again.');
+      Alert.alert(
+        t('premium.alertTitle'),
+        t('premium.restoreFailed'),
+      );
     } finally {
       setIsRestoring(false);
     }
