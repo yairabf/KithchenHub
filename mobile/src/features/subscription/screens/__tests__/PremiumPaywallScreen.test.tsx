@@ -15,24 +15,36 @@ jest.mock('react-i18next', () => ({
     t: (key: string) =>
       ({
         'premium.paywallTitle': 'Premium',
-        'premium.paywallHeadline': 'Upgrade your whole household',
+        'premium.paywallEyebrow': 'Household premium',
+        'premium.paywallHeadline': 'Make the whole kitchen run smoother together.',
         'premium.paywallDescription':
-          'Start a 5-day free trial, then choose monthly or yearly billing.',
-        'premium.householdScope': 'Premium applies to your whole household.',
-        'premium.trialBadge': '5-day free trial',
+          'This version sells the shared-home outcome first, then pricing second.',
+        'premium.householdMembersLabel': 'Y M L A',
+        'premium.householdCoverage': 'Covers everyone in your household',
+        'premium.storyTitle': 'Why upgrade',
+        'premium.storyVoiceTitle': 'Faster while cooking',
+        'premium.storyVoiceDescription':
+          'Voice add and lower-friction grocery capture reduce interruptions in the kitchen.',
+        'premium.storyShoppingTitle': 'Smarter shared shopping',
+        'premium.storyShoppingDescription':
+          'Premium features help the whole household add and clean up items faster.',
+        'premium.storyRecipeTitle': 'Less manual recipe work',
+        'premium.storyRecipeDescription':
+          'Import and turn recipe content into real grocery actions with fewer taps.',
+        'premium.yearlyPlanTitle': 'Yearly plan',
+        'premium.yearlyPlanBadge': 'Best value',
+        'premium.yearlyPlanDescription':
+          'Starts with a 5-day free trial. Best for families and couples already using KitchenHub every week.',
         'premium.monthlyPlanTitle': 'Monthly plan',
         'premium.monthlyPlanDescription':
-          'Flexible monthly billing through the App Store or Google Play.',
-        'premium.yearlyPlanTitle': 'Yearly plan',
-        'premium.yearlyPlanDescription':
-          'Best value for households that want premium all year.',
-        'premium.featureVoiceAdd': 'Voice grocery add',
-        'premium.featureSmartMatching': 'Smart grocery matching',
-        'premium.featureRecipeImport': 'AI recipe import',
+          'A lighter commitment if you want to validate the premium workflow first.',
+        'premium.monthlyPlanSecondaryDescription': 'Flexible monthly billing through the App Store or Google Play.',
+        'premium.priceYearly': '$39.99 / year',
+        'premium.priceMonthly': '$4.99 / month',
         'premium.storeBillingNote':
-          'Purchases will be handled through Apple App Store and Google Play.',
+          'Subscription applies to your household premium status. Cancel anytime in your store settings.',
         'premium.purchaseComingSoon': 'Purchase and restore actions are coming soon.',
-        'premium.startTrialCta': 'Start free trial',
+        'premium.startTrialCta': 'Start household trial',
         'premium.restorePurchasesCta': 'Restore purchases',
         'premium.purchaseUnavailable':
           'Purchases are not configured on this app build. Please contact support.',
@@ -116,26 +128,31 @@ describe('PremiumPaywallScreen', () => {
     jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   });
 
-  it('renders the premium paywall content for monthly, yearly, and trial messaging', () => {
+  it('renders the household-story premium paywall content', () => {
     const { getByText } = render(<PremiumPaywallScreen />);
 
     expect(getByText('Premium')).toBeTruthy();
-    expect(getByText('Upgrade your whole household')).toBeTruthy();
-    expect(getByText('5-day free trial')).toBeTruthy();
-    expect(getByText('Monthly plan')).toBeTruthy();
+    expect(getByText('Household premium')).toBeTruthy();
+    expect(getByText('Make the whole kitchen run smoother together.')).toBeTruthy();
+    expect(getByText('Covers everyone in your household')).toBeTruthy();
+    expect(getByText('Why upgrade')).toBeTruthy();
+    expect(getByText('Faster while cooking')).toBeTruthy();
+    expect(getByText('Smarter shared shopping')).toBeTruthy();
+    expect(getByText('Less manual recipe work')).toBeTruthy();
+    expect(getByText('Best value')).toBeTruthy();
     expect(getByText('Yearly plan')).toBeTruthy();
-    expect(getByText('Voice grocery add')).toBeTruthy();
+    expect(getByText('Monthly plan')).toBeTruthy();
     expect(
-      getByText('Purchases will be handled through Apple App Store and Google Play.'),
+      getByText('Subscription applies to your household premium status. Cancel anytime in your store settings.'),
     ).toBeTruthy();
-    expect(getByText('Start free trial')).toBeTruthy();
+    expect(getByText('Start household trial')).toBeTruthy();
     expect(getByText('Restore purchases')).toBeTruthy();
   });
 
-  it('starts trial purchase flow when pressing Start free trial', async () => {
+  it('starts trial purchase flow when pressing Start household trial', async () => {
     const { getByText } = render(<PremiumPaywallScreen />);
 
-    fireEvent.press(getByText('Start free trial'));
+    fireEvent.press(getByText('Start household trial'));
 
     await waitFor(() => {
       expect(mockPurchasePackage).toHaveBeenCalledWith('monthly');
@@ -156,7 +173,7 @@ describe('PremiumPaywallScreen', () => {
 
     const { getByText } = render(<PremiumPaywallScreen />);
 
-    fireEvent.press(getByText('Start free trial'));
+    fireEvent.press(getByText('Start household trial'));
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(

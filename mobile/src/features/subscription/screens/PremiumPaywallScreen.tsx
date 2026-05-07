@@ -24,20 +24,45 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { purchaseService } from '../services/purchaseService';
 import { subscriptionApi } from '../services/subscriptionApi';
 
-const FEATURE_KEYS = [
-  'premium.featureVoiceAdd',
-  'premium.featureSmartMatching',
-  'premium.featureRecipeImport',
+const HOUSEHOLD_MEMBER_KEYS = [
+  'premium.householdMemberOne',
+  'premium.householdMemberTwo',
+  'premium.householdMemberThree',
+  'premium.householdMemberFour',
+] as const;
+
+const STORY_KEYS = [
+  {
+    icon: '🎙',
+    title: 'premium.storyVoiceTitle',
+    description: 'premium.storyVoiceDescription',
+  },
+  {
+    icon: '🛒',
+    title: 'premium.storyShoppingTitle',
+    description: 'premium.storyShoppingDescription',
+  },
+  {
+    icon: '📖',
+    title: 'premium.storyRecipeTitle',
+    description: 'premium.storyRecipeDescription',
+  },
 ] as const;
 
 const PLAN_KEYS = [
   {
-    title: 'premium.monthlyPlanTitle',
-    description: 'premium.monthlyPlanDescription',
-  },
-  {
     title: 'premium.yearlyPlanTitle',
     description: 'premium.yearlyPlanDescription',
+    price: 'premium.priceYearly',
+    badge: 'premium.yearlyPlanBadge',
+    featured: true,
+  },
+  {
+    title: 'premium.monthlyPlanTitle',
+    description: 'premium.monthlyPlanDescription',
+    price: 'premium.priceMonthly',
+    badge: undefined,
+    featured: false,
   },
 ] as const;
 
@@ -164,30 +189,69 @@ export function PremiumPaywallScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroCard}>
+          <View style={styles.eyebrowBadge}>
+            <Text style={styles.eyebrowBadgeText}>{t('premium.paywallEyebrow')}</Text>
+          </View>
           <Text style={styles.heroHeadline}>{t('premium.paywallHeadline')}</Text>
           <Text style={styles.heroDescription}>
             {t('premium.paywallDescription')}
           </Text>
-          <View style={styles.trialBadge}>
-            <Text style={styles.trialBadgeText}>{t('premium.trialBadge')}</Text>
+
+          <View style={styles.householdRow}>
+            <View style={styles.householdMembersRow}>
+              {HOUSEHOLD_MEMBER_KEYS.map((memberKey, index) => (
+                <View
+                  key={memberKey}
+                  style={[
+                    styles.householdMemberBadge,
+                    index > 0 ? styles.householdMemberBadgeOverlap : null,
+                  ]}
+                >
+                  <Text style={styles.householdMemberBadgeText}>{t(memberKey)}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.householdCoverageText}>
+              {t('premium.householdCoverage')}
+            </Text>
           </View>
-          <Text style={styles.householdText}>{t('premium.householdScope')}</Text>
+        </View>
+
+        <View style={styles.storyCard}>
+          <Text style={styles.sectionEyebrow}>{t('premium.storyTitle')}</Text>
+          <View style={styles.storyList}>
+            {STORY_KEYS.map((storyItem) => (
+              <View key={storyItem.title} style={styles.storyItemCard}>
+                <View style={styles.storyIconBadge}>
+                  <Text style={styles.storyIconText}>{storyItem.icon}</Text>
+                </View>
+                <View style={styles.storyCopy}>
+                  <Text style={styles.storyItemTitle}>{t(storyItem.title)}</Text>
+                  <Text style={styles.storyItemDescription}>
+                    {t(storyItem.description)}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
 
         <View style={styles.section}>
           {PLAN_KEYS.map((plan) => (
-            <View key={plan.title} style={styles.planCard}>
-              <Text style={styles.planTitle}>{t(plan.title)}</Text>
+            <View
+              key={plan.title}
+              style={[styles.planCard, plan.featured ? styles.planCardFeatured : null]}
+            >
+              <View style={styles.planHeaderRow}>
+                <Text style={styles.planTitle}>{t(plan.title)}</Text>
+                {plan.badge ? (
+                  <View style={styles.planBadge}>
+                    <Text style={styles.planBadgeText}>{t(plan.badge)}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={styles.planPrice}>{t(plan.price)}</Text>
               <Text style={styles.planDescription}>{t(plan.description)}</Text>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          {FEATURE_KEYS.map((featureKey) => (
-            <View key={featureKey} style={styles.featureRow}>
-              <Text style={styles.featureBullet}>•</Text>
-              <Text style={styles.featureText}>{t(featureKey)}</Text>
             </View>
           ))}
         </View>
@@ -239,64 +303,153 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadows.sm,
   },
+  eyebrowBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.pastel.green,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  eyebrowBadgeText: {
+    ...typography.captionBold,
+    color: colors.primaryDark,
+  },
   heroHeadline: {
-    ...typography.h3,
+    ...typography.h2,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   heroDescription: {
     ...typography.body,
     color: colors.textSecondary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
-  trialBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.pastel.yellow,
+  householdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  householdMembersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  householdMemberBadge: {
+    width: 36,
+    height: 36,
     borderRadius: borderRadius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  householdMemberBadgeOverlap: {
+    marginLeft: -8,
+  },
+  householdMemberBadgeText: {
+    ...typography.labelBold,
+    color: colors.surface,
+  },
+  householdCoverageText: {
+    flex: 1,
+    ...typography.bodySmall,
+    color: colors.primaryDark,
+  },
+  storyCard: {
+    backgroundColor: colors.transparent.white70,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.transparent.white80,
+  },
+  sectionEyebrow: {
+    ...typography.sectionTitle,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
-  trialBadgeText: {
-    ...typography.captionBold,
-    color: colors.secondary,
+  storyList: {
+    gap: spacing.md,
   },
-  householdText: {
-    ...typography.bodySmall,
+  storyItemCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  storyIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.pastel.peach,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storyIconText: {
+    fontSize: 18,
+  },
+  storyCopy: {
+    flex: 1,
+  },
+  storyItemTitle: {
+    ...typography.labelBold,
     color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  storyItemDescription: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
   },
   section: {
     gap: spacing.md,
   },
   planCard: {
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
+  planCardFeatured: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.pastel.green,
+    ...shadows.sm,
+  },
+  planHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
   planTitle: {
-    ...typography.labelBold,
+    ...typography.h4,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  planBadge: {
+    backgroundColor: colors.transparent.white80,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  planBadgeText: {
+    ...typography.captionBold,
+    color: colors.primary,
+  },
+  planPrice: {
+    ...typography.h3,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
   planDescription: {
     ...typography.bodySmall,
     color: colors.textSecondary,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  featureBullet: {
-    ...typography.labelBold,
-    color: colors.primary,
-  },
-  featureText: {
-    flex: 1,
-    ...typography.bodySmall,
-    color: colors.textPrimary,
   },
   infoCard: {
     backgroundColor: colors.surface,
