@@ -41,6 +41,12 @@ import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
 import { mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
 import { useTranslation } from 'react-i18next';
 import { useCatalog } from '../../../common/hooks/useCatalog';
+import { determineUserDataMode } from '../../../common/types/dataModes';
+import {
+  CacheAwareShoppingRepository,
+  type ICacheAwareShoppingRepository,
+} from '../../../common/repositories/cacheAwareShoppingRepository';
+import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../shopping/constants/categories';
 
 
 export function RecipeDetailScreen({
@@ -69,11 +75,25 @@ export function RecipeDetailScreen({
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+  const userMode = useMemo(() => {
+    if (config.mockData.enabled) {
+      return 'guest' as const;
+    }
+    return determineUserDataMode(user);
+  }, [user]);
+
   const shouldUseMockData = config.mockData.enabled || !user || user?.isGuest === true;
   const shoppingService = useMemo(
-    () => createShoppingService(shouldUseMockData ? 'guest' : 'signed-in'),
-    [shouldUseMockData]
+    () => createShoppingService(userMode),
+    [userMode]
   );
+  const shoppingRepository = useMemo<ICacheAwareShoppingRepository | null>(() => {
+    if (shouldUseMockData || userMode !== 'signed-in') {
+      return null;
+    }
+
+    return new CacheAwareShoppingRepository(shoppingService);
+  }, [shouldUseMockData, shoppingService, userMode]);
 
   // Check if recipe has full details (ingredients/instructions)
   const hasFullDetails = useMemo(() => {
@@ -274,6 +294,65 @@ export function RecipeDetailScreen({
     []
   );
 
+  const resolveIngredientCatalogItem = useCallback((ingredient: Ingredient) => {
+    const normalizedIngredientName = ingredient.name.trim().toLowerCase();
+
+    if (ingredient.catalogItemId) {
+      const byCatalogId = groceryItems.find((item) => item.id === ingredient.catalogItemId);
+      if (byCatalogId) {
+        return byCatalogId;
+      }
+    }
+
+    return groceryItems.find((item) => item.name.trim().toLowerCase() === normalizedIngredientName);
+  }, [groceryItems]);
+
+  const buildRecipeIngredientShoppingInput = useCallback((ingredient: Ingredient, listId: string) => {
+    const resolvedCatalogItem = resolveIngredientCatalogItem(ingredient);
+    const rawQuantity = getIngredientAmount(ingredient, 1);
+    const { quantity: normalizedQuantity, unit: normalizedUnit } = normalizeToStandardUnit(
+      rawQuantity,
+      getIngredientUnit(ingredient) || ''
+    );
+
+    const rawCategory = resolvedCatalogItem?.category ?? DEFAULT_CATEGORY.toLowerCase();
+    const normalizedCategory = normalizeShoppingCategory(rawCategory);
+
+    return {
+      listId,
+      name: ingredient.name,
+      quantity: normalizedQuantity,
+      unit: normalizedUnit,
+      image: ingredient.image ?? resolvedCatalogItem?.image ?? '',
+      category: normalizedCategory,
+      catalogItemId: ingredient.catalogItemId ?? resolvedCatalogItem?.id,
+    };
+  }, [getIngredientAmount, getIngredientUnit, resolveIngredientCatalogItem]);
+
+  const createShoppingItem = useCallback(async (item: {
+    listId: string;
+    name: string;
+    quantity: number;
+    unit?: string;
+    image?: string;
+    category: string;
+    catalogItemId?: string;
+  }) => {
+    if (shoppingRepository) {
+      return shoppingRepository.createItem(item);
+    }
+
+    return shoppingService.createItem(item);
+  }, [shoppingRepository, shoppingService]);
+
+  const getShoppingData = useCallback(async () => {
+    if (shoppingRepository) {
+      return shoppingRepository.getShoppingData();
+    }
+
+    return shoppingService.getShoppingData();
+  }, [shoppingRepository, shoppingService]);
+
   const handleToggleStep = useCallback((stepId: string) => {
     setCompletedSteps((prev) => {
       const next = new Set(prev);
@@ -289,7 +368,7 @@ export function RecipeDetailScreen({
   const handleAddIngredient = useCallback(
     async (ingredient: Ingredient) => {
       try {
-        const data = await shoppingService.getShoppingData();
+        const data = await getShoppingData();
         const mainList = data.shoppingLists.find(list => list.isMain);
 
         if (!mainList) {
@@ -309,20 +388,7 @@ export function RecipeDetailScreen({
           setExistingItem(existingItemInList);
           setConflictModalVisible(true);
         } else {
-          // Add new item
-          const rawQuantity = getIngredientAmount(ingredient, 1);
-          const { quantity: normalizedQuantity, unit: normalizedUnit } = normalizeToStandardUnit(
-            rawQuantity,
-            getIngredientUnit(ingredient) || ''
-          );
-
-          await shoppingService.createItem({
-            listId: mainList.id,
-            name: ingredient.name,
-            quantity: normalizedQuantity,
-            unit: normalizedUnit,
-            image: ingredient.image,
-          });
+          await createShoppingItem(buildRecipeIngredientShoppingInput(ingredient, mainList.id));
           showToast(t('detail.toasts.ingredientAdded', { name: ingredient.name, listName: mainList.name }));
         }
       } catch (error) {
@@ -330,7 +396,7 @@ export function RecipeDetailScreen({
         showToast(t('detail.toasts.ingredientAddFailed'));
       }
     },
-    [shoppingService, showToast, getIngredientAmount, getIngredientUnit]
+    [buildRecipeIngredientShoppingInput, createShoppingItem, getShoppingData, showToast, t]
   );
 
   const handleReplaceIngredient = useCallback(async () => {
@@ -392,7 +458,7 @@ export function RecipeDetailScreen({
     }
 
     try {
-      const data = await shoppingService.getShoppingData();
+      const data = await getShoppingData();
       const mainList = data.shoppingLists.find(list => list.isMain);
 
       if (!mainList) {
@@ -428,21 +494,7 @@ export function RecipeDetailScreen({
             quantity: finalQuantity,
           });
         } else {
-          // Normalize before adding new item
-          const rawQuantity = getIngredientAmount(ingredient, 1);
-          const { quantity: normalizedQuantity, unit: normalizedUnit } = normalizeToStandardUnit(
-            rawQuantity,
-            getIngredientUnit(ingredient) || ''
-          );
-
-          // Add new item
-          await shoppingService.createItem({
-            listId: mainList.id,
-            name: ingredient.name,
-            quantity: normalizedQuantity,
-            unit: normalizedUnit,
-            image: ingredient.image,
-          });
+          await createShoppingItem(buildRecipeIngredientShoppingInput(ingredient, mainList.id));
         }
       }
 
@@ -451,7 +503,7 @@ export function RecipeDetailScreen({
       console.error('Failed to add all ingredients:', error);
       showToast(t('detail.toasts.addIngredientsFailed'));
     }
-  }, [shoppingService, displayRecipe.ingredients, showToast, getIngredientAmount, getIngredientUnit]);
+  }, [buildRecipeIngredientShoppingInput, createShoppingItem, displayRecipe.ingredients, getIngredientAmount, getIngredientUnit, getShoppingData, showToast, shoppingService, t]);
 
   // Handle scroll position tracking
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
