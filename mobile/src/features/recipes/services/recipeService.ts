@@ -439,21 +439,13 @@ export class RemoteRecipeService implements IRecipeService {
         const cached = await readCachedEntitiesForUpdate<Recipe>('recipes');
         const cachedRecipe = cached.find(r => r.id === recipeId);
 
-        const hasCatalogLinkedIngredients = Boolean(
-            cachedRecipe?.ingredients?.some(
-                (ingredient) =>
-                    typeof ingredient.catalogItemId === 'string' &&
-                    ingredient.catalogItemId.trim() !== '',
-            ),
-        );
-
-        // If cached recipe has full details without catalog-linked ingredients, return it.
-        // Catalog-linked ingredient names are language-dependent, so those should refetch.
+        // If cached recipe already has full details, trust the native cache and
+        // return it immediately. Ingredient localization/image enrichment can be
+        // handled client-side without forcing a blocking detail refetch.
         if (
             cachedRecipe &&
             cachedRecipe.ingredients &&
-            cachedRecipe.ingredients.length > 0 &&
-            !hasCatalogLinkedIngredients
+            cachedRecipe.ingredients.length > 0
         ) {
             return cachedRecipe;
         }

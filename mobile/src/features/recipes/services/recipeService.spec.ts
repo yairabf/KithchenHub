@@ -7,7 +7,7 @@ import { api } from '../../../services/api';
 import { mockRecipes } from '../../../mocks/recipes';
 import { guestStorage } from '../../../common/utils/guestStorage';
 import { isDevMode } from '../../../common/utils/devMode';
-import { invalidateCache } from '../../../common/repositories/cacheAwareRepository';
+import { invalidateCache, setCached } from '../../../common/repositories/cacheAwareRepository';
 
 // Mock AsyncStorage (required for cache-aware repository)
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -369,6 +369,35 @@ describe('Recipe Services', () => {
                     catalogItemId: 'catalog-1',
                 }),
             );
+        });
+
+        it('getRecipeById returns full cached recipe details without refetching when cache is already hydrated', async () => {
+            await invalidateCache('recipes');
+            await setCached('recipes', [
+                {
+                    id: 'recipe-1',
+                    title: 'Cached Full Recipe',
+                    prepTime: 15,
+                    category: 'Dinner',
+                    ingredients: [
+                        {
+                            name: 'Tomato',
+                            catalogItemId: 'catalog-1',
+                            quantityAmount: 1,
+                            quantityUnit: 'pcs',
+                        },
+                    ],
+                    instructions: [{ step: 1, instruction: 'Mix' }],
+                } as any,
+            ], (recipe: any) => recipe.id);
+
+            const recipe = await service.getRecipeById('recipe-1');
+
+            expect(api.get).not.toHaveBeenCalled();
+            expect(recipe).toEqual(expect.objectContaining({
+                id: 'recipe-1',
+                title: 'Cached Full Recipe',
+            }));
         });
 
         it('getRecipes calls api.get and normalizes timestamps', async () => {
