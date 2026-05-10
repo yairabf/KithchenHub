@@ -151,7 +151,32 @@ export function RecipeDetailScreen({
   }, [recipe.id, hasFullDetails, getRecipeById, user?.isGuest]);
 
   // Use fullRecipe if available, otherwise fall back to recipe prop
-  const displayRecipe = fullRecipe || recipe;
+  const baseDisplayRecipe = fullRecipe || recipe;
+  const displayRecipe = useMemo(() => {
+    const ingredients = (baseDisplayRecipe.ingredients || []).map((ingredient) => {
+      if (ingredient.image) {
+        return ingredient;
+      }
+
+      const resolvedCatalogItem = ingredient.catalogItemId
+        ? groceryItems.find((item) => item.id === ingredient.catalogItemId)
+        : groceryItems.find((item) => item.name.trim().toLowerCase() === ingredient.name.trim().toLowerCase());
+
+      if (!resolvedCatalogItem?.image) {
+        return ingredient;
+      }
+
+      return {
+        ...ingredient,
+        image: resolvedCatalogItem.image,
+      };
+    });
+
+    return {
+      ...baseDisplayRecipe,
+      ingredients,
+    };
+  }, [baseDisplayRecipe, groceryItems]);
 
   // Track scroll position and header height for sticky header
   const [scrollY, setScrollY] = useState(0);

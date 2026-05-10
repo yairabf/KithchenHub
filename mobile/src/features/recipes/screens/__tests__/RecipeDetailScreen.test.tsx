@@ -101,6 +101,8 @@ jest.mock('../../components/RecipeContentWrapper', () => {
   return {
     RecipeContentWrapper: ({ recipe, onAddIngredient, onAddAllIngredients }: any) => (
       <View>
+        <Text testID="ingredient-image-0">{recipe.ingredients?.[0]?.image ?? 'no-image'}</Text>
+        <Text testID="ingredient-image-1">{recipe.ingredients?.[1]?.image ?? 'no-image'}</Text>
         <TouchableOpacity
           testID="add-first-ingredient"
           onPress={() => onAddIngredient?.(recipe.ingredients[0])}
@@ -162,6 +164,15 @@ describe('RecipeDetailScreen shopping integration', () => {
       ],
       searchGroceries: jest.fn(),
     });
+  });
+
+  it('enriches signed-in recipe ingredients with catalog images for display', () => {
+    const { getAllByTestId } = render(
+      <RecipeDetailScreen recipe={baseRecipe as any} onBack={jest.fn()} />,
+    );
+
+    expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('apple.png');
+    expect(getAllByTestId('ingredient-image-1')[0].props.children).toBe('milk.png');
   });
 
   it('adds a recipe ingredient through the cache-aware repository with catalog/category metadata', async () => {
