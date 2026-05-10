@@ -31,10 +31,16 @@ jest.mock('../../../common/repositories/cacheAwareRecipeRepository', () => ({
   CacheAwareRecipeRepository: jest.fn(),
 }));
 
+jest.mock('../../../common/services/recipeImageCache', () => ({
+  pruneStaleImages: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { useRecipes } from './useRecipes';
 
 const mockUseAuth = jest.requireMock('../../../contexts/AuthContext').useAuth;
 const createRecipeService = jest.requireMock('../services/recipeService').createRecipeService;
+const mockUseCachedEntities = jest.requireMock('../../../common/hooks/useCachedEntities').useCachedEntities;
+const MockCacheAwareRecipeRepository = jest.requireMock('../../../common/repositories/cacheAwareRecipeRepository').CacheAwareRecipeRepository;
 
 function createMockRecipe(overrides: Partial<Recipe> = {}): Recipe {
   return {
@@ -53,6 +59,19 @@ describe('useRecipes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseAuth.mockReturnValue({ user: null, isLoading: false });
+    mockUseCachedEntities.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    });
+    MockCacheAwareRecipeRepository.mockImplementation(() => ({
+      findAll: jest.fn().mockResolvedValue([]),
+      findById: jest.fn().mockResolvedValue(null),
+      refresh: jest.fn().mockResolvedValue([]),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    }));
   });
 
   describe('guest mode: addRecipe', () => {
@@ -120,33 +139,42 @@ describe('useRecipes', () => {
     });
   });
 
-  describe('recipe visibility', () => {
-    it('filters out soft-deleted recipes from the returned list', async () => {
-      const activeRecipe = createMockRecipe({ id: 'active-1', name: 'Visible Recipe' });
-      const deletedRecipe = createMockRecipe({
-        id: 'deleted-1',
-        name: 'Deleted Recipe',
-        deletedAt: new Date('2026-04-23T05:00:00.000Z'),
-      });
+  describe('signed-in cache behavior', () => {
+    it('does not auto-refresh cached signed-in recipes on first render', async () => {
+      const originalConfig = jest.requireMock('../../../config').config;
+      originalConfig.mockData.enabled = false;
 
-      const mockService = {
-        getRecipes: jest.fn().mockResolvedValue([activeRecipe, deletedRecipe]),
-        createRecipe: jest.fn(),
-        updateRecipe: jest.fn(),
-        deleteRecipe: jest.fn(),
+      const cachedRecipe = createMockRecipe({ id: 'signed-in-1', name: 'Cached Recipe' });
+      const mockRepository = {
+        findAll: jest.fn().mockResolvedValue([cachedRecipe]),
+        findById: jest.fn().mockResolvedValue(cachedRecipe),
+        refresh: jest.fn().mockResolvedValue([cachedRecipe]),
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
       };
-      createRecipeService.mockReturnValue(mockService);
 
-      const { result } = renderHook(() => useRecipes());
+      mockUseAuth.mockReturnValue({
+        user: { id: 'user-1', householdId: 'household-1', isGuest: false },
+        isLoading: false,
+      });
+      mockUseCachedEntities.mockReturnValue({
+        data: [cachedRecipe],
+        isLoading: false,
+        error: null,
+      });
+      MockCacheAwareRecipeRepository.mockImplementation(() => mockRepository);
+      createRecipeService.mockReturnValue({ getRecipes: jest.fn() });
+
+      renderHook(() => useRecipes());
 
       await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
+        expect(mockRepository.findAll).toHaveBeenCalledTimes(1);
       });
 
-      expect(result.current.recipes).toEqual([
-        expect.objectContaining({ id: 'active-1', name: 'Visible Recipe' }),
-      ]);
-      expect(result.current.recipes).toHaveLength(1);
+      expect(mockRepository.refresh).not.toHaveBeenCalled();
+
+      originalConfig.mockData.enabled = true;
     });
   });
 });

@@ -330,20 +330,25 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         items = data.shoppingItems;
       }
 
-      // The cache-aware repository may return items stored in a previous locale.
-      // Re-apply the current locale to catalog-linked items so the user always
-      // sees names in their selected language.
-      const translatedItems = await translateShoppingItemNames(
-        items,
-        i18n.language,
-        getCatalogDisplayNames,
-      );
-
       hasLoadedOnceRef.current = true;
       const sortedLists = sortListsWithMainFirst(lists);
       setShoppingLists(sortedLists);
-      setAllItems(translatedItems);
+      setAllItems(items);
       setSelectedList((current) => getSelectedList(sortedLists, current?.id));
+
+      void (async () => {
+        const translatedItems = await translateShoppingItemNames(
+          items,
+          i18n.language,
+          getCatalogDisplayNames,
+        );
+
+        setAllItems((currentItems) => {
+          const currentIds = currentItems.map((item) => item.id).join(',');
+          const translatedIds = translatedItems.map((item) => item.id).join(',');
+          return currentIds === translatedIds ? translatedItems : currentItems;
+        });
+      })();
     } catch (error) {
       console.error('Failed to load shopping data:', error);
     } finally {
