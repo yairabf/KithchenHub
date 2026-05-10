@@ -228,4 +228,42 @@ describe('RecipeDetailScreen shopping integration', () => {
       }),
     );
   });
+
+  it('falls back to the canonical catalog item for recipe ingredient variants like Large Eggs', async () => {
+    mockUseCatalog.mockReturnValue({
+      groceryItems: [
+        { id: 'catalog-eggs', name: 'Eggs', category: 'dairy', image: 'eggs.png' },
+      ],
+      searchGroceries: jest.fn(),
+    });
+
+    const recipeWithVariantIngredient = {
+      ...baseRecipe,
+      ingredients: [
+        {
+          name: 'Large Eggs',
+          quantityAmount: 2,
+          quantityUnit: 'pcs',
+          image: 'eggs.png',
+        },
+      ],
+    };
+
+    const { getAllByTestId } = render(
+      <RecipeDetailScreen recipe={recipeWithVariantIngredient as any} onBack={jest.fn()} />,
+    );
+
+    fireEvent.press(getAllByTestId('add-all-ingredients')[0]);
+
+    await waitFor(() => {
+      expect(mockRepository.createItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Large Eggs',
+          catalogItemId: 'catalog-eggs',
+          category: 'dairy',
+          image: 'eggs.png',
+        }),
+      );
+    });
+  });
 });

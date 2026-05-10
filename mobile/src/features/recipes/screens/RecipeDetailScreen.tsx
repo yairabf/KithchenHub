@@ -152,15 +152,36 @@ export function RecipeDetailScreen({
 
   // Use fullRecipe if available, otherwise fall back to recipe prop
   const baseDisplayRecipe = fullRecipe || recipe;
+  const normalizeIngredientLookupName = useCallback((value: string) => {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/\blarge\b/g, '')
+      .replace(/\bextra\s+large\b/g, '')
+      .replace(/\bsmall\b/g, '')
+      .replace(/\bmedium\b/g, '')
+      .replace(/[()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }, []);
+
   const displayRecipe = useMemo(() => {
     const ingredients = (baseDisplayRecipe.ingredients || []).map((ingredient) => {
       if (ingredient.image) {
         return ingredient;
       }
 
+      const normalizedIngredientName = normalizeIngredientLookupName(ingredient.name);
       const resolvedCatalogItem = ingredient.catalogItemId
         ? groceryItems.find((item) => item.id === ingredient.catalogItemId)
-        : groceryItems.find((item) => item.name.trim().toLowerCase() === ingredient.name.trim().toLowerCase());
+        : groceryItems.find((item) => {
+            const normalizedCatalogName = normalizeIngredientLookupName(item.name);
+            return (
+              normalizedCatalogName === normalizedIngredientName ||
+              normalizedCatalogName.includes(normalizedIngredientName) ||
+              normalizedIngredientName.includes(normalizedCatalogName)
+            );
+          });
 
       if (!resolvedCatalogItem?.image) {
         return ingredient;
@@ -176,7 +197,7 @@ export function RecipeDetailScreen({
       ...baseDisplayRecipe,
       ingredients,
     };
-  }, [baseDisplayRecipe, groceryItems]);
+  }, [baseDisplayRecipe, groceryItems, normalizeIngredientLookupName]);
 
   // Track scroll position and header height for sticky header
   const [scrollY, setScrollY] = useState(0);
@@ -320,7 +341,7 @@ export function RecipeDetailScreen({
   );
 
   const resolveIngredientCatalogItem = useCallback((ingredient: Ingredient) => {
-    const normalizedIngredientName = ingredient.name.trim().toLowerCase();
+    const normalizedIngredientName = normalizeIngredientLookupName(ingredient.name);
 
     if (ingredient.catalogItemId) {
       const byCatalogId = groceryItems.find((item) => item.id === ingredient.catalogItemId);
@@ -329,8 +350,26 @@ export function RecipeDetailScreen({
       }
     }
 
-    return groceryItems.find((item) => item.name.trim().toLowerCase() === normalizedIngredientName);
-  }, [groceryItems]);
+    const byName = groceryItems.find((item) => {
+      const normalizedCatalogName = normalizeIngredientLookupName(item.name);
+      return (
+        normalizedCatalogName === normalizedIngredientName ||
+        normalizedCatalogName.includes(normalizedIngredientName) ||
+        normalizedIngredientName.includes(normalizedCatalogName)
+      );
+    });
+
+    if (byName) {
+      return byName;
+    }
+
+    const normalizedIngredientImage = ingredient.image?.trim();
+    if (!normalizedIngredientImage) {
+      return undefined;
+    }
+
+    return groceryItems.find((item) => item.image?.trim() === normalizedIngredientImage);
+  }, [groceryItems, normalizeIngredientLookupName]);
 
   const buildRecipeIngredientShoppingInput = useCallback((ingredient: Ingredient, listId: string) => {
     const resolvedCatalogItem = resolveIngredientCatalogItem(ingredient);
@@ -411,9 +450,10 @@ export function RecipeDetailScreen({
         }
 
         const normalizedName = ingredient.name.trim().toLowerCase();
+        const resolvedCatalogItem = resolveIngredientCatalogItem(ingredient);
         const existingItemInList = data.shoppingItems.find(
           item => item.listId === mainList.id && (
-            (ingredient.catalogItemId && item.catalogItemId === ingredient.catalogItemId) ||
+            ((ingredient.catalogItemId ?? resolvedCatalogItem?.id) && item.catalogItemId === (ingredient.catalogItemId ?? resolvedCatalogItem?.id)) ||
             item.name.trim().toLowerCase() === normalizedName
           )
         );
@@ -507,9 +547,10 @@ export function RecipeDetailScreen({
       // Process each ingredient
       for (const ingredient of ingredients) {
         const normalizedName = ingredient.name.trim().toLowerCase();
+        const resolvedCatalogItem = resolveIngredientCatalogItem(ingredient);
         const existingItemInList = workingItems.find(
           item => item.listId === mainList.id && (
-            (ingredient.catalogItemId && item.catalogItemId === ingredient.catalogItemId) ||
+            ((ingredient.catalogItemId ?? resolvedCatalogItem?.id) && item.catalogItemId === (ingredient.catalogItemId ?? resolvedCatalogItem?.id)) ||
             item.name.trim().toLowerCase() === normalizedName
           )
         );
