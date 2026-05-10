@@ -268,52 +268,7 @@ export function DashboardScreen({
         return;
       }
 
-      const data = await shoppingService.getShoppingData();
-      const mainList = getMainList(data.shoppingLists);
-
-      if (!mainList) {
-        showToast(t("detail.toasts.noMainList", { ns: "recipes" }));
-        openShoppingModal();
-        return;
-      }
-
-      // Use the same pattern as ShoppingListsScreen but always use main list
-      const normalizedItemName = trimmedItemName.toLowerCase();
-      const existingInList = data.shoppingItems.find(
-        (i) =>
-          i.listId === mainList.id &&
-          i.name.trim().toLowerCase() === normalizedItemName,
-      );
-
-      if (existingInList) {
-        const currentQuantity =
-          typeof existingInList.quantity === "number"
-            ? existingInList.quantity
-            : 0;
-        await shoppingService.updateItem(existingInList.id, {
-          quantity: currentQuantity + 1,
-        });
-        showToast(t("detail.toasts.ingredientUpdated", { ns: "recipes", name: item.name }));
-      } else {
-        const isCustomItem = isCustomGroceryItem(item);
-        const categoryToUse = isCustomItem
-          ? normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase())
-          : getSafeGroceryCategory(item);
-
-        const newItemData: Partial<ShoppingItem> = {
-          listId: mainList.id,
-          name: trimmedItemName,
-          quantity: 1,
-          category: categoryToUse,
-          image: item.image ?? "",
-          catalogItemId: !isCustomItem && item.id ? item.id : undefined,
-        } as any; // Type assertion needed because ShoppingItem doesn't have catalogItemId
-
-        await shoppingService.createItem(newItemData);
-        showToast(t("detail.toasts.ingredientAdded", { ns: "recipes", name: item.name, listName: mainList.name }));
-      }
-
-      await loadShoppingData();
+      await handleQuickAddGroceryItem(item);
       // Don't clear search value - keep dropdown open for multiple additions
     } catch (error) {
       console.error("Failed to add item to shopping list:", error);

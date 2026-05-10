@@ -137,9 +137,10 @@ const buildShoppingItemsFromDetails = (
   groceries: GroceryItem[],
 ): ShoppingItem[] => {
   return items.map((item) => {
-    const matchingGrocery = groceries.find(
-      (grocery) => grocery.name.toLowerCase() === item.name.toLowerCase()
-    );
+    const matchingGrocery = item.catalogItemId
+      ? groceries.find((grocery) => grocery.id === item.catalogItemId) ??
+        groceries.find((grocery) => grocery.name.toLowerCase() === item.name.toLowerCase())
+      : groceries.find((grocery) => grocery.name.toLowerCase() === item.name.toLowerCase());
 
     return {
       id: item.id,
@@ -276,6 +277,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
     return withCreatedAt({
       id: `item-${Date.now()}`,
       localId: localId,
+      catalogItemId: data.catalogItemId,
       name: data.name ?? '',
       image: data.image ?? '',
       quantity: data.quantity ?? 1,
@@ -690,7 +692,7 @@ export class CacheAwareShoppingRepository implements ICacheAwareShoppingReposito
       const existing = current.find((i) => 
         i.listId === item.listId && 
         i.name === item.name &&
-        (item.catalogItemId ? i.id === item.catalogItemId : true)
+        (item.catalogItemId ? i.catalogItemId === item.catalogItemId : true)
       );
       if (existing) {
         return existing;

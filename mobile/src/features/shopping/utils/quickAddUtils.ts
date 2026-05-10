@@ -162,7 +162,7 @@ export async function quickAddItem(
         listId: selectedList.id,
         quantity,
         category: categoryToUse,
-        image: groceryItem.image,
+        image: groceryItem.image || undefined,
         catalogItemId: !isCustomItem && groceryItem.id ? groceryItem.id : undefined,
       });
       

@@ -55,7 +55,18 @@ const normalizeListName = (name?: string | null, fallbackName?: string) => {
   return name ?? fallbackName ?? 'Untitled List';
 };
 
-const findMatchingGrocery = (items: GroceryItem[], name: string | null | undefined) => {
+const findMatchingGrocery = (
+  items: GroceryItem[],
+  name: string | null | undefined,
+  catalogItemId?: string | null,
+) => {
+  if (catalogItemId) {
+    const byId = items.find((item) => item.id === catalogItemId);
+    if (byId) {
+      return byId;
+    }
+  }
+
   if (!name) {
     return undefined;
   }
@@ -111,7 +122,11 @@ const mapItemRowToItem = (
   groceryItems: GroceryItem[],
   existing?: ShoppingItem,
 ): ShoppingItem => {
-  const matchingGrocery = findMatchingGrocery(groceryItems, row.name ?? existing?.name);
+  const matchingGrocery = findMatchingGrocery(
+    groceryItems,
+    row.name ?? existing?.name,
+    row.catalog_item_id ?? existing?.catalogItemId,
+  );
 
   const base = {
     id: row.id,

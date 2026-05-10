@@ -135,25 +135,63 @@ type UpdateListDto = {
   isMain?: boolean;
 };
 
+type GroceryLookup = {
+  byName: Map<string, GroceryItem>;
+  byId: Map<string, GroceryItem>;
+};
+
 const createGroceryLookup = (
   groceries: GroceryItem[],
-): Map<string, GroceryItem> => {
-  return new Map(
-    groceries
-      .filter(
-        (item) => typeof item.name === "string" && item.name.trim().length > 0,
-      )
-      .map((item) => [item.name.trim().toLowerCase(), item]),
-  );
+): GroceryLookup => {
+  return {
+    byName: new Map(
+      groceries
+        .filter(
+          (item) => typeof item.name === "string" && item.name.trim().length > 0,
+        )
+        .map((item) => [item.name.trim().toLowerCase(), item]),
+    ),
+    byId: new Map(
+      groceries
+        .filter(
+          (item) => typeof item.id === "string" && item.id.trim().length > 0,
+        )
+        .map((item) => [item.id, item]),
+    ),
+  };
+};
+
+const resolveMatchingGrocery = (
+  groceries: GroceryLookup,
+  name: string | null | undefined,
+  catalogItemId?: string | null,
+): GroceryItem | undefined => {
+  if (catalogItemId) {
+    const byId = groceries.byId.get(catalogItemId);
+    if (byId) {
+      return byId;
+    }
+  }
+
+  const normalizedName = name?.trim().toLowerCase();
+  if (!normalizedName) {
+    return undefined;
+  }
+
+  return groceries.byName.get(normalizedName);
 };
 
 const buildShoppingItemsFromDetails = (
   listId: string,
   items: ShoppingListDetailDto["items"],
-  groceriesByName: Map<string, GroceryItem>,
+  groceries: GroceryLookup,
 ): ShoppingItem[] => {
   return items.map((item) => {
-    const matchingGrocery = groceriesByName.get(item.name.trim().toLowerCase());
+    const matchingGrocery = resolveMatchingGrocery(
+      groceries,
+      item.name,
+      item.catalogItemId,
+    );
 
     return {
       id: item.id,
@@ -250,8 +288,10 @@ export class RemoteShoppingService implements IShoppingService {
 
       shoppingLists = aggregateLists.map(mapShoppingListSummary);
       shoppingItems = aggregateItems.map((item) => {
-        const matchingGrocery = groceryLookup.get(
-          item.name.trim().toLowerCase(),
+        const matchingGrocery = resolveMatchingGrocery(
+          groceryLookup,
+          item.name,
+          item.catalogItemId,
         );
         return mapItemResponseToShoppingItem(
           item,
@@ -786,7 +826,7 @@ export class RemoteShoppingService implements IShoppingService {
 
   private async getShoppingItems(
     shoppingLists: ShoppingList[],
-    groceryLookup: Map<string, GroceryItem>,
+    groceryLookup: GroceryLookup,
     encodedLang?: string,
   ): Promise<ShoppingItem[]> {
     const lang =

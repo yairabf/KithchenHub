@@ -36,6 +36,7 @@ const getTabIndex = (tab: TabKey): number => TAB_ORDER.indexOf(tab);
 
 export function MainTabsScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('Dashboard');
+  const [visitedTabs, setVisitedTabs] = useState<Set<TabKey>>(() => new Set(['Dashboard']));
   const [shoppingModalVisible, setShoppingModalVisible] = useState(false);
   const [choresModalVisible, setChoresModalVisible] = useState(false);
   const [shoppingButtonPosition, setShoppingButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | undefined>(undefined);
@@ -73,6 +74,12 @@ export function MainTabsScreen() {
 
     // Update active tab immediately
     setActiveTab(tabKey);
+    setVisitedTabs((current) => {
+      if (current.has(tabKey)) {
+        return current;
+      }
+      return new Set([...current, tabKey]);
+    });
 
     // Animate all screens
     TAB_ORDER.forEach((tab) => {
@@ -183,7 +190,7 @@ export function MainTabsScreen() {
     <View style={styles.container}>
       <OfflineBanner />
       <View style={styles.screenContainer}>
-        {TAB_ORDER.map((tab) => (
+        {TAB_ORDER.filter((tab) => visitedTabs.has(tab)).map((tab) => (
           <Animated.View
             key={tab}
             style={[

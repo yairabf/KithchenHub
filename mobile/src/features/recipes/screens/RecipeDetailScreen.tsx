@@ -342,13 +342,14 @@ export function RecipeDetailScreen({
 
     const rawCategory = resolvedCatalogItem?.category ?? DEFAULT_CATEGORY.toLowerCase();
     const normalizedCategory = normalizeShoppingCategory(rawCategory);
+    const resolvedImage = ingredient.image?.trim() || resolvedCatalogItem?.image?.trim();
 
     return {
       listId,
       name: ingredient.name,
       quantity: normalizedQuantity,
       unit: normalizedUnit,
-      image: ingredient.image ?? resolvedCatalogItem?.image ?? '',
+      image: resolvedImage || undefined,
       category: normalizedCategory,
       catalogItemId: ingredient.catalogItemId ?? resolvedCatalogItem?.id,
     };
@@ -368,6 +369,14 @@ export function RecipeDetailScreen({
     }
 
     return shoppingService.createItem(item);
+  }, [shoppingRepository, shoppingService]);
+
+  const updateShoppingItem = useCallback(async (itemId: string, updates: Partial<ShoppingItem>) => {
+    if (shoppingRepository) {
+      return shoppingRepository.updateItem(itemId, updates);
+    }
+
+    return shoppingService.updateItem(itemId, updates);
   }, [shoppingRepository, shoppingService]);
 
   const getShoppingData = useCallback(async () => {
@@ -403,8 +412,10 @@ export function RecipeDetailScreen({
 
         const normalizedName = ingredient.name.trim().toLowerCase();
         const existingItemInList = data.shoppingItems.find(
-          item => item.listId === mainList.id &&
+          item => item.listId === mainList.id && (
+            (ingredient.catalogItemId && item.catalogItemId === ingredient.catalogItemId) ||
             item.name.trim().toLowerCase() === normalizedName
+          )
         );
 
         if (existingItemInList) {
@@ -429,7 +440,7 @@ export function RecipeDetailScreen({
 
     try {
       const quantity = getIngredientAmount(conflictingIngredient, 1);
-      await shoppingService.updateItem(existingItem.id, {
+      await updateShoppingItem(existingItem.id, {
         quantity,
         unit: getIngredientUnit(conflictingIngredient),
       });
@@ -441,7 +452,7 @@ export function RecipeDetailScreen({
       console.error('Failed to replace ingredient:', error);
       showToast(t('detail.toasts.ingredientUpdateFailed'));
     }
-  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
+  }, [conflictingIngredient, existingItem, updateShoppingItem, showToast, getIngredientAmount, getIngredientUnit, t]);
 
   const handleAddToQuantity = useCallback(async () => {
     if (!conflictingIngredient || !existingItem) return;
@@ -462,7 +473,7 @@ export function RecipeDetailScreen({
       // (This preserves existing behavior for edge cases, but fixes compatible ones)
       const finalQuantity = newQuantity !== null ? newQuantity : currentQuantity + ingredientQuantity;
 
-      await shoppingService.updateItem(existingItem.id, {
+      await updateShoppingItem(existingItem.id, {
         quantity: finalQuantity,
       });
       showToast(t('detail.toasts.ingredientUpdated', { name: conflictingIngredient.name }));
@@ -473,7 +484,7 @@ export function RecipeDetailScreen({
       console.error('Failed to add to quantity:', error);
       showToast(t('detail.toasts.ingredientUpdateFailed'));
     }
-  }, [conflictingIngredient, existingItem, shoppingService, showToast, getIngredientAmount, getIngredientUnit]);
+  }, [conflictingIngredient, existingItem, updateShoppingItem, showToast, getIngredientAmount, getIngredientUnit, t]);
 
   const handleAddAllIngredients = useCallback(async () => {
     const ingredients = displayRecipe.ingredients || [];
@@ -491,12 +502,16 @@ export function RecipeDetailScreen({
         return;
       }
 
+      let workingItems = [...data.shoppingItems];
+
       // Process each ingredient
       for (const ingredient of ingredients) {
         const normalizedName = ingredient.name.trim().toLowerCase();
-        const existingItemInList = data.shoppingItems.find(
-          item => item.listId === mainList.id &&
+        const existingItemInList = workingItems.find(
+          item => item.listId === mainList.id && (
+            (ingredient.catalogItemId && item.catalogItemId === ingredient.catalogItemId) ||
             item.name.trim().toLowerCase() === normalizedName
+          )
         );
 
         if (existingItemInList) {
@@ -515,11 +530,17 @@ export function RecipeDetailScreen({
           // If conversion worked, use it. If not, fallback to simple addition.
           const finalQuantity = newQuantity !== null ? newQuantity : currentQuantity + ingredientQuantity;
 
-          await shoppingService.updateItem(existingItemInList.id, {
+          const updatedItem = await updateShoppingItem(existingItemInList.id, {
             quantity: finalQuantity,
           });
+          workingItems = workingItems.map((item) =>
+            item.id === existingItemInList.id || item.localId === existingItemInList.localId
+              ? { ...item, ...updatedItem }
+              : item,
+          );
         } else {
-          await createShoppingItem(buildRecipeIngredientShoppingInput(ingredient, mainList.id));
+          const createdItem = await createShoppingItem(buildRecipeIngredientShoppingInput(ingredient, mainList.id));
+          workingItems = [...workingItems, createdItem];
         }
       }
 
@@ -528,7 +549,7 @@ export function RecipeDetailScreen({
       console.error('Failed to add all ingredients:', error);
       showToast(t('detail.toasts.addIngredientsFailed'));
     }
-  }, [buildRecipeIngredientShoppingInput, createShoppingItem, displayRecipe.ingredients, getIngredientAmount, getIngredientUnit, getShoppingData, showToast, shoppingService, t]);
+  }, [buildRecipeIngredientShoppingInput, createShoppingItem, displayRecipe.ingredients, getIngredientAmount, getIngredientUnit, getShoppingData, showToast, t, updateShoppingItem]);
 
   // Handle scroll position tracking
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
