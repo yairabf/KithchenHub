@@ -271,6 +271,10 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [isListsLoading, setIsListsLoading] = useState(false);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
 
+  const allItemsRef = useRef<ShoppingItem[]>([]);
+  allItemsRef.current = allItems;
+  const pendingQuickAddKeys = useRef<Set<string>>(new Set());
+
   const fallbackList = useMemo<ShoppingList>(() => ({
     id: 'fallback-list',
     localId: 'fallback-list',
@@ -460,27 +464,33 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   );
 
   const createItem = useCallback(
-    (item: ShoppingItemCreationPayload) => shoppingService.createItem(item),
-    [shoppingService],
+    (item: ShoppingItemCreationPayload) =>
+      shoppingRepository ? shoppingRepository.createItem(item) : shoppingService.createItem(item),
+    [shoppingRepository, shoppingService],
   );
 
   const updateItem = useCallback(
-    (itemId: string, updates: Partial<ShoppingItem>) => shoppingService.updateItem(itemId, updates),
-    [shoppingService],
+    (itemId: string, updates: Partial<ShoppingItem>) =>
+      shoppingRepository ? shoppingRepository.updateItem(itemId, updates) : shoppingService.updateItem(itemId, updates),
+    [shoppingRepository, shoppingService],
   );
 
   const deleteItem = useCallback(
-    (itemId: string) => shoppingService.deleteItem(itemId),
-    [shoppingService],
+    (itemId: string) =>
+      shoppingRepository ? shoppingRepository.deleteItem(itemId) : shoppingService.deleteItem(itemId),
+    [shoppingRepository, shoppingService],
   );
 
   const toggleItem = useCallback(
-    (itemId: string) => shoppingService.toggleItem(itemId),
-    [shoppingService],
+    (itemId: string) =>
+      shoppingRepository ? shoppingRepository.toggleItem(itemId) : shoppingService.toggleItem(itemId),
+    [shoppingRepository, shoppingService],
   );
 
   const createList = useCallback(async (list: Partial<ShoppingList>) => {
-    const created = await shoppingService.createList(list);
+    const created = shoppingRepository
+      ? await shoppingRepository.createList(list)
+      : await shoppingService.createList(list);
     // Read updated lists from cache (write-through cache means this is instant)
     const updatedLists = shoppingRepository
       ? await shoppingRepository.findAllLists()
@@ -492,7 +502,9 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, [shoppingRepository, shoppingService, sortListsWithMainFirst]);
 
   const updateList = useCallback(async (listId: string, updates: Partial<ShoppingList>) => {
-    const updated = await shoppingService.updateList(listId, updates);
+    const updated = shoppingRepository
+      ? await shoppingRepository.updateList(listId, updates)
+      : await shoppingService.updateList(listId, updates);
     setShoppingLists((currentLists) =>
       sortListsWithMainFirst(
         currentLists.map((list) =>
@@ -506,10 +518,14 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         : currentSelected,
     );
     return updated;
-  }, [shoppingService, sortListsWithMainFirst]);
+  }, [shoppingRepository, shoppingService, sortListsWithMainFirst]);
 
   const deleteList = useCallback(async (listId: string) => {
-    await shoppingService.deleteList(listId);
+    if (shoppingRepository) {
+      await shoppingRepository.deleteList(listId);
+    } else {
+      await shoppingService.deleteList(listId);
+    }
     setShoppingLists((currentLists) => {
       const nextLists = currentLists.filter((list) => list.id !== listId);
       const sortedLists = sortListsWithMainFirst(nextLists);
@@ -521,7 +537,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     setAllItems((currentItems) =>
       currentItems.filter((item) => item.listId !== listId),
     );
-  }, [shoppingService, sortListsWithMainFirst]);
+  }, [shoppingRepository, shoppingService, sortListsWithMainFirst]);
 
   /**
    * Executes a service operation with optimistic UI updates and automatic revert on error.
@@ -697,15 +713,23 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, []);
 
   const handleQuickAddItem = useCallback(async (groceryItem: GroceryItem) => {
-    await quickAddItem(groceryItem, activeList, {
-      allItems,
-      setAllItems,
-      createItem,
-      updateItem,
-      executeWithOptimisticUpdate,
-      logError: (msg, err) => console.error(msg, err),
-    });
-  }, [activeList, allItems, createItem, updateItem, executeWithOptimisticUpdate]);
+    const addKey = groceryItem.id ?? groceryItem.name;
+    if (pendingQuickAddKeys.current.has(addKey)) return;
+    pendingQuickAddKeys.current.add(addKey);
+
+    try {
+      await quickAddItem(groceryItem, activeList, {
+        allItems: allItemsRef.current,
+        setAllItems,
+        createItem,
+        updateItem,
+        executeWithOptimisticUpdate,
+        logError: (msg, err) => console.error(msg, err),
+      });
+    } finally {
+      pendingQuickAddKeys.current.delete(addKey);
+    }
+  }, [activeList, createItem, updateItem, executeWithOptimisticUpdate]);
 
   const handleAddToList = useCallback(async () => {
     if (!selectedGroceryItem) return;
@@ -771,7 +795,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
           listId: activeList.id,
           quantity,
           category: categoryToUse,
-          image: selectedGroceryItem.image,
+          image: selectedGroceryItem.image || undefined,
           catalogItemId: selectedGroceryItem.id.startsWith('custom-') ? undefined : selectedGroceryItem.id,
         };
         const newItem = await createItem(payload);
