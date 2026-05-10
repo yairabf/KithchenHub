@@ -83,8 +83,25 @@ describe('createShoppingItem', () => {
     expect(result.updatedAt).toBeDefined();
   });
 
+  it('uses UUID-based unique ids for rapid successive item creation', () => {
+    const crypto = jest.requireMock('expo-crypto') as { randomUUID: jest.Mock };
+    crypto.randomUUID
+      .mockReturnValueOnce('uuid-1')
+      .mockReturnValueOnce('uuid-2');
+
+    const first = createShoppingItem({ name: 'Milk', image: '', category: 'Dairy' } as any, 'list-1', 1);
+    const second = createShoppingItem({ name: 'Eggs', image: '', category: 'Dairy' } as any, 'list-1', 1);
+
+    expect(first.id).toBe('item-uuid-1');
+    expect(first.localId).toBe('uuid-1');
+    expect(second.id).toBe('item-uuid-2');
+    expect(second.localId).toBe('uuid-2');
+    expect(first.id).not.toBe(second.id);
+  });
+
   describe.each<[string, ShoppingItemInput, string | undefined]>([
     ['catalog item (non-custom id)', { id: 'cat-uuid-1', name: 'Apple', image: '', category: 'Fruits', defaultQuantity: 1 }, 'cat-uuid-1'],
+    ['catalog item create-input with explicit catalogItemId only', { name: 'Large Eggs', image: '', category: 'dairy', catalogItemId: 'g30' } as ShoppingItemInput, 'g30'],
     ['custom item (custom- prefix)', { id: 'custom-abc', name: 'My Item', image: '', category: 'Other', defaultQuantity: 1 }, undefined],
     ['item with no id field', { name: 'Apple', image: '', category: 'Fruits' }, undefined],
   ])(

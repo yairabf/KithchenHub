@@ -28,25 +28,34 @@ export const createShoppingItem = (
   listId: string,
   quantity: number,
 ): ShoppingItem => {
+  const explicitCatalogItemId =
+    'catalogItemId' in groceryItem &&
+    typeof groceryItem.catalogItemId === 'string' &&
+    groceryItem.catalogItemId.trim().length > 0
+      ? groceryItem.catalogItemId
+      : undefined;
+
+  const derivedCatalogItemId =
+    'id' in groceryItem &&
+    typeof groceryItem.id === 'string' &&
+    !groceryItem.id.startsWith('custom-')
+      ? groceryItem.id
+      : undefined;
+
+  const localId = Crypto.randomUUID();
+
   const item = {
-    id: `item-${Date.now()}`,
-    localId: Crypto.randomUUID(),
+    id: `item-${localId}`,
+    localId,
     name: groceryItem.name,
     image: groceryItem.image,
     quantity: quantity,
     category: groceryItem.category,
     listId: listId,
     isChecked: false,
-    // Propagate catalog ID so the realtime dedup handler can match by ID
-    // rather than name, preventing Hebrew ↔ English name mismatches from
-    // creating duplicate items when the realtime INSERT fires before the
-    // API response.
-    catalogItemId:
-      'id' in groceryItem &&
-      typeof groceryItem.id === 'string' &&
-      !groceryItem.id.startsWith('custom-')
-        ? groceryItem.id
-        : undefined,
+    // Preserve explicit catalogItemId from shopping create-inputs (recipe/dashboard)
+    // and fall back to deriving it from groceryItem.id for direct catalog items.
+    catalogItemId: explicitCatalogItemId ?? derivedCatalogItemId,
   };
   // Business rule: auto-populate createdAt and updatedAt on creation
   return withCreatedAtAndUpdatedAt<ShoppingItem>(item as ShoppingItem);
