@@ -46,7 +46,7 @@ import {
   CacheAwareShoppingRepository,
   type ICacheAwareShoppingRepository,
 } from '../../../common/repositories/cacheAwareShoppingRepository';
-import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../shopping/constants/categories';
+import { DEFAULT_CATEGORY, normalizeCategoryKey } from '../../shopping/constants/categories';
 
 
 export function RecipeDetailScreen({
@@ -341,7 +341,7 @@ export function RecipeDetailScreen({
     );
 
     const rawCategory = resolvedCatalogItem?.category ?? DEFAULT_CATEGORY.toLowerCase();
-    const normalizedCategory = normalizeShoppingCategory(rawCategory);
+    const normalizedCategory = normalizeCategoryKey(rawCategory);
     const resolvedImage = ingredient.image?.trim() || resolvedCatalogItem?.image?.trim();
 
     return {

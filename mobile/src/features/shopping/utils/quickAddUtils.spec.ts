@@ -60,6 +60,35 @@ const makeServerItem = (overrides: Partial<ShoppingItem> = {}): ShoppingItem =>
 // ---------------------------------------------------------------------------
 
 describe('quickAddItem – create new item', () => {
+  it('preserves catalog-backed categories even when they are outside the static shopping-category set', async () => {
+    const serverItem = makeServerItem({ category: 'condiments & sauces' });
+    const createItem = jest.fn().mockResolvedValue(serverItem);
+
+    let items: ShoppingItem[] = [];
+    const setAllItems = jest.fn((updater) => {
+      items = typeof updater === 'function' ? updater(items) : updater;
+    });
+
+    await quickAddItem(
+      makeGroceryItem({ category: 'Condiments & Sauces' }),
+      makeList(),
+      {
+        allItems: items,
+        setAllItems,
+        createItem,
+        updateItem: jest.fn(),
+        executeWithOptimisticUpdate: jest.fn(),
+        logError: jest.fn(),
+      },
+    );
+
+    expect(createItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'condiments & sauces',
+      }),
+    );
+  });
+
   it('adds a temp item optimistically then replaces it with the server item', async () => {
     const serverItem = makeServerItem();
     const createItem = jest.fn().mockResolvedValue(serverItem);

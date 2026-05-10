@@ -159,7 +159,7 @@ describe('RecipeDetailScreen shopping integration', () => {
 
     mockUseCatalog.mockReturnValue({
       groceryItems: [
-        { id: 'catalog-apple', name: 'Apple', category: 'fruits', image: 'apple.png' },
+        { id: 'catalog-apple', name: 'Apple', category: 'condiments & sauces', image: 'apple.png' },
         { id: 'catalog-milk', name: 'Milk', category: 'dairy', image: 'milk.png' },
       ],
       searchGroceries: jest.fn(),
@@ -188,7 +188,7 @@ describe('RecipeDetailScreen shopping integration', () => {
           listId: 'list-main',
           name: 'Apple',
           catalogItemId: 'catalog-apple',
-          category: 'fruits',
+          category: 'condiments & sauces',
           image: 'apple.png',
         }),
       );
@@ -213,7 +213,7 @@ describe('RecipeDetailScreen shopping integration', () => {
       expect.objectContaining({
         name: 'Apple',
         catalogItemId: 'catalog-apple',
-        category: 'fruits',
+        category: 'condiments & sauces',
         image: 'apple.png',
       }),
     );

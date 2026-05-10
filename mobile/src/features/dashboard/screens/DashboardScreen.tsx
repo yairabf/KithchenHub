@@ -38,9 +38,10 @@ import { getMainList } from "../../shopping/utils/selectionUtils";
 import { createShoppingItem } from "../../shopping/utils/shoppingFactory";
 import {
   DEFAULT_CATEGORY,
-  normalizeShoppingCategory,
-} from "../../shopping/constants/categories";
-import { quickAddItem } from "../../shopping/utils/quickAddUtils";
+  normalizeCategoryKey,
+} from '../../shopping/constants/categories';
+import { quickAddItem } from '../../shopping/utils/quickAddUtils';
+
 import { getAssigneeAvatarUri } from "../../../common/utils/avatarUtils";
 import { config } from "../../../config";
 import { determineUserDataMode } from "../../../common/types/dataModes";
@@ -64,7 +65,7 @@ function getSafeGroceryCategory(item: GroceryItem): string {
     typeof item.category === "string" && item.category.trim().length > 0
       ? item.category
       : DEFAULT_CATEGORY.toLowerCase();
-  return normalizeShoppingCategory(rawCategory);
+  return normalizeCategoryKey(rawCategory);
 }
 
 export function DashboardScreen({

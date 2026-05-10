@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { GroceryItem } from '../components/GrocerySearchBar';
 import type { ShoppingItem, ShoppingList } from '../../../mocks/shopping';
 import { createShoppingItem, preserveLocalizedName } from './shoppingFactory';
-import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../constants/categories';
+import { DEFAULT_CATEGORY, normalizeCategoryKey } from '../constants/categories';
 
 /**
  * Type for shopping item creation that includes catalogItemId for API requests.
@@ -100,12 +100,12 @@ export async function quickAddItem(
     typeof groceryItem.id === 'string' && groceryItem.id.startsWith('custom-');
   const safeCategory =
     typeof groceryItem.category === 'string' && groceryItem.category.trim().length > 0
-      ? normalizeShoppingCategory(groceryItem.category)
-      : normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase());
+      ? normalizeCategoryKey(groceryItem.category)
+      : normalizeCategoryKey(DEFAULT_CATEGORY.toLowerCase());
   
   // Use default category for custom items in quick add (user can select category in modal)
   const categoryToUse = isCustomItem
-    ? normalizeShoppingCategory(DEFAULT_CATEGORY.toLowerCase())
+    ? normalizeCategoryKey(DEFAULT_CATEGORY.toLowerCase())
     : safeCategory;
 
   // Check if item already exists in the selected list.
