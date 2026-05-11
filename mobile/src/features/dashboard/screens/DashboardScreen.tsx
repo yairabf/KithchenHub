@@ -49,6 +49,10 @@ import {
   type ICacheAwareShoppingRepository,
 } from "../../../common/repositories/cacheAwareShoppingRepository";
 import { cacheEvents } from "../../../common/utils/cacheEvents";
+import {
+  readCachedFrequentItems,
+  writeCachedFrequentItems,
+} from "../../../common/utils/frequentItemsCache";
 import { styles } from "./styles";
 import type { DashboardScreenProps } from "./types";
 import { useTranslation } from "react-i18next";
@@ -157,6 +161,11 @@ export function DashboardScreen({
 
     try {
       if (shoppingRepository) {
+        const cachedFrequentItems = await readCachedFrequentItems();
+        if (cachedFrequentItems.length > 0 && requestId === loadRequestIdRef.current) {
+          setFrequentItems(cachedFrequentItems);
+        }
+
         const [frequentItemsFromService, mainListFromService] = await Promise.all([
           shoppingService.getFrequentItems(DASHBOARD_FREQUENT_ITEMS_LIMIT),
           shoppingService.getMainList(),
@@ -168,6 +177,7 @@ export function DashboardScreen({
         }
 
         setFrequentItems(frequentItemsFromService);
+        void writeCachedFrequentItems(frequentItemsFromService);
         setMainList((currentMainList) => currentMainList ?? mainListFromService);
         return;
       }

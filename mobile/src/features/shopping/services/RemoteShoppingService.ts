@@ -25,6 +25,7 @@ import {
 import { i18n } from "../../../i18n";
 import { preserveLocalizedName } from "../utils/shoppingFactory";
 import { logger } from "../../../common/utils/logger";
+import { writeCachedFrequentItems } from "../../../common/utils/frequentItemsCache";
 
 /**
  * Extended ShoppingItem type that includes catalog identifiers for API requests.
@@ -356,9 +357,11 @@ export class RemoteShoppingService implements IShoppingService {
       const frequentResponse = await api.get<{ items: FrequentShoppingItemDto[] }>(
         `/shopping-items/frequent?limit=${limit}&lang=${encodedLang}`,
       );
-      return createFrequentGroceryItems(
+      const items = createFrequentGroceryItems(
         Array.isArray(frequentResponse?.items) ? frequentResponse.items : [],
       );
+      void writeCachedFrequentItems(items);
+      return items;
     } catch (error) {
       if (!is404Error(error)) {
         logger.warn(

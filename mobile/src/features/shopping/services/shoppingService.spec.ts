@@ -220,6 +220,45 @@ describe('Shopping Services', () => {
             ]);
         });
 
+        it('getFrequentItems caches successful backend frequent items', async () => {
+            const AsyncStorage = require('@react-native-async-storage/async-storage');
+            (api.get as jest.Mock).mockResolvedValue({
+                items: [
+                    {
+                        id: 'catalog-1',
+                        name: 'Milk',
+                        category: 'Dairy',
+                        image: 'milk.png',
+                        sourceType: 'catalog',
+                    },
+                ],
+            });
+
+            const result = await service.getFrequentItems(8);
+
+            expect(result).toEqual([
+                {
+                    id: 'catalog-1',
+                    name: 'Milk',
+                    category: 'Dairy',
+                    image: 'milk.png',
+                    defaultQuantity: 1,
+                },
+            ]);
+            expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+                '@kitchen_hub_cache_frequently_added_items',
+                JSON.stringify([
+                    {
+                        id: 'catalog-1',
+                        name: 'Milk',
+                        category: 'Dairy',
+                        image: 'milk.png',
+                        defaultQuantity: 1,
+                    },
+                ]),
+            );
+        });
+
         it('getShoppingData falls back to legacy per-list fetch when aggregate returns 404', async () => {
             mockedI18n.language = 'en';
             (api.get as jest.Mock).mockImplementation((url: string) => {
