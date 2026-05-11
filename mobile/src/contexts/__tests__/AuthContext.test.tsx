@@ -198,6 +198,74 @@ describe('AuthContext', () => {
     expect(result.current.user).not.toBeNull();
   });
 
+  it('restores cached user before waiting for slow startup auth verification', async () => {
+    await AsyncStorage.setItem(
+      '@kitchen_hub_user',
+      JSON.stringify({
+        id: 'cached-user',
+        email: 'cached@example.com',
+        name: 'Cached User',
+        isGuest: false,
+        role: 'member',
+      }),
+    );
+
+    let resolveCurrentUser: (value: unknown) => void = () => undefined;
+    const slowCurrentUser = new Promise((resolve) => {
+      resolveCurrentUser = resolve;
+    });
+    mockGetCurrentUser.mockImplementation(() => slowCurrentUser);
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(
+      () => {
+        expect(result.current.isLoading).toBe(false);
+        expect(result.current.user?.id).toBe('cached-user');
+      },
+      { timeout: 100 },
+    );
+
+    expect(mockGetCurrentUser).toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCurrentUser({
+        id: 'user-1',
+        email: 'test@example.com',
+        name: 'Test User',
+        avatarUrl: undefined,
+        householdId: 'house-1',
+        household: { id: 'house-1', name: 'Home', createdAt: new Date().toISOString() },
+        isGuest: false,
+        role: 'member',
+      });
+      await slowCurrentUser;
+    });
+  });
+
+  it('treats malformed cached user as a cache miss and verifies token with backend', async () => {
+    await AsyncStorage.setItem('@kitchen_hub_user', '{not-json');
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.user?.id).toBe('user-1');
+    });
+
+    const { tokenStorage: mockTokenStorage } = jest.requireMock(
+      '../../features/auth/services/tokenStorage',
+    ) as { tokenStorage: { clearTokens: jest.Mock } };
+    expect(mockTokenStorage.clearTokens).not.toHaveBeenCalled();
+    expect(mockGetCurrentUser).toHaveBeenCalled();
+  });
+
   it('startup transient failure with cached user: preserves tokens and keeps session', async () => {
     await AsyncStorage.setItem(
       '@kitchen_hub_user',

@@ -31,6 +31,7 @@ export const ENTITY_TYPES = {
   chores: 'chores',
   groceryCatalog: 'grocery_catalog',
   categories: 'categories',
+  frequentlyAddedItems: 'frequently_added_items',
 } as const;
 
 /**

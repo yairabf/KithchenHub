@@ -119,6 +119,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logger.debug('[AuthContext] Session cleared during startup restore');
     };
 
+    const parseCachedUser = (storedUser: string): User | null => {
+      try {
+        return JSON.parse(storedUser) as User;
+      } catch (error) {
+        logger.warn('[AuthContext] Ignoring malformed cached user during startup restore', error);
+        return null;
+      }
+    };
+
     const restoreCachedUserFallback = async (): Promise<boolean> => {
       const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
       if (!storedUser) {
@@ -126,7 +135,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      setUser(JSON.parse(storedUser) as User);
+      const cachedUser = parseCachedUser(storedUser);
+      if (!cachedUser) {
+        return false;
+      }
+
+      setUser(cachedUser);
       didRestoreAuthenticatedUser = true;
       logger.debug('[AuthContext] Cached user fallback restored');
       return true;
@@ -141,8 +155,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedToken) {
         // CRITICAL: Set token BEFORE any API calls
         api.setAuthToken(storedToken);
+
+        const storedUser = await AsyncStorage.getItem(STORAGE_KEY);
+        if (storedUser) {
+          const cachedUser = parseCachedUser(storedUser);
+          if (cachedUser) {
+            setUser(cachedUser);
+            didRestoreAuthenticatedUser = true;
+            setIsLoading(false);
+            logger.debug('[AuthContext] Cached user restored before startup auth verification');
+          }
+        }
+
         try {
-          // Fetch current user from backend to ensure session is valid
+          // Fetch current user from backend to ensure session is valid, but do not block cached startup UI.
           const userData = await authApi.getCurrentUser();
           logger.debug('[AuthContext] Startup restore via /auth/me succeeded');
           const userToSet = mapUserResponseToUser(userData);

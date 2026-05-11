@@ -30,6 +30,9 @@ const mockRepository = {
   updateItem: jest.fn(),
 };
 
+const mockReadCachedFrequentItems = jest.fn();
+const mockWriteCachedFrequentItems = jest.fn();
+
 const mockCacheChangeHandlers: Record<string, Array<() => void>> = {
   shoppingItems: [],
   shoppingLists: [],
@@ -135,6 +138,11 @@ jest.mock('../../../../common/repositories/cacheAwareShoppingRepository', () => 
   CacheAwareShoppingRepository: jest.fn(() => mockRepository),
 }));
 
+jest.mock('../../../../common/utils/frequentItemsCache', () => ({
+  readCachedFrequentItems: (...args: unknown[]) => mockReadCachedFrequentItems(...args),
+  writeCachedFrequentItems: (...args: unknown[]) => mockWriteCachedFrequentItems(...args),
+}));
+
 jest.mock('../../../../services/api', () => ({
   api: mockApi,
 }));
@@ -201,6 +209,9 @@ describe('DashboardScreen frequent item adds', () => {
       isChecked: false,
     });
 
+    mockReadCachedFrequentItems.mockResolvedValue([]);
+    mockWriteCachedFrequentItems.mockResolvedValue(undefined);
+
     mockApi.get.mockImplementation((url: string) => {
       throw new Error(`Unexpected direct API call in DashboardScreen test: ${url}`);
     });
@@ -252,6 +263,64 @@ describe('DashboardScreen frequent item adds', () => {
     });
   });
 
+  it('renders cached frequent items before the backend frequent-items request resolves', async () => {
+    let resolveFrequentRequest: ((value: Array<{ id: string; name: string; category: string; image: string; defaultQuantity: number }>) => void) | undefined;
+
+    mockReadCachedFrequentItems.mockResolvedValue([
+      {
+        id: 'cached-eggs',
+        name: 'Eggs',
+        category: 'Dairy',
+        image: '',
+        defaultQuantity: 1,
+      },
+    ]);
+    mockService.getFrequentItems.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveFrequentRequest = resolve;
+      }),
+    );
+
+    const { getByText, queryByText } = render(
+      <DashboardScreen
+        onOpenShoppingModal={jest.fn()}
+        onOpenChoresModal={jest.fn()}
+        onNavigateToTab={jest.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByText('Eggs')).toBeTruthy();
+    });
+    expect(queryByText('Milk')).toBeNull();
+    expect(mockService.getFrequentItems).toHaveBeenCalledWith(8);
+
+    await act(async () => {
+      resolveFrequentRequest?.([
+        {
+          id: 'milk-1',
+          name: 'Milk',
+          category: 'Dairy',
+          image: '',
+          defaultQuantity: 1,
+        },
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(getByText('Milk')).toBeTruthy();
+    });
+    expect(mockWriteCachedFrequentItems).toHaveBeenCalledWith([
+      {
+        id: 'milk-1',
+        name: 'Milk',
+        category: 'Dairy',
+        image: '',
+        defaultQuantity: 1,
+      },
+    ]);
+  });
+
   it('ignores stale frequent-item responses when overlapping reloads resolve out of order', async () => {
     let resolveFirstFrequentRequest: ((value: Array<{ id: string; name: string; category: string; image: string; defaultQuantity: number }>) => void) | undefined;
     let resolveSecondFrequentRequest: ((value: Array<{ id: string; name: string; category: string; image: string; defaultQuantity: number }>) => void) | undefined;
@@ -281,10 +350,15 @@ describe('DashboardScreen frequent item adds', () => {
 
     await waitFor(() => {
       expect(mockCacheChangeHandlers.shoppingItems).toHaveLength(1);
+      expect(mockService.getFrequentItems).toHaveBeenCalledTimes(1);
     });
 
     act(() => {
       mockCacheChangeHandlers.shoppingItems[0]?.();
+    });
+
+    await waitFor(() => {
+      expect(mockService.getFrequentItems).toHaveBeenCalledTimes(2);
     });
 
     await act(async () => {
