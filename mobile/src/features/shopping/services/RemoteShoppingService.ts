@@ -360,7 +360,9 @@ export class RemoteShoppingService implements IShoppingService {
       const items = createFrequentGroceryItems(
         Array.isArray(frequentResponse?.items) ? frequentResponse.items : [],
       );
-      void writeCachedFrequentItems(items);
+      if (items.length > 0) {
+        void writeCachedFrequentItems(items);
+      }
       return items;
     } catch (error) {
       if (!is404Error(error)) {

@@ -220,7 +220,7 @@ describe('Shopping Services', () => {
             ]);
         });
 
-        it('getFrequentItems caches successful backend frequent items', async () => {
+        it('getFrequentItems caches successful non-empty backend frequent items', async () => {
             const AsyncStorage = require('@react-native-async-storage/async-storage');
             (api.get as jest.Mock).mockResolvedValue({
                 items: [
@@ -256,6 +256,19 @@ describe('Shopping Services', () => {
                         defaultQuantity: 1,
                     },
                 ]),
+            );
+        });
+
+        it('getFrequentItems does not overwrite the frequent-items cache with an empty backend response', async () => {
+            const AsyncStorage = require('@react-native-async-storage/async-storage');
+            (api.get as jest.Mock).mockResolvedValue({ items: [] });
+
+            const result = await service.getFrequentItems(8);
+
+            expect(result).toEqual([]);
+            expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
+                '@kitchen_hub_cache_frequently_added_items',
+                JSON.stringify([]),
             );
         });
 
