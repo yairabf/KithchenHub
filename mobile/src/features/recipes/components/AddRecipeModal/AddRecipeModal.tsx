@@ -17,6 +17,8 @@ import { stripToDigitsOnly, stripToNumeric } from '../../../../common/utils';
 import { useDebouncedRemoteSearch } from '../../../../common/hooks';
 import { GrocerySearchBar, GroceryItem } from '../../../shopping/components/GrocerySearchBar';
 import { UnitPicker } from '../UnitPicker';
+import { RecipeImageSearchModal } from '../RecipeImageSearchModal';
+import type { RecipeImageSearchResult } from '../../services/recipeImageSearchService';
 import { getRecipeCategoryLabel, getUnitLabel, RECIPE_CATEGORIES } from '../../constants';
 import { styles } from './styles';
 import { AddRecipeModalProps, NewRecipeData, Ingredient } from './types';
@@ -59,6 +61,7 @@ export function AddRecipeModal({
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageIsLocal, setImageIsLocal] = useState(false);
   const [removeImage, setRemoveImage] = useState(false);
+  const [showImageSearch, setShowImageSearch] = useState(false);
   const [unitPickerIngredientId, setUnitPickerIngredientId] = useState<string | null>(null);
   /** Ingredient ids whose name field has been "committed" (blurred or added from search); names are then read-only. */
   const [committedIngredientIds, setCommittedIngredientIds] = useState<Set<string>>(() => new Set());
@@ -75,6 +78,7 @@ export function AddRecipeModal({
         setImageUri(initialRecipe.imageUrl ?? null);
         setImageIsLocal(false);
         setRemoveImage(false);
+        setShowImageSearch(false);
         setCommittedIngredientIds(
           new Set((initialRecipe.ingredients ?? []).map((i) => i.id)),
         );
@@ -83,6 +87,7 @@ export function AddRecipeModal({
         setImageUri(null);
         setImageIsLocal(false);
         setRemoveImage(false);
+        setShowImageSearch(false);
         setCommittedIngredientIds(new Set());
       }
       setSearchQuery('');
@@ -160,6 +165,13 @@ export function AddRecipeModal({
     setImageUri(null);
     setImageIsLocal(false);
     setRemoveImage(true);
+  };
+
+  const handleSelectWebImage = (result: RecipeImageSearchResult) => {
+    setImageUri(result.imageUrl);
+    setImageIsLocal(false);
+    setRemoveImage(false);
+    setShowImageSearch(false);
   };
 
   // Ingredient handlers
@@ -388,6 +400,16 @@ export function AddRecipeModal({
                   {imageUri ? t('form.changePhoto') : t('form.addPhoto')}
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.photoButtonSecondary}
+                onPress={() => setShowImageSearch(true)}
+                testID="recipe-web-image-search-button"
+              >
+                <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
+                <Text style={[styles.photoButtonSecondaryText, isRtlLayout && styles.modalTextRtl]}>
+                  {t('form.searchWebImages')}
+                </Text>
+              </TouchableOpacity>
               {imageUri && (
                 <TouchableOpacity style={styles.photoButtonSecondary} onPress={handleRemoveImage}>
                   <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
@@ -533,6 +555,14 @@ export function AddRecipeModal({
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <RecipeImageSearchModal
+        visible={showImageSearch}
+        initialQuery={recipe.title}
+        isRtl={isRtlLayout}
+        onClose={() => setShowImageSearch(false)}
+        onSelect={handleSelectWebImage}
+      />
 
       {unitPickerIngredientId && (() => {
         const ing = ingredients.find((i) => i.id === unitPickerIngredientId);

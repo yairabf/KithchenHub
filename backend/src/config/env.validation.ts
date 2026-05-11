@@ -25,6 +25,12 @@ const envSchema = z
     JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
+    GOOGLE_IMAGE_SEARCH_API_KEY: z.string().min(1).optional(),
+    GOOGLE_IMAGE_SEARCH_CX: z.string().min(1).optional(),
+    GOOGLE_IMAGE_SEARCH_SAFE: z
+      .enum(['active', 'off'])
+      .optional()
+      .default('active'),
     /**
      * OAuth configuration for backend-driven flows
      */
@@ -114,6 +120,18 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['AUTH_SKIP_EMAIL_VERIFICATION'],
         message: 'AUTH_SKIP_EMAIL_VERIFICATION cannot be true in production',
+      });
+    }
+
+    if (
+      Boolean(env.GOOGLE_IMAGE_SEARCH_API_KEY) !==
+      Boolean(env.GOOGLE_IMAGE_SEARCH_CX)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['GOOGLE_IMAGE_SEARCH_API_KEY'],
+        message:
+          'GOOGLE_IMAGE_SEARCH_API_KEY and GOOGLE_IMAGE_SEARCH_CX must be set together',
       });
     }
 
