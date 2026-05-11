@@ -175,6 +175,51 @@ describe('RecipeDetailScreen shopping integration', () => {
     expect(getAllByTestId('ingredient-image-1')[0].props.children).toBe('milk.png');
   });
 
+  it('searches the catalog on demand so recipe ingredients show canonical images when the full catalog is not preloaded', async () => {
+    const searchGroceries = jest.fn().mockResolvedValue([
+      { id: 'catalog-banana', name: 'Banana', category: 'fruits', image: 'banana.png' },
+    ]);
+    mockUseCatalog.mockReturnValue({
+      groceryItems: [],
+      searchGroceries,
+    });
+
+    const recipeWithBanana = {
+      ...baseRecipe,
+      ingredients: [
+        {
+          name: 'Banana',
+          quantityAmount: 1,
+          quantityUnit: 'pcs',
+        },
+      ],
+    };
+
+    const { getAllByTestId } = render(
+      <RecipeDetailScreen recipe={recipeWithBanana as any} onBack={jest.fn()} />,
+    );
+
+    expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('no-image');
+
+    await waitFor(() => {
+      expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('banana.png');
+    });
+    expect(searchGroceries).toHaveBeenCalledWith('Banana');
+
+    fireEvent.press(getAllByTestId('add-all-ingredients')[0]);
+
+    await waitFor(() => {
+      expect(mockRepository.createItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Banana',
+          catalogItemId: 'catalog-banana',
+          category: 'fruits',
+          image: 'banana.png',
+        }),
+      );
+    });
+  });
+
   it('adds a recipe ingredient through the cache-aware repository with catalog/category metadata', async () => {
     const { getAllByTestId } = render(
       <RecipeDetailScreen recipe={baseRecipe as any} onBack={jest.fn()} />,
