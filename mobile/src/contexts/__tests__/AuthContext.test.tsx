@@ -246,6 +246,26 @@ describe('AuthContext', () => {
     });
   });
 
+  it('treats malformed cached user as a cache miss and verifies token with backend', async () => {
+    await AsyncStorage.setItem('@kitchen_hub_user', '{not-json');
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.user?.id).toBe('user-1');
+    });
+
+    const { tokenStorage: mockTokenStorage } = jest.requireMock(
+      '../../features/auth/services/tokenStorage',
+    ) as { tokenStorage: { clearTokens: jest.Mock } };
+    expect(mockTokenStorage.clearTokens).not.toHaveBeenCalled();
+    expect(mockGetCurrentUser).toHaveBeenCalled();
+  });
+
   it('startup transient failure with cached user: preserves tokens and keeps session', async () => {
     await AsyncStorage.setItem(
       '@kitchen_hub_user',
