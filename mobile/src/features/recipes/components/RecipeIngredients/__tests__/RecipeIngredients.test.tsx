@@ -54,6 +54,28 @@ describe('RecipeIngredients', () => {
     expect(getByTestId('recipe-ingredient-fallback-ingredient-sauce')).toBeTruthy();
   });
 
+  it('does not render ingredient category metadata in recipe ingredient rows', () => {
+    const recipeWithCatalogCategory = {
+      ...recipe,
+      ingredients: [
+        {
+          ...appleIngredient,
+          category: 'fruits',
+        },
+      ],
+    } as Recipe;
+
+    const { queryByText } = render(
+      <RecipeIngredients
+        recipe={recipeWithCatalogCategory}
+        onAddIngredient={jest.fn()}
+        onAddAllIngredients={jest.fn()}
+      />,
+    );
+
+    expect(queryByText('fruits')).toBeNull();
+  });
+
   it('calls the ingredient add handler with the selected ingredient', () => {
     const onAddIngredient = jest.fn();
     const { getAllByLabelText } = render(
