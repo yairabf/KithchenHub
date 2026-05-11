@@ -10,12 +10,10 @@ import {
   Text,
   SafeAreaView,
   ScrollView,
-  TouchableOpacity,
   RefreshControl,
   Image,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
   formatTimeForDisplay,
@@ -23,7 +21,6 @@ import {
 } from "../../../common/utils/dateTimeUtils";
 import { useDebouncedRemoteSearch, useResponsive } from "../../../common/hooks";
 import { useCatalog } from "../../../common/hooks/useCatalog";
-import { colors } from "../../../theme";
 import { SafeImage } from "../../../common/components/SafeImage";
 import { Toast } from "../../../common/components/Toast";
 import { ScreenHeader } from "../../../common/components/ScreenHeader";
@@ -402,22 +399,6 @@ export function DashboardScreen({
                 <Text style={[styles.dateText, isRtl && styles.rtlNativeText]}>{formattedDate}</Text>
               </View>
             )}
-            <TouchableOpacity
-              style={styles.notificationButton}
-              accessibilityLabel={t("notifications.buttonLabel")}
-              accessibilityRole="button"
-              accessibilityHint={t("notifications.buttonHint")}
-            >
-              <Ionicons
-                name="notifications-outline"
-                size={22}
-                color={colors.textSecondary}
-              />
-              <View style={styles.notificationBadge} />
-            </TouchableOpacity>
-
-            <View style={styles.profileSectionSeparator} />
-
             <View style={styles.profileSection}>
               {isTablet && (
                 <View style={styles.profileInfo}>
