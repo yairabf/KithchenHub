@@ -49,28 +49,6 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-  notificationButton: {
-    padding: spacing.sm,
-    position: "relative",
-  },
-  profileSectionSeparator: {
-    width: 1,
-    height: 24,
-    backgroundColor: colors.border,
-    marginStart: spacing.sm,
-    marginEnd: spacing.sm,
-  },
-  notificationBadge: {
-    position: "absolute",
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 10,
-    height: 10,
-    backgroundColor: colors.error,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
   profileSection: {
     flexDirection: "row",
     alignItems: "center",

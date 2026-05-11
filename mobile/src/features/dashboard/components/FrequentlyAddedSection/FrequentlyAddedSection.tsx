@@ -88,6 +88,9 @@ function FrequentItemTile({
         accessibilityRole="button"
         style={styles.itemPressable}
       >
+        <View style={styles.quickAddBadge} testID={`frequent-item-add-icon-${item.id}`}>
+          <Ionicons name="add" size={16} color={colors.primary} />
+        </View>
         <View style={styles.itemImageContainer}>
           <View style={styles.itemImageBadge}>
             <SafeImage
