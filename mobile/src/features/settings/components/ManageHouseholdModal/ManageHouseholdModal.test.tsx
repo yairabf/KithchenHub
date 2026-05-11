@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import { ManageHouseholdModal } from './ManageHouseholdModal';
 
@@ -47,57 +47,51 @@ describe('ManageHouseholdModal', () => {
     });
   });
 
-  it('renders actual joined users with email and role details', () => {
+  it('renders current user as a compact member card with initials, badges, and inline self-removal guidance', () => {
     mockUseHousehold.mockReturnValue({
       members: [
         {
           id: 'user-1',
-          name: 'Alice',
+          name: 'Alice Smith',
           email: 'alice@example.com',
           role: 'Admin',
           isCurrentUser: true,
-        },
-        {
-          id: 'user-2',
-          name: 'Bob',
-          email: 'bob@example.com',
-          role: 'Member',
-          isCurrentUser: false,
         },
       ],
       isLoading: false,
       removeMember: jest.fn(),
     });
 
-    const { getByText, queryByPlaceholderText } = render(
+    const { getByText, queryByLabelText, queryByPlaceholderText } = render(
       <ManageHouseholdModal visible onClose={jest.fn()} />,
     );
 
-    expect(getByText('Alice')).toBeTruthy();
+    expect(getByText('AS')).toBeTruthy();
+    expect(getByText('Alice Smith')).toBeTruthy();
     expect(getByText('alice@example.com')).toBeTruthy();
     expect(getByText('Admin')).toBeTruthy();
     expect(getByText('You')).toBeTruthy();
-
-    expect(getByText('Bob')).toBeTruthy();
-    expect(getByText('bob@example.com')).toBeTruthy();
-    expect(getByText('Member')).toBeTruthy();
-
+    expect(getByText('You cannot remove yourself here')).toBeTruthy();
+    expect(queryByLabelText('Remove member')).toBeNull();
     expect(queryByPlaceholderText('Add new member...')).toBeNull();
   });
 
-  it('disables member removal affordances for non-admin users', () => {
-    mockUseAuth.mockReturnValue({
-      user: { id: 'user-2', role: 'Member' },
-    });
-
+  it('lets admins remove other household members with an explicit remove action', () => {
     const removeMember = jest.fn();
     mockUseHousehold.mockReturnValue({
       members: [
         {
           id: 'user-1',
-          name: 'Alice',
+          name: 'Alice Smith',
           email: 'alice@example.com',
           role: 'Admin',
+          isCurrentUser: true,
+        },
+        {
+          id: 'user-2',
+          name: 'Bob Jones',
+          email: 'bob@example.com',
+          role: 'Member',
           isCurrentUser: false,
         },
       ],
@@ -109,8 +103,42 @@ describe('ManageHouseholdModal', () => {
       <ManageHouseholdModal visible onClose={jest.fn()} />,
     );
 
+    expect(getByText('BJ')).toBeTruthy();
+    expect(getByText('Bob Jones')).toBeTruthy();
+    expect(getByText('bob@example.com')).toBeTruthy();
+    expect(getByText('Member')).toBeTruthy();
+
+    fireEvent.press(getByLabelText('Remove member'));
+
+    expect(removeMember).toHaveBeenCalledWith('user-2');
+  });
+
+  it('hides member removal affordances for non-admin users', () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-2', role: 'Member' },
+    });
+
+    const removeMember = jest.fn();
+    mockUseHousehold.mockReturnValue({
+      members: [
+        {
+          id: 'user-1',
+          name: 'Alice Smith',
+          email: 'alice@example.com',
+          role: 'Admin',
+          isCurrentUser: false,
+        },
+      ],
+      isLoading: false,
+      removeMember,
+    });
+
+    const { getByText, queryByLabelText } = render(
+      <ManageHouseholdModal visible onClose={jest.fn()} />,
+    );
+
     expect(getByText('Only household admins can remove members.')).toBeTruthy();
-    expect(getByLabelText('Remove member').props.accessibilityState?.disabled ?? getByLabelText('Remove member').props.disabled).toBeTruthy();
+    expect(queryByLabelText('Remove member')).toBeNull();
     expect(removeMember).not.toHaveBeenCalled();
   });
 });

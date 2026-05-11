@@ -21,6 +21,20 @@ function getRoleLabel(role: string, t: (key: string) => string): string {
     : t('manageHouseholdModal.memberRole');
 }
 
+function getInitials(name?: string, email?: string): string {
+  const source = name?.trim() || email?.split('@')[0] || '?';
+  const parts = source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (parts.length === 0) {
+    return '?';
+  }
+
+  return parts.map((part) => part[0]).join('').toUpperCase();
+}
+
 export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalProps) {
   const { t } = useTranslation('settings');
   const { user } = useAuth();
@@ -53,49 +67,90 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
             </View>
           ) : (
             members.map((member) => {
-              const isRemoveDisabled = !canManageMembers || member.isCurrentUser;
+              const canRemoveMember = canManageMembers && !member.isCurrentUser;
+              const roleLabel = getRoleLabel(member.role, t);
 
               return (
-              <View key={member.id} style={styles.memberRow}>
-                <View style={[styles.memberColorDot, { backgroundColor: member.color || colors.textMuted }]} />
-                <View style={styles.memberTextColumn}>
-                  <View style={styles.memberHeaderRow}>
-                    <Text style={styles.memberName}>{member.name}</Text>
-                    {member.isCurrentUser ? (
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{t('manageHouseholdModal.currentUserBadge')}</Text>
+                <View key={member.id} style={styles.memberCard}>
+                  <View
+                    style={[
+                      styles.memberAvatar,
+                      { backgroundColor: member.color || colors.primary },
+                    ]}
+                  >
+                    <Text style={styles.memberAvatarText}>{getInitials(member.name, member.email)}</Text>
+                  </View>
+
+                  <View style={styles.memberTextColumn}>
+                    <View style={styles.memberHeaderRow}>
+                      <Text style={styles.memberName} numberOfLines={1}>{member.name}</Text>
+                      {member.isCurrentUser ? (
+                        <View style={[styles.badge, styles.currentUserBadge]}>
+                          <Text style={[styles.badgeText, styles.currentUserBadgeText]}>
+                            {t('manageHouseholdModal.currentUserBadge')}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {member.email ? (
+                      <Text style={styles.memberEmail} numberOfLines={1}>{member.email}</Text>
+                    ) : null}
+
+                    <View style={styles.memberMetaRow}>
+                      <View
+                        style={[
+                          styles.roleBadge,
+                          member.role.toLowerCase() === 'admin'
+                            ? styles.adminRoleBadge
+                            : styles.memberRoleBadge,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.roleBadgeText,
+                            member.role.toLowerCase() === 'admin'
+                              ? styles.adminRoleBadgeText
+                              : styles.memberRoleBadgeText,
+                          ]}
+                        >
+                          {roleLabel}
+                        </Text>
                       </View>
+
+                      {canRemoveMember ? (
+                        <TouchableOpacity
+                          accessibilityLabel={t('manageHouseholdModal.removeMember')}
+                          style={styles.removeButton}
+                          onPress={() => handleRemoveMember(member.id)}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={colors.error} />
+                          <Text style={styles.removeButtonText}>
+                            {t('manageHouseholdModal.removeMember')}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+
+                    {member.isCurrentUser ? (
+                      <Text style={styles.inlineHelperText}>
+                        {t('manageHouseholdModal.cannotRemoveYourself')}
+                      </Text>
                     ) : null}
                   </View>
-                  {member.email ? (
-                    <Text style={styles.memberEmail}>{member.email}</Text>
-                  ) : null}
-                  <Text style={styles.memberRole}>{getRoleLabel(member.role, t)}</Text>
                 </View>
-                <TouchableOpacity
-                  accessibilityLabel={t('manageHouseholdModal.removeMember')}
-                  style={[styles.deleteButton, isRemoveDisabled && styles.deleteButtonDisabled]}
-                  onPress={() => handleRemoveMember(member.id)}
-                  disabled={isRemoveDisabled}
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={20}
-                    color={isRemoveDisabled ? colors.textMuted : colors.error}
-                  />
-                </TouchableOpacity>
-              </View>
-            )})
+              );
+            })
           )}
         </ScrollView>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            {canManageMembers
-              ? t('manageHouseholdModal.cannotRemoveYourself')
-              : t('manageHouseholdModal.onlyAdminsCanRemoveMembers')}
-          </Text>
-        </View>
+        {!canManageMembers ? (
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              {t('manageHouseholdModal.onlyAdminsCanRemoveMembers')}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </CenteredModal>
   );
