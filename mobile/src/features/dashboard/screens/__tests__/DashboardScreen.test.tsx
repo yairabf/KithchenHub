@@ -321,6 +321,81 @@ describe('DashboardScreen frequent item adds', () => {
     ]);
   });
 
+  it('keeps cached frequent items visible when the backend temporarily returns an empty list', async () => {
+    let resolveFrequentRequest: ((value: Array<{ id: string; name: string; category: string; image: string; defaultQuantity: number }>) => void) | undefined;
+
+    mockReadCachedFrequentItems.mockResolvedValue([
+      {
+        id: 'cached-eggs',
+        name: 'Eggs',
+        category: 'Dairy',
+        image: '',
+        defaultQuantity: 1,
+      },
+    ]);
+    mockService.getFrequentItems.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveFrequentRequest = resolve;
+      }),
+    );
+
+    const { getByText, queryByText } = render(
+      <DashboardScreen
+        onOpenShoppingModal={jest.fn()}
+        onOpenChoresModal={jest.fn()}
+        onNavigateToTab={jest.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByText('Eggs')).toBeTruthy();
+    });
+
+    await act(async () => {
+      resolveFrequentRequest?.([]);
+    });
+
+    expect(queryByText('Eggs')).toBeTruthy();
+    expect(mockWriteCachedFrequentItems).not.toHaveBeenCalledWith([]);
+  });
+
+  it('keeps cached frequent items visible when the backend frequent-items request fails', async () => {
+    let rejectFrequentRequest: ((error: Error) => void) | undefined;
+
+    mockReadCachedFrequentItems.mockResolvedValue([
+      {
+        id: 'cached-eggs',
+        name: 'Eggs',
+        category: 'Dairy',
+        image: '',
+        defaultQuantity: 1,
+      },
+    ]);
+    mockService.getFrequentItems.mockImplementation(
+      () => new Promise((_resolve, reject) => {
+        rejectFrequentRequest = reject;
+      }),
+    );
+
+    const { getByText, queryByText } = render(
+      <DashboardScreen
+        onOpenShoppingModal={jest.fn()}
+        onOpenChoresModal={jest.fn()}
+        onNavigateToTab={jest.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByText('Eggs')).toBeTruthy();
+    });
+
+    await act(async () => {
+      rejectFrequentRequest?.(new Error('network timeout'));
+    });
+
+    expect(queryByText('Eggs')).toBeTruthy();
+  });
+
   it('ignores stale frequent-item responses when overlapping reloads resolve out of order', async () => {
     let resolveFirstFrequentRequest: ((value: Array<{ id: string; name: string; category: string; image: string; defaultQuantity: number }>) => void) | undefined;
     let resolveSecondFrequentRequest: ((value: Array<{ id: string; name: string; category: string; image: string; defaultQuantity: number }>) => void) | undefined;

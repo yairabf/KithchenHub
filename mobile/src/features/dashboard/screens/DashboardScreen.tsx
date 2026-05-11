@@ -158,11 +158,13 @@ export function DashboardScreen({
 
   const loadShoppingData = useCallback(async () => {
     const requestId = ++loadRequestIdRef.current;
+    let hasCachedFrequentItems = false;
 
     try {
       if (shoppingRepository) {
         const cachedFrequentItems = await readCachedFrequentItems();
-        if (cachedFrequentItems.length > 0 && requestId === loadRequestIdRef.current) {
+        hasCachedFrequentItems = cachedFrequentItems.length > 0;
+        if (hasCachedFrequentItems && requestId === loadRequestIdRef.current) {
           setFrequentItems(cachedFrequentItems);
         }
 
@@ -176,8 +178,12 @@ export function DashboardScreen({
           return;
         }
 
-        setFrequentItems(frequentItemsFromService);
-        void writeCachedFrequentItems(frequentItemsFromService);
+        if (frequentItemsFromService.length > 0 || !hasCachedFrequentItems) {
+          setFrequentItems(frequentItemsFromService);
+        }
+        if (frequentItemsFromService.length > 0) {
+          void writeCachedFrequentItems(frequentItemsFromService);
+        }
         setMainList((currentMainList) => currentMainList ?? mainListFromService);
         return;
       }
@@ -196,7 +202,9 @@ export function DashboardScreen({
       }
 
       setAllItems([]);
-      setFrequentItems([]);
+      if (!hasCachedFrequentItems) {
+        setFrequentItems([]);
+      }
       setMainList(null);
     }
   }, [loadShoppingCacheState, shoppingRepository, shoppingService]);
