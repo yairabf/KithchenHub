@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Image } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { ManageHouseholdModal } from './ManageHouseholdModal';
@@ -86,7 +86,9 @@ describe('ManageHouseholdModal', () => {
     expect(getByText('Invite household member')).toBeTruthy();
     expect(getByText('Share invite code')).toBeTruthy();
     expect(getByText('AS')).toBeTruthy();
-    expect(getByText('Alice Smith')).toBeTruthy();
+    const memberName = getByText('Alice Smith');
+    expect(memberName).toBeTruthy();
+    expect(memberName.props.numberOfLines).toBeUndefined();
     expect(getByText('alice@example.com')).toBeTruthy();
     expect(getByText('Admin')).toBeTruthy();
     expect(getByText('You')).toBeTruthy();
@@ -99,6 +101,47 @@ describe('ManageHouseholdModal', () => {
       'Cannot remove this member',
       'The household admin or manager cannot be deleted from the household.',
     );
+  });
+
+  it('renders Google/account avatars before falling back to initials', () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1', role: 'Admin', avatarUrl: 'https://example.com/google-avatar.jpg' },
+    });
+    mockUseHousehold.mockReturnValue({
+      members: [
+        {
+          id: 'user-1',
+          name: 'Alice Smith',
+          email: 'alice@example.com',
+          role: 'Admin',
+          isCurrentUser: true,
+        },
+        {
+          id: 'user-2',
+          name: 'Bob Jones',
+          email: 'bob@example.com',
+          role: 'Member',
+          avatarUrl: 'https://example.com/bob.jpg',
+          isCurrentUser: false,
+        },
+      ],
+      isLoading: false,
+      removeMember: jest.fn(),
+    });
+
+    const { getByTestId, queryByText, UNSAFE_queryAllByType } = render(
+      <ManageHouseholdModal visible onClose={jest.fn()} />,
+    );
+
+    expect(getByTestId('member-avatar-image-user-1').props.source).toEqual({
+      uri: 'https://example.com/google-avatar.jpg',
+    });
+    expect(getByTestId('member-avatar-image-user-2').props.source).toEqual({
+      uri: 'https://example.com/bob.jpg',
+    });
+    expect(queryByText('AS')).toBeNull();
+    expect(queryByText('BJ')).toBeNull();
+    expect(UNSAFE_queryAllByType(Image)).toHaveLength(2);
   });
 
   it('lets admins remove other household members with an explicit remove action', () => {

@@ -25,9 +25,50 @@ jest.mock('../../../../contexts/HouseholdContext', () => ({
 }));
 
 const manageHouseholdModalPath = require.resolve('../../components/ManageHouseholdModal');
-jest.mock(manageHouseholdModalPath, () => ({
-  ManageHouseholdModal: () => null,
-}));
+const mockManageHouseholdModalProps = jest.fn();
+jest.mock(manageHouseholdModalPath, () => {
+  const React = require('react');
+  const { View, Text, TouchableOpacity } = require('react-native');
+
+  return {
+    ManageHouseholdModal: (props: {
+      visible: boolean;
+      onInviteMember: () => void;
+      onShareInviteCode: () => void;
+    }) => {
+      mockManageHouseholdModalProps(props);
+      if (!props.visible) return null;
+      return React.createElement(
+        View,
+        { testID: 'manage-household-modal' },
+        React.createElement(
+          TouchableOpacity,
+          { onPress: props.onInviteMember },
+          React.createElement(Text, null, 'Invite household member')
+        ),
+        React.createElement(
+          TouchableOpacity,
+          { onPress: props.onShareInviteCode },
+          React.createElement(Text, null, 'Share invite code')
+        )
+      );
+    },
+  };
+});
+
+const mockInviteMemberModalProps = jest.fn();
+jest.mock('../../components/InviteMemberModal', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return {
+    InviteMemberModal: (props: { visible: boolean; initialAction?: 'generate' | 'share' }) => {
+      mockInviteMemberModalProps(props);
+      if (!props.visible) return null;
+      return React.createElement(Text, { testID: 'invite-member-modal' }, props.initialAction);
+    },
+  };
+});
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
@@ -88,6 +129,15 @@ jest.mock('react-i18next', () => ({
         'premium.expiresLabel': 'Access until',
         'premium.comingSoon': 'Billing, upgrades, and restore controls are coming soon.',
         'premium.viewPlans': 'View plans',
+        inviteMemberToHousehold: 'inviteMemberToHousehold',
+        'manageHouseholdModal.title': 'Manage Household',
+        'manageHouseholdModal.membersSectionTitle': 'HOUSEHOLD MEMBERS',
+        'manageHouseholdModal.emptyState': 'No household members yet',
+        'manageHouseholdModal.inviteHouseholdMember': 'Invite household member',
+        'manageHouseholdModal.shareInviteCode': 'Share invite code',
+        'inviteMemberModal.title': 'Invite household member',
+        'inviteMemberModal.shareMessage': 'Join my KitchenHub household with code TEST',
+        'inviteMemberModal.shareTitle': 'KitchenHub invite',
         deleteAccount: 'Delete account',
         deleteAccountConfirmTitle: 'Delete account?',
         deleteAccountConfirmMessage:
@@ -117,6 +167,13 @@ jest.mock('../../../../contexts/LegalLinksContext', () => ({
 const mockOpenLegalUrl = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../../../common/utils/legalLinks', () => ({
   openLegalUrl: (url: string) => mockOpenLegalUrl(url),
+}));
+
+const mockInviteMember = jest.fn().mockResolvedValue({ inviteToken: 'TEST' });
+jest.mock('../../../../services/householdService', () => ({
+  householdService: {
+    inviteMember: () => mockInviteMember(),
+  },
 }));
 
 const mockSetAppLanguage = jest.fn().mockResolvedValue(undefined);
@@ -254,6 +311,33 @@ describe('SettingsScreen', () => {
       });
       await waitFor(() => {
         expect(queryByTestId('language-selector-modal')).toBeNull();
+      });
+    });
+  });
+
+  describe('Household invite flows', () => {
+    it('reuses the existing invite modal in share mode from Manage Household', async () => {
+      const { getByText, getByTestId, queryByText } = render(<SettingsScreen />);
+
+      fireEvent.press(getByText('manageHouseholdMembers'));
+      expect(getByText('Manage Household')).toBeTruthy();
+
+      fireEvent.press(getByText('Share invite code'));
+
+      await waitFor(() => {
+        expect(getByTestId('invite-member-modal').props.children).toBe('share');
+      });
+      expect(queryByText('Manage Household')).toBeNull();
+    });
+
+    it('reuses the existing invite modal in generate mode from Manage Household', async () => {
+      const { getByText, getByTestId } = render(<SettingsScreen />);
+
+      fireEvent.press(getByText('manageHouseholdMembers'));
+      fireEvent.press(getByText('Invite household member'));
+
+      await waitFor(() => {
+        expect(getByTestId('invite-member-modal').props.children).toBe('generate');
       });
     });
   });

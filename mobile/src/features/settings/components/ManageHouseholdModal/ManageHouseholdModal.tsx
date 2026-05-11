@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -93,21 +94,30 @@ export function ManageHouseholdModal({
               const canRemoveMember = canManageMembers && !isProtectedMember;
               const shouldShowProtectedRemove = canManageMembers && isProtectedMember;
               const roleLabel = getRoleLabel(member.role, t);
+              const avatarUri = member.avatarUrl || (member.isCurrentUser ? user?.avatarUrl : undefined);
 
               return (
                 <View key={member.id} style={styles.memberCard}>
-                  <View
-                    style={[
-                      styles.memberAvatar,
-                      { backgroundColor: member.color || colors.primary },
-                    ]}
-                  >
-                    <Text style={styles.memberAvatarText}>{getInitials(member.name, member.email)}</Text>
-                  </View>
+                  {avatarUri ? (
+                    <Image
+                      testID={`member-avatar-image-${member.id}`}
+                      source={{ uri: avatarUri }}
+                      style={styles.memberAvatarImage}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.memberAvatar,
+                        { backgroundColor: member.color || colors.primary },
+                      ]}
+                    >
+                      <Text style={styles.memberAvatarText}>{getInitials(member.name, member.email)}</Text>
+                    </View>
+                  )}
 
                   <View style={styles.memberTextColumn}>
                     <View style={styles.memberHeaderRow}>
-                      <Text style={styles.memberName} numberOfLines={1}>{member.name}</Text>
+                      <Text style={styles.memberName}>{member.name}</Text>
                       {member.isCurrentUser ? (
                         <View style={[styles.badge, styles.currentUserBadge]}>
                           <Text style={[styles.badgeText, styles.currentUserBadgeText]}>

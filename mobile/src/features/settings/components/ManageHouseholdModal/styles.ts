@@ -53,6 +53,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  memberAvatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+  },
   memberAvatarText: {
     fontSize: 14,
     color: colors.textLight,
@@ -66,7 +72,7 @@ export const styles = StyleSheet.create({
   },
   memberHeaderRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
   },
   memberName: {
