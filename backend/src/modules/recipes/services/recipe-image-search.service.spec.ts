@@ -20,7 +20,7 @@ describe('RecipeImageSearchService', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockedAxios.get.mockReset();
   });
 
   it('rejects empty search queries', async () => {
@@ -96,5 +96,43 @@ describe('RecipeImageSearchService', () => {
         height: 800,
       }),
     ]);
+  });
+
+  it('accepts Google Custom Search alias env names for Vercel configuration', async () => {
+    mockedAxios.get.mockResolvedValue({ data: { items: [] } });
+    const service = buildService({
+      GOOGLE_CUSTOM_SEARCH_API_KEY: 'custom-key',
+      GOOGLE_CUSTOM_SEARCH_ENGINE_ID: 'custom-cx',
+    });
+
+    await service.searchImages('pasta');
+
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      'https://www.googleapis.com/customsearch/v1',
+      expect.objectContaining({
+        params: expect.objectContaining({
+          key: 'custom-key',
+          cx: 'custom-cx',
+        }),
+      }),
+    );
+  });
+
+  it('returns service unavailable with a safe message when Google rejects the request', async () => {
+    mockedAxios.get.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: { error: { message: 'API key not valid' } },
+      },
+    });
+    const service = buildService({
+      GOOGLE_IMAGE_SEARCH_API_KEY: 'key',
+      GOOGLE_IMAGE_SEARCH_CX: 'cx',
+    });
+
+    await expect(service.searchImages('pasta')).rejects.toThrow(
+      /Image search is temporarily unavailable/,
+    );
   });
 });

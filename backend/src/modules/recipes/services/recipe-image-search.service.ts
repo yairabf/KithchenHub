@@ -4,7 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 export type RecipeImageSearchResultDto = {
   id: string;
@@ -48,8 +48,13 @@ export class RecipeImageSearchService {
   ): Promise<RecipeImageSearchResultDto[]> {
     const normalizedQuery = this.normalizeQuery(query);
     const normalizedLimit = this.normalizeLimit(limit);
-    const apiKey = this.getConfigValue('GOOGLE_IMAGE_SEARCH_API_KEY');
-    const cx = this.getConfigValue('GOOGLE_IMAGE_SEARCH_CX');
+    const apiKey =
+      this.getConfigValue('GOOGLE_IMAGE_SEARCH_API_KEY') ??
+      this.getConfigValue('GOOGLE_CUSTOM_SEARCH_API_KEY');
+    const cx =
+      this.getConfigValue('GOOGLE_IMAGE_SEARCH_CX') ??
+      this.getConfigValue('GOOGLE_CUSTOM_SEARCH_ENGINE_ID') ??
+      this.getConfigValue('GOOGLE_CUSTOM_SEARCH_CX');
     const safe = this.getConfigValue('GOOGLE_IMAGE_SEARCH_SAFE') || 'active';
 
     if (!apiKey || !cx) {
@@ -58,34 +63,55 @@ export class RecipeImageSearchService {
       );
     }
 
-    const response = await axios.get<GoogleImageSearchResponse>(
-      GOOGLE_CUSTOM_SEARCH_URL,
-      {
-        params: {
-          key: apiKey,
-          cx,
-          searchType: 'image',
-          q: normalizedQuery,
-          num: normalizedLimit,
-          safe,
+    try {
+      const response = await axios.get<GoogleImageSearchResponse>(
+        GOOGLE_CUSTOM_SEARCH_URL,
+        {
+          params: {
+            key: apiKey,
+            cx,
+            searchType: 'image',
+            q: normalizedQuery,
+            num: normalizedLimit,
+            safe,
+          },
         },
-      },
-    );
+      );
 
-    return (response.data.items ?? [])
-      .filter((item): item is GoogleImageSearchItem & { link: string } =>
-        Boolean(item.link),
-      )
-      .map((item, index) => ({
-        id: `${index}-${this.hashUrl(item.link)}`,
-        title: item.title?.trim() || normalizedQuery,
-        imageUrl: item.link,
-        thumbnailUrl: item.image?.thumbnailLink,
-        sourceUrl: item.image?.contextLink,
-        sourceDisplayName: item.displayLink,
-        width: item.image?.width,
-        height: item.image?.height,
-      }));
+      return (response.data.items ?? [])
+        .filter((item): item is GoogleImageSearchItem & { link: string } =>
+          Boolean(item.link),
+        )
+        .map((item, index) => ({
+          id: `${index}-${this.hashUrl(item.link)}`,
+          title: item.title?.trim() || normalizedQuery,
+          imageUrl: item.link,
+          thumbnailUrl: item.image?.thumbnailLink,
+          sourceUrl: item.image?.contextLink,
+          sourceDisplayName: item.displayLink,
+          width: item.image?.width,
+          height: item.image?.height,
+        }));
+    } catch (error) {
+      throw this.toSearchUnavailableException(error);
+    }
+  }
+
+  private toSearchUnavailableException(
+    error: unknown,
+  ): ServiceUnavailableException {
+    if (axios.isAxiosError(error)) {
+      const status = (error as AxiosError).response?.status;
+      if (status === 400 || status === 403) {
+        return new ServiceUnavailableException(
+          'Image search is temporarily unavailable. Please check Google image search configuration.',
+        );
+      }
+    }
+
+    return new ServiceUnavailableException(
+      'Image search is temporarily unavailable. Please try again later.',
+    );
   }
 
   private normalizeQuery(query: string | undefined): string {

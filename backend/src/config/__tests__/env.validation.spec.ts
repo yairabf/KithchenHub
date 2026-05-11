@@ -90,6 +90,27 @@ describe('validateEnv', () => {
     expect(() => validateEnv()).toThrow('Invalid environment variables');
   });
 
+  it('accepts Google Custom Search alias env names', () => {
+    process.env = buildBaseEnv({
+      GOOGLE_CUSTOM_SEARCH_API_KEY: 'custom-key',
+      GOOGLE_CUSTOM_SEARCH_ENGINE_ID: 'custom-cx',
+    }) as Record<string, string>;
+
+    const env = validateEnv();
+
+    expect(env.GOOGLE_CUSTOM_SEARCH_API_KEY).toBe('custom-key');
+    expect(env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID).toBe('custom-cx');
+  });
+
+  it('rejects Google Custom Search alias env when only API key is set', () => {
+    process.env = buildBaseEnv({
+      GOOGLE_CUSTOM_SEARCH_API_KEY: 'custom-key',
+      GOOGLE_CUSTOM_SEARCH_ENGINE_ID: undefined,
+    }) as Record<string, string>;
+
+    expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
+
   it('rejects env when webhook auth header is set without webhook auth secret', () => {
     process.env = buildBaseEnv({
       SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER: 'x-revenuecat-signature',

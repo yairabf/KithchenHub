@@ -74,10 +74,10 @@ export function RecipeImageSearchModal({
             setResults(nextResults);
           }
         })
-        .catch(() => {
+        .catch((searchError) => {
           if (isCurrent) {
             setResults([]);
-            setError(t('form.webImageSearch.error'));
+            setError(searchError instanceof Error ? searchError.message : t('form.webImageSearch.error'));
           }
         })
         .finally(() => {
