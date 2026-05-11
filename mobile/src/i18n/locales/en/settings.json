@@ -98,12 +98,18 @@
   "manageHouseholdModal": {
     "title": "Manage Household",
     "membersSectionTitle": "Household Members",
+    "memberCount": "{{count}} members",
+    "inviteHouseholdMember": "Invite household member",
+    "shareInviteCode": "Share invite code",
     "loading": "Loading household members...",
     "emptyState": "No household members yet.",
     "currentUserBadge": "You",
     "adminRole": "Admin",
     "memberRole": "Member",
     "removeMember": "Remove member",
+    "removeMemberUnavailable": "Remove member unavailable",
+    "protectedMemberTitle": "Cannot remove this member",
+    "protectedMemberMessage": "The household admin or manager cannot be deleted from the household.",
     "cannotRemoveYourself": "You cannot remove yourself from this screen.",
     "onlyAdminsCanRemoveMembers": "Only household admins can remove members."
   },

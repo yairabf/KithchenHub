@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, spacing, borderRadius } from '../../../../theme';
+import { colors, spacing, borderRadius, withOpacity } from '../../../../theme';
 
 export const styles = StyleSheet.create({
   contentContainer: {
@@ -8,30 +8,61 @@ export const styles = StyleSheet.create({
   membersList: {
     maxHeight: 280,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: spacing.md,
   },
-  memberRow: {
+  memberCountPill: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  memberCountText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '700',
+  },
+  memberCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    alignItems: 'flex-start',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    gap: spacing.base,
   },
-  memberColorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginEnd: spacing.sm,
+  memberAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberAvatarText: {
+    fontSize: 14,
+    color: colors.textLight,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   memberTextColumn: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xs,
+    minWidth: 0,
   },
   memberHeaderRow: {
     flexDirection: 'row',
@@ -39,38 +70,117 @@ export const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   memberName: {
-    flexShrink: 1,
+    flex: 1,
     fontSize: 16,
     color: colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   memberEmail: {
     fontSize: 13,
     color: colors.textSecondary,
   },
-  memberRole: {
-    fontSize: 12,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+  memberMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
   badge: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.full,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
+  },
+  currentUserBadge: {
+    backgroundColor: withOpacity(colors.primary, 0.1),
   },
   badgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  currentUserBadgeText: {
+    color: colors.primary,
+  },
+  roleBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  adminRoleBadge: {
+    backgroundColor: withOpacity(colors.success, 0.12),
+  },
+  memberRoleBadge: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  roleBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  deleteButton: {
-    padding: spacing.sm,
+  adminRoleBadgeText: {
+    color: colors.success,
   },
-  deleteButtonDisabled: {
-    opacity: 0.3,
+  memberRoleBadgeText: {
+    color: colors.textMuted,
+  },
+  removeIconButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    backgroundColor: withOpacity(colors.error, 0.08),
+  },
+  removeIconButtonDisabled: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  actionSection: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  primaryActionButton: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.xl,
+    paddingHorizontal: spacing.md,
+  },
+  primaryActionText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textLight,
+  },
+  secondaryActionButton: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.xl,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  secondaryActionText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  inlineHelperText: {
+    marginTop: spacing.xs,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textMuted,
   },
   footer: {
     paddingTop: spacing.md,
