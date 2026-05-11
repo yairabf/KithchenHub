@@ -20,6 +20,9 @@ jest.mock('react-i18next', () => ({
       ({
         'manageHouseholdModal.title': 'Manage Household',
         'manageHouseholdModal.membersSectionTitle': 'Household Members',
+        'manageHouseholdModal.memberCount': '2 members',
+        'manageHouseholdModal.inviteHouseholdMember': 'Invite household member',
+        'manageHouseholdModal.shareInviteCode': 'Share invite code',
         'manageHouseholdModal.emptyState': 'No household members yet',
         'manageHouseholdModal.currentUserBadge': 'You',
         'manageHouseholdModal.adminRole': 'Admin',
@@ -62,6 +65,13 @@ describe('ManageHouseholdModal', () => {
           role: 'Admin',
           isCurrentUser: true,
         },
+        {
+          id: 'user-2',
+          name: 'Bob Jones',
+          email: 'bob@example.com',
+          role: 'Member',
+          isCurrentUser: false,
+        },
       ],
       isLoading: false,
       removeMember: jest.fn(),
@@ -71,6 +81,10 @@ describe('ManageHouseholdModal', () => {
       <ManageHouseholdModal visible onClose={jest.fn()} />,
     );
 
+    expect(getByText('Household Members')).toBeTruthy();
+    expect(getByText('2 members')).toBeTruthy();
+    expect(getByText('Invite household member')).toBeTruthy();
+    expect(getByText('Share invite code')).toBeTruthy();
     expect(getByText('AS')).toBeTruthy();
     expect(getByText('Alice Smith')).toBeTruthy();
     expect(getByText('alice@example.com')).toBeTruthy();
@@ -160,6 +174,46 @@ describe('ManageHouseholdModal', () => {
       'The household admin or manager cannot be deleted from the household.',
     );
     expect(removeMember).not.toHaveBeenCalled();
+  });
+
+  it('calls invite and share action callbacks from the selected footer buttons', () => {
+    const onInviteMember = jest.fn();
+    const onShareInviteCode = jest.fn();
+    mockUseHousehold.mockReturnValue({
+      members: [
+        {
+          id: 'user-1',
+          name: 'Alice Smith',
+          email: 'alice@example.com',
+          role: 'Admin',
+          isCurrentUser: true,
+        },
+        {
+          id: 'user-2',
+          name: 'Bob Jones',
+          email: 'bob@example.com',
+          role: 'Member',
+          isCurrentUser: false,
+        },
+      ],
+      isLoading: false,
+      removeMember: jest.fn(),
+    });
+
+    const { getByText } = render(
+      <ManageHouseholdModal
+        visible
+        onClose={jest.fn()}
+        onInviteMember={onInviteMember}
+        onShareInviteCode={onShareInviteCode}
+      />,
+    );
+
+    fireEvent.press(getByText('Invite household member'));
+    fireEvent.press(getByText('Share invite code'));
+
+    expect(onInviteMember).toHaveBeenCalledTimes(1);
+    expect(onShareInviteCode).toHaveBeenCalledTimes(1);
   });
 
   it('hides member removal affordances for non-admin users', () => {

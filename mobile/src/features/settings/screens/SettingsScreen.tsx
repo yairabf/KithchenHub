@@ -362,6 +362,8 @@ export function SettingsScreen() {
       <ManageHouseholdModal
         visible={showManageHousehold}
         onClose={() => setShowManageHousehold(false)}
+        onInviteMember={() => setShowInviteModal(true)}
+        onShareInviteCode={() => setShowInviteModal(true)}
       />
 
       <LanguageSelectorModal

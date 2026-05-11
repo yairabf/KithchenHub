@@ -36,7 +36,12 @@ function getInitials(name?: string, email?: string): string {
   return parts.map((part) => part[0]).join('').toUpperCase();
 }
 
-export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalProps) {
+export function ManageHouseholdModal({
+  visible,
+  onClose,
+  onInviteMember,
+  onShareInviteCode,
+}: ManageHouseholdModalProps) {
   const { t } = useTranslation('settings');
   const { user } = useAuth();
   const { members, isLoading, removeMember } = useHousehold();
@@ -62,7 +67,16 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
     >
       <View style={styles.contentContainer}>
         <ScrollView style={styles.membersList} showsVerticalScrollIndicator={false}>
-          <Text style={styles.sectionTitle}>{t('manageHouseholdModal.membersSectionTitle')}</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>{t('manageHouseholdModal.membersSectionTitle')}</Text>
+            {!isLoading && members.length > 0 ? (
+              <View style={styles.memberCountPill}>
+                <Text style={styles.memberCountText}>
+                  {t('manageHouseholdModal.memberCount', { count: members.length })}
+                </Text>
+              </View>
+            ) : null}
+          </View>
 
           {isLoading ? (
             <View style={styles.stateContainer}>
@@ -153,6 +167,32 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
             })
           )}
         </ScrollView>
+
+        {canManageMembers ? (
+          <View style={styles.actionSection}>
+            <TouchableOpacity
+              style={styles.primaryActionButton}
+              onPress={onInviteMember}
+              disabled={!onInviteMember}
+            >
+              <Ionicons name="person-add-outline" size={18} color={colors.textLight} />
+              <Text style={styles.primaryActionText}>
+                {t('manageHouseholdModal.inviteHouseholdMember')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryActionButton}
+              onPress={onShareInviteCode ?? onInviteMember}
+              disabled={!onShareInviteCode && !onInviteMember}
+            >
+              <Ionicons name="share-social-outline" size={18} color={colors.primary} />
+              <Text style={styles.secondaryActionText}>
+                {t('manageHouseholdModal.shareInviteCode')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {!canManageMembers ? (
           <View style={styles.footer}>

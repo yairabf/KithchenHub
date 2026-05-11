@@ -98,6 +98,9 @@
   "manageHouseholdModal": {
     "title": "Manage Household",
     "membersSectionTitle": "Household Members",
+    "memberCount": "{{count}} members",
+    "inviteHouseholdMember": "Invite household member",
+    "shareInviteCode": "Share invite code",
     "loading": "Loading household members...",
     "emptyState": "No household members yet.",
     "currentUserBadge": "You",
