@@ -4,6 +4,7 @@ import { RecipesController } from './controllers/recipes.controller';
 import { RecipeImagesController } from './controllers/recipe-images.controller';
 import { RecipesService } from './services/recipes.service';
 import { RecipeImagesService } from './services/recipe-images.service';
+import { RecipeImageSearchService } from './services/recipe-image-search.service';
 import { ImageProcessingService } from './images/image-processing.service';
 import { RecipeImageRateLimitService } from './services/recipe-image-rate-limit.service';
 import { RecipeImageRateLimitGuard } from './guards/recipe-image-rate-limit.guard';
@@ -19,6 +20,7 @@ import { ShoppingModule } from '../shopping/shopping.module';
     RecipesService,
     RecipesRepository,
     RecipeImagesService,
+    RecipeImageSearchService,
     RecipeImageRateLimitService,
     RecipeImageRateLimitGuard,
     ImageProcessingService,

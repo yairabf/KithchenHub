@@ -1,12 +1,15 @@
 import {
   Controller,
   Post,
+  Get,
   Param,
+  Query,
   UseGuards,
   Req,
   BadRequestException,
 } from '@nestjs/common';
 import { RecipeImagesService } from '../services/recipe-images.service';
+import { RecipeImageSearchService } from '../services/recipe-image-search.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RecipeImageRateLimitGuard } from '../guards/recipe-image-rate-limit.guard';
 import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
@@ -37,7 +40,18 @@ type RecipeImageUploadRequest = {
 @Controller({ path: 'recipes', version: '1' })
 @UseGuards(JwtAuthGuard)
 export class RecipeImagesController {
-  constructor(private readonly recipeImagesService: RecipeImagesService) {}
+  constructor(
+    private readonly recipeImagesService: RecipeImagesService,
+    private readonly recipeImageSearchService: RecipeImageSearchService,
+  ) {}
+
+  @Get('images/search')
+  async searchImages(
+    @Query('q') query: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.recipeImageSearchService.searchImages(query, limit);
+  }
 
   @Post(':id/image')
   @UseGuards(RecipeImageRateLimitGuard)

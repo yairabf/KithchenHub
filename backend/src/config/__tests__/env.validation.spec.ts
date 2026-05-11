@@ -68,6 +68,28 @@ describe('validateEnv', () => {
     expect(() => validateEnv()).toThrow('Invalid environment variables');
   });
 
+  it('accepts Google image search when API key and CX are both set', () => {
+    process.env = buildBaseEnv({
+      GOOGLE_IMAGE_SEARCH_API_KEY: 'search-key',
+      GOOGLE_IMAGE_SEARCH_CX: 'search-cx',
+    }) as Record<string, string>;
+
+    const env = validateEnv();
+
+    expect(env.GOOGLE_IMAGE_SEARCH_API_KEY).toBe('search-key');
+    expect(env.GOOGLE_IMAGE_SEARCH_CX).toBe('search-cx');
+    expect(env.GOOGLE_IMAGE_SEARCH_SAFE).toBe('active');
+  });
+
+  it('rejects Google image search env when only API key is set', () => {
+    process.env = buildBaseEnv({
+      GOOGLE_IMAGE_SEARCH_API_KEY: 'search-key',
+      GOOGLE_IMAGE_SEARCH_CX: undefined,
+    }) as Record<string, string>;
+
+    expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
+
   it('rejects env when webhook auth header is set without webhook auth secret', () => {
     process.env = buildBaseEnv({
       SUBSCRIPTIONS_REVENUECAT_WEBHOOK_AUTH_HEADER: 'x-revenuecat-signature',

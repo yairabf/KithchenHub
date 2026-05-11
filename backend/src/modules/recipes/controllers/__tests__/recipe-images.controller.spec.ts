@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RecipeImagesController } from '../recipe-images.controller';
 import { RecipeImagesService } from '../../services/recipe-images.service';
+import { RecipeImageSearchService } from '../../services/recipe-image-search.service';
 import { RecipeImageRateLimitGuard } from '../../guards/recipe-image-rate-limit.guard';
 import { BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
@@ -23,6 +24,9 @@ describe('RecipeImagesController', () => {
   const mockRecipeImagesService = {
     uploadRecipeImage: jest.fn(),
   };
+  const mockRecipeImageSearchService = {
+    searchImages: jest.fn(),
+  };
 
   beforeEach(async () => {
     getFileTypeMock().mockResolvedValue({ mime: 'image/jpeg' });
@@ -32,6 +36,10 @@ describe('RecipeImagesController', () => {
         {
           provide: RecipeImagesService,
           useValue: mockRecipeImagesService,
+        },
+        {
+          provide: RecipeImageSearchService,
+          useValue: mockRecipeImageSearchService,
         },
       ],
     })
@@ -116,6 +124,32 @@ describe('RecipeImagesController', () => {
           controller.uploadImage(mockId, mockRequest),
         ).rejects.toThrow(BadRequestException);
       });
+    });
+  });
+
+  describe('searchImages', () => {
+    it('delegates query and limit to the image search service', async () => {
+      mockRecipeImageSearchService.searchImages.mockResolvedValue([
+        {
+          id: 'result-1',
+          title: 'Omelet',
+          imageUrl: 'https://example.com/omelet.jpg',
+        },
+      ]);
+
+      const result = await controller.searchImages('omelet', '6');
+
+      expect(mockRecipeImageSearchService.searchImages).toHaveBeenCalledWith(
+        'omelet',
+        '6',
+      );
+      expect(result).toEqual([
+        {
+          id: 'result-1',
+          title: 'Omelet',
+          imageUrl: 'https://example.com/omelet.jpg',
+        },
+      ]);
     });
   });
 });
