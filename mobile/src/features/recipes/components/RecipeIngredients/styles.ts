@@ -23,6 +23,25 @@ export const styles = StyleSheet.create({
   ingredientCardWrapper: {
     width: '100%',
   },
+  ingredientImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: withOpacity(colors.recipes, 0.12),
+  },
+  ingredientImageFallbackContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: withOpacity(colors.recipes, 0.12),
+  },
+  ingredientFallbackIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   addAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
