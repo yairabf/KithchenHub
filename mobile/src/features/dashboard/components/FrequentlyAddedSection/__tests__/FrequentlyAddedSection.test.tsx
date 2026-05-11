@@ -83,8 +83,8 @@ describe('FrequentlyAddedSection', () => {
     expect(getByText('Bread')).toBeTruthy();
   });
 
-  it('renders the compact frequent-item layout with centered names and no add badge', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('renders the compact white frequent-item layout with centered names and quick-add badges', () => {
+    const { getByTestId } = render(
       <FrequentlyAddedSection
         isTablet={true}
         isRtl={false}
@@ -98,7 +98,8 @@ describe('FrequentlyAddedSection', () => {
     expect(getByTestId('frequent-item-name-1').props.style).toEqual(
       expect.arrayContaining([expect.objectContaining({ textAlign: 'center' })]),
     );
-    expect(queryByTestId('frequent-item-add-icon-1')).toBeNull();
+    expect(getByTestId('frequent-item-add-icon-1')).toBeTruthy();
+    expect(getByTestId('frequent-item-add-icon-2')).toBeTruthy();
   });
 
   it('falls back to the category image when a valid remote image fails to load', () => {
