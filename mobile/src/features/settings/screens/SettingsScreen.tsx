@@ -50,6 +50,7 @@ export function SettingsScreen() {
   const [showLanguageSelector, setShowLanguageSelector] = React.useState(false);
   const [showManageHousehold, setShowManageHousehold] = React.useState(false);
   const [showInviteModal, setShowInviteModal] = React.useState(false);
+  const [inviteModalInitialAction, setInviteModalInitialAction] = React.useState<'generate' | 'share'>('generate');
   const [isDeletingAccount, setIsDeletingAccount] = React.useState(false);
   const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
 
@@ -67,6 +68,12 @@ export function SettingsScreen() {
   const handleOpenPremiumPaywall = React.useCallback(() => {
     navigation.navigate('PremiumPaywall');
   }, [navigation]);
+
+  const openInviteModal = React.useCallback((initialAction: 'generate' | 'share' = 'generate') => {
+    setInviteModalInitialAction(initialAction);
+    setShowManageHousehold(false);
+    setShowInviteModal(true);
+  }, []);
 
   const handleDeleteAccount = async () => {
     if (isDeletingAccount) {
@@ -252,7 +259,7 @@ export function SettingsScreen() {
           {isAdmin && (
             <TouchableOpacity
               style={styles.settingRow}
-              onPress={() => setShowInviteModal(true)}
+              onPress={() => openInviteModal('generate')}
             >
               <View style={styles.settingInfo}>
                 <View style={[styles.iconContainer, { backgroundColor: colors.pastel.peach }]}>
@@ -362,8 +369,8 @@ export function SettingsScreen() {
       <ManageHouseholdModal
         visible={showManageHousehold}
         onClose={() => setShowManageHousehold(false)}
-        onInviteMember={() => setShowInviteModal(true)}
-        onShareInviteCode={() => setShowInviteModal(true)}
+        onInviteMember={() => openInviteModal('generate')}
+        onShareInviteCode={() => openInviteModal('share')}
       />
 
       <LanguageSelectorModal
@@ -375,6 +382,7 @@ export function SettingsScreen() {
       <InviteMemberModal
         visible={showInviteModal}
         onClose={() => setShowInviteModal(false)}
+        initialAction={inviteModalInitialAction}
       />
 
     </SafeAreaView >

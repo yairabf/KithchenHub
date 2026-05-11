@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -17,25 +17,41 @@ import { householdService } from '../../../services/householdService';
 interface InviteMemberModalProps {
     visible: boolean;
     onClose: () => void;
+    initialAction?: 'generate' | 'share';
 }
 
-export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) {
+export function InviteMemberModal({ visible, onClose, initialAction }: InviteMemberModalProps) {
     const { t } = useTranslation('settings');
     const [inviteToken, setInviteToken] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [copied, setCopied] = useState(false);
+    const hasRunInitialAction = useRef(false);
 
-    const handleGenerateInvite = async () => {
+    const shareInviteToken = useCallback(async (token: string) => {
+        try {
+            await Share.share({
+                message: t('inviteMemberModal.shareMessage', { code: token }),
+                title: t('inviteMemberModal.shareTitle'),
+            });
+        } catch (error) {
+            console.error('Error sharing:', error);
+        }
+    }, [t]);
+
+    const handleGenerateInvite = useCallback(async (options?: { shareAfterGenerate?: boolean }) => {
         try {
             setIsGenerating(true);
             const { inviteToken } = await householdService.inviteMember();
             setInviteToken(inviteToken);
+            if (options?.shareAfterGenerate) {
+                await shareInviteToken(inviteToken);
+            }
         } catch (error) {
             console.error('Error generating invite:', error);
         } finally {
             setIsGenerating(false);
         }
-    };
+    }, [shareInviteToken]);
 
     const copyToClipboard = async () => {
         if (inviteToken) {
@@ -47,15 +63,20 @@ export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) 
 
     const handleShare = async () => {
         if (!inviteToken) return;
-        try {
-            await Share.share({
-                message: t('inviteMemberModal.shareMessage', { code: inviteToken }),
-                title: t('inviteMemberModal.shareTitle'),
-            });
-        } catch (error) {
-            console.error('Error sharing:', error);
-        }
+        await shareInviteToken(inviteToken);
     };
+
+    useEffect(() => {
+        if (!visible) {
+            hasRunInitialAction.current = false;
+            return;
+        }
+
+        if (initialAction === 'share' && !hasRunInitialAction.current) {
+            hasRunInitialAction.current = true;
+            void handleGenerateInvite({ shareAfterGenerate: true });
+        }
+    }, [handleGenerateInvite, initialAction, visible]);
 
     const handleClose = () => {
         setInviteToken(null);
@@ -98,14 +119,14 @@ export function InviteMemberModal({ visible, onClose }: InviteMemberModalProps) 
                             <Text style={styles.shareButtonText}>{t('inviteMemberModal.shareViaApps')}</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.refreshButton} onPress={handleGenerateInvite} disabled={isGenerating}>
+                        <TouchableOpacity style={styles.refreshButton} onPress={() => handleGenerateInvite()} disabled={isGenerating}>
                             <Text style={styles.refreshButtonText}>{t('inviteMemberModal.generateNewCode')}</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
                     <TouchableOpacity
                         style={styles.generateButton}
-                        onPress={handleGenerateInvite}
+                        onPress={() => handleGenerateInvite()}
                         disabled={isGenerating}
                     >
                         {isGenerating ? (
