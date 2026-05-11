@@ -10,7 +10,10 @@ import type { GroceryCardContentProps } from './types';
  */
 export function GroceryCardContent({
   image,
+  imageTestID,
+  imageStyle,
   customIcon,
+  iconContainerStyle,
   title,
   titleStyle,
   subtitle,
@@ -25,11 +28,12 @@ export function GroceryCardContent({
     ? (image ? (
       <SafeImage
         uri={image}
-        style={styles.itemImage}
+        style={[styles.itemImage, imageStyle]}
         fallbackIcon={customIcon}
+        testID={imageTestID}
       />
     ) : customIcon ? (
-      <View style={styles.iconContainer}>{customIcon}</View>
+      <View style={[styles.iconContainer, iconContainerStyle]} testID={imageTestID}>{customIcon}</View>
     ) : null)
     : null;
 

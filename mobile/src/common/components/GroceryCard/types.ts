@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { TextStyle, ViewStyle } from 'react-native';
+import type { ImageStyle, StyleProp, TextStyle, ViewStyle } from 'react-native';
 
 /**
  * Props for the base GroceryCard component
@@ -27,11 +27,20 @@ export interface GroceryCardContentProps {
   /** Optional image URL to display on the left side. Must be a valid HTTP/HTTPS URL. */
   image?: string;
 
+  /** Optional test ID forwarded to the image/fallback thumbnail slot. */
+  imageTestID?: string;
+
+  /** Optional custom style for the image thumbnail. */
+  imageStyle?: StyleProp<ImageStyle>;
+
   /**
    * Custom icon element to display if no image is provided.
    * Useful for placeholder icons or custom graphics.
    */
   customIcon?: ReactNode;
+
+  /** Optional custom style for the no-image icon thumbnail slot. */
+  iconContainerStyle?: StyleProp<ViewStyle>;
 
   /** Main title text displayed prominently (required) */
   title: string;

@@ -9,6 +9,10 @@ import type { RecipeIngredientsProps } from './types';
 import { useTranslation } from 'react-i18next';
 import { getUnitLabel } from '../../constants';
 
+function getIngredientTestKey(ingredientId: string | undefined, index: number) {
+  return ingredientId ? ingredientId.replace(/[^a-zA-Z0-9-_]/g, '-') : `index-${index}`;
+}
+
 /**
  * RecipeIngredients component displays the ingredients list for a recipe.
  * Provides functionality to add individual ingredients or all ingredients
@@ -56,43 +60,62 @@ export function RecipeIngredients({
           </View>
 
           <View style={styles.ingredientsList}>
-            {(recipe.ingredients || []).map((ingredient, index) => (
-              <View key={ingredient.id || `ing-${index}`} style={styles.ingredientCardWrapper}>
-                <ListItemCardWrapper
-                  backgroundColor={pastelColors[index % pastelColors.length]}
-                >
-                  <GroceryCardContent
-                    image={ingredient.image}
-                    title={ingredient.name || ''}
+            {(recipe.ingredients || []).map((ingredient, index) => {
+              const ingredientTestKey = getIngredientTestKey(ingredient.id, index);
+
+              return (
+                <View key={ingredient.id || `ing-${index}`} style={styles.ingredientCardWrapper}>
+                  <ListItemCardWrapper
+                    backgroundColor={pastelColors[index % pastelColors.length]}
+                  >
+                    <GroceryCardContent
+                      image={ingredient.image}
+                      imageTestID={`recipe-ingredient-image-${ingredientTestKey}`}
+                      imageStyle={styles.ingredientImage}
+                      customIcon={
+                        <View
+                          style={styles.ingredientFallbackIcon}
+                          testID={`recipe-ingredient-fallback-${ingredientTestKey}`}
+                        >
+                          <Ionicons
+                            name="restaurant-outline"
+                            size={20}
+                            color={colors.recipes}
+                          />
+                        </View>
+                      }
+                      iconContainerStyle={styles.ingredientImageFallbackContainer}
+                      title={ingredient.name || t('detail.ingredientFallbackName')}
                       subtitle={
-                      <IngredientInfo
-                        quantity={String(ingredient.quantityAmount ?? ingredient.quantity ?? '')}
-                        unit={getUnitLabel(ingredient.quantityUnit ?? ingredient.unit ?? '', t)}
-                      />
-                    }
-                    rightElement={
-                      <TouchableOpacity
-                        style={styles.addButton}
-                        onPress={() => onAddIngredient(ingredient)}
-                        activeOpacity={0.7}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('detail.addIngredientToShoppingListAccessibilityLabel', {
-                          name: ingredient.name || t('detail.ingredientFallbackName'),
-                        })}
-                      >
-                        <Ionicons
-                          name="cart-outline"
-                          size={18}
-                          color={colors.textMuted}
+                        <IngredientInfo
+                          quantity={String(ingredient.quantityAmount ?? ingredient.quantity ?? '')}
+                          unit={getUnitLabel(ingredient.quantityUnit ?? ingredient.unit ?? '', t)}
                         />
-                      </TouchableOpacity>
-                    }
-                    imagePosition={ingredient.image ? 'left' : 'none'}
-                    isRtl={isRtlLayout}
-                  />
-                </ListItemCardWrapper>
-              </View>
-            ))}
+                      }
+                      rightElement={
+                        <TouchableOpacity
+                          style={styles.addButton}
+                          onPress={() => onAddIngredient(ingredient)}
+                          activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('detail.addIngredientToShoppingListAccessibilityLabel', {
+                            name: ingredient.name || t('detail.ingredientFallbackName'),
+                          })}
+                        >
+                          <Ionicons
+                            name="cart-outline"
+                            size={18}
+                            color={colors.textMuted}
+                          />
+                        </TouchableOpacity>
+                      }
+                      imagePosition="left"
+                      isRtl={isRtlLayout}
+                    />
+                  </ListItemCardWrapper>
+                </View>
+              );
+            })}
           </View>
         </View>
       )}
