@@ -132,9 +132,6 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.sm,
   },
   itemImage: {
     width: 40,
