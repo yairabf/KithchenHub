@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -45,6 +46,13 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
     await removeMember(id);
   };
 
+  const handleProtectedMemberPress = () => {
+    Alert.alert(
+      t('manageHouseholdModal.protectedMemberTitle'),
+      t('manageHouseholdModal.protectedMemberMessage'),
+    );
+  };
+
   return (
     <CenteredModal
       visible={visible}
@@ -67,7 +75,9 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
             </View>
           ) : (
             members.map((member) => {
-              const canRemoveMember = canManageMembers && !member.isCurrentUser;
+              const isProtectedMember = member.isCurrentUser || member.role.toLowerCase() === 'admin';
+              const canRemoveMember = canManageMembers && !isProtectedMember;
+              const shouldShowProtectedRemove = canManageMembers && isProtectedMember;
               const roleLabel = getRoleLabel(member.role, t);
 
               return (
@@ -121,22 +131,22 @@ export function ManageHouseholdModal({ visible, onClose }: ManageHouseholdModalP
                       {canRemoveMember ? (
                         <TouchableOpacity
                           accessibilityLabel={t('manageHouseholdModal.removeMember')}
-                          style={styles.removeButton}
+                          style={styles.removeIconButton}
                           onPress={() => handleRemoveMember(member.id)}
                         >
-                          <Ionicons name="trash-outline" size={16} color={colors.error} />
-                          <Text style={styles.removeButtonText}>
-                            {t('manageHouseholdModal.removeMember')}
-                          </Text>
+                          <Ionicons name="trash-outline" size={18} color={colors.error} />
+                        </TouchableOpacity>
+                      ) : shouldShowProtectedRemove ? (
+                        <TouchableOpacity
+                          accessibilityLabel={t('manageHouseholdModal.removeMemberUnavailable')}
+                          style={[styles.removeIconButton, styles.removeIconButtonDisabled]}
+                          onPress={handleProtectedMemberPress}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
                         </TouchableOpacity>
                       ) : null}
                     </View>
 
-                    {member.isCurrentUser ? (
-                      <Text style={styles.inlineHelperText}>
-                        {t('manageHouseholdModal.cannotRemoveYourself')}
-                      </Text>
-                    ) : null}
                   </View>
                 </View>
               );

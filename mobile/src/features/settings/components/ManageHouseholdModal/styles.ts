@@ -108,18 +108,18 @@ export const styles = StyleSheet.create({
   memberRoleBadgeText: {
     color: colors.textMuted,
   },
-  removeButton: {
-    minHeight: 44,
-    flexDirection: 'row',
+  removeIconButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    justifyContent: 'center',
     borderRadius: borderRadius.full,
+    backgroundColor: withOpacity(colors.error, 0.08),
   },
-  removeButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.error,
+  removeIconButtonDisabled: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
   inlineHelperText: {
     marginTop: spacing.xs,

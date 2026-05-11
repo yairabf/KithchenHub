@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { ManageHouseholdModal } from './ManageHouseholdModal';
@@ -24,6 +25,9 @@ jest.mock('react-i18next', () => ({
         'manageHouseholdModal.adminRole': 'Admin',
         'manageHouseholdModal.memberRole': 'Member',
         'manageHouseholdModal.removeMember': 'Remove member',
+        'manageHouseholdModal.removeMemberUnavailable': 'Remove member unavailable',
+        'manageHouseholdModal.protectedMemberTitle': 'Cannot remove this member',
+        'manageHouseholdModal.protectedMemberMessage': 'The household admin or manager cannot be deleted from the household.',
         'manageHouseholdModal.cannotRemoveYourself': 'You cannot remove yourself here',
         'manageHouseholdModal.onlyAdminsCanRemoveMembers': 'Only household admins can remove members.',
       }[key] ?? key),
@@ -47,7 +51,8 @@ describe('ManageHouseholdModal', () => {
     });
   });
 
-  it('renders current user as a compact member card with initials, badges, and inline self-removal guidance', () => {
+  it('renders current user as a compact member card with initials, badges, and popup-only removal guidance', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     mockUseHousehold.mockReturnValue({
       members: [
         {
@@ -62,7 +67,7 @@ describe('ManageHouseholdModal', () => {
       removeMember: jest.fn(),
     });
 
-    const { getByText, queryByLabelText, queryByPlaceholderText } = render(
+    const { getByText, getByLabelText, queryByText, queryByPlaceholderText } = render(
       <ManageHouseholdModal visible onClose={jest.fn()} />,
     );
 
@@ -71,9 +76,15 @@ describe('ManageHouseholdModal', () => {
     expect(getByText('alice@example.com')).toBeTruthy();
     expect(getByText('Admin')).toBeTruthy();
     expect(getByText('You')).toBeTruthy();
-    expect(getByText('You cannot remove yourself here')).toBeTruthy();
-    expect(queryByLabelText('Remove member')).toBeNull();
+    expect(queryByText('You cannot remove yourself here')).toBeNull();
     expect(queryByPlaceholderText('Add new member...')).toBeNull();
+
+    fireEvent.press(getByLabelText('Remove member unavailable'));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Cannot remove this member',
+      'The household admin or manager cannot be deleted from the household.',
+    );
   });
 
   it('lets admins remove other household members with an explicit remove action', () => {
@@ -111,6 +122,44 @@ describe('ManageHouseholdModal', () => {
     fireEvent.press(getByLabelText('Remove member'));
 
     expect(removeMember).toHaveBeenCalledWith('user-2');
+  });
+
+  it('shows a popup instead of removing protected admin or manager members', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const removeMember = jest.fn();
+    mockUseHousehold.mockReturnValue({
+      members: [
+        {
+          id: 'user-1',
+          name: 'Alice Smith',
+          email: 'alice@example.com',
+          role: 'Admin',
+          isCurrentUser: true,
+        },
+        {
+          id: 'user-2',
+          name: 'Maya Manager',
+          email: 'maya@example.com',
+          role: 'Admin',
+          isCurrentUser: false,
+        },
+      ],
+      isLoading: false,
+      removeMember,
+    });
+
+    const { getAllByLabelText, getByText } = render(
+      <ManageHouseholdModal visible onClose={jest.fn()} />,
+    );
+
+    expect(getByText('MM')).toBeTruthy();
+    fireEvent.press(getAllByLabelText('Remove member unavailable')[1]);
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Cannot remove this member',
+      'The household admin or manager cannot be deleted from the household.',
+    );
+    expect(removeMember).not.toHaveBeenCalled();
   });
 
   it('hides member removal affordances for non-admin users', () => {
