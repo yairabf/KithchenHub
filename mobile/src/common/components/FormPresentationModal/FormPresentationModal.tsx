@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../theme';
 import { styles } from './styles';
@@ -31,6 +31,7 @@ export function FormPresentationModal({
   showFooter = false,
 }: FormPresentationModalProps) {
   const { t } = useTranslation('common');
+  const insets = useSafeAreaInsets();
 
   if (!visible) return null;
 
@@ -42,6 +43,14 @@ export function FormPresentationModal({
 
   const headerSubmit = !showFooter && onSubmit;
   const footerSubmit = showFooter && onSubmit;
+  const fullScreenTopInset = Math.max(insets.top, Platform.OS === 'ios' ? 44 : 0);
+  const safeAreaStyle = [
+    styles.safeArea,
+    {
+      paddingTop: presentation === 'fullScreen' ? fullScreenTopInset : 0,
+      paddingBottom: insets.bottom,
+    },
+  ];
 
   return (
     <Modal
@@ -68,7 +77,7 @@ export function FormPresentationModal({
                 </View>
               ) : null}
 
-              <SafeAreaView style={styles.safeArea} edges={presentation === 'sheet' ? ['bottom'] : ['top', 'bottom']}>
+              <View style={safeAreaStyle} testID="form-presentation-safe-area">
                 <View style={styles.header}>
                   <View style={styles.headerSide}>
                     <TouchableOpacity
@@ -133,7 +142,7 @@ export function FormPresentationModal({
                     </TouchableOpacity>
                   </View>
                 ) : null}
-              </SafeAreaView>
+              </View>
             </View>
           </View>
         </KeyboardAvoidingView>
