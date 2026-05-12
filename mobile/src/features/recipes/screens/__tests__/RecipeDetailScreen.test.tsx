@@ -1,5 +1,4 @@
 import React from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { RecipeDetailScreen } from '../RecipeDetailScreen';
 
@@ -228,10 +227,9 @@ describe('RecipeDetailScreen shopping integration', () => {
       ],
     };
 
-    const firstRender = render(
+    const { getAllByTestId } = render(
       <RecipeDetailScreen recipe={recipeWithBanana as any} onBack={jest.fn()} />,
     );
-    const { getAllByTestId } = firstRender;
 
     expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('no-image');
 
@@ -239,10 +237,6 @@ describe('RecipeDetailScreen shopping integration', () => {
       expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('https://cdn.example.com/banana.png');
     });
     expect(searchGroceries).toHaveBeenCalledWith('Banana');
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-      '@kitchen_hub_recipe_ingredient_catalog_cache_en',
-      expect.stringContaining('catalog-banana'),
-    );
 
     fireEvent.press(getAllByTestId('add-all-ingredients')[0]);
 
@@ -256,21 +250,6 @@ describe('RecipeDetailScreen shopping integration', () => {
         }),
       );
     });
-
-    firstRender.unmount();
-
-    const secondSearchGroceries = jest.fn().mockResolvedValue([]);
-    mockUseCatalog.mockReturnValue({
-      groceryItems: [],
-      searchGroceries: secondSearchGroceries,
-    });
-
-    const secondRender = render(
-      <RecipeDetailScreen recipe={recipeWithBanana as any} onBack={jest.fn()} />,
-    );
-
-    expect(secondRender.getAllByTestId('ingredient-image-0')[0].props.children).toBe('https://cdn.example.com/banana.png');
-    expect(secondSearchGroceries).not.toHaveBeenCalled();
   });
 
   it('adds a recipe ingredient through the cache-aware repository with catalog/category metadata', async () => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Image, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { isValidImageUrl } from '../../../utils/urlValidator';
@@ -36,10 +36,6 @@ export function SafeImage({
 }: SafeImageProps) {
   const [imageError, setImageError] = useState(false);
 
-  useEffect(() => {
-    setImageError(false);
-  }, [uri]);
-
   // Check if URL is valid and safe
   const isValidImage = uri && isValidImageUrl(uri);
 
@@ -47,7 +43,7 @@ export function SafeImage({
   if (isValidImage && !imageError) {
     return (
       <Image
-        source={{ uri, cache: 'force-cache' }}
+        source={{ uri }}
         style={[styles.image, style]}
         onError={() => setImageError(true)}
         testID={testID}

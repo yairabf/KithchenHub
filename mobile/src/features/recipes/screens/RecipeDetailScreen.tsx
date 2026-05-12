@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   ScrollView,
@@ -51,103 +50,6 @@ import {
 import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../shopping/constants/categories';
 import { isValidImageUrl } from '../../../utils/urlValidator';
 
-const RECIPE_INGREDIENT_CATALOG_CACHE_KEY_PREFIX = '@kitchen_hub_recipe_ingredient_catalog_cache';
-const recipeIngredientCatalogMemoryCache: Record<string, Record<string, GroceryItem>> = {};
-
-function getRecipeIngredientCatalogCacheLanguage(language: string | undefined): string {
-  return language?.trim().toLowerCase() || 'en';
-}
-
-function getRecipeIngredientCatalogCacheKey(language: string | undefined): string {
-  return `${RECIPE_INGREDIENT_CATALOG_CACHE_KEY_PREFIX}_${getRecipeIngredientCatalogCacheLanguage(language)}`;
-}
-
-function getRecipeIngredientCatalogMemoryCache(language: string | undefined): Record<string, GroceryItem> {
-  const cacheLanguage = getRecipeIngredientCatalogCacheLanguage(language);
-  return recipeIngredientCatalogMemoryCache[cacheLanguage] ?? {};
-}
-
-function isValidCachedGroceryItem(value: unknown): value is GroceryItem {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const candidate = value as Partial<GroceryItem>;
-  return (
-    typeof candidate.id === 'string' &&
-    typeof candidate.name === 'string' &&
-    typeof candidate.category === 'string' &&
-    typeof candidate.image === 'string'
-  );
-}
-
-function parseRecipeIngredientCatalogCache(raw: string | null): Record<string, GroceryItem> {
-  if (!raw) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {};
-    }
-
-    return Object.entries(parsed).reduce<Record<string, GroceryItem>>((acc, [key, value]) => {
-      if (typeof key === 'string' && key.trim().length > 0 && isValidCachedGroceryItem(value)) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
-  } catch {
-    return {};
-  }
-}
-
-async function hydrateRecipeIngredientCatalogCache(language: string | undefined): Promise<Record<string, GroceryItem>> {
-  const cacheLanguage = getRecipeIngredientCatalogCacheLanguage(language);
-  const cached = parseRecipeIngredientCatalogCache(
-    await AsyncStorage.getItem(getRecipeIngredientCatalogCacheKey(language)),
-  );
-
-  recipeIngredientCatalogMemoryCache[cacheLanguage] = {
-    ...cached,
-    ...(recipeIngredientCatalogMemoryCache[cacheLanguage] ?? {}),
-  };
-
-  return cached;
-}
-
-function persistRecipeIngredientCatalogItems(
-  language: string | undefined,
-  entries: Array<readonly [string, GroceryItem | null]>,
-): void {
-  const cacheLanguage = getRecipeIngredientCatalogCacheLanguage(language);
-  const existing = recipeIngredientCatalogMemoryCache[cacheLanguage] ?? {};
-  const next = { ...existing };
-  let hasItemToPersist = false;
-
-  entries.forEach(([lookupKey, item]) => {
-    if (!item) {
-      return;
-    }
-
-    hasItemToPersist = true;
-    next[lookupKey] = item;
-    if (item.id) {
-      next[item.id] = item;
-    }
-  });
-
-  if (!hasItemToPersist) {
-    return;
-  }
-
-  recipeIngredientCatalogMemoryCache[cacheLanguage] = next;
-  AsyncStorage.setItem(getRecipeIngredientCatalogCacheKey(language), JSON.stringify(next)).catch((error) => {
-    console.error('[RecipeDetailScreen] Failed to cache resolved ingredient catalog metadata:', error);
-  });
-}
-
 
 export function RecipeDetailScreen({
   recipe,
@@ -174,9 +76,7 @@ export function RecipeDetailScreen({
   const [existingItem, setExistingItem] = useState<ShoppingItem | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [resolvedIngredientCatalogItems, setResolvedIngredientCatalogItems] = useState<Record<string, GroceryItem | null>>(
-    () => ({ ...getRecipeIngredientCatalogMemoryCache(i18n.language) }),
-  );
+  const [resolvedIngredientCatalogItems, setResolvedIngredientCatalogItems] = useState<Record<string, GroceryItem | null>>({});
 
   const userMode = useMemo(() => {
     if (config.mockData.enabled) {
@@ -298,72 +198,6 @@ export function RecipeDetailScreen({
   }, []);
 
   useEffect(() => {
-    let isActive = true;
-
-    hydrateRecipeIngredientCatalogCache(i18n.language)
-      .then((cachedItems) => {
-        if (!isActive || Object.keys(cachedItems).length === 0) {
-          return;
-        }
-
-        const hasNewCachedItems = Object.entries(cachedItems).some(
-          ([key, item]) => resolvedIngredientCatalogItems[key] !== item,
-        );
-
-        if (!hasNewCachedItems) {
-          return;
-        }
-
-        setResolvedIngredientCatalogItems((current) => ({
-          ...cachedItems,
-          ...current,
-        }));
-      })
-      .catch((error) => {
-        console.error('[RecipeDetailScreen] Failed to hydrate ingredient catalog cache:', error);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [i18n.language]);
-
-  useEffect(() => {
-    const localCatalogEntries = (baseDisplayRecipe.ingredients || []).flatMap((ingredient) => {
-      if (getUsableIngredientImage(ingredient.image)) {
-        return [];
-      }
-
-      const lookupKey = getIngredientCatalogLookupKey(ingredient);
-      const localMatch = findMatchingCatalogItem(ingredient, groceryItems);
-      return lookupKey && localMatch ? [[lookupKey, localMatch] as const] : [];
-    });
-
-    if (localCatalogEntries.length === 0) {
-      return;
-    }
-
-    persistRecipeIngredientCatalogItems(i18n.language, localCatalogEntries);
-    setResolvedIngredientCatalogItems((current) => {
-      const next = { ...current };
-      localCatalogEntries.forEach(([lookupKey, item]) => {
-        next[lookupKey] = item;
-        if (item.id) {
-          next[item.id] = item;
-        }
-      });
-      return next;
-    });
-  }, [
-    baseDisplayRecipe.ingredients,
-    findMatchingCatalogItem,
-    getIngredientCatalogLookupKey,
-    getUsableIngredientImage,
-    groceryItems,
-    i18n.language,
-  ]);
-
-  useEffect(() => {
     const ingredientsNeedingCatalogLookup = (baseDisplayRecipe.ingredients || []).filter((ingredient) => {
       if (getUsableIngredientImage(ingredient.image)) {
         return false;
@@ -400,7 +234,6 @@ export function RecipeDetailScreen({
         return;
       }
 
-      persistRecipeIngredientCatalogItems(i18n.language, resolvedEntries);
       setResolvedIngredientCatalogItems((current) => {
         const next = { ...current };
         resolvedEntries.forEach(([lookupKey, item]) => {
@@ -422,7 +255,6 @@ export function RecipeDetailScreen({
     getIngredientCatalogLookupKey,
     getUsableIngredientImage,
     groceryItems,
-    i18n.language,
     resolvedIngredientCatalogItems,
     searchGroceries,
   ]);
