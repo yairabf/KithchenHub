@@ -447,7 +447,7 @@ describe('Recipe Services', () => {
             });
         });
 
-        it('updateRecipe sends ingredient catalogItemId in payload', async () => {
+        it('updateRecipe sends ingredient catalog metadata in payload', async () => {
             const recipeId = 'remote-1';
             const existingRecipe = {
                 id: recipeId,
@@ -462,6 +462,8 @@ describe('Recipe Services', () => {
                     {
                         name: 'Tomato',
                         catalogItemId: 'catalog-1',
+                        image: 'https://cdn.example.com/tomato.png',
+                        category: 'vegetables',
                         quantityAmount: 1,
                         quantityUnit: 'pcs',
                     },
@@ -487,6 +489,8 @@ describe('Recipe Services', () => {
                         expect.objectContaining({
                             name: 'Tomato',
                             catalogItemId: 'catalog-1',
+                            image: 'https://cdn.example.com/tomato.png',
+                            category: 'vegetables',
                         }),
                     ],
                 }),

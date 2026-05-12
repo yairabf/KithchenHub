@@ -43,6 +43,38 @@ describe('recipeFactory', () => {
             expect(recipe.category).toBe('');
         });
 
+
+
+        it('preserves catalog image and category metadata on selected ingredients', () => {
+            const recipeData = {
+                title: 'Apple Snack',
+                prepTime: '5',
+                category: 'Snack',
+                description: '',
+                ingredients: [
+                    {
+                        id: 'ingredient-apple',
+                        name: 'Apple',
+                        catalogItemId: 'catalog-apple',
+                        image: 'https://cdn.example.com/apple.png',
+                        category: 'fruits',
+                        quantityAmount: '2',
+                        quantityUnit: 'pcs',
+                    },
+                ],
+                instructions: [],
+            };
+
+            const recipe = createRecipe(recipeData);
+
+            expect(recipe.ingredients[0]).toMatchObject({
+                name: 'Apple',
+                catalogItemId: 'catalog-apple',
+                image: 'https://cdn.example.com/apple.png',
+                category: 'fruits',
+            });
+        });
+
         describe.each([
             ['non-empty description', '  Tasty dish  ', 'Tasty dish'],
             ['empty string description', '', undefined],
@@ -82,6 +114,35 @@ describe('recipeFactory', () => {
                 expect(updates.description).toBe(expectedDescription);
             });
         });
+
+
+        it('preserves catalog image and category metadata in update payloads', () => {
+            const updates = mapFormDataToRecipeUpdates({
+                title: 'Apple Snack',
+                category: 'Snack',
+                prepTime: '5',
+                description: '',
+                ingredients: [
+                    {
+                        id: 'ingredient-apple',
+                        name: 'Apple',
+                        catalogItemId: 'catalog-apple',
+                        image: 'https://cdn.example.com/apple.png',
+                        category: 'fruits',
+                        quantityAmount: '2',
+                        quantityUnit: 'pcs',
+                    },
+                ],
+                instructions: [],
+            });
+
+            expect(updates.ingredients?.[0]).toMatchObject({
+                name: 'Apple',
+                catalogItemId: 'catalog-apple',
+                image: 'https://cdn.example.com/apple.png',
+                category: 'fruits',
+            });
+        });
     });
 
     describe('mapRecipeToFormData', () => {
@@ -110,6 +171,36 @@ describe('recipeFactory', () => {
             };
             const formData = mapRecipeToFormData(recipe as ReturnType<typeof createRecipe>);
             expect(formData.description).toBe('');
+        });
+
+        it('preserves catalog image and category metadata when editing a recipe', () => {
+            const recipe = {
+                id: '1',
+                localId: 'uuid-1',
+                title: 'Apple Snack',
+                category: 'Snack',
+                ingredients: [
+                    {
+                        id: 'ingredient-apple',
+                        name: 'Apple',
+                        catalogItemId: 'catalog-apple',
+                        image: 'https://cdn.example.com/apple.png',
+                        category: 'fruits',
+                        quantityAmount: 2,
+                        quantityUnit: 'pcs',
+                    },
+                ],
+                instructions: [],
+            };
+
+            const formData = mapRecipeToFormData(recipe as ReturnType<typeof createRecipe>);
+
+            expect(formData.ingredients[0]).toMatchObject({
+                name: 'Apple',
+                catalogItemId: 'catalog-apple',
+                image: 'https://cdn.example.com/apple.png',
+                category: 'fruits',
+            });
         });
     });
 });

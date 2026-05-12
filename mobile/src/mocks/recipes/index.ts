@@ -17,6 +17,7 @@ export interface Ingredient {
   unit?: string;
   id?: string; // Optional for legacy/mock data
   image?: string; // Optional image URL for the ingredient
+  category?: string; // Optional catalog category used for image fallbacks/shopping list sync
 }
 
 /**

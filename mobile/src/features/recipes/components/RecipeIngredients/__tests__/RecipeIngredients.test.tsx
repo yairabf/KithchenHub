@@ -54,6 +54,49 @@ describe('RecipeIngredients', () => {
     expect(getByTestId('recipe-ingredient-fallback-ingredient-sauce')).toBeTruthy();
   });
 
+  it('uses the ingredient category image when the ingredient image is missing', () => {
+    const recipeWithCategoryFallback = {
+      ...recipe,
+      ingredients: [
+        {
+          ...customIngredient,
+          category: 'spices',
+        },
+      ],
+    };
+
+    const { getByTestId } = render(
+      <RecipeIngredients
+        recipe={recipeWithCategoryFallback}
+        onAddIngredient={jest.fn()}
+        onAddAllIngredients={jest.fn()}
+      />,
+    );
+
+    expect(getByTestId('recipe-ingredient-category-fallback-ingredient-sauce')).toBeTruthy();
+  });
+
+  it('uses the ingredient category image when the ingredient image URL is invalid', () => {
+    const ingredientWithInvalidImage: Ingredient = {
+      id: 'ingredient-eggs',
+      name: 'Eggs',
+      quantityAmount: 2,
+      quantityUnit: 'pcs',
+      image: 'eggs.png',
+      category: 'dairy',
+    };
+
+    const { getByTestId } = render(
+      <RecipeIngredients
+        recipe={{ ...recipe, ingredients: [ingredientWithInvalidImage] }}
+        onAddIngredient={jest.fn()}
+        onAddAllIngredients={jest.fn()}
+      />,
+    );
+
+    expect(getByTestId('recipe-ingredient-category-fallback-ingredient-eggs')).toBeTruthy();
+  });
+
   it('does not render ingredient category metadata in recipe ingredient rows', () => {
     const recipeWithCatalogCategory = {
       ...recipe,

@@ -42,6 +42,11 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ingredientCategoryFallbackImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+  },
   addAllButton: {
     flexDirection: 'row',
     alignItems: 'center',

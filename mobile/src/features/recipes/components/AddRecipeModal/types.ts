@@ -8,6 +8,8 @@ export interface Ingredient {
   quantityModifier?: string;
   name: string;
   catalogItemId?: string;
+  image?: string;
+  category?: string;
 }
 
 export interface Instruction {

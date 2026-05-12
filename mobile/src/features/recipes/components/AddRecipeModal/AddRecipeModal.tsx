@@ -252,6 +252,8 @@ export function AddRecipeModal({
           quantityUnit: '',
           name: item.name,
           catalogItemId: item.id.startsWith('custom-') ? undefined : item.id,
+          image: item.image || undefined,
+          category: item.category || undefined,
         },
       ],
     });

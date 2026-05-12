@@ -27,6 +27,8 @@ type RecipeDetailDto = {
     ingredients: Array<{
         name: string;
         catalogItemId?: string;
+        image?: string;
+        category?: string;
         quantityAmount?: number;
         quantityUnit?: string;
         quantityUnitType?: string;
@@ -98,6 +100,8 @@ function mapDetailDtoToRecipe(dto: RecipeDetailDto): RecipeApiResponse {
     const ingredients = (dto.ingredients ?? []).map((ing) => ({
         name: ing.name,
         catalogItemId: ing.catalogItemId,
+        image: ing.image,
+        category: ing.category,
         quantityAmount: ing.quantityAmount ?? ing.quantity,
         quantityUnit: ing.quantityUnit ?? ing.unit,
         quantityUnitType: ing.quantityUnitType,
@@ -506,6 +510,8 @@ export class RemoteRecipeService implements IRecipeService {
         ingredients: Array<{
             name: string;
             catalogItemId?: string;
+            image?: string;
+            category?: string;
             quantityAmount?: number;
             quantityUnit?: string;
             quantityUnitType?: string;
@@ -528,6 +534,8 @@ export class RemoteRecipeService implements IRecipeService {
                     typeof ing.catalogItemId === 'string' && ing.catalogItemId.trim().length > 0
                         ? ing.catalogItemId
                         : undefined,
+                image: ing.image,
+                category: ing.category,
                 quantityAmount,
                 quantityUnit,
                 quantityUnitType: ing.quantityUnitType,
@@ -566,6 +574,8 @@ export class RemoteRecipeService implements IRecipeService {
         ingredients?: Array<{
             name: string;
             catalogItemId?: string;
+            image?: string;
+            category?: string;
             quantityAmount?: number;
             quantityUnit?: string;
             quantityUnitType?: string;
@@ -582,6 +592,8 @@ export class RemoteRecipeService implements IRecipeService {
             ingredients?: Array<{
                 name: string;
                 catalogItemId?: string;
+                image?: string;
+                category?: string;
                 quantityAmount?: number;
                 quantityUnit?: string;
                 quantityUnitType?: string;
@@ -617,6 +629,8 @@ export class RemoteRecipeService implements IRecipeService {
                         typeof ing.catalogItemId === 'string' && ing.catalogItemId.trim().length > 0
                             ? ing.catalogItemId
                             : undefined,
+                    image: ing.image,
+                    category: ing.category,
                     quantityAmount,
                     quantityUnit,
                     quantityUnitType: ing.quantityUnitType,
