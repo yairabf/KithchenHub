@@ -259,15 +259,29 @@ def android_signing_properties!
   }
 end
 
+def configure_android_gradle_version!(version_code:, version_name:)
+  build_gradle_path = File.join(ANDROID_GRADLE_PROJECT_DIR, 'app', 'build.gradle')
+  UI.user_error!("Android build.gradle not found at #{build_gradle_path}. Did Expo prebuild run?") unless File.exist?(build_gradle_path)
+
+  contents = File.read(build_gradle_path)
+  updated = contents.gsub(/versionCode\s+\d+/, "versionCode #{version_code}")
+  updated = updated.gsub(/versionName\s+[\"'][^\"']+[\"']/, "versionName \"#{version_name}\"")
+
+  UI.user_error!("Could not update Android versionCode in #{build_gradle_path}") unless updated.include?("versionCode #{version_code}")
+  UI.user_error!("Could not update Android versionName in #{build_gradle_path}") unless updated.include?("versionName \"#{version_name}\"")
+
+  File.write(build_gradle_path, updated)
+  UI.message("Updated Android Gradle versionCode/versionName before bundling")
+end
+
 def build_android_aab!(version_code:, version_name:)
+  configure_android_gradle_version!(version_code: version_code, version_name: version_name)
+
   gradle(
     task: 'bundle',
     build_type: 'Release',
     project_dir: ANDROID_GRADLE_PROJECT_DIR,
-    properties: {
-      'android.injected.version.code' => version_code.to_s,
-      'android.injected.version.name' => version_name,
-    }.merge(android_signing_properties!),
+    properties: android_signing_properties!,
   )
 end
 
