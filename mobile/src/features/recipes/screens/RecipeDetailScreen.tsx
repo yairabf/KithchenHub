@@ -48,6 +48,7 @@ import {
   type ICacheAwareShoppingRepository,
 } from '../../../common/repositories/cacheAwareShoppingRepository';
 import { DEFAULT_CATEGORY, normalizeShoppingCategory } from '../../shopping/constants/categories';
+import { isValidImageUrl } from '../../../utils/urlValidator';
 
 
 export function RecipeDetailScreen({
@@ -171,7 +172,7 @@ export function RecipeDetailScreen({
     return ingredient.catalogItemId?.trim() || normalizeIngredientLookupName(ingredient.name);
   }, [normalizeIngredientLookupName]);
 
-  const findMatchingCatalogItem = useCallback((ingredient: Ingredient, items: GroceryItem[]) => {
+  const findMatchingCatalogItem = useCallback((ingredient: Ingredient, items: GroceryItem[] = []) => {
     const normalizedIngredientName = normalizeIngredientLookupName(ingredient.name);
 
     if (ingredient.catalogItemId) {
@@ -191,9 +192,14 @@ export function RecipeDetailScreen({
     });
   }, [normalizeIngredientLookupName]);
 
+  const getUsableIngredientImage = useCallback((value: string | undefined | null) => {
+    const image = value?.trim();
+    return image && isValidImageUrl(image) ? image : undefined;
+  }, []);
+
   useEffect(() => {
     const ingredientsNeedingCatalogLookup = (baseDisplayRecipe.ingredients || []).filter((ingredient) => {
-      if (ingredient.image) {
+      if (getUsableIngredientImage(ingredient.image)) {
         return false;
       }
 
@@ -247,6 +253,7 @@ export function RecipeDetailScreen({
     baseDisplayRecipe.ingredients,
     findMatchingCatalogItem,
     getIngredientCatalogLookupKey,
+    getUsableIngredientImage,
     groceryItems,
     resolvedIngredientCatalogItems,
     searchGroceries,
@@ -254,25 +261,29 @@ export function RecipeDetailScreen({
 
   const displayRecipe = useMemo(() => {
     const ingredients = (baseDisplayRecipe.ingredients || []).map((ingredient) => {
-      if (ingredient.image) {
+      const ingredientImage = getUsableIngredientImage(ingredient.image);
+      if (ingredientImage) {
         return ingredient;
       }
 
       const lookupKey = getIngredientCatalogLookupKey(ingredient);
-      const resolvedCatalogItem = findMatchingCatalogItem(ingredient, groceryItems)
-        ?? resolvedIngredientCatalogItems[lookupKey]
-        ?? undefined;
+      const localCatalogItem = findMatchingCatalogItem(ingredient, groceryItems);
+      const resolvedLookupItem = resolvedIngredientCatalogItems[lookupKey] ?? undefined;
+      const resolvedCatalogItem = (getUsableIngredientImage(localCatalogItem?.image) ? localCatalogItem : undefined)
+        ?? (getUsableIngredientImage(resolvedLookupItem?.image) ? resolvedLookupItem : undefined)
+        ?? localCatalogItem
+        ?? resolvedLookupItem;
 
       if (!resolvedCatalogItem) {
-        return ingredient;
+        return ingredient.image ? { ...ingredient, image: undefined } : ingredient;
       }
 
-      const resolvedCatalogImage = resolvedCatalogItem.image?.trim() || undefined;
+      const resolvedCatalogImage = getUsableIngredientImage(resolvedCatalogItem.image);
 
       return {
         ...ingredient,
         catalogItemId: ingredient.catalogItemId ?? resolvedCatalogItem.id,
-        image: ingredient.image ?? resolvedCatalogImage,
+        image: resolvedCatalogImage,
         category: ingredient.category ?? resolvedCatalogItem.category,
       };
     });
@@ -285,6 +296,7 @@ export function RecipeDetailScreen({
     baseDisplayRecipe,
     findMatchingCatalogItem,
     getIngredientCatalogLookupKey,
+    getUsableIngredientImage,
     groceryItems,
     resolvedIngredientCatalogItems,
   ]);
@@ -432,12 +444,21 @@ export function RecipeDetailScreen({
 
   const resolveIngredientCatalogItem = useCallback((ingredient: Ingredient) => {
     const byCatalogMetadata = findMatchingCatalogItem(ingredient, groceryItems);
+    const lookupKey = getIngredientCatalogLookupKey(ingredient);
+    const resolvedLookupItem = resolvedIngredientCatalogItems[lookupKey];
+
+    if (getUsableIngredientImage(byCatalogMetadata?.image)) {
+      return byCatalogMetadata;
+    }
+
+    if (getUsableIngredientImage(resolvedLookupItem?.image)) {
+      return resolvedLookupItem;
+    }
+
     if (byCatalogMetadata) {
       return byCatalogMetadata;
     }
 
-    const lookupKey = getIngredientCatalogLookupKey(ingredient);
-    const resolvedLookupItem = resolvedIngredientCatalogItems[lookupKey];
     if (resolvedLookupItem) {
       return resolvedLookupItem;
     }
@@ -451,6 +472,7 @@ export function RecipeDetailScreen({
   }, [
     findMatchingCatalogItem,
     getIngredientCatalogLookupKey,
+    getUsableIngredientImage,
     groceryItems,
     resolvedIngredientCatalogItems,
   ]);
@@ -465,7 +487,8 @@ export function RecipeDetailScreen({
 
     const rawCategory = resolvedCatalogItem?.category ?? DEFAULT_CATEGORY.toLowerCase();
     const normalizedCategory = normalizeShoppingCategory(rawCategory);
-    const resolvedImage = ingredient.image?.trim() || resolvedCatalogItem?.image?.trim();
+    const resolvedImage = getUsableIngredientImage(ingredient.image)
+      ?? getUsableIngredientImage(resolvedCatalogItem?.image);
 
     return {
       listId,
@@ -476,7 +499,7 @@ export function RecipeDetailScreen({
       category: normalizedCategory,
       catalogItemId: ingredient.catalogItemId ?? resolvedCatalogItem?.id,
     };
-  }, [getIngredientAmount, getIngredientUnit, resolveIngredientCatalogItem]);
+  }, [getIngredientAmount, getIngredientUnit, getUsableIngredientImage, resolveIngredientCatalogItem]);
 
   const createShoppingItem = useCallback(async (item: {
     listId: string;

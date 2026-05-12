@@ -161,10 +161,10 @@ describe('RecipeDetailScreen shopping integration', () => {
 
     mockUseCatalog.mockReturnValue({
       groceryItems: [
-        { id: 'catalog-apple', name: 'Apple', category: 'fruits', image: 'apple.png' },
-        { id: 'catalog-milk', name: 'Milk', category: 'dairy', image: 'milk.png' },
+        { id: 'catalog-apple', name: 'Apple', category: 'fruits', image: 'https://cdn.example.com/apple.png' },
+        { id: 'catalog-milk', name: 'Milk', category: 'dairy', image: 'https://cdn.example.com/milk.png' },
       ],
-      searchGroceries: jest.fn(),
+      searchGroceries: jest.fn().mockResolvedValue([]),
     });
   });
 
@@ -173,8 +173,8 @@ describe('RecipeDetailScreen shopping integration', () => {
       <RecipeDetailScreen recipe={baseRecipe as any} onBack={jest.fn()} />,
     );
 
-    expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('apple.png');
-    expect(getAllByTestId('ingredient-image-1')[0].props.children).toBe('milk.png');
+    expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('https://cdn.example.com/apple.png');
+    expect(getAllByTestId('ingredient-image-1')[0].props.children).toBe('https://cdn.example.com/milk.png');
     expect(getAllByTestId('ingredient-category-0')[0].props.children).toBe('fruits');
     expect(getAllByTestId('ingredient-category-1')[0].props.children).toBe('dairy');
   });
@@ -184,7 +184,7 @@ describe('RecipeDetailScreen shopping integration', () => {
       groceryItems: [
         { id: 'catalog-salt', name: 'Salt', category: 'spices', image: '' },
       ],
-      searchGroceries: jest.fn(),
+      searchGroceries: jest.fn().mockResolvedValue([]),
     });
 
     const recipeWithSalt = {
@@ -206,9 +206,9 @@ describe('RecipeDetailScreen shopping integration', () => {
     expect(getAllByTestId('ingredient-category-0')[0].props.children).toBe('spices');
   });
 
-  it('searches the catalog on demand so recipe ingredients show canonical images when the full catalog is not preloaded', async () => {
+  it('searches the catalog on demand so recipe ingredients replace invalid placeholder images with canonical images', async () => {
     const searchGroceries = jest.fn().mockResolvedValue([
-      { id: 'catalog-banana', name: 'Banana', category: 'fruits', image: 'banana.png' },
+      { id: 'catalog-banana', name: 'Banana', category: 'fruits', image: 'https://cdn.example.com/banana.png' },
     ]);
     mockUseCatalog.mockReturnValue({
       groceryItems: [],
@@ -222,6 +222,7 @@ describe('RecipeDetailScreen shopping integration', () => {
           name: 'Banana',
           quantityAmount: 1,
           quantityUnit: 'pcs',
+          image: 'banana.png',
         },
       ],
     };
@@ -233,7 +234,7 @@ describe('RecipeDetailScreen shopping integration', () => {
     expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('no-image');
 
     await waitFor(() => {
-      expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('banana.png');
+      expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('https://cdn.example.com/banana.png');
     });
     expect(searchGroceries).toHaveBeenCalledWith('Banana');
 
@@ -245,7 +246,7 @@ describe('RecipeDetailScreen shopping integration', () => {
           name: 'Banana',
           catalogItemId: 'catalog-banana',
           category: 'fruits',
-          image: 'banana.png',
+          image: 'https://cdn.example.com/banana.png',
         }),
       );
     });
@@ -265,7 +266,7 @@ describe('RecipeDetailScreen shopping integration', () => {
           name: 'Apple',
           catalogItemId: 'catalog-apple',
           category: 'fruits',
-          image: 'apple.png',
+          image: 'https://cdn.example.com/apple.png',
         }),
       );
     });
@@ -290,7 +291,7 @@ describe('RecipeDetailScreen shopping integration', () => {
         name: 'Apple',
         catalogItemId: 'catalog-apple',
         category: 'fruits',
-        image: 'apple.png',
+        image: 'https://cdn.example.com/apple.png',
       }),
     );
 
@@ -300,17 +301,17 @@ describe('RecipeDetailScreen shopping integration', () => {
         name: 'Milk',
         catalogItemId: 'catalog-milk',
         category: 'dairy',
-        image: 'milk.png',
+        image: 'https://cdn.example.com/milk.png',
       }),
     );
   });
 
-  it('falls back to the canonical catalog item for recipe ingredient variants like Large Eggs', async () => {
+  it('replaces an invalid ingredient image with the canonical catalog item image for variants like Large Eggs', async () => {
     mockUseCatalog.mockReturnValue({
       groceryItems: [
-        { id: 'catalog-eggs', name: 'Eggs', category: 'dairy', image: 'eggs.png' },
+        { id: 'catalog-eggs', name: 'Eggs', category: 'dairy', image: 'https://cdn.example.com/eggs.png' },
       ],
-      searchGroceries: jest.fn(),
+      searchGroceries: jest.fn().mockResolvedValue([]),
     });
 
     const recipeWithVariantIngredient = {
@@ -329,6 +330,8 @@ describe('RecipeDetailScreen shopping integration', () => {
       <RecipeDetailScreen recipe={recipeWithVariantIngredient as any} onBack={jest.fn()} />,
     );
 
+    expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('https://cdn.example.com/eggs.png');
+
     fireEvent.press(getAllByTestId('add-all-ingredients')[0]);
 
     await waitFor(() => {
@@ -337,7 +340,7 @@ describe('RecipeDetailScreen shopping integration', () => {
           name: 'Large Eggs',
           catalogItemId: 'catalog-eggs',
           category: 'dairy',
-          image: 'eggs.png',
+          image: 'https://cdn.example.com/eggs.png',
         }),
       );
     });
