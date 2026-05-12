@@ -1,22 +1,16 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, I18nManager, Image } from 'react-native';
+import { View, Text, TouchableOpacity, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { styles } from './styles';
 import { colors, pastelColors } from '../../../../theme/colors';
 import { ListItemCardWrapper } from '../../../../common/components/ListItemCardWrapper';
-import { GroceryCardContent, IngredientInfo } from '../../../../common/components/GroceryCard';
+import { GroceryItemContent, IngredientInfo } from '../../../../common/components/GroceryCard';
 import type { RecipeIngredientsProps } from './types';
 import { useTranslation } from 'react-i18next';
 import { getUnitLabel } from '../../constants';
-import { getCategoryImageSource } from '../../../shopping/utils/categoryImage';
 
 function getIngredientTestKey(ingredientId: string | undefined, index: number) {
   return ingredientId ? ingredientId.replace(/[^a-zA-Z0-9-_]/g, '-') : `index-${index}`;
-}
-
-function getIngredientCategoryImage(category: string | undefined) {
-  const normalizedCategory = category?.trim();
-  return normalizedCategory ? getCategoryImageSource(normalizedCategory) : null;
 }
 
 /**
@@ -68,39 +62,35 @@ export function RecipeIngredients({
           <View style={styles.ingredientsList}>
             {(recipe.ingredients || []).map((ingredient, index) => {
               const ingredientTestKey = getIngredientTestKey(ingredient.id, index);
-              const categoryImageSource = getIngredientCategoryImage(ingredient.category);
 
               return (
                 <View key={ingredient.id || `ing-${index}`} style={styles.ingredientCardWrapper}>
                   <ListItemCardWrapper
                     backgroundColor={pastelColors[index % pastelColors.length]}
                   >
-                    <GroceryCardContent
-                      image={ingredient.image}
+                    <GroceryItemContent
+                      item={{
+                        name: ingredient.name || t('detail.ingredientFallbackName'),
+                        image: ingredient.image,
+                        category: ingredient.category,
+                      }}
                       imageTestID={`recipe-ingredient-image-${ingredientTestKey}`}
                       imageStyle={styles.ingredientImage}
-                      customIcon={
+                      categoryFallbackTestID={`recipe-ingredient-category-fallback-${ingredientTestKey}`}
+                      categoryFallbackImageStyle={styles.ingredientCategoryFallbackImage}
+                      fallbackIcon={
                         <View
                           style={styles.ingredientFallbackIcon}
                           testID={`recipe-ingredient-fallback-${ingredientTestKey}`}
                         >
-                          {categoryImageSource ? (
-                            <Image
-                              source={categoryImageSource}
-                              style={styles.ingredientCategoryFallbackImage}
-                              testID={`recipe-ingredient-category-fallback-${ingredientTestKey}`}
-                            />
-                          ) : (
-                            <Ionicons
-                              name="restaurant-outline"
-                              size={20}
-                              color={colors.recipes}
-                            />
-                          )}
+                          <Ionicons
+                            name="restaurant-outline"
+                            size={20}
+                            color={colors.recipes}
+                          />
                         </View>
                       }
                       iconContainerStyle={styles.ingredientImageFallbackContainer}
-                      title={ingredient.name || t('detail.ingredientFallbackName')}
                       subtitle={
                         <IngredientInfo
                           quantity={String(ingredient.quantityAmount ?? ingredient.quantity ?? '')}
