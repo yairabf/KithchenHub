@@ -432,7 +432,7 @@ platform :android do
 
     UI.message("Repo version.json: #{repo_version}")
     UI.message("Android versionCode: #{next_version_code}")
-    UI.message("Retaining active Android versionCodes: #{existing_version_codes.join(', ')}")
+    UI.message("Existing Android versionCodes used for next-code calculation: #{existing_version_codes.join(', ')}")
 
     build_android_aab!(
       version_code: next_version_code,
@@ -444,7 +444,6 @@ platform :android do
       package_name: ANDROID_PACKAGE_NAME,
       track: 'internal',
       aab: ANDROID_AAB_PATH,
-      version_codes_to_retain: existing_version_codes,
       release_status: 'completed',
       skip_upload_metadata: true,
       skip_upload_images: true,
