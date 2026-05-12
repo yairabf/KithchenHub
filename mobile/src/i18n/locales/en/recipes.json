@@ -123,7 +123,7 @@
       "title": "Search web images",
       "close": "Close web image search",
       "placeholder": "Search omelet, barbecue, salad...",
-      "usageNote": "Images come from the web. Check usage rights before sharing.",
+      "usageNote": "Photos are provided by Pexels. Check usage rights before sharing.",
       "loading": "Searching images...",
       "error": "Image search failed",
       "errorHint": "Please check your connection and try again.",

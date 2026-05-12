@@ -68,47 +68,14 @@ describe('validateEnv', () => {
     expect(() => validateEnv()).toThrow('Invalid environment variables');
   });
 
-  it('accepts Google image search when API key and CX are both set', () => {
+  it('accepts Pexels API key for recipe image search', () => {
     process.env = buildBaseEnv({
-      GOOGLE_IMAGE_SEARCH_API_KEY: 'search-key',
-      GOOGLE_IMAGE_SEARCH_CX: 'search-cx',
+      PEXELS_API_KEY: 'pexels-key',
     }) as Record<string, string>;
 
     const env = validateEnv();
 
-    expect(env.GOOGLE_IMAGE_SEARCH_API_KEY).toBe('search-key');
-    expect(env.GOOGLE_IMAGE_SEARCH_CX).toBe('search-cx');
-    expect(env.GOOGLE_IMAGE_SEARCH_SAFE).toBe('active');
-  });
-
-  it('rejects Google image search env when only API key is set', () => {
-    process.env = buildBaseEnv({
-      GOOGLE_IMAGE_SEARCH_API_KEY: 'search-key',
-      GOOGLE_IMAGE_SEARCH_CX: undefined,
-    }) as Record<string, string>;
-
-    expect(() => validateEnv()).toThrow('Invalid environment variables');
-  });
-
-  it('accepts Google Custom Search alias env names', () => {
-    process.env = buildBaseEnv({
-      GOOGLE_CUSTOM_SEARCH_API_KEY: 'custom-key',
-      GOOGLE_CUSTOM_SEARCH_ENGINE_ID: 'custom-cx',
-    }) as Record<string, string>;
-
-    const env = validateEnv();
-
-    expect(env.GOOGLE_CUSTOM_SEARCH_API_KEY).toBe('custom-key');
-    expect(env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID).toBe('custom-cx');
-  });
-
-  it('rejects Google Custom Search alias env when only API key is set', () => {
-    process.env = buildBaseEnv({
-      GOOGLE_CUSTOM_SEARCH_API_KEY: 'custom-key',
-      GOOGLE_CUSTOM_SEARCH_ENGINE_ID: undefined,
-    }) as Record<string, string>;
-
-    expect(() => validateEnv()).toThrow('Invalid environment variables');
+    expect(env.PEXELS_API_KEY).toBe('pexels-key');
   });
 
   it('rejects env when webhook auth header is set without webhook auth secret', () => {
