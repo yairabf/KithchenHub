@@ -413,7 +413,14 @@ describe('RecipesService - Soft-Delete Behavior', () => {
         title: 'New Pasta',
         prepTime: 25,
         ingredients: [
-          { name: 'Spaghetti', quantity: 400, unit: 'g' },
+          {
+            name: 'Spaghetti',
+            catalogItemId: 'catalog-spaghetti',
+            image: 'https://cdn.example.com/spaghetti.png',
+            category: 'pantry',
+            quantity: 400,
+            unit: 'g',
+          },
           { name: 'Olive oil', quantity: 2, unit: 'tbsp' },
         ],
         instructions: [
@@ -459,6 +466,9 @@ describe('RecipesService - Soft-Delete Behavior', () => {
       expect(result.ingredients).toHaveLength(2);
       expect(result.ingredients[0]).toMatchObject({
         name: 'Spaghetti',
+        catalogItemId: 'catalog-spaghetti',
+        image: 'https://cdn.example.com/spaghetti.png',
+        category: 'pantry',
         quantityAmount: 400,
         quantityUnit: 'g',
         quantity: 400,

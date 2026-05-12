@@ -30,6 +30,9 @@ describe('IngredientInputDto Validation', () => {
       'valid count unit',
       {
         name: 'Eggs',
+        catalogItemId: 'catalog-eggs',
+        image: 'https://cdn.example.com/eggs.png',
+        category: 'dairy',
         quantityAmount: 2,
         quantityUnit: UnitCode.PIECE,
         quantityUnitType: UnitType.COUNT,

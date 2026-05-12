@@ -44,6 +44,8 @@ type RecipeEntityShape = {
 type IngredientRow = {
   name: string;
   catalogItemId?: string;
+  image?: string;
+  category?: string;
   quantityAmount?: number;
   quantityUnit?: string;
   quantityUnitType?: string;
@@ -65,6 +67,8 @@ function mapRecipeToDetailDto(recipe: RecipeEntityShape): RecipeDetailDto {
     ? (recipe.ingredients as IngredientRow[]).map((ing) => ({
         name: ing.name,
         catalogItemId: ing.catalogItemId,
+        image: ing.image,
+        category: ing.category,
         quantityAmount: ing.quantityAmount ?? ing.quantity,
         quantityUnit: ing.quantityUnit ?? ing.unit,
         quantityUnitType: ing.quantityUnitType,
