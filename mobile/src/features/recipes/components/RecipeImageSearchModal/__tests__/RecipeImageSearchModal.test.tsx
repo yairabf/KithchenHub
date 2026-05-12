@@ -1,4 +1,5 @@
 import React from 'react';
+import { Modal } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { RecipeImageSearchModal } from '../RecipeImageSearchModal';
 
@@ -24,6 +25,20 @@ jest.mock('react-i18next', () => ({
 }));
 
 describe('RecipeImageSearchModal', () => {
+  it('presents over the recipe form without replacing the parent full-screen modal', () => {
+    const screen = render(
+      <RecipeImageSearchModal
+        visible={true}
+        initialQuery=""
+        onClose={jest.fn()}
+        onSelect={jest.fn()}
+        searchImages={jest.fn()}
+      />,
+    );
+
+    expect(screen.UNSAFE_getByType(Modal).props.presentationStyle).toBe('overFullScreen');
+  });
+
   it('searches and selects a web image result', async () => {
     const searchImages = jest.fn().mockResolvedValue([
       {
