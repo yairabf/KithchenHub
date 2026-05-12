@@ -20,6 +20,36 @@ export interface GroceryCardProps {
 }
 
 /**
+ * Minimal item shape for the shared wrapper-free grocery row content.
+ * Keep this data-focused so shopping rows and recipe ingredient rows can reuse
+ * the same inner element while choosing their own outer wrapper/actions.
+ */
+export interface GroceryItemContentItem {
+  name: string;
+  image?: string;
+  category?: string;
+}
+
+/**
+ * Props for the shared wrapper-free grocery item content component.
+ */
+export interface GroceryItemContentProps {
+  item: GroceryItemContentItem;
+  imageTestID?: string;
+  imageStyle?: StyleProp<ImageStyle>;
+  categoryFallbackTestID?: string;
+  categoryFallbackImageStyle?: StyleProp<ImageStyle>;
+  fallbackIcon?: ReactNode;
+  iconContainerStyle?: StyleProp<ViewStyle>;
+  titleStyle?: TextStyle;
+  subtitle?: string | ReactNode;
+  rightElement?: ReactNode;
+  imagePosition?: 'left' | 'none';
+  onPress?: () => void;
+  isRtl?: boolean;
+}
+
+/**
  * Props for the flexible GroceryCardContent layout component
  * Handles all layout variations (image/no-image, different right actions)
  */

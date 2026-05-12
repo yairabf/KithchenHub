@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
 import { ListItemCardWrapper } from '../../../../common/components/ListItemCardWrapper';
-import { GroceryCardContent, QuantityControls } from '../../../../common/components/GroceryCard';
+import { GroceryItemContent, QuantityControls } from '../../../../common/components/GroceryCard';
 import { GrocerySearchBar } from '../GrocerySearchBar';
 import { EmptyState } from '../../../../common/components/EmptyState';
 import { ListItemSkeleton } from '../../../../common/components/ListItemSkeleton';
@@ -38,7 +38,6 @@ function ShoppingItemCard({
   const { i18n } = useTranslation('shopping');
   const isRtlLayout = i18n.dir() === 'rtl' || I18nManager.isRTL;
   const isChecked = item.isChecked;
-  const fallbackCategoryImage = getCategoryImageSource(item.category);
 
   return (
     <SwipeableWrapper
@@ -50,18 +49,9 @@ function ShoppingItemCard({
       <ListItemCardWrapper
         style={[styles.shoppingItemCard, isChecked ? styles.checkedCard : undefined]}
       >
-        <GroceryCardContent
-          image={item.image}
-          customIcon={
-            fallbackCategoryImage ? (
-              <Image
-                source={fallbackCategoryImage}
-                style={styles.fallbackCategoryImage}
-                resizeMode="contain"
-              />
-            ) : undefined
-          }
-          title={item.name}
+        <GroceryItemContent
+          item={item}
+          categoryFallbackImageStyle={styles.fallbackCategoryImage}
           titleStyle={isChecked ? styles.checkedTitle : undefined}
           onPress={() => onToggleItemChecked(item.id)}
           rightElement={
