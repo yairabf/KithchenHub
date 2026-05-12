@@ -38,7 +38,7 @@ describe('RecipeIngredients', () => {
 
     const image = getByTestId('recipe-ingredient-image-ingredient-apple');
 
-    expect(image.props.source).toEqual({ uri: appleIngredient.image });
+    expect(image.props.source).toEqual({ uri: appleIngredient.image, cache: 'force-cache' });
   });
 
   it('renders a polished fallback thumbnail for ingredients without images', () => {
