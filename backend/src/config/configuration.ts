@@ -15,9 +15,9 @@ export interface AppConfig {
   google: {
     clientId?: string;
     clientSecret?: string;
-    imageSearchApiKey?: string;
-    imageSearchCx?: string;
-    imageSearchSafe: 'active' | 'off';
+  };
+  pexels: {
+    apiKey?: string;
   };
   auth: {
     backendBaseUrl: string;
@@ -102,13 +102,9 @@ export const loadConfiguration = (): AppConfig => {
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
-      imageSearchApiKey:
-        env.GOOGLE_IMAGE_SEARCH_API_KEY ?? env.GOOGLE_CUSTOM_SEARCH_API_KEY,
-      imageSearchCx:
-        env.GOOGLE_IMAGE_SEARCH_CX ??
-        env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID ??
-        env.GOOGLE_CUSTOM_SEARCH_CX,
-      imageSearchSafe: env.GOOGLE_IMAGE_SEARCH_SAFE,
+    },
+    pexels: {
+      apiKey: env.PEXELS_API_KEY,
     },
     auth: {
       backendBaseUrl: env.AUTH_BACKEND_BASE_URL,

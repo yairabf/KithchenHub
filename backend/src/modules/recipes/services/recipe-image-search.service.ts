@@ -17,23 +17,28 @@ export type RecipeImageSearchResultDto = {
   height?: number;
 };
 
-type GoogleImageSearchItem = {
-  title?: string;
-  link?: string;
-  displayLink?: string;
-  image?: {
-    contextLink?: string;
-    thumbnailLink?: string;
-    width?: number;
-    height?: number;
+type PexelsPhoto = {
+  id: number;
+  width?: number;
+  height?: number;
+  url?: string;
+  photographer?: string;
+  src?: {
+    original?: string;
+    large2x?: string;
+    large?: string;
+    medium?: string;
+    small?: string;
+    tiny?: string;
   };
+  alt?: string;
 };
 
-type GoogleImageSearchResponse = {
-  items?: GoogleImageSearchItem[];
+type PexelsSearchResponse = {
+  photos?: PexelsPhoto[];
 };
 
-const GOOGLE_CUSTOM_SEARCH_URL = 'https://www.googleapis.com/customsearch/v1';
+const PEXELS_SEARCH_URL = 'https://api.pexels.com/v1/search';
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 10;
 const MAX_QUERY_LENGTH = 120;
@@ -48,63 +53,79 @@ export class RecipeImageSearchService {
   ): Promise<RecipeImageSearchResultDto[]> {
     const normalizedQuery = this.normalizeQuery(query);
     const normalizedLimit = this.normalizeLimit(limit);
-    const apiKey =
-      this.getConfigValue('GOOGLE_IMAGE_SEARCH_API_KEY') ??
-      this.getConfigValue('GOOGLE_CUSTOM_SEARCH_API_KEY');
-    const cx =
-      this.getConfigValue('GOOGLE_IMAGE_SEARCH_CX') ??
-      this.getConfigValue('GOOGLE_CUSTOM_SEARCH_ENGINE_ID') ??
-      this.getConfigValue('GOOGLE_CUSTOM_SEARCH_CX');
-    const safe = this.getConfigValue('GOOGLE_IMAGE_SEARCH_SAFE') || 'active';
+    const apiKey = this.getConfigValue('PEXELS_API_KEY');
 
-    if (!apiKey || !cx) {
+    if (!apiKey) {
       throw new ServiceUnavailableException(
         'Recipe image search is not configured',
       );
     }
 
     try {
-      const response = await axios.get<GoogleImageSearchResponse>(
-        GOOGLE_CUSTOM_SEARCH_URL,
+      const response = await axios.get<PexelsSearchResponse>(
+        PEXELS_SEARCH_URL,
         {
+          headers: {
+            Authorization: apiKey,
+          },
           params: {
-            key: apiKey,
-            cx,
-            searchType: 'image',
-            q: normalizedQuery,
-            num: normalizedLimit,
-            safe,
+            query: normalizedQuery,
+            per_page: normalizedLimit,
           },
         },
       );
 
-      return (response.data.items ?? [])
-        .filter((item): item is GoogleImageSearchItem & { link: string } =>
-          Boolean(item.link),
-        )
-        .map((item, index) => ({
-          id: `${index}-${this.hashUrl(item.link)}`,
-          title: item.title?.trim() || normalizedQuery,
-          imageUrl: item.link,
-          thumbnailUrl: item.image?.thumbnailLink,
-          sourceUrl: item.image?.contextLink,
-          sourceDisplayName: item.displayLink,
-          width: item.image?.width,
-          height: item.image?.height,
-        }));
+      return (response.data.photos ?? [])
+        .map((photo) => this.mapPexelsPhoto(photo, normalizedQuery))
+        .filter((photo): photo is RecipeImageSearchResultDto => Boolean(photo));
     } catch (error) {
       throw this.toSearchUnavailableException(error);
     }
   }
 
+  private mapPexelsPhoto(
+    photo: PexelsPhoto,
+    fallbackTitle: string,
+  ): RecipeImageSearchResultDto | null {
+    const imageUrl =
+      photo.src?.large2x ??
+      photo.src?.large ??
+      photo.src?.original ??
+      undefined;
+
+    if (!imageUrl) {
+      return null;
+    }
+
+    return {
+      id: `pexels-${photo.id}`,
+      title: photo.alt?.trim() || fallbackTitle,
+      imageUrl,
+      thumbnailUrl: photo.src?.medium ?? photo.src?.small ?? photo.src?.tiny,
+      sourceUrl: photo.url,
+      sourceDisplayName: photo.photographer
+        ? `Pexels • ${photo.photographer}`
+        : 'Pexels',
+      width: photo.width,
+      height: photo.height,
+    };
+  }
+
   private toSearchUnavailableException(
     error: unknown,
   ): ServiceUnavailableException {
-    if (axios.isAxiosError(error)) {
+    const isAxiosError =
+      axios.isAxiosError(error) ||
+      (typeof error === 'object' &&
+        error !== null &&
+        'isAxiosError' in error &&
+        error.isAxiosError === true);
+
+    if (isAxiosError) {
       const status = (error as AxiosError).response?.status;
-      if (status === 400 || status === 403) {
+      if (status === 401 || status === 403) {
         return new ServiceUnavailableException(
-          'Image search is temporarily unavailable. Please check Google image search configuration.',
+          'Image search is temporarily unavailable. Please check Pexels API key configuration.',
         );
       }
     }
@@ -134,13 +155,5 @@ export class RecipeImageSearchService {
 
   private getConfigValue(key: string): string | undefined {
     return this.configService.get<string>(key) ?? process.env[key];
-  }
-
-  private hashUrl(url: string): string {
-    let hash = 0;
-    for (let index = 0; index < url.length; index += 1) {
-      hash = (hash * 31 + url.charCodeAt(index)) >>> 0;
-    }
-    return hash.toString(36);
   }
 }

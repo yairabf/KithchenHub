@@ -25,8 +25,7 @@ describe('RecipeImageSearchService', () => {
 
   it('rejects empty search queries', async () => {
     const service = buildService({
-      GOOGLE_IMAGE_SEARCH_API_KEY: 'key',
-      GOOGLE_IMAGE_SEARCH_CX: 'cx',
+      PEXELS_API_KEY: 'pexels-key',
     });
 
     await expect(service.searchImages('   ')).rejects.toThrow(
@@ -34,7 +33,7 @@ describe('RecipeImageSearchService', () => {
     );
   });
 
-  it('returns service unavailable when Google image search is not configured', async () => {
+  it('returns service unavailable when Pexels image search is not configured', async () => {
     const service = buildService();
 
     await expect(service.searchImages('omelet')).rejects.toThrow(
@@ -42,97 +41,110 @@ describe('RecipeImageSearchService', () => {
     );
   });
 
-  it('clamps limit and maps Google image results', async () => {
+  it('clamps limit and maps Pexels image results', async () => {
     mockedAxios.get.mockResolvedValue({
       data: {
-        items: [
+        photos: [
           {
-            title: 'Fluffy Omelet',
-            link: 'https://images.example.com/omelet.jpg',
-            displayLink: 'example.com',
-            image: {
-              contextLink: 'https://example.com/omelet',
-              thumbnailLink: 'https://images.example.com/omelet-thumb.jpg',
-              width: 1200,
-              height: 800,
+            id: 123,
+            width: 1200,
+            height: 800,
+            url: 'https://www.pexels.com/photo/fluffy-omelet-123/',
+            photographer: 'Jane Cook',
+            alt: 'Fluffy omelet on a plate',
+            src: {
+              original: 'https://images.pexels.com/photos/123/original.jpeg',
+              large2x: 'https://images.pexels.com/photos/123/large2x.jpeg',
+              medium: 'https://images.pexels.com/photos/123/medium.jpeg',
+              small: 'https://images.pexels.com/photos/123/small.jpeg',
             },
           },
           {
-            title: 'Missing image url',
+            id: 456,
+            photographer: 'Missing Image',
           },
         ],
       },
     });
 
     const service = buildService({
-      GOOGLE_IMAGE_SEARCH_API_KEY: 'key',
-      GOOGLE_IMAGE_SEARCH_CX: 'cx',
-      GOOGLE_IMAGE_SEARCH_SAFE: 'active',
+      PEXELS_API_KEY: 'pexels-key',
     });
 
     const results = await service.searchImages(' omelet recipe ', '25');
 
     expect(mockedAxios.get).toHaveBeenCalledWith(
-      'https://www.googleapis.com/customsearch/v1',
+      'https://api.pexels.com/v1/search',
       expect.objectContaining({
-        params: expect.objectContaining({
-          key: 'key',
-          cx: 'cx',
-          searchType: 'image',
-          q: 'omelet recipe',
-          num: 10,
-          safe: 'active',
-        }),
+        headers: {
+          Authorization: 'pexels-key',
+        },
+        params: {
+          query: 'omelet recipe',
+          per_page: 10,
+        },
       }),
     );
     expect(results).toEqual([
       expect.objectContaining({
-        title: 'Fluffy Omelet',
-        imageUrl: 'https://images.example.com/omelet.jpg',
-        thumbnailUrl: 'https://images.example.com/omelet-thumb.jpg',
-        sourceUrl: 'https://example.com/omelet',
-        sourceDisplayName: 'example.com',
+        id: 'pexels-123',
+        title: 'Fluffy omelet on a plate',
+        imageUrl: 'https://images.pexels.com/photos/123/large2x.jpeg',
+        thumbnailUrl: 'https://images.pexels.com/photos/123/medium.jpeg',
+        sourceUrl: 'https://www.pexels.com/photo/fluffy-omelet-123/',
+        sourceDisplayName: 'Pexels • Jane Cook',
         width: 1200,
         height: 800,
       }),
     ]);
   });
 
-  it('accepts Google Custom Search alias env names for Vercel configuration', async () => {
-    mockedAxios.get.mockResolvedValue({ data: { items: [] } });
-    const service = buildService({
-      GOOGLE_CUSTOM_SEARCH_API_KEY: 'custom-key',
-      GOOGLE_CUSTOM_SEARCH_ENGINE_ID: 'custom-cx',
+  it('falls back to generic Pexels attribution when photographer is missing', async () => {
+    mockedAxios.get.mockResolvedValue({
+      data: {
+        photos: [
+          {
+            id: 789,
+            src: {
+              large: 'https://images.pexels.com/photos/789/large.jpeg',
+              tiny: 'https://images.pexels.com/photos/789/tiny.jpeg',
+            },
+          },
+        ],
+      },
     });
 
-    await service.searchImages('pasta');
+    const service = buildService({
+      PEXELS_API_KEY: 'pexels-key',
+    });
 
-    expect(mockedAxios.get).toHaveBeenCalledWith(
-      'https://www.googleapis.com/customsearch/v1',
+    const results = await service.searchImages('pasta');
+
+    expect(results[0]).toEqual(
       expect.objectContaining({
-        params: expect.objectContaining({
-          key: 'custom-key',
-          cx: 'custom-cx',
-        }),
+        id: 'pexels-789',
+        title: 'pasta',
+        imageUrl: 'https://images.pexels.com/photos/789/large.jpeg',
+        thumbnailUrl: 'https://images.pexels.com/photos/789/tiny.jpeg',
+        sourceDisplayName: 'Pexels',
       }),
     );
   });
 
-  it('returns service unavailable with a safe message when Google rejects the request', async () => {
+  it('returns service unavailable with a safe message when Pexels rejects the request', async () => {
     mockedAxios.get.mockRejectedValue({
       isAxiosError: true,
       response: {
-        status: 400,
-        data: { error: { message: 'API key not valid' } },
+        status: 401,
+        data: { error: 'Authorization field missing' },
       },
     });
     const service = buildService({
-      GOOGLE_IMAGE_SEARCH_API_KEY: 'key',
-      GOOGLE_IMAGE_SEARCH_CX: 'cx',
+      PEXELS_API_KEY: 'pexels-key',
     });
 
     await expect(service.searchImages('pasta')).rejects.toThrow(
-      /Image search is temporarily unavailable/,
+      /Pexels API key configuration/,
     );
   });
 });
