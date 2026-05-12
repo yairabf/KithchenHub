@@ -27,6 +27,9 @@ const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     GOOGLE_IMAGE_SEARCH_API_KEY: z.string().min(1).optional(),
     GOOGLE_IMAGE_SEARCH_CX: z.string().min(1).optional(),
+    GOOGLE_CUSTOM_SEARCH_API_KEY: z.string().min(1).optional(),
+    GOOGLE_CUSTOM_SEARCH_ENGINE_ID: z.string().min(1).optional(),
+    GOOGLE_CUSTOM_SEARCH_CX: z.string().min(1).optional(),
     GOOGLE_IMAGE_SEARCH_SAFE: z
       .enum(['active', 'off'])
       .optional()
@@ -132,6 +135,18 @@ const envSchema = z
         path: ['GOOGLE_IMAGE_SEARCH_API_KEY'],
         message:
           'GOOGLE_IMAGE_SEARCH_API_KEY and GOOGLE_IMAGE_SEARCH_CX must be set together',
+      });
+    }
+
+    if (
+      Boolean(env.GOOGLE_CUSTOM_SEARCH_API_KEY) !==
+      Boolean(env.GOOGLE_CUSTOM_SEARCH_ENGINE_ID || env.GOOGLE_CUSTOM_SEARCH_CX)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['GOOGLE_CUSTOM_SEARCH_API_KEY'],
+        message:
+          'GOOGLE_CUSTOM_SEARCH_API_KEY and GOOGLE_CUSTOM_SEARCH_ENGINE_ID must be set together',
       });
     }
 

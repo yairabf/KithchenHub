@@ -59,4 +59,25 @@ describe('RecipeImageSearchModal', () => {
       }),
     );
   });
+
+  it('shows backend error details when image search fails', async () => {
+    const searchImages = jest
+      .fn()
+      .mockRejectedValue(new Error('Recipe image search is not configured'));
+
+    const screen = render(
+      <RecipeImageSearchModal
+        visible={true}
+        initialQuery="pasta"
+        onClose={jest.fn()}
+        onSelect={jest.fn()}
+        searchImages={searchImages}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(searchImages).toHaveBeenCalledWith('pasta');
+      expect(screen.getByText('Recipe image search is not configured')).toBeTruthy();
+    }, { timeout: 1000 });
+  });
 });
