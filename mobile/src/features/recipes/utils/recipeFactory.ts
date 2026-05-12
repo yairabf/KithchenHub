@@ -22,6 +22,9 @@ const parseNumber = (value: unknown): number | undefined => {
 
 const generateId = () => Crypto.randomUUID();
 
+export const getRecipeImageUrlFromFormData = (data: NewRecipeData): string | undefined =>
+    data.imageLocalUri ?? data.imageUrl;
+
 export const createRecipe = (data: NewRecipeData): Recipe => {
     const prepTime = parseNumber(data.prepTime);
     const ingredients = (data.ingredients || []).map((ing) => {

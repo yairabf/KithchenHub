@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme';
@@ -137,74 +138,83 @@ export function RecipeImageSearchModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      presentationStyle="overFullScreen"
+      statusBarTranslucent={false}
+      onRequestClose={onClose}
+    >
       <View style={styles.modalBackdrop}>
-        <View style={styles.sheet}>
-          <View style={[styles.header, isRtl && styles.headerRtl]}>
-            <Text style={[styles.title, isRtl && styles.textRtl]}>
-              {t('form.webImageSearch.title')}
+        <SafeAreaView edges={['bottom']} style={styles.safeAreaSheet}>
+          <View style={styles.sheet}>
+            <View style={[styles.header, isRtl && styles.headerRtl]}>
+              <Text style={[styles.title, isRtl && styles.textRtl]}>
+                {t('form.webImageSearch.title')}
+              </Text>
+              <Pressable
+                accessibilityLabel={t('form.webImageSearch.close')}
+                onPress={onClose}
+                style={styles.closeButton}
+                testID="recipe-image-search-close"
+              >
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <View style={[styles.searchRow, isRtl && styles.searchRowRtl]}>
+              <Ionicons name="search-outline" size={18} color={colors.textMuted} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder={t('form.webImageSearch.placeholder')}
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={[styles.searchInput, isRtl && styles.textRtl]}
+                testID="recipe-image-search-input"
+              />
+            </View>
+
+            <Text style={[styles.helperText, isRtl && styles.textRtl]}>
+              {t('form.webImageSearch.usageNote')}
             </Text>
-            <Pressable
-              accessibilityLabel={t('form.webImageSearch.close')}
-              onPress={onClose}
-              style={styles.closeButton}
-              testID="recipe-image-search-close"
-            >
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </Pressable>
-          </View>
 
-          <View style={[styles.searchRow, isRtl && styles.searchRowRtl]}>
-            <Ionicons name="search-outline" size={18} color={colors.textMuted} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder={t('form.webImageSearch.placeholder')}
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={[styles.searchInput, isRtl && styles.textRtl]}
-              testID="recipe-image-search-input"
-            />
-          </View>
-
-          <Text style={[styles.helperText, isRtl && styles.textRtl]}>
-            {t('form.webImageSearch.usageNote')}
-          </Text>
-
-          {renderState() ?? (
-            <ScrollView contentContainerStyle={styles.gridContent}>
-              {rows.map((row) => (
-                <View key={row.map((item) => item.id).join('-')} style={styles.resultRow}>
-                  {row.map((item) => (
-                    <Pressable
-                      key={item.id}
-                      style={styles.resultTile}
-                      onPress={() => onSelect(item)}
-                      testID={`recipe-image-search-result-${item.id}`}
-                    >
-                      <Image
-                        source={{ uri: item.thumbnailUrl || item.imageUrl }}
-                        style={styles.resultImage}
-                      />
-                      <View style={styles.resultMeta}>
-                        <Text numberOfLines={2} style={[styles.resultTitle, isRtl && styles.textRtl]}>
-                          {item.title}
-                        </Text>
-                        {!!item.sourceDisplayName && (
-                          <Text numberOfLines={1} style={[styles.sourceText, isRtl && styles.textRtl]}>
-                            {item.sourceDisplayName}
+            {renderState() ?? (
+              <ScrollView contentContainerStyle={styles.gridContent}>
+                {rows.map((row) => (
+                  <View key={row.map((item) => item.id).join('-')} style={styles.resultRow}>
+                    {row.map((item) => (
+                      <Pressable
+                        key={item.id}
+                        style={styles.resultTile}
+                        onPress={() => onSelect(item)}
+                        testID={`recipe-image-search-result-${item.id}`}
+                      >
+                        <Image
+                          source={{ uri: item.thumbnailUrl || item.imageUrl }}
+                          style={styles.resultImage}
+                        />
+                        <View style={styles.resultMeta}>
+                          <Text numberOfLines={2} style={[styles.resultTitle, isRtl && styles.textRtl]}>
+                            {item.title}
                           </Text>
-                        )}
-                      </View>
-                    </Pressable>
-                  ))}
-                  {row.length === 1 && <View style={styles.resultTile} />}
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+                          {!!item.sourceDisplayName && (
+                            <Text numberOfLines={1} style={[styles.sourceText, isRtl && styles.textRtl]}>
+                              {item.sourceDisplayName}
+                            </Text>
+                          )}
+                        </View>
+                      </Pressable>
+                    ))}
+                    {row.length === 1 && <View style={styles.resultTile} />}
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </SafeAreaView>
       </View>
     </Modal>
   );

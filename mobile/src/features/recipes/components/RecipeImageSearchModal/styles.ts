@@ -7,6 +7,9 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.32)',
     justifyContent: 'flex-end',
   },
+  safeAreaSheet: {
+    width: '100%',
+  },
   sheet: {
     maxHeight: '88%',
     backgroundColor: colors.surface,

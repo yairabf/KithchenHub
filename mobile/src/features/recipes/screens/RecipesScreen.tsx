@@ -27,7 +27,7 @@ import { resizeAndValidateImage } from '../../../common/utils';
 import { config } from '../../../config';
 import { styles } from './styles';
 import type { RecipesScreenProps } from './types';
-import { createRecipe, mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
+import { createRecipe, getRecipeImageUrlFromFormData, mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
 import { useRecipes } from '../hooks/useRecipes';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useCatalog } from '../../../common/hooks/useCatalog';
@@ -212,7 +212,7 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
       // Create recipe with image encoded in data (RecipeService handles upload if local URI)
       const baseRecipe = createRecipe({
         ...data,
-        imageUrl: data.imageLocalUri
+        imageUrl: getRecipeImageUrlFromFormData(data),
       });
 
       await addRecipe(baseRecipe);
@@ -234,9 +234,12 @@ export function RecipesScreen({ onSelectRecipe }: RecipesScreenProps) {
 
       if (data.removeImage) {
         await updateRecipe(editingRecipe.id, { ...updates, imageUrl: null });
-      } else if (data.imageLocalUri) {
-        // Pass local URI, RecipeService will handle upload
-        await updateRecipe(editingRecipe.id, { ...updates, imageUrl: data.imageLocalUri });
+      } else if (data.imageLocalUri || data.imageUrl) {
+        // Pass local URI to RecipeService for upload; remote web URLs are saved directly.
+        await updateRecipe(editingRecipe.id, {
+          ...updates,
+          imageUrl: getRecipeImageUrlFromFormData(data),
+        });
       } else {
         await updateRecipe(editingRecipe.id, updates);
       }

@@ -39,7 +39,7 @@ import { config } from '../../../config';
 import type { ShoppingItem } from '../../../mocks/shopping';
 import type { GroceryItem } from '../../../common/types/grocery';
 import { AddRecipeModal, NewRecipeData } from '../components/AddRecipeModal';
-import { mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
+import { getRecipeImageUrlFromFormData, mapFormDataToRecipeUpdates, mapRecipeToFormData } from '../utils/recipeFactory';
 import { useTranslation } from 'react-i18next';
 import { useCatalog } from '../../../common/hooks/useCatalog';
 import { determineUserDataMode } from '../../../common/types/dataModes';
@@ -384,11 +384,11 @@ export function RecipeDetailScreen({
       if (data.removeImage) {
         const updated = await updateRecipe(displayRecipe.id, { ...updates, imageUrl: null });
         setFullRecipe(updated);
-      } else if (data.imageLocalUri) {
-        // Pass local URI, RecipeService will handle upload
+      } else if (data.imageLocalUri || data.imageUrl) {
+        // Pass local URI to RecipeService for upload; remote web URLs are saved directly.
         const updated = await updateRecipe(displayRecipe.id, {
           ...updates,
-          imageUrl: data.imageLocalUri
+          imageUrl: getRecipeImageUrlFromFormData(data),
         });
         setFullRecipe(updated);
       } else {
