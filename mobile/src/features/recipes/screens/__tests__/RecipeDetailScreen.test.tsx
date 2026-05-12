@@ -103,6 +103,8 @@ jest.mock('../../components/RecipeContentWrapper', () => {
       <View>
         <Text testID="ingredient-image-0">{recipe.ingredients?.[0]?.image ?? 'no-image'}</Text>
         <Text testID="ingredient-image-1">{recipe.ingredients?.[1]?.image ?? 'no-image'}</Text>
+        <Text testID="ingredient-category-0">{recipe.ingredients?.[0]?.category ?? 'no-category'}</Text>
+        <Text testID="ingredient-category-1">{recipe.ingredients?.[1]?.category ?? 'no-category'}</Text>
         <TouchableOpacity
           testID="add-first-ingredient"
           onPress={() => onAddIngredient?.(recipe.ingredients[0])}
@@ -166,13 +168,42 @@ describe('RecipeDetailScreen shopping integration', () => {
     });
   });
 
-  it('enriches signed-in recipe ingredients with catalog images for display', () => {
+  it('enriches signed-in recipe ingredients with catalog images and categories for display', () => {
     const { getAllByTestId } = render(
       <RecipeDetailScreen recipe={baseRecipe as any} onBack={jest.fn()} />,
     );
 
     expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('apple.png');
     expect(getAllByTestId('ingredient-image-1')[0].props.children).toBe('milk.png');
+    expect(getAllByTestId('ingredient-category-0')[0].props.children).toBe('fruits');
+    expect(getAllByTestId('ingredient-category-1')[0].props.children).toBe('dairy');
+  });
+
+  it('enriches recipe ingredients with catalog categories even when catalog images are missing', () => {
+    mockUseCatalog.mockReturnValue({
+      groceryItems: [
+        { id: 'catalog-salt', name: 'Salt', category: 'spices', image: '' },
+      ],
+      searchGroceries: jest.fn(),
+    });
+
+    const recipeWithSalt = {
+      ...baseRecipe,
+      ingredients: [
+        {
+          name: 'Salt',
+          quantityAmount: 1,
+          quantityUnit: 'tsp',
+        },
+      ],
+    };
+
+    const { getAllByTestId } = render(
+      <RecipeDetailScreen recipe={recipeWithSalt as any} onBack={jest.fn()} />,
+    );
+
+    expect(getAllByTestId('ingredient-image-0')[0].props.children).toBe('no-image');
+    expect(getAllByTestId('ingredient-category-0')[0].props.children).toBe('spices');
   });
 
   it('searches the catalog on demand so recipe ingredients show canonical images when the full catalog is not preloaded', async () => {

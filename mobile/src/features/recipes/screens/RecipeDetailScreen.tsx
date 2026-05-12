@@ -203,7 +203,7 @@ export function RecipeDetailScreen({
       }
 
       const localMatch = findMatchingCatalogItem(ingredient, groceryItems);
-      return !localMatch?.image?.trim();
+      return !localMatch;
     });
 
     if (ingredientsNeedingCatalogLookup.length === 0) {
@@ -263,14 +263,17 @@ export function RecipeDetailScreen({
         ?? resolvedIngredientCatalogItems[lookupKey]
         ?? undefined;
 
-      if (!resolvedCatalogItem?.image) {
+      if (!resolvedCatalogItem) {
         return ingredient;
       }
+
+      const resolvedCatalogImage = resolvedCatalogItem.image?.trim() || undefined;
 
       return {
         ...ingredient,
         catalogItemId: ingredient.catalogItemId ?? resolvedCatalogItem.id,
-        image: resolvedCatalogItem.image,
+        image: ingredient.image ?? resolvedCatalogImage,
+        category: ingredient.category ?? resolvedCatalogItem.category,
       };
     });
 
