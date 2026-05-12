@@ -197,7 +197,7 @@ def latest_ios_build_for_version!(api_key:, version:)
   build_number
 end
 
-def next_android_version_code(json_key:)
+def android_existing_version_codes!(json_key:)
   lookup_failed = false
 
   existing_version_codes = ANDROID_TRACKS.flat_map do |track|
@@ -232,6 +232,10 @@ def next_android_version_code(json_key:)
     end
   end
 
+  [existing_version_codes.uniq.sort, lookup_failed]
+end
+
+def next_android_version_code(existing_version_codes:, lookup_failed:)
   next_from_tracks = (existing_version_codes.max || 0) + 1
   return next_from_tracks unless lookup_failed
 
@@ -406,10 +410,15 @@ platform :android do
     ensure_release_api_url!
     json_key = ensure_env!('SUPPLY_JSON_KEY')
     repo_version = read_repo_version!
-    next_version_code = next_android_version_code(json_key: json_key)
+    existing_version_codes, version_code_lookup_failed = android_existing_version_codes!(json_key: json_key)
+    next_version_code = next_android_version_code(
+      existing_version_codes: existing_version_codes,
+      lookup_failed: version_code_lookup_failed,
+    )
 
     UI.message("Repo version.json: #{repo_version}")
     UI.message("Android versionCode: #{next_version_code}")
+    UI.message("Retaining active Android versionCodes: #{existing_version_codes.join(', ')}")
 
     build_android_aab!(
       version_code: next_version_code,
@@ -421,6 +430,7 @@ platform :android do
       package_name: ANDROID_PACKAGE_NAME,
       track: 'internal',
       aab: ANDROID_AAB_PATH,
+      version_codes_to_retain: existing_version_codes,
       release_status: 'completed',
       skip_upload_metadata: true,
       skip_upload_images: true,
