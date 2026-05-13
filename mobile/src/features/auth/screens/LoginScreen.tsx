@@ -10,7 +10,9 @@ import {
   Dimensions,
   TextInput,
   Image,
+  Platform,
 } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
@@ -41,7 +43,7 @@ interface LoginScreenProps {
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const { t } = useTranslation('auth');
   const { privacyPolicyUrl, termsOfServiceUrl } = useLegalLinks();
-  const { signInWithGoogle, signInWithEmail, showHouseholdNameScreen } = useAuth();
+  const { signInWithGoogle, signInWithApple, signInWithEmail, showHouseholdNameScreen } = useAuth();
   const { mode, inviteContext, setMode, setInviteContext } = useOnboarding();
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
@@ -156,6 +158,42 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      if (mode === 'join_by_invite') {
+        if (!inviteContext?.householdId || !inviteContext.code) {
+          Alert.alert(
+            t('login.inviteMissingTitle'),
+            t('login.inviteMissingMessage'),
+            [{ text: t('buttons.ok', { ns: 'common' }) }]
+          );
+          return;
+        }
+        await signInWithApple({
+          householdId: inviteContext.householdId,
+          inviteCode: inviteContext.code,
+        });
+      } else {
+        await signInWithApple();
+      }
+      if (mode === 'join_by_invite') {
+        setMode('login_or_signup');
+        setInviteContext(undefined);
+      }
+    } catch (error) {
+      Alert.alert(
+        t('login.signInFailed'),
+        error instanceof Error
+          ? error.message
+          : 'Unable to sign in with Apple. Please try again.',
+        [{ text: t('buttons.ok', { ns: 'common' }) }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleJoinHousehold = () => {
     navigation.navigate('EnterInviteCode');
   };
@@ -250,6 +288,18 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           {/* Sign In Buttons */}
           <View style={styles.buttonContainer}>
             <GoogleSignInButton onPress={handleGoogleSignIn} isLoading={isLoading} />
+
+            {Platform.OS === 'ios' ? (
+              <View style={styles.appleButtonWrapper}>
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={borderRadius.lg}
+                  style={styles.appleButton}
+                  onPress={handleAppleSignIn}
+                />
+              </View>
+            ) : null}
 
             {/* Email/Password Login Section */}
             {!showEmailLogin ? (
@@ -490,6 +540,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
     alignSelf: 'center',
+  },
+  appleButtonWrapper: {
+    marginTop: spacing.md,
+    height: 48,
+  },
+  appleButton: {
+    width: '100%',
+    height: 48,
   },
   emailLoginToggle: {
     flexDirection: 'row',

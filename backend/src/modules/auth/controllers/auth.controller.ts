@@ -11,6 +11,7 @@ import {
 import { AuthService } from '../services/auth.service';
 import {
   GoogleAuthDto,
+  AppleAuthDto,
   SyncDataDto,
   RefreshTokenDto,
   RegisterDto,
@@ -29,6 +30,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
  *
  * Public endpoints:
  * - POST /auth/google - Google OAuth authentication
+ * - POST /auth/apple - Sign in with Apple authentication
  * - POST /auth/register - Email/password registration
  * - POST /auth/login - Email/password login
  * - POST /auth/verify-email - Verify email address
@@ -55,6 +57,24 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async authenticateGoogle(@Body() dto: GoogleAuthDto) {
     return this.authService.authenticateGoogle(dto);
+  }
+
+  /**
+   * Authenticates a user using a Sign in with Apple identity token.
+   *
+   * @param dto - Contains Apple identity token and one-time profile fields
+   * @returns Authentication response with tokens and user info
+   */
+  @Post('apple')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Login with Sign in with Apple',
+    description:
+      'Verifies the Apple identity token and creates or links a user account.',
+  })
+  async authenticateApple(@Body() dto: AppleAuthDto) {
+    return this.authService.authenticateApple(dto);
   }
 
   /**

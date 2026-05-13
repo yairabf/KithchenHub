@@ -917,6 +917,7 @@ describe('AuthService - authenticateGoogle household payload', () => {
     findUserById: jest.fn(),
     findUserByEmail: jest.fn(),
     findUserByGoogleId: jest.fn(),
+    findUserByAppleId: jest.fn(),
     findUserByEmailVerificationToken: jest.fn(),
     updateUserEmailVerification: jest.fn(),
     createUser: jest.fn(),

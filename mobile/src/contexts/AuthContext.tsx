@@ -40,6 +40,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   signInWithGoogle: (options?: { householdId?: string; inviteCode?: string }) => Promise<{ isNewHousehold: boolean }>;
+  signInWithApple: (options?: { householdId?: string; inviteCode?: string }) => Promise<{ isNewHousehold: boolean }>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -78,7 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [showHouseholdNameScreen, setShowHouseholdNameScreen] = useState(false);
   const isProcessingOAuthRef = useRef(false);
 
-  const { signInWithGoogle: oauthSignIn } = useOAuthSignIn();
+  const {
+    signInWithGoogle: oauthSignIn,
+    signInWithApple: oauthSignInWithApple,
+  } = useOAuthSignIn();
 
   const fetchCurrentUser = useCallback(async (): Promise<User> => {
     try {
@@ -462,6 +466,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Handles Apple sign-in flow for iOS.
+   * Navigation to HouseholdName screen is handled by useEffect watching showHouseholdNameScreen flag.
+   */
+  const handleSignInWithApple = async (
+    options?: { householdId?: string; inviteCode?: string },
+  ): Promise<{ isNewHousehold: boolean }> => {
+    try {
+      setIsLoading(true);
+
+      const result = await oauthSignInWithApple(options);
+
+      if (!result.success) {
+        throw new Error(result.message || 'Sign in failed');
+      }
+
+      await tokenStorage.saveAccessToken(result.token!);
+      if (result.refreshToken) {
+        await tokenStorage.saveRefreshToken(result.refreshToken);
+      }
+
+      api.setAuthToken(result.token!);
+
+      const userResponse = await authApi.getCurrentUser();
+      verifyUserExists(userResponse);
+      verifyHouseholdDataConsistency(userResponse);
+
+      const shouldShowHouseholdName = verifyHouseholdIsNewlyCreated(
+        result.isNewHousehold || false,
+        userResponse.household?.createdAt,
+      );
+
+      const userData = mapUserResponseToUser(userResponse);
+
+      const currentToken = await tokenStorage.getAccessToken();
+      if (currentToken) {
+        api.setAuthToken(currentToken);
+      }
+
+      setUser(userData);
+      await saveUser(userData);
+
+      if (shouldShowHouseholdName) {
+        setShowHouseholdNameScreen(true);
+      } else if (result.isNewHousehold) {
+        logger.warn('Backend reported new household but verification failed - household may already exist');
+      }
+
+      return { isNewHousehold: result.isNewHousehold || false };
+    } catch (error) {
+      logger.error('Error signing in with Apple:', error);
+      await tokenStorage.clearTokens();
+      api.setAuthToken(null);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   /**
    * Registers a new user with email and password
@@ -603,6 +666,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         signInWithGoogle: handleSignInWithGoogle,
+        signInWithApple: handleSignInWithApple,
         signUpWithEmail: handleSignUpWithEmail,
         signInWithEmail: handleSignInWithEmail,
         signOut: handleSignOut,

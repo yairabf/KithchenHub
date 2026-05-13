@@ -123,6 +123,7 @@ model User {
   id                          String    @id @db.Uuid
   email                       String?   @unique
   googleId                    String?   @unique @map("google_id")
+  appleId                     String?   @unique @map("apple_id")
   passwordHash                String?   @map("password_hash")
   emailVerified               Boolean   @default(false) @map("email_verified")
   emailVerificationToken      String?   @map("email_verification_token")

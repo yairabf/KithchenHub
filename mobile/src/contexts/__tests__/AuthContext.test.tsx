@@ -35,6 +35,7 @@ const mockSignInWithGoogle = jest.fn();
 jest.mock('../../features/auth/hooks/useOAuthSignIn', () => ({
   useOAuthSignIn: () => ({
     signInWithGoogle: mockSignInWithGoogle,
+    signInWithApple: jest.fn(),
     isLoading: false,
   }),
 }));

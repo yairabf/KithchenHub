@@ -25,6 +25,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kitchenhub.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "FullHouse uses your photo library to add images to recipes."
       },
@@ -89,7 +90,8 @@
       "expo-font",
       "@react-native-community/datetimepicker",
       "expo-localization",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

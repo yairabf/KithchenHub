@@ -25,6 +25,7 @@ const envSchema = z
     JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
+    APPLE_CLIENT_ID: z.string().optional().default('com.kitchenhub.app'),
     PEXELS_API_KEY: z.string().min(1).optional(),
     /**
      * OAuth configuration for backend-driven flows
