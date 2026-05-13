@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
+import axios from 'axios';
+import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../../infrastructure/database/prisma/prisma.service';
@@ -20,6 +22,7 @@ import { Household, User } from '@prisma/client';
 import { SubscriptionsService } from '../../subscriptions/services/subscriptions.service';
 import {
   GoogleAuthDto,
+  AppleAuthDto,
   SyncDataDto,
   RefreshTokenDto,
   AuthResponseDto,
@@ -82,6 +85,9 @@ function isPrismaUniqueConstraintError(error: unknown): error is {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private googleClient: OAuth2Client | null = null;
+  private appleKeysCache:
+    | { keys: Array<crypto.JsonWebKey & { kid?: string }>; fetchedAt: number }
+    | null = null;
   private readonly config = loadConfiguration();
 
   constructor(
@@ -312,6 +318,89 @@ export class AuthService {
       throw new UnauthorizedException(
         'Failed to exchange Google authorization code',
       );
+    }
+  }
+
+  /**
+   * Authenticates a user using Sign in with Apple identity token.
+   *
+   * Apple only returns name/email on the first authorization, so the backend
+   * persists the stable Apple subject and falls back to the existing user data
+   * on subsequent logins.
+   */
+  async authenticateApple(dto: AppleAuthDto): Promise<AuthResponseDto> {
+    try {
+      const payload = await this.verifyAppleIdentityToken(dto.identityToken);
+
+      if (!payload.sub || typeof payload.sub !== 'string') {
+        throw new UnauthorizedException('Invalid Apple token');
+      }
+
+      const tokenEmail =
+        typeof payload.email === 'string' ? payload.email : undefined;
+      const email = dto.email ?? tokenEmail;
+      const emailVerified =
+        payload.email_verified === true || payload.email_verified === 'true';
+
+      const { user: userResult, isNewUser } =
+        await this.findOrCreateAppleUser({
+          sub: payload.sub,
+          email,
+          name: dto.fullName,
+          emailVerified,
+        });
+      let user = userResult;
+      let isNewHousehold = false;
+
+      if (user.householdId) {
+        if (dto.household) {
+          throw new BadRequestException(
+            'Cannot attach or switch household during login.',
+          );
+        }
+      } else {
+        if (dto.household) {
+          await this.resolveAndAttachHousehold(user.id, dto.household);
+          isNewHousehold = dto.household.name !== undefined;
+        } else {
+          const defaultName = this.deriveDefaultHouseholdName(
+            user.email ?? email ?? '',
+            user.name ?? dto.fullName,
+          );
+          await this.resolveAndAttachHousehold(user.id, {
+            name: defaultName,
+          });
+          isNewHousehold = true;
+        }
+        const refreshed = await this.authRepository.findUserById(user.id);
+        user = (refreshed ?? user) as UserWithHousehold;
+      }
+
+      const tokens = await this.generateTokens(user);
+
+      return {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: await this.mapUserToResponse(user),
+        householdId: user.householdId,
+        isNewUser,
+        isNewHousehold,
+        household: user.household
+          ? {
+              id: user.household.id,
+              name: user.household.name,
+            }
+          : undefined,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('Apple token verification failed', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw new UnauthorizedException('Failed to verify Apple token');
     }
   }
 
@@ -605,6 +694,119 @@ export class AuthService {
         name: payload.name,
         avatarUrl: payload.picture,
       });
+      isNewUser = false;
+    }
+
+    return { user: user as UserWithHousehold, isNewUser };
+  }
+
+  /**
+   * Verifies an Apple identity token against Apple's rotating public keys.
+   */
+  private async verifyAppleIdentityToken(
+    identityToken: string,
+  ): Promise<jwt.JwtPayload> {
+    const decoded = jwt.decode(identityToken, { complete: true });
+    if (!decoded || typeof decoded === 'string' || !decoded.header?.kid) {
+      throw new UnauthorizedException('Invalid Apple token');
+    }
+
+    const publicKey = await this.getApplePublicKey(decoded.header.kid);
+    const verified = jwt.verify(identityToken, publicKey, {
+      algorithms: ['RS256'],
+      issuer: 'https://appleid.apple.com',
+      audience: this.config.apple.clientId,
+    });
+
+    if (typeof verified === 'string') {
+      throw new UnauthorizedException('Invalid Apple token payload');
+    }
+
+    return verified;
+  }
+
+  /**
+   * Loads and caches Apple's public key for the token header key id.
+   */
+  private async getApplePublicKey(kid: string): Promise<string> {
+    const oneHour = 60 * 60 * 1000;
+    if (
+      !this.appleKeysCache ||
+      Date.now() - this.appleKeysCache.fetchedAt > oneHour
+    ) {
+      const response = await axios.get<{
+        keys: Array<crypto.JsonWebKey & { kid?: string }>;
+      }>('https://appleid.apple.com/auth/keys');
+      this.appleKeysCache = {
+        keys: response.data.keys,
+        fetchedAt: Date.now(),
+      };
+    }
+
+    const appleKey = this.appleKeysCache.keys.find((key) => key.kid === kid);
+    if (!appleKey) {
+      throw new UnauthorizedException('Unknown Apple token key');
+    }
+
+    return crypto.createPublicKey({ key: appleKey, format: 'jwk' }).export({
+      type: 'spki',
+      format: 'pem',
+    }) as string;
+  }
+
+  /**
+   * Finds or creates a user based on Sign in with Apple identity payload.
+   * Handles three scenarios:
+   * 1. User exists with Apple ID - update available profile fields
+   * 2. User exists with email but no Apple ID - link Apple account
+   * 3. User doesn't exist - create new user
+   *
+   * @returns Object containing the user and isNewUser flag
+   */
+  private async findOrCreateAppleUser(payload: {
+    sub: string;
+    email?: string;
+    name?: string;
+    emailVerified?: boolean;
+  }): Promise<{ user: UserWithHousehold; isNewUser: boolean }> {
+    let user = await this.authRepository.findUserByAppleId(payload.sub);
+    let isNewUser = false;
+
+    const trimmedName = payload.name?.trim();
+    const profileUpdates = {
+      ...(trimmedName ? { name: trimmedName } : {}),
+      ...(payload.emailVerified ? { emailVerified: true } : {}),
+    };
+
+    if (!user) {
+      user = payload.email
+        ? await this.authRepository.findUserByEmail(payload.email)
+        : null;
+      if (user) {
+        user = await this.authRepository.updateUser(user.id, {
+          appleId: payload.sub,
+          ...profileUpdates,
+        });
+        isNewUser = false;
+      } else {
+        if (!payload.email) {
+          throw new UnauthorizedException(
+            'Apple did not provide an email for this new account',
+          );
+        }
+
+        const newUserId = this.uuidService.generate();
+        user = await this.authRepository.createUser({
+          id: newUserId,
+          email: payload.email,
+          appleId: payload.sub,
+          name: trimmedName,
+          emailVerified: payload.emailVerified ?? true,
+        });
+        isNewUser = true;
+      }
+    } else if (Object.keys(profileUpdates).length > 0) {
+      user = await this.authRepository.updateUser(user.id, profileUpdates);
       isNewUser = false;
     }
 

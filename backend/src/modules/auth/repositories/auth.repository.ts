@@ -20,6 +20,13 @@ export class AuthRepository {
     });
   }
 
+  async findUserByAppleId(appleId: string): Promise<User | null> {
+    return this.prisma.user.findUnique({
+      where: { appleId },
+      include: { household: true },
+    });
+  }
+
   async findUserByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
@@ -31,6 +38,7 @@ export class AuthRepository {
     id?: string;
     email?: string;
     googleId?: string;
+    appleId?: string;
     passwordHash?: string;
     emailVerified?: boolean;
     emailVerificationToken?: string;
@@ -44,6 +52,7 @@ export class AuthRepository {
       id: data.id,
       email: data.email,
       googleId: data.googleId,
+      appleId: data.appleId,
       passwordHash: data.passwordHash,
       emailVerified: data.emailVerified,
       emailVerificationToken: data.emailVerificationToken,
@@ -67,6 +76,7 @@ export class AuthRepository {
     data: {
       email?: string;
       googleId?: string;
+      appleId?: string;
       passwordHash?: string;
       emailVerified?: boolean;
       emailVerificationToken?: string | null;

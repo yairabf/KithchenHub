@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import { Platform } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as WebBrowser from 'expo-web-browser';
 import { config } from '../../../config';
+import { authApi } from '../services/authApi';
 
 /**
  * Result from OAuth sign-in flow
@@ -152,20 +154,101 @@ export function useOAuthSignIn() {
   );
 
   /**
-   * Signs in with Apple using backend-driven OAuth flow.
-   * 
+   * Signs in with Apple using the native iOS Sign in with Apple sheet.
+   *
    * @returns OAuth result with token or error
-   * @throws Error - Not yet implemented
    */
-  const signInWithApple = useCallback(async (): Promise<OAuthResult> => {
-    throw new Error('Apple sign-in not yet implemented');
-  }, []);
+  const signInWithApple = useCallback(
+    async (options?: OAuthSignInOptions): Promise<OAuthResult> => {
+      if (Platform.OS !== 'ios') {
+        return {
+          success: false,
+          error: 'unsupported_platform',
+          message: 'Sign in with Apple is only available on iOS',
+        };
+      }
+
+      setIsLoading(true);
+      try {
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+        });
+
+        if (!credential.identityToken) {
+          return {
+            success: false,
+            error: 'missing_identity_token',
+            message: 'Apple did not return an identity token',
+          };
+        }
+
+        const response = await authApi.apple({
+          identityToken: credential.identityToken,
+          email: credential.email ?? undefined,
+          fullName: formatAppleFullName(credential.fullName),
+          household:
+            options?.householdId || options?.inviteCode
+              ? {
+                  id: options.householdId,
+                  inviteCode: options.inviteCode,
+                }
+              : undefined,
+        });
+
+        return {
+          success: true,
+          token: response.accessToken,
+          refreshToken: response.refreshToken,
+          isNewHousehold: response.isNewHousehold,
+        };
+      } catch (error) {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          error.code === 'ERR_REQUEST_CANCELED'
+        ) {
+          return {
+            success: false,
+            error: 'cancelled',
+            message: 'Sign in was cancelled',
+          };
+        }
+
+        console.error('Apple sign in error:', error);
+        return {
+          success: false,
+          error: 'exception',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'An unexpected error occurred',
+        };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   return {
     signInWithGoogle,
     signInWithApple,
     isLoading,
   };
+}
+
+function formatAppleFullName(
+  fullName: AppleAuthentication.AppleAuthenticationFullName | null,
+): string | undefined {
+  if (!fullName) return undefined;
+  const parts = [fullName.givenName, fullName.familyName]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
 /**

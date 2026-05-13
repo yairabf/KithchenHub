@@ -16,6 +16,9 @@ export interface AppConfig {
     clientId?: string;
     clientSecret?: string;
   };
+  apple: {
+    clientId: string;
+  };
   pexels: {
     apiKey?: string;
   };
@@ -102,6 +105,9 @@ export const loadConfiguration = (): AppConfig => {
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+    apple: {
+      clientId: env.APPLE_CLIENT_ID,
     },
     pexels: {
       apiKey: env.PEXELS_API_KEY,

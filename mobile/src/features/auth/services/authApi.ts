@@ -59,6 +59,17 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface AppleAuthRequest {
+  identityToken: string;
+  email?: string;
+  fullName?: string;
+  household?: {
+    id?: string;
+    inviteCode?: string;
+    name?: string;
+  };
+}
+
 export interface RefreshTokenRequest {
   refreshToken: string;
 }
@@ -111,6 +122,13 @@ export const authApi = {
    */
   login: (data: LoginRequest): Promise<AuthResponse> => {
     return api.post<AuthResponse>("/auth/login", data);
+  },
+
+  /**
+   * Logs in a user with Sign in with Apple.
+   */
+  apple: (data: AppleAuthRequest): Promise<AuthResponse> => {
+    return api.post<AuthResponse>("/auth/apple", data);
   },
 
   /**
