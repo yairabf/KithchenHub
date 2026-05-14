@@ -85,9 +85,10 @@ function isPrismaUniqueConstraintError(error: unknown): error is {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private googleClient: OAuth2Client | null = null;
-  private appleKeysCache:
-    | { keys: Array<crypto.JsonWebKey & { kid?: string }>; fetchedAt: number }
-    | null = null;
+  private appleKeysCache: {
+    keys: Array<crypto.JsonWebKey & { kid?: string }>;
+    fetchedAt: number;
+  } | null = null;
   private readonly config = loadConfiguration();
 
   constructor(
@@ -342,13 +343,12 @@ export class AuthService {
       const emailVerified =
         payload.email_verified === true || payload.email_verified === 'true';
 
-      const { user: userResult, isNewUser } =
-        await this.findOrCreateAppleUser({
-          sub: payload.sub,
-          email,
-          name: dto.fullName,
-          emailVerified,
-        });
+      const { user: userResult, isNewUser } = await this.findOrCreateAppleUser({
+        sub: payload.sub,
+        email,
+        name: dto.fullName,
+        emailVerified,
+      });
       let user = userResult;
       let isNewHousehold = false;
 
