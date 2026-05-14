@@ -31,6 +31,14 @@ describe('ApiClient', () => {
         });
     };
 
+    const mockBackendErrorResponse = (status: number, error: string) => {
+        (global.fetch as jest.Mock).mockResolvedValue({
+            ok: false,
+            status,
+            json: async () => ({ success: false, error }),
+        });
+    };
+
     describe.each([
         ['GET', 'get', '/test', undefined],
         ['POST', 'post', '/create', { name: 'New Item' }],
@@ -85,6 +93,14 @@ describe('ApiClient', () => {
             await expect(promise).rejects.toBeInstanceOf(ApiError);
             await expect(promise).rejects.toThrow(message);
         });
+    });
+
+    it('uses backend error field when message is absent', async () => {
+        mockBackendErrorResponse(401, 'Invalid Apple token');
+
+        const promise = api.post('/auth/apple', { identityToken: 'invalid' });
+        await expect(promise).rejects.toBeInstanceOf(ApiError);
+        await expect(promise).rejects.toThrow('Invalid Apple token');
     });
 
     describe.each([
