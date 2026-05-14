@@ -9,7 +9,7 @@
  * without coupling to React or navigation context.
  */
 
-import type { ShoppingItem } from '../../../mocks/shopping';
+import type { ShoppingItem } from "../../../mocks/shopping";
 
 /**
  * Minimal DTO returned by the batch catalog-names endpoint.
@@ -29,14 +29,28 @@ type FetchDisplayNames = (
   lang: string,
 ) => Promise<CatalogDisplayName[]>;
 
+type TranslationCache = Map<string, Map<string, string>>;
+
+const localizedNameCache: TranslationCache = new Map();
+
+/**
+ * Clears the in-memory localized catalog-name cache.
+ * Exported for tests and for future language/catalog invalidation flows.
+ */
+export function clearShoppingItemNameTranslationCache(): void {
+  localizedNameCache.clear();
+}
+
 /**
  * Translates the `name` field of every catalog-linked shopping item to the
  * requested locale.
  *
  * Items without a `catalogItemId` (custom user items) are returned as-is.
  * Duplicate catalog IDs are de-duplicated before the network call to minimize
- * the request payload. On any network or parsing error the original items are
- * returned unchanged so the UI never crashes.
+ * the request payload. Successful responses are cached by locale + catalog ID
+ * so future tab switches can render localized names immediately. On any network
+ * or parsing error the best available items are returned unchanged so the UI
+ * never crashes.
  *
  * @param items            - Shopping items to translate (not mutated)
  * @param lang             - Target locale code, e.g. 'he', 'es', 'en'
@@ -49,22 +63,119 @@ export async function translateShoppingItemNames(
   lang: string,
   fetchDisplayNames: FetchDisplayNames,
 ): Promise<ShoppingItem[]> {
+  const normalizedLang = normalizeLanguage(lang);
   const uniqueCatalogIds = collectUniqueCatalogIds(items);
   if (uniqueCatalogIds.length === 0) {
     return items;
   }
 
+  const cachedNameById = getCachedNames(normalizedLang);
+  const missingCatalogIds = uniqueCatalogIds.filter(
+    (id) => !cachedNameById.has(id),
+  );
+
+  if (missingCatalogIds.length === 0) {
+    return applyTranslations(items, cachedNameById);
+  }
+
   try {
-    const translations = await fetchDisplayNames(uniqueCatalogIds, lang);
-    const nameById = buildNameLookup(translations);
-    return applyTranslations(items, nameById);
+    const translations = await fetchDisplayNames(
+      missingCatalogIds,
+      normalizedLang,
+    );
+    storeTranslations(normalizedLang, translations);
+    return applyTranslations(items, getCachedNames(normalizedLang));
   } catch {
-    // Network/parsing errors must not break the shopping list UI
-    return items;
+    // Network/parsing errors must not break the shopping list UI. Still apply
+    // any names that were cached before this request failed.
+    return applyTranslations(items, cachedNameById);
   }
 }
 
+export function applyTranslatedItemNamesToCurrentItems(
+  currentItems: ShoppingItem[],
+  translatedSnapshot: ShoppingItem[],
+  pendingDeletedItemIds: string[] = [],
+  pendingLocalItemMutationIds: string[] = [],
+): ShoppingItem[] {
+  const pendingDeletedKeys = new Set(pendingDeletedItemIds.filter(Boolean));
+  const pendingLocalMutationKeys = new Set(pendingLocalItemMutationIds.filter(Boolean));
+  const currentByKey = new Map<string, ShoppingItem>();
+
+  for (const item of currentItems) {
+    for (const key of getItemIdentityKeys(item)) {
+      currentByKey.set(key, item);
+    }
+  }
+
+  const usedCurrentItems = new Set<ShoppingItem>();
+  const mergedItems: ShoppingItem[] = [];
+
+  for (const translatedItem of translatedSnapshot) {
+    if (hasAnyIdentityKey(translatedItem, pendingDeletedKeys)) {
+      continue;
+    }
+
+    const currentItem = getItemIdentityKeys(translatedItem)
+      .map((key) => currentByKey.get(key))
+      .find(Boolean);
+
+    if (
+      currentItem &&
+      (isOptimisticLocalItem(currentItem) ||
+        hasAnyIdentityKey(currentItem, pendingLocalMutationKeys))
+    ) {
+      usedCurrentItems.add(currentItem);
+      mergedItems.push({
+        ...translatedItem,
+        ...currentItem,
+        id: translatedItem.id || currentItem.id,
+        localId: currentItem.localId || translatedItem.localId,
+        name: translatedItem.name,
+      });
+    } else {
+      if (currentItem) {
+        usedCurrentItems.add(currentItem);
+      }
+      mergedItems.push(translatedItem);
+    }
+  }
+
+  for (const currentItem of currentItems) {
+    if (
+      !usedCurrentItems.has(currentItem) &&
+      (isOptimisticLocalItem(currentItem) ||
+        hasAnyIdentityKey(currentItem, pendingLocalMutationKeys)) &&
+      !hasAnyIdentityKey(currentItem, pendingDeletedKeys)
+    ) {
+      mergedItems.push(currentItem);
+    }
+  }
+
+  return mergedItems;
+}
+
 // ─── Private helpers ──────────────────────────────────────────────────────────
+
+function normalizeLanguage(lang: string): string {
+  return lang.trim().toLowerCase() || "en";
+}
+
+function getItemIdentityKeys(item: ShoppingItem): string[] {
+  return [item.id, item.localId].filter(
+    (key): key is string => Boolean(key),
+  );
+}
+
+function hasAnyIdentityKey(item: ShoppingItem, keys: Set<string>): boolean {
+  return getItemIdentityKeys(item).some((key) => keys.has(key));
+}
+
+function isOptimisticLocalItem(item: ShoppingItem): boolean {
+  return Boolean(
+    item.id?.startsWith("item-") && item.localId && item.localId !== item.id,
+  );
+}
 
 /**
  * Collects the unique, non-null catalogItemIds from a list of shopping items.
@@ -72,18 +183,36 @@ export async function translateShoppingItemNames(
 function collectUniqueCatalogIds(items: ShoppingItem[]): string[] {
   const seen = new Set<string>();
   for (const item of items) {
-    if (item.catalogItemId != null) {
-      seen.add(item.catalogItemId);
+    const catalogItemId = item.catalogItemId?.trim();
+    if (catalogItemId) {
+      seen.add(catalogItemId);
     }
   }
   return Array.from(seen);
 }
 
-/**
- * Builds a Map from catalogItemId → translated name for O(1) lookup.
- */
-function buildNameLookup(translations: CatalogDisplayName[]): Map<string, string> {
-  return new Map(translations.map((t) => [t.id, t.name]));
+function getCachedNames(lang: string): Map<string, string> {
+  let cacheForLanguage = localizedNameCache.get(lang);
+  if (!cacheForLanguage) {
+    cacheForLanguage = new Map();
+    localizedNameCache.set(lang, cacheForLanguage);
+  }
+  return cacheForLanguage;
+}
+
+function storeTranslations(
+  lang: string,
+  translations: CatalogDisplayName[],
+): void {
+  const cacheForLanguage = getCachedNames(lang);
+
+  for (const translation of translations) {
+    const id = translation.id?.trim();
+    const name = translation.name?.trim();
+    if (id && name) {
+      cacheForLanguage.set(id, name);
+    }
+  }
 }
 
 /**
@@ -96,7 +225,7 @@ function applyTranslations(
 ): ShoppingItem[] {
   return items.map((item) => {
     if (!item.catalogItemId) return item;
-    const translatedName = nameById.get(item.catalogItemId);
+    const translatedName = nameById.get(item.catalogItemId.trim());
     return translatedName ? { ...item, name: translatedName } : item;
   });
 }

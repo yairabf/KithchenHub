@@ -107,6 +107,7 @@ jest.mock('../../../../common/repositories/cacheAwareShoppingRepository', () => 
 }));
 
 jest.mock('../../utils/catalogTranslation', () => ({
+  applyTranslatedItemNamesToCurrentItems: (_currentItems: unknown[], translatedItems: unknown[]) => translatedItems,
   translateShoppingItemNames: (...args: unknown[]) => mockTranslateShoppingItemNames(...args),
 }));
 
@@ -144,13 +145,37 @@ describe('ShoppingListsScreen snappiness', () => {
     );
   });
 
-  it('renders cached shopping items immediately without waiting for translation fetches', async () => {
-    const { findByText } = render(<ShoppingListsScreen />);
+  it('does not render raw cached catalog item names while localized names are resolving', async () => {
+    let resolveTranslation: (items: Array<{ id: string; name: string }>) => void = () => undefined;
+    mockTranslateShoppingItemNames.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveTranslation = resolve;
+      }),
+    );
 
-    await waitFor(async () => {
-      expect(await findByText('Milk')).toBeTruthy();
+    const { queryByText, findByText } = render(<ShoppingListsScreen />);
+
+    await waitFor(() => {
+      expect(mockFindAllItems).toHaveBeenCalled();
+      expect(mockTranslateShoppingItemNames).toHaveBeenCalled();
     });
 
-    expect(mockTranslateShoppingItemNames).toHaveBeenCalled();
+    expect(queryByText('Milk')).toBeNull();
+
+    resolveTranslation([
+      {
+        id: 'item-1',
+        localId: 'item-1',
+        name: 'חלב',
+        listId: 'list-1',
+        quantity: 1,
+        category: 'Dairy',
+        isChecked: false,
+        catalogItemId: 'g27',
+      },
+    ]);
+
+    expect(await findByText('חלב')).toBeTruthy();
+    expect(queryByText('Milk')).toBeNull();
   });
 });

@@ -54,6 +54,10 @@ export interface QuickAddDependencies {
    * Error logging function
    */
   logError: (message: string, error: unknown) => void;
+  /**
+   * Tracks a server-backed optimistic item mutation until its API call settles.
+   */
+  trackPendingLocalItemMutation?: (item: ShoppingItem) => () => void;
 }
 
 /**
@@ -93,6 +97,7 @@ export async function quickAddItem(
     updateItem,
     executeWithOptimisticUpdate,
     logError,
+    trackPendingLocalItemMutation,
   } = dependencies;
 
   const quantity = 1;
@@ -131,26 +136,31 @@ export async function quickAddItem(
     // the optimistic update and the API call to avoid stale closure reads.
     const nextQuantity = baseQuantity + quantity;
 
-    await executeWithOptimisticUpdate(
-      () => updateItem(itemId, { quantity: nextQuantity }),
-      () => {
-        setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
-          if (item.id === itemId || item.localId === itemLocalId) {
-            return { ...item, quantity: nextQuantity };
-          }
-          return item;
-        }));
-      },
-      () => {
-        setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
-          if (item.id === itemId || item.localId === itemLocalId) {
-            return { ...item, quantity: baseQuantity };
-          }
-          return item;
-        }));
-      },
-      'Failed to update shopping item quantity:',
-    );
+    const clearPendingLocalMutation = trackPendingLocalItemMutation?.(existingItem);
+    try {
+      await executeWithOptimisticUpdate(
+        () => updateItem(itemId, { quantity: nextQuantity }),
+        () => {
+          setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
+            if (item.id === itemId || item.localId === itemLocalId) {
+              return { ...item, quantity: nextQuantity };
+            }
+            return item;
+          }));
+        },
+        () => {
+          setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
+            if (item.id === itemId || item.localId === itemLocalId) {
+              return { ...item, quantity: baseQuantity };
+            }
+            return item;
+          }));
+        },
+        'Failed to update shopping item quantity:',
+      );
+    } finally {
+      clearPendingLocalMutation?.();
+    }
   } else {
     // Create new item with optimistic UI update (all modes)
     const tempItem = createShoppingItem(groceryItem, selectedList.id, quantity);
