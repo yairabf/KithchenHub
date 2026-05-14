@@ -2,6 +2,20 @@ import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert, ActivityIndicator } from 'react-native';
 
+const mockConfig = {
+  api: {
+    baseUrl: 'https://api.example.com',
+    version: '1',
+  },
+  features: {
+    premiumSettingsSurface: false,
+  },
+};
+
+jest.mock('../../../../config', () => ({
+  config: mockConfig,
+}));
+
 jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
@@ -78,9 +92,16 @@ jest.mock('@react-navigation/native', () => ({
 
 const mockDeleteMyAccount = jest.fn();
 const mockNavigate = jest.fn();
+const mockGetPremiumDemo = jest.fn().mockResolvedValue({ message: 'Premium demo ready' });
 jest.mock('../../services/accountService', () => ({
   accountService: {
     deleteMyAccount: () => mockDeleteMyAccount(),
+  },
+}));
+
+jest.mock('../../services/premiumDemoApi', () => ({
+  premiumDemoApi: {
+    getDemo: () => mockGetPremiumDemo(),
   },
 }));
 
@@ -231,6 +252,7 @@ describe('SettingsScreen', () => {
   };
 
   beforeEach(() => {
+    mockConfig.features.premiumSettingsSurface = false;
     jest.clearAllMocks();
     (useAuth as jest.Mock).mockReturnValue(defaultAuthContext);
     consoleWarnSpy.mockImplementation((message, ...args) => {
@@ -247,15 +269,27 @@ describe('SettingsScreen', () => {
     alertSpy.mockRestore();
   });
 
-  it('renders the premium settings surface for a free household by default', () => {
+  it('hides the premium settings surface by default', () => {
+    const { queryByText } = render(<SettingsScreen />);
+
+    expect(queryByText('KitchenHub Premium')).toBeNull();
+    expect(queryByText('Status: Inactive')).toBeNull();
+    expect(queryByText('View plans')).toBeNull();
+    expect(mockGetPremiumDemo).not.toHaveBeenCalled();
+  });
+
+  it('renders the premium settings surface when the feature flag is enabled', () => {
+    mockConfig.features.premiumSettingsSurface = true;
+
     const { getByText } = render(<SettingsScreen />);
 
-    expect(getByText('Premium')).toBeTruthy();
+    expect(getByText('KitchenHub Premium')).toBeTruthy();
     expect(getByText('Free')).toBeTruthy();
     expect(getByText('Status: Inactive')).toBeTruthy();
   });
 
-  it('renders the premium settings surface using the authenticated household premium summary', () => {
+  it('renders the premium settings surface using the authenticated household premium summary when enabled', async () => {
+    mockConfig.features.premiumSettingsSurface = true;
     (useAuth as jest.Mock).mockReturnValue({
       ...defaultAuthContext,
       user: {
@@ -274,9 +308,11 @@ describe('SettingsScreen', () => {
     expect(getAllByText('Premium').length).toBeGreaterThanOrEqual(1);
     expect(getByText('Status: Trialing')).toBeTruthy();
     expect(getByText('Trial ends: May 8, 2026')).toBeTruthy();
+    await waitFor(() => expect(getByText('Premium demo ready')).toBeTruthy());
   });
 
-  it('navigates to the premium paywall screen when View plans is pressed', () => {
+  it('navigates to the premium paywall screen when View plans is pressed and the feature flag is enabled', () => {
+    mockConfig.features.premiumSettingsSurface = true;
     const { getByText } = render(<SettingsScreen />);
 
     fireEvent.press(getByText('View plans'));

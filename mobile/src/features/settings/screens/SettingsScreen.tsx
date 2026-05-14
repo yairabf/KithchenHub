@@ -33,6 +33,7 @@ import { accountService } from '../services/accountService';
 import { getDeleteAccountErrorMessage } from '../utils/errorMessages';
 import { PremiumSection } from '../components/PremiumSection';
 import { PremiumDemoSection } from '../components/PremiumDemoSection';
+import { config } from '../../../config';
 
 /** Set to true when push notifications are implemented. */
 const SHOW_PUSH_NOTIFICATIONS_SETTING = false;
@@ -60,6 +61,7 @@ export function SettingsScreen() {
   const currentLanguageDisplayName = getNativeNameForCode(currentLanguageCode);
   const normalizedRole = user?.role?.toLowerCase();
   const roleLabel = normalizedRole === 'admin' ? t('admin') : t('member');
+  const showPremiumSurface = config.features.premiumSettingsSurface;
 
   const handleSignOut = async () => {
     await signOut();
@@ -207,11 +209,15 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        <PremiumSection
-          premium={user?.premium}
-          onOpenPaywall={handleOpenPremiumPaywall}
-        />
-        <PremiumDemoSection isPremium={Boolean(user?.premium?.isPremium)} />
+        {showPremiumSurface ? (
+          <>
+            <PremiumSection
+              premium={user?.premium}
+              onOpenPaywall={handleOpenPremiumPaywall}
+            />
+            <PremiumDemoSection isPremium={Boolean(user?.premium?.isPremium)} />
+          </>
+        ) : null}
 
         {/* Notifications Section - hidden until push notifications are implemented */}
         {SHOW_PUSH_NOTIFICATIONS_SETTING && (

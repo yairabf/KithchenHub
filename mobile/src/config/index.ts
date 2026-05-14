@@ -1,6 +1,7 @@
 import { isMockDataEnabled } from '../common/utils/mockDataToggle';
 
 import { resolveApiBaseUrl } from './apiBaseUrl';
+import { featureFlags } from './featureFlags';
 
 // Localhost default: adb reverse forwards Android emulator port to host
 const API_BASE_URL = resolveApiBaseUrl();
@@ -20,4 +21,5 @@ export const config = {
   mockData: {
     enabled: isMockDataEnabled(process.env.EXPO_PUBLIC_USE_MOCK_DATA),
   },
+  features: featureFlags,
 };
