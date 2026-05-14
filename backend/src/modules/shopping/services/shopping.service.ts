@@ -834,7 +834,7 @@ export class ShoppingService {
     );
 
     await Promise.all(
-      addedItems.map((item) =>
+      addedItems.map((item, index) =>
         this.recordFrequentItemAdd({
           householdId,
           catalogItemId: item.catalogItemId,
@@ -842,7 +842,7 @@ export class ShoppingService {
           name: item.name,
           category: item.category,
           image: item.image,
-          quantity: item.quantity,
+          quantity: dto.items[index]?.quantity ?? 1,
         }),
       ),
     );
@@ -993,36 +993,18 @@ export class ShoppingService {
 
     const catalogItemId = item.catalogItemId ?? item.masterItemId;
     let catalogItem = null;
-    let customItemId: string | undefined;
 
     if (catalogItemId) {
       catalogItem = await this.getCatalogItemOrThrow(catalogItemId);
-    } else {
-      const normalizedName = item.name?.trim();
-      if (normalizedName) {
-        const customItem = await this.shoppingRepository.findCustomItemByName(
-          householdId,
-          normalizedName,
-        );
-        if (customItem) {
-          customItemId = customItem.id;
-        } else {
-          const newItem = await this.shoppingRepository.createCustomItem(
-            householdId,
-            normalizedName,
-            item.category,
-          );
-          customItemId = newItem.id;
-        }
-      }
     }
 
     const itemData = this.buildItemData(item, catalogItem, catalogItemId);
 
-    return this.shoppingRepository.createItem(listId, {
-      ...itemData,
-      customItemId,
-    });
+    return this.shoppingRepository.createOrIncrementActiveItem(
+      householdId,
+      listId,
+      itemData,
+    );
   }
 
   /**

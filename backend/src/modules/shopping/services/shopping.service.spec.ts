@@ -39,6 +39,8 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
             createList: jest.fn(),
             createItem: jest.fn(),
             updateItem: jest.fn(),
+            createOrIncrementActiveItem: jest.fn(),
+            findActiveItemByIdentity: jest.fn(),
             findCustomItemByName: jest.fn(),
             createCustomItem: jest.fn(),
             findCustomItems: jest.fn(),
@@ -757,6 +759,62 @@ describe('ShoppingService - Soft-Delete Behavior', () => {
       );
 
       expect(result[0]?.name).toBe('Tomato Canonical');
+    });
+  });
+
+  describe('createItemFromInput', () => {
+    it('merges a catalog item into an existing active row instead of creating a duplicate', async () => {
+      const catalogItem = {
+        id: 'catalog-1',
+        name: 'Bean sprouts',
+        category: 'Vegetables',
+        defaultUnit: null,
+        defaultQuantity: 1,
+        imageUrl: 'bean-sprouts.png',
+      };
+      const existingItem = {
+        id: mockItemId,
+        listId: mockListId,
+        catalogItemId: 'catalog-1',
+        customItemId: null,
+        name: 'Bean sprouts',
+        quantity: 1,
+        unit: null,
+        isChecked: false,
+        category: 'Vegetables',
+        image: 'bean-sprouts.png',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+      const updatedItem = { ...existingItem, quantity: 2 };
+
+      jest
+        .spyOn(prisma.masterGroceryCatalog, 'findUnique')
+        .mockResolvedValue(catalogItem as any);
+      jest
+        .spyOn(repository, 'createOrIncrementActiveItem')
+        .mockResolvedValue(updatedItem as any);
+      jest.spyOn(repository, 'createItem').mockResolvedValue({} as any);
+
+      const result = await service.createItemFromInput(
+        mockListId,
+        mockHouseholdId,
+        { catalogItemId: 'catalog-1', quantity: 1 },
+      );
+
+      expect(repository.createOrIncrementActiveItem).toHaveBeenCalledWith(
+        mockHouseholdId,
+        mockListId,
+        expect.objectContaining({
+          catalogItemId: 'catalog-1',
+          name: 'Bean sprouts',
+          quantity: 1,
+          category: 'Vegetables',
+        }),
+      );
+      expect(repository.createItem).not.toHaveBeenCalled();
+      expect(result).toBe(updatedItem);
     });
   });
 
