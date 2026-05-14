@@ -109,6 +109,7 @@ export function applyTranslatedItemNamesToCurrentItems(
   }
 
   const usedCurrentItems = new Set<ShoppingItem>();
+  const usedCatalogKeys = new Set<string>();
   const mergedItems: ShoppingItem[] = [];
 
   for (const translatedItem of translatedSnapshot) {
@@ -116,16 +117,37 @@ export function applyTranslatedItemNamesToCurrentItems(
       continue;
     }
 
-    const currentItem = getItemIdentityKeys(translatedItem)
-      .map((key) => currentByKey.get(key))
-      .find(Boolean);
+    let currentItem: ShoppingItem | undefined;
+    let matchedKey: string | undefined;
+    for (const key of getItemIdentityKeys(translatedItem)) {
+      const match = currentByKey.get(key);
+      if (match) {
+        currentItem = match;
+        matchedKey = key;
+        break;
+      }
+    }
+    const matchedByCatalogIdentity = Boolean(
+      matchedKey?.startsWith("catalog:") &&
+        currentItem &&
+        currentItem.id !== translatedItem.id &&
+        currentItem.localId !== translatedItem.localId,
+    );
+
+    if (currentItem) {
+      usedCurrentItems.add(currentItem);
+    }
+    const translatedCatalogKey = getCatalogIdentityKey(translatedItem);
+    if (translatedCatalogKey) {
+      usedCatalogKeys.add(translatedCatalogKey);
+    }
 
     if (
       currentItem &&
+      !matchedByCatalogIdentity &&
       (isOptimisticLocalItem(currentItem) ||
         hasAnyIdentityKey(currentItem, pendingLocalMutationKeys))
     ) {
-      usedCurrentItems.add(currentItem);
       mergedItems.push({
         ...translatedItem,
         ...currentItem,
@@ -133,17 +155,21 @@ export function applyTranslatedItemNamesToCurrentItems(
         localId: currentItem.localId || translatedItem.localId,
         name: translatedItem.name,
       });
+    } else if (currentItem && matchedByCatalogIdentity) {
+      mergedItems.push({
+        ...translatedItem,
+        localId: currentItem.localId || translatedItem.localId,
+      });
     } else {
-      if (currentItem) {
-        usedCurrentItems.add(currentItem);
-      }
       mergedItems.push(translatedItem);
     }
   }
 
   for (const currentItem of currentItems) {
+    const catalogKey = getCatalogIdentityKey(currentItem);
     if (
       !usedCurrentItems.has(currentItem) &&
+      (!catalogKey || !usedCatalogKeys.has(catalogKey)) &&
       (isOptimisticLocalItem(currentItem) ||
         hasAnyIdentityKey(currentItem, pendingLocalMutationKeys)) &&
       !hasAnyIdentityKey(currentItem, pendingDeletedKeys)
@@ -161,8 +187,13 @@ function normalizeLanguage(lang: string): string {
   return lang.trim().toLowerCase() || "en";
 }
 
+function getCatalogIdentityKey(item: ShoppingItem): string | undefined {
+  const catalogItemId = item.catalogItemId?.trim();
+  return catalogItemId ? `catalog:${catalogItemId}` : undefined;
+}
+
 function getItemIdentityKeys(item: ShoppingItem): string[] {
-  return [item.id, item.localId].filter(
+  return [item.id, item.localId, getCatalogIdentityKey(item)].filter(
     (key): key is string => Boolean(key),
   );
 }

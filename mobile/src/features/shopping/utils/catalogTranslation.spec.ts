@@ -157,6 +157,79 @@ describe("applyTranslatedItemNamesToCurrentItems", () => {
     ]);
   });
 
+  it("matches translated snapshots to optimistic current items by catalog item ID", () => {
+    const result = applyTranslatedItemNamesToCurrentItems(
+      [
+        makeItem({
+          id: "item-optimistic",
+          localId: "local-optimistic-beans",
+          name: "bean sprouts",
+          quantity: 1,
+          catalogItemId: "catalog-bean-sprouts",
+        }),
+      ],
+      [
+        makeItem({
+          id: "server-beans",
+          localId: "server-beans",
+          name: "נבטי שעועית",
+          quantity: 1,
+          catalogItemId: "catalog-bean-sprouts",
+        }),
+      ],
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "server-beans",
+        localId: "local-optimistic-beans",
+        name: "נבטי שעועית",
+        quantity: 1,
+        catalogItemId: "catalog-bean-sprouts",
+      }),
+    ]);
+  });
+
+  it("drops a same-catalog optimistic duplicate when the server row is already present", () => {
+    const result = applyTranslatedItemNamesToCurrentItems(
+      [
+        makeItem({
+          id: "server-beans",
+          localId: "server-beans",
+          name: "bean sprouts",
+          quantity: 1,
+          catalogItemId: "catalog-bean-sprouts",
+        }),
+        makeItem({
+          id: "item-optimistic",
+          localId: "local-optimistic-beans",
+          name: "bean sprouts",
+          quantity: 1,
+          catalogItemId: "catalog-bean-sprouts",
+        }),
+      ],
+      [
+        makeItem({
+          id: "server-beans",
+          localId: "server-beans",
+          name: "נבטי שעועית",
+          quantity: 2,
+          catalogItemId: "catalog-bean-sprouts",
+        }),
+      ],
+    );
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "server-beans",
+        localId: "server-beans",
+        name: "נבטי שעועית",
+        quantity: 2,
+        catalogItemId: "catalog-bean-sprouts",
+      }),
+    ]);
+  });
+
   it("matches translated snapshots to current items by either id or localId", () => {
     const result = applyTranslatedItemNamesToCurrentItems(
       [

@@ -21,6 +21,17 @@ interface HouseholdFrequencyAddInput extends HouseholdFrequencyIdentityInput {
   quantity: number;
 }
 
+interface ShoppingItemCreateInput {
+  catalogItemId?: string;
+  customItemId?: string;
+  name: string;
+  quantity: number;
+  unit?: string;
+  category?: string;
+  image?: string;
+  isChecked?: boolean;
+}
+
 @Injectable()
 export class ShoppingRepository {
   private readonly logger = new Logger(ShoppingRepository.name);
@@ -139,16 +150,7 @@ export class ShoppingRepository {
 
   async createItem(
     listId: string,
-    data: {
-      catalogItemId?: string;
-      customItemId?: string;
-      name: string;
-      quantity: number;
-      unit?: string;
-      category?: string;
-      image?: string;
-      isChecked?: boolean;
-    },
+    data: ShoppingItemCreateInput,
   ): Promise<ShoppingItem> {
     return this.prisma.shoppingItem.create({
       data: {
@@ -163,6 +165,167 @@ export class ShoppingRepository {
         isChecked: data.isChecked || false,
       },
     });
+  }
+
+  async createOrIncrementActiveItem(
+    householdId: string,
+    listId: string,
+    data: ShoppingItemCreateInput,
+  ): Promise<ShoppingItem> {
+    const identityKey = this.getShoppingItemIdentityKey(data);
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        SELECT pg_advisory_xact_lock(hashtext(${listId}), hashtext(${identityKey}))
+      `;
+
+      const existingItem = await this.findActiveItemByIdentityWithClient(
+        tx,
+        listId,
+        data,
+      );
+
+      if (existingItem) {
+        return tx.shoppingItem.update({
+          where: { id: existingItem.id },
+          data: {
+            quantity: { increment: data.quantity },
+          },
+        });
+      }
+
+      const customItemId =
+        data.customItemId ??
+        (data.catalogItemId
+          ? undefined
+          : await this.findOrCreateCustomItemWithClient(
+              tx,
+              householdId,
+              data.name,
+              data.category,
+            ));
+
+      return tx.shoppingItem.create({
+        data: {
+          listId,
+          catalogItemId: data.catalogItemId,
+          customItemId,
+          name: data.name,
+          quantity: data.quantity,
+          unit: data.unit,
+          category: data.category,
+          image: data.image,
+          isChecked: data.isChecked || false,
+        },
+      });
+    });
+  }
+
+  private getShoppingItemIdentityKey(
+    identity: ShoppingItemCreateInput,
+  ): string {
+    if (identity.catalogItemId) {
+      return `catalog:${identity.catalogItemId}`;
+    }
+    if (identity.customItemId) {
+      return `custom:${identity.customItemId}`;
+    }
+    return `name:${identity.name.trim().toLowerCase()}`;
+  }
+
+  private getShoppingItemIdentityFilter(identity: {
+    catalogItemId?: string;
+    customItemId?: string;
+    name?: string;
+  }):
+    | { catalogItemId: string }
+    | { customItemId: string }
+    | { name: { equals: string; mode: 'insensitive' } }
+    | null {
+    if (identity.catalogItemId) {
+      return { catalogItemId: identity.catalogItemId };
+    }
+    if (identity.customItemId) {
+      return { customItemId: identity.customItemId };
+    }
+    if (identity.name) {
+      return {
+        name: { equals: identity.name, mode: 'insensitive' },
+      };
+    }
+    return null;
+  }
+
+  private async findActiveItemByIdentityWithClient(
+    client: Pick<PrismaService, 'shoppingItem'>,
+    listId: string,
+    identity: {
+      catalogItemId?: string;
+      customItemId?: string;
+      name?: string;
+    },
+  ): Promise<ShoppingItem | null> {
+    const identityFilter = this.getShoppingItemIdentityFilter(identity);
+
+    if (!identityFilter) {
+      return null;
+    }
+
+    return client.shoppingItem.findFirst({
+      where: {
+        listId,
+        ...ACTIVE_RECORDS_FILTER,
+        ...identityFilter,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  private async findOrCreateCustomItemWithClient(
+    client: Pick<PrismaService, 'customItem'>,
+    householdId: string,
+    name: string,
+    category?: string,
+  ): Promise<string> {
+    const customItem = await client.customItem.findFirst({
+      where: {
+        householdId,
+        name: {
+          equals: name,
+          mode: 'insensitive',
+        },
+        ...ACTIVE_RECORDS_FILTER,
+      },
+    });
+
+    if (customItem) {
+      return customItem.id;
+    }
+
+    const newItem = await client.customItem.create({
+      data: {
+        householdId,
+        name,
+        category,
+      },
+    });
+
+    return newItem.id;
+  }
+
+  async findActiveItemByIdentity(
+    listId: string,
+    identity: {
+      catalogItemId?: string;
+      customItemId?: string;
+      name?: string;
+    },
+  ): Promise<ShoppingItem | null> {
+    return this.findActiveItemByIdentityWithClient(
+      this.prisma,
+      listId,
+      identity,
+    );
   }
 
   async findCustomItemByName(
