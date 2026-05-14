@@ -38,6 +38,7 @@ describe('AuthService - Register', () => {
     deleteAllRefreshTokensForUser: jest.fn().mockResolvedValue(undefined),
     findUserByEmail: jest.fn(),
     createUser: jest.fn(),
+    deleteUser: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockUuidService = {
@@ -283,6 +284,38 @@ describe('AuthService - Register', () => {
       await expect(service.register(registerDto)).rejects.toThrow(
         'Email already registered',
       );
+    });
+
+    it('should remove the unverified user and skip household setup if verification email sending fails', async () => {
+      const registerDto: RegisterDto = {
+        email: 'newuser@example.com',
+        password: 'SecurePassword123!',
+        name: 'New User',
+      };
+
+      mockAuthRepository.findUserByEmail.mockResolvedValue(null);
+      mockAuthRepository.createUser.mockResolvedValue({
+        id: 'generated-user-id',
+        email: registerDto.email,
+        name: registerDto.name,
+        emailVerified: false,
+      });
+      mockEmailService.sendVerificationEmail.mockRejectedValueOnce(
+        new Error('Failed to send verification email'),
+      );
+      const resolveAndAttachSpy = jest.spyOn(
+        service as any,
+        'resolveAndAttachHousehold',
+      );
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        'Failed to send verification email',
+      );
+
+      expect(mockAuthRepository.deleteUser).toHaveBeenCalledWith(
+        'generated-user-id',
+      );
+      expect(resolveAndAttachSpy).not.toHaveBeenCalled();
     });
 
     it('should handle household creation when provided', async () => {

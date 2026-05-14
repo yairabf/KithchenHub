@@ -1546,11 +1546,16 @@ export class AuthService {
     });
 
     if (!shouldSkipEmailVerification && verificationToken) {
-      await this.emailService.sendVerificationEmail(
-        dto.email,
-        verificationToken,
-        dto.name,
-      );
+      try {
+        await this.emailService.sendVerificationEmail(
+          dto.email,
+          verificationToken,
+          dto.name,
+        );
+      } catch (error) {
+        await this.authRepository.deleteUser(userId);
+        throw error;
+      }
     }
 
     // Handle household creation if provided
