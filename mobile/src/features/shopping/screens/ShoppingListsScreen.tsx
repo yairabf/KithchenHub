@@ -46,7 +46,10 @@ import { config } from '../../../config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getSelectedList } from '../utils/selectionUtils';
 import { quickAddItem } from '../utils/quickAddUtils';
-import { translateShoppingItemNames } from '../utils/catalogTranslation';
+import {
+  applyTranslatedItemNamesToCurrentItems,
+  translateShoppingItemNames,
+} from '../utils/catalogTranslation';
 import { determineUserDataMode } from '../../../common/types/dataModes';
 import { useDebouncedRemoteSearch, useResponsive } from '../../../common/hooks';
 import { useCatalog } from '../../../common/hooks/useCatalog';
@@ -235,6 +238,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   // Tracks whether shopping data has been successfully loaded at least once.
   // When true, subsequent cache reads happen silently without showing the loading spinner.
   const hasLoadedOnceRef = useRef(false);
+  const itemTranslationRequestIdRef = useRef(0);
 
   // Determine data mode based on user authentication state
   const userMode = useMemo(() => {
@@ -268,11 +272,42 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [allItems, setAllItems] = useState<ShoppingItem[]>([]);
   const [pendingDeletedItemIds, setPendingDeletedItemIds] = useState<string[]>([]);
+  const setAllItemsAfterLocalMutation = useCallback<React.Dispatch<React.SetStateAction<ShoppingItem[]>>>(
+    (value) => {
+      itemTranslationRequestIdRef.current += 1;
+      setAllItems(value);
+    },
+    [],
+  );
+  const getPendingLocalItemMutationIds = useCallback(
+    () => Array.from(pendingLocalItemMutationIdsRef.current.keys()),
+    [],
+  );
+  const trackPendingLocalItemMutation = useCallback((item: ShoppingItem) => {
+    const ids = [item.id, item.localId].filter((id): id is string => Boolean(id));
+    ids.forEach((id) => {
+      pendingLocalItemMutationIdsRef.current.set(
+        id,
+        (pendingLocalItemMutationIdsRef.current.get(id) ?? 0) + 1,
+      );
+    });
+    return () => {
+      ids.forEach((id) => {
+        const nextCount = (pendingLocalItemMutationIdsRef.current.get(id) ?? 1) - 1;
+        if (nextCount <= 0) {
+          pendingLocalItemMutationIdsRef.current.delete(id);
+        } else {
+          pendingLocalItemMutationIdsRef.current.set(id, nextCount);
+        }
+      });
+    };
+  }, []);
   const [isListsLoading, setIsListsLoading] = useState(false);
   const [isItemsLoading, setIsItemsLoading] = useState(false);
 
   const allItemsRef = useRef<ShoppingItem[]>([]);
   allItemsRef.current = allItems;
+  const pendingLocalItemMutationIdsRef = useRef<Map<string, number>>(new Map());
   const pendingQuickAddKeys = useRef<Set<string>>(new Set());
 
   const fallbackList = useMemo<ShoppingList>(() => ({
@@ -302,6 +337,16 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     });
   }, []);
 
+  const translateItemsForDisplay = useCallback(
+    (items: ShoppingItem[]) =>
+      translateShoppingItemNames(
+        items,
+        i18n.language,
+        getCatalogDisplayNames,
+      ),
+    [i18n.language, getCatalogDisplayNames],
+  );
+
   // Load shopping data function - reusable for both initial load and refresh.
   // Shows loading spinner only on the first load (no data yet). Subsequent
   // tab-switch refreshes read from cache silently to avoid visible flickering.
@@ -309,6 +354,8 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   // API call that getShoppingData() would trigger on every tab switch.
   const loadShoppingData = useCallback(async () => {
     if (isAuthLoading) return;
+
+    const translationRequestId = ++itemTranslationRequestIdRef.current;
 
     const shouldShowLoadingSpinner = !hasLoadedOnceRef.current;
     if (shouldShowLoadingSpinner) {
@@ -333,22 +380,19 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       hasLoadedOnceRef.current = true;
       const sortedLists = sortListsWithMainFirst(lists);
       setShoppingLists(sortedLists);
-      setAllItems(items);
       setSelectedList((current) => getSelectedList(sortedLists, current?.id));
 
-      void (async () => {
-        const translatedItems = await translateShoppingItemNames(
-          items,
-          i18n.language,
-          getCatalogDisplayNames,
+      const translatedItems = await translateItemsForDisplay(items);
+      if (translationRequestId === itemTranslationRequestIdRef.current) {
+        setAllItems((currentItems) =>
+          applyTranslatedItemNamesToCurrentItems(
+            currentItems,
+            translatedItems,
+            pendingDeletedItemIds,
+            getPendingLocalItemMutationIds(),
+          ),
         );
-
-        setAllItems((currentItems) => {
-          const currentIds = currentItems.map((item) => item.id).join(',');
-          const translatedIds = translatedItems.map((item) => item.id).join(',');
-          return currentIds === translatedIds ? translatedItems : currentItems;
-        });
-      })();
+      }
     } catch (error) {
       console.error('Failed to load shopping data:', error);
     } finally {
@@ -357,7 +401,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         setIsItemsLoading(false);
       }
     }
-  }, [shoppingRepository, shoppingService, isAuthLoading, sortListsWithMainFirst, i18n.language, getCatalogDisplayNames]);
+  }, [shoppingRepository, shoppingService, isAuthLoading, sortListsWithMainFirst, translateItemsForDisplay, pendingDeletedItemIds, getPendingLocalItemMutationIds]);
 
   // Load shopping data on mount
   useEffect(() => {
@@ -441,8 +485,22 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, [sortListsWithMainFirst]);
 
   const handleRealtimeItemChange = useCallback((items: ShoppingItem[]) => {
-    setAllItems(items);
-  }, []);
+    const translationRequestId = ++itemTranslationRequestIdRef.current;
+
+    void (async () => {
+      const translatedItems = await translateItemsForDisplay(items);
+      if (translationRequestId === itemTranslationRequestIdRef.current) {
+        setAllItems((currentItems) =>
+          applyTranslatedItemNamesToCurrentItems(
+            currentItems,
+            translatedItems,
+            pendingDeletedItemIds,
+            getPendingLocalItemMutationIds(),
+          ),
+        );
+      }
+    })();
+  }, [translateItemsForDisplay, pendingDeletedItemIds, getPendingLocalItemMutationIds]);
 
   // Use custom hook for realtime subscriptions
   const { error: realtimeError } = useShoppingRealtime({
@@ -539,10 +597,10 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       );
       return sortedLists;
     });
-    setAllItems((currentItems) =>
+    setAllItemsAfterLocalMutation((currentItems) =>
       currentItems.filter((item) => item.listId !== listId),
     );
-  }, [shoppingRepository, shoppingService, sortListsWithMainFirst]);
+  }, [shoppingRepository, shoppingService, sortListsWithMainFirst, setAllItemsAfterLocalMutation]);
 
   /**
    * Executes a service operation with optimistic UI updates and automatic revert on error.
@@ -581,7 +639,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     // Item is still being created on the server (optimistic create in flight).
     // Apply the change locally only; skip the update API call to avoid 404 errors.
     if (isLocalOnlyItem(targetItem, isSignedIn)) {
-      setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
+      setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) =>
         item.id === itemId || item.localId === itemId
           ? { ...item, quantity: nextQuantity }
           : item,
@@ -589,25 +647,30 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       return;
     }
 
-    await executeWithOptimisticUpdate(
-      () => updateItem(itemId, { quantity: nextQuantity }),
-      () => {
-        setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
-          item.id === itemId || item.localId === itemId
-            ? { ...item, quantity: nextQuantity }
-            : item,
-        ));
-      },
-      () => {
-        setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
-          item.id === itemId || item.localId === itemId
-            ? { ...item, quantity: previousQuantity }
-            : item,
-        ));
-      },
-      'Failed to update shopping item quantity:',
-    );
-  }, [allItems, executeWithOptimisticUpdate, updateItem]);
+    const clearPendingLocalMutation = trackPendingLocalItemMutation(targetItem);
+    try {
+      await executeWithOptimisticUpdate(
+        () => updateItem(itemId, { quantity: nextQuantity }),
+        () => {
+          setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) =>
+            item.id === itemId || item.localId === itemId
+              ? { ...item, quantity: nextQuantity }
+              : item,
+          ));
+        },
+        () => {
+          setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) =>
+            item.id === itemId || item.localId === itemId
+              ? { ...item, quantity: previousQuantity }
+              : item,
+          ));
+        },
+        'Failed to update shopping item quantity:',
+      );
+    } finally {
+      clearPendingLocalMutation();
+    }
+  }, [allItems, executeWithOptimisticUpdate, updateItem, setAllItemsAfterLocalMutation, trackPendingLocalItemMutation]);
 
   const handleDeleteItem = useCallback(async (itemId: string) => {
     const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
@@ -632,7 +695,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     // Item exists only locally (optimistic create not yet confirmed by server).
     // Remove it from UI and skip DELETE API call to avoid 404/API errors.
     if (isLocalOnlyItem(targetItem, isSignedIn)) {
-      setAllItems((prev: ShoppingItem[]) =>
+      setAllItemsAfterLocalMutation((prev: ShoppingItem[]) =>
         prev.filter(
           (item) => item.id !== targetItem.id && item.localId !== targetItem.localId,
         ),
@@ -646,12 +709,12 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       await executeWithOptimisticUpdate(
         () => deleteItem(deleteById),
         () => {
-          setAllItems((prev: ShoppingItem[]) =>
+          setAllItemsAfterLocalMutation((prev: ShoppingItem[]) =>
             prev.filter((item) => item.id !== targetItem.id && item.localId !== targetItem.localId),
           );
         },
         () => {
-          setAllItems((prev: ShoppingItem[]) => {
+          setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => {
             const alreadyExists = prev.some(
               (item) => item.id === targetItem.id || item.localId === targetItem.localId,
             );
@@ -665,7 +728,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     } finally {
       deletingItemIdsRef.current.delete(deleteById);
     }
-  }, [allItems, isSignedIn, executeWithOptimisticUpdate, deleteItem]);
+  }, [allItems, isSignedIn, executeWithOptimisticUpdate, deleteItem, setAllItemsAfterLocalMutation]);
 
   const handleToggleItemChecked = useCallback(async (itemId: string) => {
     const targetItem = allItems.find((item) => item.id === itemId || item.localId === itemId);
@@ -677,7 +740,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     // Item is still being created on the server (optimistic create in flight).
     // Apply the toggle locally only; skip the update API call to avoid 404 errors.
     if (isLocalOnlyItem(targetItem, isSignedIn)) {
-      setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
+      setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) =>
         item.id === itemId || item.localId === itemId
           ? { ...item, isChecked: nextChecked }
           : item,
@@ -685,25 +748,30 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       return;
     }
 
-    await executeWithOptimisticUpdate(
-      () => toggleItem(itemId),
-      () => {
-        setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
-          item.id === itemId || item.localId === itemId
-            ? { ...item, isChecked: nextChecked }
-            : item,
-        ));
-      },
-      () => {
-        setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
-          item.id === itemId || item.localId === itemId
-            ? { ...item, isChecked: previousChecked }
-            : item,
-        ));
-      },
-      'Failed to toggle shopping item:',
-    );
-  }, [allItems, executeWithOptimisticUpdate, toggleItem]);
+    const clearPendingLocalMutation = trackPendingLocalItemMutation(targetItem);
+    try {
+      await executeWithOptimisticUpdate(
+        () => toggleItem(itemId),
+        () => {
+          setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) =>
+            item.id === itemId || item.localId === itemId
+              ? { ...item, isChecked: nextChecked }
+              : item,
+          ));
+        },
+        () => {
+          setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) =>
+            item.id === itemId || item.localId === itemId
+              ? { ...item, isChecked: previousChecked }
+              : item,
+          ));
+        },
+        'Failed to toggle shopping item:',
+      );
+    } finally {
+      clearPendingLocalMutation();
+    }
+  }, [allItems, executeWithOptimisticUpdate, toggleItem, setAllItemsAfterLocalMutation, trackPendingLocalItemMutation]);
 
   const handleSelectGroceryItem = useCallback((groceryItem: GroceryItem) => {
     setSelectedGroceryItem(groceryItem);
@@ -725,16 +793,17 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     try {
       await quickAddItem(groceryItem, activeList, {
         allItems: allItemsRef.current,
-        setAllItems,
+        setAllItems: setAllItemsAfterLocalMutation,
         createItem,
         updateItem,
         executeWithOptimisticUpdate,
+        trackPendingLocalItemMutation,
         logError: (msg, err) => console.error(msg, err),
       });
     } finally {
       pendingQuickAddKeys.current.delete(addKey);
     }
-  }, [activeList, createItem, updateItem, executeWithOptimisticUpdate]);
+  }, [activeList, createItem, updateItem, executeWithOptimisticUpdate, setAllItemsAfterLocalMutation]);
 
   const handleAddToList = useCallback(async () => {
     if (!selectedGroceryItem) return;
@@ -762,33 +831,38 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
       // same value avoids reading stale `allItems` inside an async closure.
       const nextQuantity = baseQuantity + quantity;
 
-      await executeWithOptimisticUpdate(
-        () => updateItem(itemId, { quantity: nextQuantity }),
-        () => {
-          setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
-            if (item.id === itemId || item.localId === itemLocalId) {
-              return { ...item, quantity: nextQuantity };
-            }
-            return item;
-          }));
-        },
-        () => {
-          setAllItems((prev: ShoppingItem[]) => prev.map((item) => {
-            if (item.id === itemId || item.localId === itemLocalId) {
-              return { ...item, quantity: baseQuantity };
-            }
-            return item;
-          }));
-        },
-        'Failed to update shopping item quantity:',
-      );
+      const clearPendingLocalMutation = trackPendingLocalItemMutation(existingItem);
+      try {
+        await executeWithOptimisticUpdate(
+          () => updateItem(itemId, { quantity: nextQuantity }),
+          () => {
+            setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) => {
+              if (item.id === itemId || item.localId === itemLocalId) {
+                return { ...item, quantity: nextQuantity };
+              }
+              return item;
+            }));
+          },
+          () => {
+            setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) => {
+              if (item.id === itemId || item.localId === itemLocalId) {
+                return { ...item, quantity: baseQuantity };
+              }
+              return item;
+            }));
+          },
+          'Failed to update shopping item quantity:',
+        );
+      } finally {
+        clearPendingLocalMutation();
+      }
     } else {
       const tempItem = createShoppingItem(
         { ...selectedGroceryItem, name: itemName },
         activeList.id,
         quantity,
       );
-      setAllItems((prev: ShoppingItem[]) => [...prev, tempItem]);
+      setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => [...prev, tempItem]);
 
       try {
         const categoryToUse = selectedGroceryItem.id.startsWith('custom-')
@@ -807,11 +881,11 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
         const confirmedItem = preserveLocalizedName(newItem, tempItem.name);
 
-        setAllItems((prev: ShoppingItem[]) => prev.map((item) =>
+        setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.map((item) =>
           item.localId === tempItem.localId ? confirmedItem : item,
         ));
       } catch (error) {
-        setAllItems((prev: ShoppingItem[]) => prev.filter((item) => item.localId !== tempItem.localId));
+        setAllItemsAfterLocalMutation((prev: ShoppingItem[]) => prev.filter((item) => item.localId !== tempItem.localId));
         console.error('Failed to create shopping item:', error);
       }
     }
@@ -823,6 +897,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   }, [
     selectedGroceryItem, quantityInput, customItemName, allItems, activeList,
     effectiveItemCategory, executeWithOptimisticUpdate, updateItem, createItem,
+    setAllItemsAfterLocalMutation, trackPendingLocalItemMutation,
   ]);
 
   const handleCancelQuantityModal = useCallback(() => {
@@ -935,7 +1010,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
 
     setShoppingLists(nextLists);
     setSelectedList(nextSelected);
-    setAllItems((currentItems) => currentItems.filter((item) => item.listId !== listToDelete.id));
+    setAllItemsAfterLocalMutation((currentItems) => currentItems.filter((item) => item.listId !== listToDelete.id));
     setPendingDeleteList(null);
     setDeleteListError(null);
 
@@ -946,12 +1021,12 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         restored.splice(originalIndex, 0, listToDelete);
         return sortListsWithMainFirst(restored);
       });
-      setAllItems((currentItems) => [...currentItems, ...itemsToRestore]);
+      setAllItemsAfterLocalMutation((currentItems) => [...currentItems, ...itemsToRestore]);
       setSelectedList(previousSelected);
       setDeleteListError(t('screen.deleteListError'));
       setPendingDeleteList(listToDelete);
     });
-  }, [pendingDeleteList, allItems, shoppingLists, selectedList, shoppingService, sortListsWithMainFirst, t]);
+  }, [pendingDeleteList, allItems, shoppingLists, selectedList, shoppingService, sortListsWithMainFirst, t, setAllItemsAfterLocalMutation]);
 
   const handleCategoryClick = useCallback(async (categoryName: string) => {
     const requestId = categoryRequestIdRef.current + 1;
