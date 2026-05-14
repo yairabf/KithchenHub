@@ -7,7 +7,9 @@ import {
   Get,
   Query,
   BadRequestException,
+  Res,
 } from '@nestjs/common';
+import type { FastifyReply } from 'fastify';
 import { AuthService } from '../services/auth.service';
 import {
   GoogleAuthDto,
@@ -127,11 +129,17 @@ export class AuthController {
     description:
       'Verifies user email via GET request (for email links) and automatically logs them in.',
   })
-  async verifyEmailGet(@Query('token') token: string) {
+  async verifyEmailGet(
+    @Query('token') token: string,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
     if (!token) {
       throw new BadRequestException('Verification token is required');
     }
-    return this.authService.verifyEmail({ token });
+
+    await this.authService.verifyEmail({ token });
+
+    reply.type('text/html; charset=utf-8').send(this.buildEmailVerifiedHtml());
   }
 
   /**
@@ -216,5 +224,57 @@ export class AuthController {
   })
   async getCurrentUser(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.getCurrentUser(user.userId);
+  }
+
+  private buildEmailVerifiedHtml(): string {
+    return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Email was verified</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f6f7fb;
+      color: #1f2937;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(420px, calc(100% - 32px));
+      padding: 32px 24px;
+      border-radius: 24px;
+      background: #ffffff;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+      text-align: center;
+    }
+    .check {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: #ecfdf5;
+      color: #059669;
+      font-size: 36px;
+      line-height: 1;
+    }
+    h1 { margin: 0 0 12px; font-size: 28px; }
+    p { margin: 0; color: #6b7280; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="check" aria-hidden="true">✓</div>
+    <h1>Email was verified</h1>
+    <p>Your KitchenHub account is ready. You can close this page and return to the app.</p>
+  </main>
+</body>
+</html>`;
   }
 }
