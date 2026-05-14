@@ -71,6 +71,12 @@ export class AuthRepository {
     return result as unknown as User & { household: Household | null };
   }
 
+  async deleteUser(userId: string): Promise<void> {
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+  }
+
   async updateUser(
     userId: string,
     data: {

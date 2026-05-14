@@ -31,7 +31,11 @@ describe('validateEnv', () => {
     ],
     [
       'succeeds in production without DIRECT_URL',
-      buildBaseEnv({ NODE_ENV: 'production', RESEND_API_KEY: 'resend-key' }),
+      buildBaseEnv({
+        NODE_ENV: 'production',
+        RESEND_API_KEY: 'resend-key',
+        EMAIL_FROM: 'hello@kitchenhub.app',
+      }),
     ],
     [
       'succeeds in production with DIRECT_URL',
@@ -39,6 +43,7 @@ describe('validateEnv', () => {
         NODE_ENV: 'production',
         DIRECT_URL: 'postgresql://user:***@localhost:5432/db?schema=public',
         RESEND_API_KEY: 'resend-key',
+        EMAIL_FROM: 'hello@kitchenhub.app',
       }),
     ],
   ])('%s', (_label, env) => {
@@ -79,7 +84,27 @@ describe('validateEnv', () => {
     expect(() => validateEnv()).toThrow('Invalid environment variables');
   });
 
-  it('parses Resend email configuration with onboarding default sender', () => {
+  it('rejects production email verification when EMAIL_FROM is omitted', () => {
+    process.env = buildBaseEnv({
+      NODE_ENV: 'production',
+      RESEND_API_KEY: 'resend-key',
+      EMAIL_FROM: undefined,
+    }) as Record<string, string>;
+
+    expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
+
+  it('rejects the Resend test sender in production', () => {
+    process.env = buildBaseEnv({
+      NODE_ENV: 'production',
+      RESEND_API_KEY: 'resend-key',
+      EMAIL_FROM: 'onboarding@resend.dev',
+    }) as Record<string, string>;
+
+    expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
+
+  it('parses Resend email configuration with onboarding default sender in development', () => {
     process.env = buildBaseEnv({
       RESEND_API_KEY: 'resend-key',
       EMAIL_FROM: undefined,

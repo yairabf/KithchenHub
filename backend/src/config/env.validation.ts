@@ -123,13 +123,26 @@ const envSchema = z
     if (
       env.NODE_ENV === 'production' &&
       !env.AUTH_SKIP_EMAIL_VERIFICATION &&
-      !env.RESEND_API_KEY
+      (!env.RESEND_API_KEY || !process.env.RESEND_API_KEY)
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['RESEND_API_KEY'],
         message:
           'RESEND_API_KEY is required in production when email verification is enabled',
+      });
+    }
+
+    if (
+      env.NODE_ENV === 'production' &&
+      !env.AUTH_SKIP_EMAIL_VERIFICATION &&
+      (!process.env.EMAIL_FROM || env.EMAIL_FROM === 'onboarding@resend.dev')
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['EMAIL_FROM'],
+        message:
+          'EMAIL_FROM must be set to a verified sender domain in production',
       });
     }
 
