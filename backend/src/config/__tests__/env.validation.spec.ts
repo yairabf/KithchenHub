@@ -31,13 +31,14 @@ describe('validateEnv', () => {
     ],
     [
       'succeeds in production without DIRECT_URL',
-      buildBaseEnv({ NODE_ENV: 'production' }),
+      buildBaseEnv({ NODE_ENV: 'production', RESEND_API_KEY: 'resend-key' }),
     ],
     [
       'succeeds in production with DIRECT_URL',
       buildBaseEnv({
         NODE_ENV: 'production',
-        DIRECT_URL: 'postgresql://user:pass@localhost:5432/db?schema=public',
+        DIRECT_URL: 'postgresql://user:***@localhost:5432/db?schema=public',
+        RESEND_API_KEY: 'resend-key',
       }),
     ],
   ])('%s', (_label, env) => {
@@ -66,6 +67,28 @@ describe('validateEnv', () => {
     }) as Record<string, string>;
 
     expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
+
+  it('rejects production email verification when RESEND_API_KEY is missing', () => {
+    process.env = buildBaseEnv({
+      NODE_ENV: 'production',
+      AUTH_SKIP_EMAIL_VERIFICATION: 'false',
+      RESEND_API_KEY: undefined,
+    }) as Record<string, string>;
+
+    expect(() => validateEnv()).toThrow('Invalid environment variables');
+  });
+
+  it('parses Resend email configuration with onboarding default sender', () => {
+    process.env = buildBaseEnv({
+      RESEND_API_KEY: 'resend-key',
+      EMAIL_FROM: undefined,
+    }) as Record<string, string>;
+
+    const env = validateEnv();
+
+    expect(env.RESEND_API_KEY).toBe('resend-key');
+    expect(env.EMAIL_FROM).toBe('onboarding@resend.dev');
   });
 
   it('accepts Pexels API key for recipe image search', () => {

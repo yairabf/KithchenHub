@@ -53,11 +53,12 @@ export interface AppConfig {
   };
   /** Base URL for catalog icons (e.g. http://localhost:9000/catalog-icons). When set, relative image_url are rewritten. */
   catalogIconsBaseUrl?: string;
-  email?: {
+  email: {
     smtpHost?: string;
     smtpPort?: number;
     smtpUser?: string;
     smtpPass?: string;
+    resendApiKey?: string;
     from: string;
     verificationTokenExpiryHours: number;
   };
@@ -142,18 +143,15 @@ export const loadConfiguration = (): AppConfig => {
         }
       : undefined,
     catalogIconsBaseUrl: readCatalogIconsBaseUrlFromEnv(),
-    email:
-      env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS
-        ? {
-            smtpHost: env.SMTP_HOST,
-            smtpPort: env.SMTP_PORT,
-            smtpUser: env.SMTP_USER,
-            smtpPass: env.SMTP_PASS,
-            from: env.EMAIL_FROM,
-            verificationTokenExpiryHours:
-              env.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS,
-          }
-        : undefined,
+    email: {
+      smtpHost: env.SMTP_HOST,
+      smtpPort: env.SMTP_PORT,
+      smtpUser: env.SMTP_USER,
+      smtpPass: env.SMTP_PASS,
+      resendApiKey: env.RESEND_API_KEY,
+      from: env.EMAIL_FROM,
+      verificationTokenExpiryHours: env.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS,
+    },
   };
 
   return config;
