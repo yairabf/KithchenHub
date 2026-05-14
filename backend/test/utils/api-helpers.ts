@@ -112,15 +112,14 @@ export class ApiTestHelpers {
   }
 
   /**
-   * Verifies user email with token
+   * Verifies user email with token via the API endpoint.
    */
   async verifyEmail(token: string): Promise<VerifyEmailResponse> {
     const response = await this.unauthenticatedRequest(
-      'get',
+      'post',
       '/auth/verify-email',
-    )
-      .query({ token })
-      .expect(200);
+      { token },
+    ).expect(200);
 
     return response.body as VerifyEmailResponse;
   }
