@@ -13,7 +13,8 @@ interface ApiOptions extends RequestInit {
 }
 
 type ApiErrorResponse = {
-  message?: string;
+  message?: string | string[];
+  error?: string | string[];
 };
 
 export class NetworkError extends Error {
@@ -274,8 +275,20 @@ class ApiClient {
       return undefined;
     }
 
-    const message = (data as ApiErrorResponse).message;
-    return typeof message === "string" ? message : undefined;
+    const body = data as ApiErrorResponse;
+    return this.firstString(body.message) ?? this.firstString(body.error);
+  }
+
+  private firstString(value: string | string[] | undefined): string | undefined {
+    if (typeof value === "string") {
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      return value.find((item): item is string => typeof item === "string");
+    }
+
+    return undefined;
   }
 
   /**
