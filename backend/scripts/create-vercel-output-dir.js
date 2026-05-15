@@ -28,21 +28,33 @@ const sourceDir = fs.existsSync(STATIC_LEGAL_DIR)
   ? STATIC_LEGAL_DIR
   : LEGACY_STATIC_WEB_DIR;
 
+function copyStaticLegalAsset(src, dest) {
+  const stat = fs.statSync(src);
+  if (stat.isDirectory()) {
+    fs.mkdirSync(dest, { recursive: true });
+    for (const child of fs.readdirSync(src)) {
+      if (child.startsWith('.')) {
+        continue;
+      }
+      copyStaticLegalAsset(path.join(src, child), path.join(dest, child));
+    }
+    return;
+  }
+
+  if (!src.endsWith('.html') && !src.match(/\.(png|jpe?g|webp|svg)$/i)) {
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
+}
+
 if (fs.existsSync(sourceDir)) {
   for (const name of fs.readdirSync(sourceDir)) {
     if (name.startsWith('.')) {
       continue;
     }
-    const src = path.join(sourceDir, name);
-    const stat = fs.statSync(src);
-    if (stat.isDirectory()) {
-      continue;
-    }
-    if (!name.endsWith('.html')) {
-      continue;
-    }
-    const dest = path.join(OUTPUT_DIR, name);
-    fs.copyFileSync(src, dest);
+    copyStaticLegalAsset(path.join(sourceDir, name), path.join(OUTPUT_DIR, name));
   }
   console.log(`[vercel-build] Copied ${path.relative(REPO_ROOT, sourceDir)} → public`);
 } else {
