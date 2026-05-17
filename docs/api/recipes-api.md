@@ -3,6 +3,8 @@
 ## Overview
 This document describes the ingredient unit fields supported by the Recipes API. The API accepts canonical unit fields and still supports legacy `quantity` and `unit` for backward compatibility.
 
+Base path: `/api/v1`. Recipe endpoints are protected by `JwtAuthGuard` and `HouseholdGuard` in `backend/src/modules/recipes/controllers/recipes.controller.ts`.
+
 ## Recipe Image Caching
 - Image access is public via unguessable, versioned URLs to maximize caching.
 - Image URLs are versioned via storage keys (e.g., `image_v{n}.webp`) so clients can cache aggressively.
@@ -21,7 +23,7 @@ Legacy fields (deprecated):
 - `quantity?: number`
 - `unit?: string`
 
-## POST /recipes
+## POST /api/v1/recipes
 
 ### Request Body (ingredient example)
 ```json
@@ -52,7 +54,7 @@ Legacy fields (deprecated):
 - If `quantityUnitType` is set, `quantityUnit` must match the unit type.
 - Legacy `quantity` and `unit` are accepted but deprecated.
 
-## GET /recipes/:id
+## GET /api/v1/recipes/:id
 
 ### Response (ingredient example)
 ```json
@@ -75,3 +77,11 @@ Legacy fields (deprecated):
 ## Migration
 A one-off script exists to backfill canonical fields from legacy data:
 - `backend/src/infrastructure/database/scripts/migrate-recipe-units.ts`
+
+## Source files
+
+- `backend/src/modules/recipes/controllers/recipes.controller.ts`
+- `backend/src/modules/recipes/dtos/create-recipe.dto.ts`
+- `backend/src/modules/recipes/dtos/update-recipe.dto.ts`
+- `backend/src/modules/recipes/validators/unit-type-validator.ts`
+- `backend/src/modules/recipes/utils/unit-converter.ts`

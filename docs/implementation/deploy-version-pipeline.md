@@ -22,11 +22,11 @@ Notes:
 - On Vercel, `gitSha` should be present via Vercel system environment variables.
 - `appVersion` is optional. If you want it to match `version.json` on Vercel, set a Vercel project env var `APP_VERSION` during releases.
 
-## Compare `main` vs deployed (GitHub Actions)
+## Compare `main` vs deployed
 
-### Deploy status workflow
+### Deploy status workflow status
 
-Workflow: `.github/workflows/deploy-status.yml`
+The older planned workflow `.github/workflows/deploy-status.yml` is **not present in the current repo**. Treat the comparison below as the intended/manual comparison logic unless that workflow is reintroduced.
 
 It compares:
 
@@ -39,10 +39,12 @@ It compares:
 - `VERCEL_API_BASE_URL`: base URL of your Vercel production backend (example: `https://api.example.com`)
 - `EXPO_TOKEN`: Expo personal access token with access to the `@yairabc/kitchen_hub` project
 
-#### How to run
+#### How to run manually
 
-- Manually: Actions → “Deploy Status (main vs deployed)” → provide `vercel_api_base_url`
-- Scheduled: runs daily (uses `VERCEL_API_BASE_URL` secret)
+- Compare the current `main` SHA/version from git and `version.json`.
+- Query the backend: `GET <VERCEL_API_BASE_URL>/api/v1/deploy-info`.
+- Compare with latest mobile store/Fastlane build metadata as needed.
+- If a GitHub status workflow is reintroduced, document its exact file path and secrets here.
 
 ## Deploy latest version
 
@@ -59,14 +61,15 @@ Project → Settings → Git → Production Branch / Root Directory.
 
 ### Mobile (EAS)
 
-Workflow: `.github/workflows/mobile-release.yml`
+Workflow: `.github/workflows/manual-deploy.yml` delegates store delivery to `.github/workflows/mobile-native-store-release.yml` when one of the store-delivery inputs is selected.
 
 - Builds `production` profile for iOS, Android, or both (manual dispatch).
 - Optional submission is supported, but requires EAS Submit credentials and submit profiles to be configured.
 
-#### Required secret
+#### Required secrets
 
-- `EXPO_TOKEN`
+- Mobile store delivery uses Fastlane and the secrets referenced by `.github/workflows/manual-deploy.yml` and `.github/workflows/mobile-native-store-release.yml`.
+- Backend deploy-hook redeploys require `VERCEL_DEPLOY_HOOK_URL`.
 
 #### Store submission (optional)
 
@@ -100,7 +103,7 @@ You cannot downgrade an installed store binary. Rollback is “fix-forward”:
 
 If the issue is JS-only and runtime-compatible, you can republish a prior update to the `main` branch/channel.
 
-### Legacy escape hatch (GCP / Docker)
+### Legacy GCP / Docker path
 
-If you still use the Docker deployment path, `.github/workflows/deploy-production.yml` supports `workflow_dispatch` with an `image_tag` (for example `main-<sha>` or `main-latest`) to roll back by redeploying a prior image.
+Older GCP/Docker rollback docs were archived under `docs/archive/deployment-docs-2026-05-16/`. The current `.github/workflows/` directory does not include `deploy-production.yml`, so do not document that workflow as an active rollback path unless it is reintroduced in source.
 

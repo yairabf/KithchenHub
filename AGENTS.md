@@ -159,8 +159,13 @@ npm run verify:eas
 - No `.github/copilot-instructions.md` was found in this repo.
 
 ## 7) Project-Local Context Files
-- Read `docs/project/PROJECT_OVERVIEW.md` at the start of a fresh session for durable project overview and stable product constraints.
+- This repo lives under the shared Hermes projects workspace: `/home/claw/.hermes/hermes-agent/projects/KithchenHub`.
+- All Hermes profiles should treat project-local docs as the shared source of truth; profile-private memory is not canonical for project facts.
+- Read `docs/project/DOCUMENTATION_MAP.md` for the canonical documentation map and source-backed reference paths.
+- Read `docs/project/PROJECT_OVERVIEW.md` at the start of a fresh session for durable product overview and stable product constraints.
 - Read `docs/project/RECENT_CHANGES.md` for the most relevant recent workstreams and documentation pointers.
+- Read `docs/project/ARCHITECTURE.md` for the high-level technical architecture map.
+- For store/release/privacy/compliance work, read `docs/project/STORE_COMPLIANCE.md` and `docs/project/RELEASE_STATUS.md`.
 - Read `.hermes/START_HERE.md` when resuming after context loss or when handing the repo to a different LLM.
 - Read `.hermes/SESSION_LOG.md` for a rolling record of major recent LLM milestones.
 - Use `.hermes/templates/PLAN_TEMPLATE.md` as the starting point for new dated files under `.hermes/plans/`.

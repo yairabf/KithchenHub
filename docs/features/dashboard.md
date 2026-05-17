@@ -2,6 +2,8 @@
 
 **Feature area:** `mobile/src/features/dashboard/`
 
+**Current source map**: see [`mobile-ui-map.md`](./mobile-ui-map.md). Current dashboard source includes `DashboardScreen`, `QuickAddCard`, `FrequentlyAddedSection`, `ImportantChoresCard`, `QuickStats` components, `useDashboardChores`, and frequent-item utility logic.
+
 ## Purpose
 
 The dashboard is a **lightweight utility surface** for KitchenHub.
@@ -42,7 +44,8 @@ Right now, the dashboard is supposed to:
 ### Current key elements
 - **Quick Add** to the main shopping list
 - **Frequently Added** section
-  - currently includes placeholder behavior until backend-driven per-user support is ready
+  - signed-in users load frequent items through the shopping service and cache the last non-empty result with `frequentItemsCache`
+  - guest/mock mode uses the shopping service's local data path
 - **Important Chores** section
 
 Among these, the highest-value parts are:
@@ -133,9 +136,11 @@ It should feel like a natural shortcut, not decorative content.
 Important Chores are included so users can instantly see whether something important must be done today.
 This should stay simple and obvious.
 
-### Keep placeholders when backend support is incomplete
-If per-user Frequently Added data is not fully available yet, a placeholder state is acceptable and useful.
-The area should still communicate the intended future behavior clearly.
+### Frequently Added should use the current service/cache path
+For signed-in users, `DashboardScreen` reads cached frequent items first, then requests `shoppingService.getFrequentItems(DASHBOARD_FREQUENT_ITEMS_LIMIT)` and writes non-empty results back through `writeCachedFrequentItems()`.
+For guest/mock data, it reads frequent items from the local shopping service data path.
+
+The UI still has an empty state, but the current source is no longer just a placeholder-only surface.
 
 ---
 
@@ -160,18 +165,31 @@ can significantly reduce its value.
 
 ---
 
-## Upcoming changes / active dashboard work
+## Current source-backed behavior
 
-### Per-user Frequently Added backend support
-This is the main upcoming dashboard-related change.
+### Shopping data and quick add
 
-Goal:
-- add backend support so each user can see their own Frequently Added items
-- replace or enrich placeholder behavior with real per-user data
-- keep the add flow easy and fast once that support is available
+- `DashboardScreen` creates a shopping service with `createShoppingService(userMode)`.
+- Signed-in mode wraps the service with `CacheAwareShoppingRepository`; guest/mock mode uses the service directly.
+- Quick Add targets the main shopping list. If no main list is available, the screen shows a toast and opens the shopping modal.
+- Rapid duplicate taps are guarded by `pendingQuickAddKeys` so repeated taps do not race past the deduplication check.
+- Optimistic updates are reverted on failure through `executeWithOptimisticUpdate()`.
 
-Important implication:
-- do not treat generic or fake data as a substitute for true per-user frequency behavior unless explicitly intended as a temporary placeholder
+### Frequently Added
+
+- Limit: `DASHBOARD_FREQUENT_ITEMS_LIMIT = 8`.
+- Signed-in path:
+  - read cached frequent items with `readCachedFrequentItems()`
+  - request service frequent items and main list in parallel
+  - write non-empty service results through `writeCachedFrequentItems()`
+- UI component: `mobile/src/features/dashboard/components/FrequentlyAddedSection/FrequentlyAddedSection.tsx`.
+- Tile behavior: pressing a tile vibrates briefly, runs a scale/overlay feedback animation, then calls the same quick-add handler as search selection.
+
+### Important Chores
+
+- Hook: `mobile/src/features/dashboard/hooks/useDashboardChores.ts`.
+- Component: `mobile/src/features/dashboard/components/ImportantChoresCard/ImportantChoresCard.tsx`.
+- Supports toggling chores and navigation to the Chores tab.
 
 ---
 

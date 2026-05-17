@@ -1,0 +1,903 @@
+# KitchenHub Codebase Map Draft
+
+Generated: 2026-05-16T21:42:36
+
+Purpose: working source map for documentation cleanup. No code changes.
+
+## Mobile feature map
+### auth (21 files)
+Subareas: components, contexts, hooks, screens, services, utils
+- components/GoogleSignInButton/GoogleSignInButton.tsx
+- components/GoogleSignInButton/index.ts
+- components/GoogleSignInButton/styles.ts
+- components/GoogleSignInButton/types.ts
+- components/GuestDataImportModal/GuestDataImportModal.tsx
+- components/GuestDataImportModal/__tests__/GuestDataImportModal.test.tsx
+- components/GuestDataImportModal/index.ts
+- contexts/OnboardingContext.tsx
+- hooks/useOAuthSignIn.ts
+- index.ts
+- screens/EnterInviteCodeScreen.tsx
+- screens/HouseholdNameScreen.tsx
+- screens/LoginScreen.tsx
+- screens/RegisterScreen.tsx
+- screens/__tests__/LoginScreen.test.tsx
+- services/authApi.ts
+- services/sessionManager.test.ts
+- services/sessionManager.ts
+- services/tokenStorage.ts
+- utils/__tests__/userVerification.test.ts
+- utils/userVerification.ts
+### chores (41 files)
+Subareas: components, screens, services, utils
+- components/ChoreCard/ChoreCard.spec.tsx
+- components/ChoreCard/ChoreCard.tsx
+- components/ChoreCard/__tests__/ChoreCard.layout.test.tsx
+- components/ChoreCard/__tests__/ChoreCard.test.tsx
+- components/ChoreCard/index.ts
+- components/ChoreCard/styles.ts
+- components/ChoreCard/types.ts
+- components/ChoreDetailsModal/ChoreDetailsModal.tsx
+- components/ChoreDetailsModal/__tests__/ChoreDetailsModal.test.tsx
+- components/ChoreDetailsModal/index.ts
+- components/ChoreDetailsModal/styles.ts
+- components/ChoreDetailsModal/types.ts
+- components/ChoresProgressCard/ChoresProgressCard.tsx
+- components/ChoresProgressCard/__tests__/ChoresProgressCard.test.tsx
+- components/ChoresProgressCard/index.ts
+- components/ChoresProgressCard/styles.ts
+- components/ChoresProgressCard/types.ts
+- components/ChoresQuickActionModal/ChoresQuickActionModal.tsx
+- components/ChoresQuickActionModal/__tests__/ChoresQuickActionModal.test.tsx
+- components/ChoresQuickActionModal/index.ts
+- components/ChoresQuickActionModal/styles.ts
+- components/ChoresQuickActionModal/types.ts
+- components/ChoresSection/ChoresSection.tsx
+- components/ChoresSection/__tests__/ChoresSection.test.tsx
+- components/ChoresSection/index.ts
+- components/ChoresSection/styles.ts
+- components/ChoresSection/types.ts
+- components/ProgressRing/ProgressRing.tsx
+- components/ProgressRing/index.ts
+- components/ProgressRing/styles.ts
+- components/ProgressRing/types.ts
+- constants.ts
+- index.ts
+- screens/ChoresScreen.tsx
+- screens/__tests__/ChoresScreen.deletion.test.tsx
+- screens/styles.ts
+- screens/types.ts
+- services/choresService.spec.ts
+- services/choresService.ts
+- utils/__tests__/choreFactory.test.ts
+- utils/choreFactory.ts
+### dashboard (31 files)
+Subareas: components, hooks, screens, utils
+- components/FrequentlyAddedSection/FrequentlyAddedSection.tsx
+- components/FrequentlyAddedSection/__tests__/FrequentlyAddedSection.test.tsx
+- components/FrequentlyAddedSection/index.ts
+- components/FrequentlyAddedSection/styles.ts
+- components/FrequentlyAddedSection/types.ts
+- components/ImportantChoresCard/ImportantChoresCard.tsx
+- components/ImportantChoresCard/index.ts
+- components/ImportantChoresCard/styles.ts
+- components/ImportantChoresCard/types.ts
+- components/QuickAddCard/QuickAddCard.tsx
+- components/QuickAddCard/__tests__/QuickAddCard.test.tsx
+- components/QuickAddCard/index.ts
+- components/QuickAddCard/styles.ts
+- components/QuickAddCard/types.ts
+- components/QuickStats/QuickStatCard.tsx
+- components/QuickStats/QuickStatsRow.tsx
+- components/QuickStats/index.ts
+- components/QuickStats/styles.ts
+- components/QuickStats/types.ts
+- components/TextBlock/TextBlock.tsx
+- components/TextBlock/TitleSubtitleWrapper.tsx
+- components/TextBlock/index.ts
+- components/TextBlock/styles.ts
+- hooks/useDashboardChores.ts
+- index.ts
+- screens/DashboardScreen.tsx
+- screens/__tests__/DashboardScreen.test.tsx
+- screens/styles.ts
+- screens/types.ts
+- utils/__tests__/dashboardFrequentItems.test.ts
+- utils/dashboardFrequentItems.ts
+### households (2 files)
+Subareas: services
+- services/householdApi.ts
+- services/inviteApi.ts
+### onboarding (1 files)
+Subareas: screens
+- screens/HouseholdOnboardingScreen.tsx
+### recipes (68 files)
+Subareas: components, constants, hooks, screens, services, utils
+- components/AddRecipeModal/AddRecipeModal.tsx
+- components/AddRecipeModal/index.ts
+- components/AddRecipeModal/styles.ts
+- components/AddRecipeModal/types.ts
+- components/IngredientCard/IngredientCard.tsx
+- components/IngredientCard/index.ts
+- components/IngredientCard/styles.ts
+- components/IngredientCard/types.ts
+- components/InstructionStep/InstructionStep.tsx
+- components/InstructionStep/index.ts
+- components/InstructionStep/styles.ts
+- components/InstructionStep/types.ts
+- components/RecipeCard/RecipeCard.tsx
+- components/RecipeCard/index.ts
+- components/RecipeCard/styles.ts
+- components/RecipeCard/types.ts
+- components/RecipeContentWrapper/RecipeContentWrapper.tsx
+- components/RecipeContentWrapper/index.ts
+- components/RecipeContentWrapper/styles.ts
+- components/RecipeContentWrapper/types.ts
+- components/RecipeHeader/RecipeHeader.tsx
+- components/RecipeHeader/index.ts
+- components/RecipeHeader/styles.ts
+- components/RecipeHeader/types.ts
+- components/RecipeImageSearchModal/RecipeImageSearchModal.tsx
+- components/RecipeImageSearchModal/__tests__/RecipeImageSearchModal.test.tsx
+- components/RecipeImageSearchModal/index.ts
+- components/RecipeImageSearchModal/styles.ts
+- components/RecipeImageSearchModal/types.ts
+- components/RecipeIngredients/RecipeIngredients.tsx
+- components/RecipeIngredients/__tests__/RecipeIngredients.test.tsx
+- components/RecipeIngredients/index.ts
+- components/RecipeIngredients/styles.ts
+- components/RecipeIngredients/types.ts
+- components/RecipeSteps/RecipeSteps.tsx
+- components/RecipeSteps/index.ts
+- components/RecipeSteps/styles.ts
+- components/RecipeSteps/types.ts
+- components/UnitPicker/UnitPicker.tsx
+- components/UnitPicker/UnitPicker.types.ts
+- components/UnitPicker/__tests__/UnitPicker.test.tsx
+- components/UnitPicker/index.ts
+- components/UnitPicker/styles.ts
+- constants/index.ts
+- constants/recipe-categories.constants.ts
+- constants/units.constants.ts
+- hooks/useRecipes.spec.ts
+- hooks/useRecipes.ts
+- index.ts
+- screens/RecipeDetailScreen.constants.ts
+- screens/RecipeDetailScreen.styles.ts
+- screens/RecipeDetailScreen.tsx
+- screens/RecipeDetailScreen.types.ts
+- screens/RecipeDetailScreen.utils.spec.ts
+- screens/RecipeDetailScreen.utils.ts
+- screens/RecipesScreen.tsx
+- screens/__tests__/RecipeDetailScreen.test.tsx
+- screens/__tests__/RecipeDetailScreen.utils.test.ts
+- screens/__tests__/RecipesScreen.test.tsx
+- screens/styles.ts
+- screens/types.ts
+- services/recipeImageSearchService.spec.ts
+- services/recipeImageSearchService.ts
+- services/recipeService.spec.ts
+- services/recipeService.ts
+- utils/__tests__/recipeFactory.test.ts
+- utils/recipeFactory.ts
+- utils/unitConversion.ts
+### settings (32 files)
+Subareas: components, screens, services, utils
+- components/ImportDataModal.spec.tsx
+- components/ImportDataModal.tsx
+- components/InviteMemberModal.test.tsx
+- components/InviteMemberModal.tsx
+- components/LanguageSelectorModal/LanguageSelectorModal.test.tsx
+- components/LanguageSelectorModal/LanguageSelectorModal.tsx
+- components/LanguageSelectorModal/index.ts
+- components/LanguageSelectorModal/types.ts
+- components/LegalConsentGate.tsx
+- components/LegalConsentModal/LegalConsentModal.tsx
+- components/LegalConsentModal/index.ts
+- components/LegalConsentModal/styles.ts
+- components/ManageHouseholdModal/ManageHouseholdModal.test.tsx
+- components/ManageHouseholdModal/ManageHouseholdModal.tsx
+- components/ManageHouseholdModal/index.ts
+- components/ManageHouseholdModal/styles.ts
+- components/ManageHouseholdModal/types.ts
+- components/PremiumDemoSection.tsx
+- components/PremiumSection/PremiumSection.test.tsx
+- components/PremiumSection/PremiumSection.tsx
+- components/PremiumSection/index.ts
+- components/__tests__/LegalConsentGate.test.tsx
+- components/__tests__/LegalConsentModal.test.tsx
+- components/__tests__/PremiumDemoSection.test.tsx
+- index.ts
+- screens/SettingsScreen.tsx
+- screens/__tests__/SettingsScreen.test.tsx
+- services/__tests__/accountService.spec.ts
+- services/accountService.ts
+- services/premiumDemoApi.ts
+- utils/__tests__/errorMessages.spec.ts
+- utils/errorMessages.ts
+### shopping (88 files)
+Subareas: components, constants, hooks, screens, services, types, utils
+- components/AllItemsModal/AllItemsModal.tsx
+- components/AllItemsModal/__tests__/AllItemsModal.test.tsx
+- components/AllItemsModal/index.ts
+- components/AllItemsModal/styles.ts
+- components/AllItemsModal/types.ts
+- components/CategoriesGrid/CategoriesGrid.tsx
+- components/CategoriesGrid/CategoriesGridItem.tsx
+- components/CategoriesGrid/__tests__/CategoriesGrid.test.tsx
+- components/CategoriesGrid/__tests__/CategoriesGridItem.test.tsx
+- components/CategoriesGrid/index.ts
+- components/CategoriesGrid/styles.ts
+- components/CategoriesGrid/types.ts
+- components/CategoryModal/CategoryModal.tsx
+- components/CategoryModal/index.ts
+- components/CategoryModal/styles.ts
+- components/CategoryModal/types.ts
+- components/CategoryPicker/CategoryPicker.tsx
+- components/CategoryPicker/__tests__/CategoryPicker.test.tsx
+- components/CategoryPicker/index.ts
+- components/CategoryPicker/styles.ts
+- components/CreateCustomItemModal/CreateCustomItemModal.tsx
+- components/CreateCustomItemModal/index.ts
+- components/CreateCustomItemModal/styles.ts
+- components/CreateCustomItemModal/types.ts
+- components/CreateListModal/CreateListModal.tsx
+- components/CreateListModal/index.ts
+- components/CreateListModal/styles.ts
+- components/CreateListModal/types.ts
+- components/FrequentlyAddedGrid/FrequentlyAddedGrid.tsx
+- components/FrequentlyAddedGrid/FrequentlyAddedGridItem.tsx
+- components/FrequentlyAddedGrid/index.ts
+- components/FrequentlyAddedGrid/styles.ts
+- components/FrequentlyAddedGrid/types.ts
+- components/GrocerySearchBar/GrocerySearchBar.tsx
+- components/GrocerySearchBar/__tests__/GrocerySearchBar.test.tsx
+- components/GrocerySearchBar/__tests__/searchSortingUtils.test.ts
+- components/GrocerySearchBar/index.ts
+- components/GrocerySearchBar/searchSortingUtils.ts
+- components/GrocerySearchBar/styles.ts
+- components/GrocerySearchBar/types.ts
+- components/IngredientConflictModal/IngredientConflictModal.tsx
+- components/IngredientConflictModal/index.ts
+- components/ShoppingListPanel/ShoppingListPanel.tsx
+- components/ShoppingListPanel/__tests__/ShoppingListPanel.collapsible.test.tsx
+- components/ShoppingListPanel/__tests__/ShoppingListPanel.test.tsx
+- components/ShoppingListPanel/index.ts
+- components/ShoppingListPanel/styles.ts
+- components/ShoppingListPanel/types.ts
+- components/ShoppingQuickActionModal/ShoppingQuickActionModal.tsx
+- components/ShoppingQuickActionModal/index.ts
+- components/ShoppingQuickActionModal/styles.ts
+- components/ShoppingQuickActionModal/types.ts
+- constants/categories.ts
+- hooks/__tests__/useShoppingRealtime.test.ts
+- hooks/index.ts
+- hooks/useShoppingRealtime.ts
+- index.ts
+- screens/ShoppingListsScreen.tsx
+- screens/__tests__/ShoppingListsScreen.categoryMigration.test.tsx
+- screens/__tests__/ShoppingListsScreen.deletion.test.tsx
+- screens/__tests__/ShoppingListsScreen.languageRefetch.test.ts
+- screens/__tests__/ShoppingListsScreen.snappiness.test.tsx
+- screens/__tests__/ShoppingListsScreen.test.tsx
+- screens/__tests__/utils/mockShoppingRepository.ts
+- screens/styles.ts
+- services/LocalShoppingService.spec.ts
+- services/LocalShoppingService.ts
+- services/RemoteShoppingService.ts
+- services/__tests__/RemoteShoppingService.catalogIdentity.test.ts
+- services/__tests__/RemoteShoppingService.mapItemToInputDto.test.ts
+- services/__tests__/RemoteShoppingService.namePreservation.test.ts
+- services/shoppingService.spec.ts
+- services/shoppingService.ts
+- types/groceryItem.ts
+- utils/__tests__/realtimeCacheIntegration.test.ts
+- utils/__tests__/realtimeRLSValidation.test.ts
+- utils/__tests__/selectionUtils.test.ts
+- utils/__tests__/shoppingFactory.test.ts
+- utils/catalogTranslation.spec.ts
+- utils/catalogTranslation.ts
+- ... 8 more
+### subscription (6 files)
+Subareas: screens, services
+- screens/PremiumPaywallScreen.tsx
+- screens/__tests__/PremiumPaywallScreen.test.tsx
+- services/__tests__/purchaseService.test.ts
+- services/purchaseService.ts
+- services/revenueCatNativeAdapter.ts
+- services/subscriptionApi.ts
+
+## Mobile common map
+Subareas: __tests__, components, config, constants, guards, hooks, repositories, services, storage, types, utils, validation
+- __tests__/utils/i18nMock.ts
+- components/BottomPillNav/BottomPillNav.tsx
+- components/BottomPillNav/index.ts
+- components/BottomPillNav/styles.ts
+- components/BottomPillNav/types.ts
+- components/Button/Button.tsx
+- components/Button/index.ts
+- components/Button/styles.ts
+- components/Button/types.ts
+- components/CardSkeleton/CardSkeleton.tsx
+- components/CardSkeleton/index.ts
+- components/CardSkeleton/styles.ts
+- components/CardSkeleton/types.ts
+- components/CenteredModal/CenteredModal.tsx
+- components/CenteredModal/index.ts
+- components/CenteredModal/styles.ts
+- components/CenteredModal/types.ts
+- components/ConfirmationModal/ConfirmationModal.tsx
+- components/ConfirmationModal/index.ts
+- components/ConfirmationModal/styles.ts
+- components/ConfirmationModal/types.ts
+- components/DateTimePicker/DatePickerWeb.tsx
+- components/DateTimePicker/DateTimePicker.tsx
+- components/DateTimePicker/DateTimePickerButton.tsx
+- components/DateTimePicker/DateTimePickerModal.tsx
+- components/DateTimePicker/README.md
+- components/DateTimePicker/TimePickerWeb.tsx
+- components/DateTimePicker/index.ts
+- components/DateTimePicker/types.ts
+- components/EmptyState/EmptyState.tsx
+- components/EmptyState/__tests__/EmptyState.test.tsx
+- components/EmptyState/index.ts
+- components/EmptyState/styles.ts
+- components/EmptyState/types.ts
+- components/EntityFormModal/EntityFormModal.tsx
+- components/EntityFormModal/index.ts
+- components/EntityFormModal/types.ts
+- components/FloatingActionButton/FloatingActionButton.tsx
+- components/FloatingActionButton/index.ts
+- components/FloatingActionButton/styles.ts
+- components/FloatingActionButton/types.ts
+- components/FormPresentationModal/FormPresentationModal.tsx
+- components/FormPresentationModal/index.ts
+- components/FormPresentationModal/styles.ts
+- components/FormPresentationModal/types.ts
+- components/GroceryCard/GroceryCard.tsx
+- components/GroceryCard/GroceryCardContent.tsx
+- components/GroceryCard/IngredientInfo.tsx
+- components/GroceryCard/QuantityControls.tsx
+- components/GroceryCard/constants.ts
+- components/GroceryCard/index.ts
+- components/GroceryCard/styles.ts
+- components/GroceryCard/types.ts
+- components/HeaderActions/HeaderActions.tsx
+- components/HeaderActions/index.ts
+- components/HeaderActions/styles.ts
+- components/HeaderActions/types.ts
+- components/ListItemCardWrapper/ListItemCardWrapper.tsx
+- components/ListItemCardWrapper/index.ts
+- components/ListItemCardWrapper/styles.ts
+- components/ListItemCardWrapper/types.ts
+- components/ListItemSkeleton/ListItemSkeleton.tsx
+- components/ListItemSkeleton/index.ts
+- components/ListItemSkeleton/styles.ts
+- components/ListItemSkeleton/types.ts
+- components/NavButton/NavButton.tsx
+- components/NavButton/index.ts
+- components/NavButton/styles.ts
+- components/NavButton/types.ts
+- components/OfflineBanner.tsx
+- components/OfflinePill/OfflinePill.tsx
+- components/OfflinePill/index.ts
+- components/OfflinePill/styles.ts
+- components/OfflinePill/types.ts
+- components/SafeImage/SafeImage.tsx
+- components/SafeImage/index.ts
+- components/SafeImage/styles.ts
+- components/SafeImage/types.ts
+- components/ScreenHeader/ScreenHeader.tsx
+- components/ScreenHeader/__tests__/ScreenHeader.test.tsx
+- components/ScreenHeader/index.ts
+- components/ScreenHeader/styles.ts
+- components/ScreenHeader/types.ts
+- components/ShareModal/ShareModal.tsx
+- components/ShareModal/index.ts
+- components/ShareModal/styles.ts
+- components/ShareModal/types.ts
+- components/SkeletonLoader/SkeletonLoader.tsx
+- components/SkeletonLoader/index.ts
+- components/SkeletonLoader/types.ts
+- components/SwipeableWrapper/SwipeableWrapper.tsx
+- components/SwipeableWrapper/index.ts
+- components/SwipeableWrapper/styles.ts
+- components/SwipeableWrapper/types.ts
+- components/SyncStatusIndicator/SyncStatusIndicator.tsx
+- components/SyncStatusIndicator/index.ts
+- components/SyncStatusIndicator/styles.ts
+- components/SyncStatusIndicator/types.ts
+- components/TextBlock/TextBlock.tsx
+- components/TextBlock/TitleSubtitleWrapper.tsx
+- components/TextBlock/index.ts
+- components/TextBlock/styles.ts
+- components/Toast/Toast.tsx
+- components/Toast/index.ts
+- components/Toast/styles.ts
+- components/Toast/types.ts
+- components/__tests__/ListItemCardWrapper.test.tsx
+- components/__tests__/OfflineBanner.test.tsx
+- components/__tests__/OfflinePill.test.tsx
+- components/__tests__/SwipeableWrapper.test.tsx
+- components/__tests__/SyncStatusIndicator.test.tsx
+- config/cacheConfig.ts
+- constants/legal.ts
+- guards/__tests__/guestNoSyncGuardrails.test.ts
+- guards/guestNoSyncGuardrails.ts
+- hooks/__tests__/useCachedEntities.test.tsx
+- hooks/__tests__/useCatalog.test.tsx
+- hooks/__tests__/useClickOutside.test.ts
+- hooks/__tests__/useKeyboardHeight.test.ts
+- hooks/__tests__/useSyncStatus.test.ts
+- hooks/index.ts
+- hooks/useCachedEntities.ts
+- hooks/useCatalog.ts
+- hooks/useClickOutside.ts
+- hooks/useDebouncedRemoteSearch.ts
+- hooks/useKeyboardHeight.ts
+- hooks/useRecipeImage.ts
+- hooks/useReducedMotion.ts
+- hooks/useResponsive.ts
+- hooks/useSyncQueue.ts
+- hooks/useSyncStatus.ts
+- index.ts
+- repositories/__tests__/cacheAwareShoppingRepository.listMapping.test.ts
+- repositories/__tests__/cacheAwareShoppingRepository.realtime.test.ts
+- repositories/__tests__/cacheAwareShoppingRepository.updateListItemCount.test.ts
+- repositories/baseCacheAwareRepository.ts
+- repositories/cacheAwareChoreRepository.ts
+- repositories/cacheAwareRecipeRepository.ts
+- repositories/cacheAwareRepository.ts
+- repositories/cacheAwareShoppingRepository.ts
+- services/__tests__/catalogService.spec.ts
+- services/catalogService.ts
+- services/recipeImageCache.ts
+- storage/__tests__/dataModeStorage.test.ts
+- storage/dataModeStorage.ts
+- types/__tests__/dataModes.test.ts
+- types/__tests__/entityMetadata.test.ts
+- types/catalog.ts
+- types/dataModes.ts
+- types/entityMetadata.ts
+- types/grocery.ts
+- types/index.ts
+- utils/__tests__/cacheEvents.test.ts
+- utils/__tests__/cacheMetadata.test.ts
+- utils/__tests__/cacheStorage.test.ts
+- utils/__tests__/catalogUtils.spec.ts
+- utils/__tests__/choreDisplayUtils.test.ts
+- utils/__tests__/conflictResolution.test.ts
+- utils/__tests__/guestStorage.integration.spec.ts
+- utils/__tests__/imageUtils.spec.ts
+- utils/__tests__/inputSanitization.test.ts
+- utils/__tests__/logger.test.ts
+- utils/__tests__/networkTest.spec.ts
+- utils/__tests__/rtlIcons.test.ts
+- utils/__tests__/setUtils.test.ts
+- utils/__tests__/syncApplication.integration.test.ts
+- utils/__tests__/syncApplication.test.ts
+- utils/__tests__/syncQueueProcessor.test.ts
+- utils/__tests__/syncQueueStorage.test.ts
+- utils/__tests__/syncStatusUtils.test.ts
+- utils/__tests__/timestamps.integration.test.ts
+- utils/__tests__/timestamps.test.ts
+- utils/apiErrorGuards.ts
+- utils/avatarUtils.ts
+- utils/backgroundRefresh.ts
+- utils/cacheEvents.ts
+- utils/cacheMetadata.ts
+- utils/cacheStorage.README.md
+- utils/cacheStorage.constants.ts
+- utils/cacheStorage.ts
+- utils/cacheStorage.types.ts
+- utils/cacheStorage/README.md
+- utils/catalogUtils.ts
+- utils/choreDisplayUtils.ts
+- utils/conflictResolution.ts
+- utils/dateTimeUtils.ts
+- utils/devMode.ts
+- utils/entityOperations.ts
+- utils/frequentItemsCache.ts
+- utils/guestStorage.spec.ts
+- utils/guestStorage.ts
+- utils/guestStorageHelpers.spec.ts
+- utils/guestStorageHelpers.ts
+- utils/imageConstraints.ts
+- utils/imageResize.spec.ts
+- utils/imageResize.ts
+- utils/imageUpload.ts
+- utils/imageUtils.ts
+- utils/index.ts
+- utils/inputSanitization.ts
+- ... 36 more
+
+## Backend module map
+### audit (8 files)
+Subareas: constants, repositories, services
+- audit.module.ts
+- constants/audit-actions.ts
+- constants/audit-defaults.ts
+- constants/entity-types.ts
+- repositories/__tests__/audit.repository.spec.ts
+- repositories/audit.repository.ts
+- services/__tests__/audit.service.spec.ts
+- services/audit.service.ts
+### auth (32 files)
+Subareas: constants, controllers, dtos, entities, repositories, services, types
+- auth.module.ts
+- constants/sync-entity-types.ts
+- controllers/.gitkeep
+- controllers/auth.controller.ts
+- controllers/oauth.controller.ts
+- dtos/.gitkeep
+- dtos/auth-response.dto.ts
+- dtos/google-auth.dto.ts
+- dtos/guest-auth.dto.ts
+- dtos/index.ts
+- dtos/login.dto.ts
+- dtos/refresh-token.dto.ts
+- dtos/register.dto.ts
+- dtos/resend-verification.dto.ts
+- dtos/sync-data.dto.ts
+- dtos/user-creation-household.dto.ts
+- dtos/verify-email.dto.ts
+- entities/.gitkeep
+- repositories/.gitkeep
+- repositories/auth.repository.ts
+- services/.gitkeep
+- services/__tests__/auth-cleanup.service.spec.ts
+- services/__tests__/auth.service.register.spec.ts
+- services/__tests__/auth.service.spec.ts
+- services/auth-cleanup.service.ts
+- services/auth.service.ts
+- services/email.service.ts
+- services/oauth-state.service.ts
+- types/index.ts
+- types/jwt-payload.interface.ts
+- types/sync-conflict.interface.ts
+- types/user-with-household.interface.ts
+### chores (16 files)
+Subareas: controllers, dtos, entities, repositories, services
+- chores.module.ts
+- controllers/.gitkeep
+- controllers/chores.controller.ts
+- dtos/.gitkeep
+- dtos/chore-list-response.dto.ts
+- dtos/chore-stats-response.dto.ts
+- dtos/create-chore.dto.ts
+- dtos/index.ts
+- dtos/toggle-completion.dto.ts
+- dtos/update-chore.dto.ts
+- entities/.gitkeep
+- repositories/.gitkeep
+- repositories/chores.repository.ts
+- services/.gitkeep
+- services/chores.service.spec.ts
+- services/chores.service.ts
+### dashboard (10 files)
+Subareas: controllers, dtos, entities, repositories, services
+- controllers/.gitkeep
+- controllers/dashboard.controller.ts
+- dashboard.module.ts
+- dtos/.gitkeep
+- dtos/dashboard-summary-response.dto.ts
+- dtos/index.ts
+- entities/.gitkeep
+- repositories/.gitkeep
+- services/.gitkeep
+- services/dashboard.service.ts
+### health (12 files)
+Subareas: controllers, services
+- controllers/client-links.controller.ts
+- controllers/deploy-info.controller.spec.ts
+- controllers/deploy-info.controller.ts
+- controllers/health.controller.spec.ts
+- controllers/health.controller.ts
+- controllers/version.controller.spec.ts
+- controllers/version.controller.ts
+- health.module.ts
+- services/client-links.service.spec.ts
+- services/client-links.service.ts
+- services/health.service.spec.ts
+- services/health.service.ts
+### households (18 files)
+Subareas: controllers, dtos, entities, repositories, services
+- controllers/.gitkeep
+- controllers/households.controller.ts
+- controllers/invite.controller.ts
+- dtos/.gitkeep
+- dtos/create-household.dto.ts
+- dtos/household-response.dto.ts
+- dtos/index.ts
+- dtos/invite-member.dto.ts
+- dtos/join-household.dto.ts
+- dtos/update-household.dto.spec.ts
+- dtos/update-household.dto.ts
+- entities/.gitkeep
+- households.module.ts
+- repositories/.gitkeep
+- repositories/households.repository.ts
+- services/.gitkeep
+- services/households.service.spec.ts
+- services/households.service.ts
+### import (9 files)
+Subareas: constants, controllers, dto, repositories, services
+- constants/import.constants.ts
+- controllers/import.controller.spec.ts
+- controllers/import.controller.ts
+- dto/import.dto.ts
+- import.module.ts
+- repositories/import.repository.spec.ts
+- repositories/import.repository.ts
+- services/import.service.spec.ts
+- services/import.service.ts
+### premium-demo (4 files)
+Subareas: controllers, services
+- controllers/premium-demo.controller.spec.ts
+- controllers/premium-demo.controller.ts
+- premium-demo.module.ts
+- services/premium-demo.service.ts
+### recipes (35 files)
+Subareas: constants, controllers, dtos, entities, guards, images, repositories, services, utils, validators
+- constants/__tests__/units.constants.spec.ts
+- constants/index.ts
+- constants/recipe-categories.constants.ts
+- constants/units.constants.ts
+- controllers/.gitkeep
+- controllers/__tests__/recipe-images.controller.spec.ts
+- controllers/__tests__/recipes.controller.spec.ts
+- controllers/recipe-images.controller.ts
+- controllers/recipes.controller.ts
+- dtos/.gitkeep
+- dtos/__tests__/create-recipe.dto.spec.ts
+- dtos/cook-recipe.dto.ts
+- dtos/create-recipe.dto.ts
+- dtos/index.ts
+- dtos/recipe-detail-response.dto.ts
+- dtos/recipe-list-response.dto.ts
+- dtos/update-recipe.dto.ts
+- entities/.gitkeep
+- guards/recipe-image-rate-limit.guard.ts
+- images/image-processing.service.ts
+- recipes.module.ts
+- repositories/.gitkeep
+- repositories/recipes.repository.ts
+- services/.gitkeep
+- services/recipe-image-rate-limit.service.spec.ts
+- services/recipe-image-rate-limit.service.ts
+- services/recipe-image-search.service.spec.ts
+- services/recipe-image-search.service.ts
+- services/recipe-images.service.spec.ts
+- services/recipe-images.service.ts
+- services/recipes.service.spec.ts
+- services/recipes.service.ts
+- utils/__tests__/unit-converter.spec.ts
+- utils/unit-converter.ts
+- validators/unit-type-validator.ts
+### settings (6 files)
+Subareas: controllers, dtos, entities, repositories, services
+- controllers/.gitkeep
+- dtos/.gitkeep
+- entities/.gitkeep
+- repositories/.gitkeep
+- services/.gitkeep
+- settings.module.ts
+### shopping (22 files)
+Subareas: constants, controllers, dtos, entities, repositories, services
+- constants/defaults.ts
+- controllers/.gitkeep
+- controllers/index.ts
+- controllers/shopping.controller.spec.ts
+- controllers/shopping.controller.ts
+- dtos/.gitkeep
+- dtos/add-items.dto.ts
+- dtos/catalog-display-name.dto.ts
+- dtos/create-list.dto.ts
+- dtos/frequent-items.dto.ts
+- dtos/grocery-search-response.dto.ts
+- dtos/index.ts
+- dtos/shopping-list-response.dto.ts
+- dtos/update-item.dto.ts
+- dtos/update-list.dto.ts
+- entities/.gitkeep
+- repositories/.gitkeep
+- repositories/shopping.repository.ts
+- services/.gitkeep
+- services/shopping.service.spec.ts
+- services/shopping.service.ts
+- shopping.module.ts
+### storage (2 files)
+- storage.module.ts
+- storage.service.ts
+### subscriptions (24 files)
+Subareas: controllers, dtos, providers, repositories, services
+- controllers/subscription-reconciliation.controller.spec.ts
+- controllers/subscription-reconciliation.controller.ts
+- controllers/subscription-support-overrides.controller.spec.ts
+- controllers/subscription-support-overrides.controller.ts
+- controllers/subscription-webhooks.controller.spec.ts
+- controllers/subscription-webhooks.controller.ts
+- dtos/set-premium-override.dto.ts
+- providers/billing-provider-registry.service.spec.ts
+- providers/billing-provider-registry.service.ts
+- providers/billing-provider.interface.ts
+- providers/billing-provider.types.ts
+- providers/revenuecat-billing-provider.service.spec.ts
+- providers/revenuecat-billing-provider.service.ts
+- repositories/subscriptions.repository.spec.ts
+- repositories/subscriptions.repository.ts
+- services/subscription-reconciliation.service.spec.ts
+- services/subscription-reconciliation.service.ts
+- services/subscription-support-overrides.service.spec.ts
+- services/subscription-support-overrides.service.ts
+- services/subscription-webhooks.service.spec.ts
+- services/subscription-webhooks.service.ts
+- services/subscriptions.service.spec.ts
+- services/subscriptions.service.ts
+- subscriptions.module.ts
+### supabase (3 files)
+- supabase.module.ts
+- supabase.service.spec.ts
+- supabase.service.ts
+### users (14 files)
+Subareas: controllers, dtos, entities, repositories, services
+- controllers/.gitkeep
+- controllers/users.controller.ts
+- dtos/.gitkeep
+- dtos/delete-account.dto.ts
+- dtos/index.ts
+- dtos/user-export.dto.ts
+- entities/.gitkeep
+- repositories/.gitkeep
+- repositories/__tests__/users.repository.spec.ts
+- repositories/users.repository.ts
+- services/.gitkeep
+- services/__tests__/users.service.spec.ts
+- services/users.service.ts
+- users.module.ts
+
+## Backend controllers/routes discovered
+### backend/src/modules/auth/controllers/auth.controller.ts
+- Controller: { path: 'auth', version: '1' }
+- Post: 'google'
+- Post: 'register'
+- Post: 'login'
+- Get: 'verify-email'
+- Post: 'verify-email'
+- Post: 'resend-verification'
+- Post: 'sync'
+- Post: 'refresh'
+- Get: 'me'
+### backend/src/modules/auth/controllers/oauth.controller.ts
+- Controller: { path: 'auth', version: '1' }
+- Get: 'google/start'
+- Get: 'google/callback'
+### backend/src/modules/chores/controllers/chores.controller.ts
+- Controller: { path: 'chores', version: '1' }
+- Get:
+- Post:
+- Patch: ':id'
+- Patch: ':id/status'
+- Get: 'stats'
+- Delete: ':id'
+- Post: ':id/restore'
+### backend/src/modules/dashboard/controllers/dashboard.controller.ts
+- Controller: { path: 'dashboard', version: '1' }
+- Get: 'summary'
+### backend/src/modules/health/controllers/client-links.controller.ts
+- Controller: { path: 'client-links', version: '1' }
+- Get:
+### backend/src/modules/health/controllers/deploy-info.controller.ts
+- Controller: { path: 'deploy-info', version: '1' }
+- Get:
+### backend/src/modules/health/controllers/health.controller.ts
+- Controller: { path: 'health', version: '1' }
+- Get:
+- Get: 'live'
+- Get: 'ready'
+- Get: 'detailed'
+### backend/src/modules/health/controllers/version.controller.ts
+- Controller: 'version'
+- Get:
+### backend/src/modules/households/controllers/households.controller.ts
+- Controller: { path: 'household', version: '1' }
+- Post:
+- Get:
+- Put:
+- Post: 'invite'
+- Delete: 'members/:id'
+- Post: 'join'
+### backend/src/modules/households/controllers/invite.controller.ts
+- Controller: { path: 'invite', version: '1' }
+- Get: 'validate'
+### backend/src/modules/import/controllers/import.controller.ts
+- Controller: { path: 'import', version: '1' }
+- Post:
+### backend/src/modules/premium-demo/controllers/premium-demo.controller.ts
+- Controller: { path: 'premium/demo', version: '1' }
+- Get:
+### backend/src/modules/recipes/controllers/recipe-images.controller.ts
+- Controller: { path: 'recipes', version: '1' }
+- Get: 'images/search'
+- Post: ':id/image'
+### backend/src/modules/recipes/controllers/recipes.controller.ts
+- Controller: { path: 'recipes', version: '1' }
+- Get:
+- Post:
+- Get: ':id'
+- Put: ':id'
+- Post: ':id/cook'
+- Delete: ':id'
+### backend/src/modules/shopping/controllers/shopping.controller.ts
+- Controller: { path: 'groceries', version: '1' }
+- Get: 'search'
+- Get: 'by-category'
+- Get: 'categories'
+- Get: 'names'
+- Get:
+- Get: 'main'
+- Get: 'aggregate'
+- Post:
+- Get: ':id'
+- Patch: ':id'
+- Delete: ':id'
+- Post: ':id/items'
+- Get: 'custom'
+- Get: 'frequent'
+- Patch: ':id'
+- Delete: ':id'
+### backend/src/modules/subscriptions/controllers/subscription-reconciliation.controller.ts
+- Controller: { path: 'subscriptions/reconcile', version: '1' }
+- Post: ':provider'
+### backend/src/modules/subscriptions/controllers/subscription-support-overrides.controller.ts
+- Controller: { path: 'subscriptions/support', version: '1' }
+- Post: 'households/:householdId/premium-override'
+- Delete: 'households/:householdId/premium-override'
+### backend/src/modules/subscriptions/controllers/subscription-webhooks.controller.ts
+- Controller: { path: 'subscriptions/webhooks', version: '1' }
+- Post: ':provider'
+### backend/src/modules/users/controllers/users.controller.ts
+- Controller: { path: 'users', version: '1' }
+- Delete: 'me'
+- Get: 'me/export'
+
+## Prisma models
+
+## Docs tree under docs/
+- docs/DESIGN_SYSTEM.md
+- docs/PLAN-household-invite 2.md
+- docs/PLAN-household-invite.md
+- docs/PLAN-recipe-edit.md
+- docs/PLAN-recipe-image-pipeline.md
+- docs/api/recipes-api.md
+- docs/architecture/DATA_MODES_SPEC.md
+- docs/architecture/GUEST_STORAGE_DECISION.md
+- docs/code-review-catalog-i18n-scripts.md
+- docs/code-review-image-upload-and-minio.md
+- docs/code-review-latest.md
+- docs/compliance/app-store-privacy.md
+- docs/compliance/google-play-data-safety.md
+- docs/compliance/google-play-submission-checklist.md
+- docs/compliance/ios-app-store-submission-checklist-rc-2026-02-21.md
+- docs/compliance/ios-app-store-submission-checklist.md
+- docs/deployment/vercel-monorepo.md
+- docs/design/GUEST_MODE_SPECS.md
+- docs/features/auth.md
+- docs/features/chores.md
+- docs/features/dashboard.md
+- docs/features/recipes.md
+- docs/features/settings.md
+- docs/features/shopping.md
+- docs/implementation/code-review-add-recipe-modal-inputs.md
+- docs/implementation/code-review-recipe-unit-system.md
+- docs/implementation/deploy-version-pipeline.md
+- docs/implementation/issue-000-recipe-unit-system.md
+- docs/implementation/premium-foundation-e2e-runbook.md
+- docs/implementation/sync-queue-endless-sync-root-cause.md
+- docs/next_plans/api-development-plan.md
+- docs/next_plans/backend-architecture.md
+- docs/project/ARCHITECTURE.md
+- docs/project/PROJECT_OVERVIEW.md
+- docs/project/RECENT_CHANGES.md
+- docs/project/RELEASE_STATUS.md
+- docs/project/STORE_COMPLIANCE.md
