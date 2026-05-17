@@ -17,9 +17,10 @@ The app helps families organize shopping lists with a comprehensive 111-item gro
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/dashboard/dashboard-main.png" alt="Dashboard" width="250"/></td>
-    <td><img src="docs/screenshots/shopping/shopping-main.png" alt="Shopping Lists" width="250"/></td>
-    <td><img src="docs/screenshots/recipes/recipes-main.png" alt="Recipes" width="250"/></td>
+    <td><img src="mobile/store-screenshots/app-store-6.5-display/live-test-user/01-shopping-list-filled.png" alt="Shopping list on iPhone" width="200"/></td>
+    <td><img src="mobile/store-screenshots/app-store-6.5-display/live-test-user/03-recipe-detail-filled.png" alt="Recipe detail on iPhone" width="200"/></td>
+    <td><img src="mobile/store-screenshots/app-store-ipad-13-display/live-test-user/02-recipes-filled.png" alt="Recipes on iPad portrait" width="260"/></td>
+    <td><img src="mobile/store-screenshots/app-store-ipad-13-landscape-display/live-test-user/04-chores-filled.png" alt="Chores on iPad landscape" width="320"/></td>
   </tr>
 </table>
 
