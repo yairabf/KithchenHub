@@ -9,6 +9,7 @@ const mockRestorePurchases = jest.fn();
 const mockReconcileCustomerState = jest.fn();
 const mockRefreshUser = jest.fn();
 const mockIsAvailable = jest.fn(() => true);
+const mockOpenLegalUrl = jest.fn();
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -43,6 +44,11 @@ jest.mock('react-i18next', () => ({
         'premium.priceMonthly': '$4.99 / month',
         'premium.storeBillingNote':
           'Subscription applies to your household premium status. Cancel anytime in your store settings.',
+        'premium.subscriptionDisclosure':
+          'Auto-renews unless canceled at least 24 hours before the end of the current period.',
+        'premium.legalDisclosurePrefix': 'By subscribing, you agree to our terms and privacy policy:',
+        'premium.privacyPolicyLink': 'Privacy Policy',
+        'premium.termsOfUseLink': 'Terms of Use (EULA)',
         'premium.purchaseComingSoon': 'Purchase and restore actions are coming soon.',
         'premium.startTrialCta': 'Start household trial',
         'premium.restorePurchasesCta': 'Restore purchases',
@@ -79,6 +85,17 @@ jest.mock('../../../../contexts/AuthContext', () => ({
   useAuth: () => ({
     refreshUser: (...args: unknown[]) => mockRefreshUser(...args),
   }),
+}));
+
+jest.mock('../../../../contexts/LegalLinksContext', () => ({
+  useLegalLinks: () => ({
+    privacyPolicyUrl: 'https://kithchensync1.vercel.app/privacy',
+    termsOfServiceUrl: 'https://kithchensync1.vercel.app/terms',
+  }),
+}));
+
+jest.mock('../../../../common/utils/legalLinks', () => ({
+  openLegalUrl: (...args: unknown[]) => mockOpenLegalUrl(...args),
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -145,8 +162,21 @@ describe('PremiumPaywallScreen', () => {
     expect(
       getByText('Subscription applies to your household premium status. Cancel anytime in your store settings.'),
     ).toBeTruthy();
+    expect(getByText('Auto-renews unless canceled at least 24 hours before the end of the current period.')).toBeTruthy();
+    expect(getByText('Privacy Policy')).toBeTruthy();
+    expect(getByText('Terms of Use (EULA)')).toBeTruthy();
     expect(getByText('Start household trial')).toBeTruthy();
     expect(getByText('Restore purchases')).toBeTruthy();
+  });
+
+  it('opens legal links from the subscription disclosure', () => {
+    const { getByText } = render(<PremiumPaywallScreen />);
+
+    fireEvent.press(getByText('Privacy Policy'));
+    fireEvent.press(getByText('Terms of Use (EULA)'));
+
+    expect(mockOpenLegalUrl).toHaveBeenNthCalledWith(1, 'https://kithchensync1.vercel.app/privacy');
+    expect(mockOpenLegalUrl).toHaveBeenNthCalledWith(2, 'https://kithchensync1.vercel.app/terms');
   });
 
   it('starts trial purchase flow when pressing Start household trial', async () => {
