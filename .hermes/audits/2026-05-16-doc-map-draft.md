@@ -1,0 +1,728 @@
+# KitchenHub Documentation Map Draft
+
+Generated: 2026-05-16T21:41:54
+
+Purpose: working inventory for upcoming documentation cleanup decisions. No delete/keep decisions applied yet.
+
+## Canonical project docs currently identified
+- AGENTS.md: exists
+- .hermes/START_HERE.md: exists
+- .hermes/PROJECT_CONTEXT.md: exists
+- .hermes/SESSION_LOG.md: exists
+- docs/project/PROJECT_OVERVIEW.md: exists
+- docs/project/RECENT_CHANGES.md: exists
+- docs/project/ARCHITECTURE.md: exists
+- docs/project/STORE_COMPLIANCE.md: exists
+- docs/project/RELEASE_STATUS.md: exists
+
+## Markdown/HTML docs by path
+- .agents/skills/vercel-composition-patterns/AGENTS.md — # React Composition Patterns (946 lines, 22627 bytes)
+- .agents/skills/vercel-composition-patterns/SKILL.md — # React Composition Patterns (89 lines, 2886 bytes)
+- .agents/skills/vercel-composition-patterns/rules/architecture-avoid-boolean-props.md — ## Avoid Boolean Prop Proliferation (100 lines, 2267 bytes)
+- .agents/skills/vercel-composition-patterns/rules/architecture-compound-components.md — ## Use Compound Components (112 lines, 2600 bytes)
+- .agents/skills/vercel-composition-patterns/rules/patterns-children-over-render-props.md — ## Prefer Children Over Render Props (87 lines, 1886 bytes)
+- .agents/skills/vercel-composition-patterns/rules/patterns-explicit-variants.md — ## Create Explicit Component Variants (100 lines, 2395 bytes)
+- .agents/skills/vercel-composition-patterns/rules/react19-no-forwardref.md — ## React 19 API Changes (42 lines, 953 bytes)
+- .agents/skills/vercel-composition-patterns/rules/state-context-interface.md — ## Define Generic Context Interfaces for Dependency Injection (191 lines, 4974 bytes)
+- .agents/skills/vercel-composition-patterns/rules/state-decouple-implementation.md — ## Decouple State Management from UI (113 lines, 2699 bytes)
+- .agents/skills/vercel-composition-patterns/rules/state-lift-state.md — ## Lift State into Provider Components (125 lines, 3224 bytes)
+- .agents/skills/vercel-react-best-practices/AGENTS.md — # React Best Practices (2934 lines, 81716 bytes)
+- .agents/skills/vercel-react-best-practices/SKILL.md — # Vercel React Best Practices (136 lines, 6165 bytes)
+- .agents/skills/vercel-react-best-practices/rules/advanced-event-handler-refs.md — ## Store Event Handlers in Refs (55 lines, 1483 bytes)
+- .agents/skills/vercel-react-best-practices/rules/advanced-init-once.md — ## Initialize App Once, Not Per Mount (42 lines, 958 bytes)
+- .agents/skills/vercel-react-best-practices/rules/advanced-use-latest.md — ## useEffectEvent for Stable Callback Refs (39 lines, 1072 bytes)
+- .agents/skills/vercel-react-best-practices/rules/async-api-routes.md — ## Prevent Waterfall Chains in API Routes (38 lines, 1125 bytes)
+- .agents/skills/vercel-react-best-practices/rules/async-defer-await.md — ## Defer Await Until Needed (80 lines, 2028 bytes)
+- .agents/skills/vercel-react-best-practices/rules/async-dependencies.md — ## Dependency-Based Parallelization (51 lines, 1293 bytes)
+- .agents/skills/vercel-react-best-practices/rules/async-parallel.md — ## Promise.all() for Independent Operations (28 lines, 654 bytes)
+- .agents/skills/vercel-react-best-practices/rules/async-suspense-boundaries.md — ## Strategic Suspense Boundaries (99 lines, 2510 bytes)
+- .agents/skills/vercel-react-best-practices/rules/bundle-barrel-imports.md — ## Avoid Barrel File Imports (59 lines, 2370 bytes)
+- .agents/skills/vercel-react-best-practices/rules/bundle-conditional.md — ## Conditional Module Loading (31 lines, 949 bytes)
+- .agents/skills/vercel-react-best-practices/rules/bundle-defer-third-party.md — ## Defer Non-Critical Third-Party Libraries (49 lines, 920 bytes)
+- .agents/skills/vercel-react-best-practices/rules/bundle-dynamic-imports.md — ## Dynamic Imports for Heavy Components (35 lines, 791 bytes)
+- .agents/skills/vercel-react-best-practices/rules/bundle-preload.md — ## Preload Based on User Intent (50 lines, 1149 bytes)
+- .agents/skills/vercel-react-best-practices/rules/client-event-listeners.md — ## Deduplicate Global Event Listeners (74 lines, 1969 bytes)
+- .agents/skills/vercel-react-best-practices/rules/client-localstorage-schema.md — ## Version and Minimize localStorage Data (71 lines, 1950 bytes)
+- .agents/skills/vercel-react-best-practices/rules/client-passive-event-listeners.md — ## Use Passive Event Listeners for Scrolling Performance (48 lines, 1644 bytes)
+- .agents/skills/vercel-react-best-practices/rules/client-swr-dedup.md — ## Use SWR for Automatic Deduplication (56 lines, 1159 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-batch-dom-css.md — ## Avoid Layout Thrashing (107 lines, 3266 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-cache-function-results.md — ## Cache Repeated Function Calls (80 lines, 1949 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-cache-property-access.md — ## Cache Property Access in Loops (28 lines, 532 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-cache-storage.md — ## Cache Storage API Calls (70 lines, 1651 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-combine-iterations.md — ## Combine Multiple Array Iterations (32 lines, 753 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-early-exit.md — ## Early Return from Functions (50 lines, 1133 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-hoist-regexp.md — ## Hoist RegExp Creation (45 lines, 1028 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-index-maps.md — ## Build Index Maps for Repeated Lookups (37 lines, 837 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-length-check-first.md — ## Early Length Check for Array Comparisons (49 lines, 1747 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-min-max-loop.md — ## Use Loop for Min/Max Instead of Sort (82 lines, 2290 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-set-map-lookups.md — ## Use Set/Map for O(1) Lookups (24 lines, 532 bytes)
+- .agents/skills/vercel-react-best-practices/rules/js-tosorted-immutable.md — ## Use toSorted() Instead of sort() for Immutability (57 lines, 1782 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-activity.md — ## Use Activity Component for Show/Hide (26 lines, 564 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-animate-svg-wrapper.md — ## Animate SVG Wrapper Instead of SVG Element (47 lines, 1185 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-conditional-render.md — ## Use Explicit Conditional Rendering (40 lines, 980 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-content-visibility.md — ## CSS content-visibility for Long Lists (38 lines, 815 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-hoist-jsx.md — ## Hoist Static JSX Elements (46 lines, 1039 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-hydration-no-flicker.md — ## Prevent Hydration Mismatch Without Flickering (82 lines, 2308 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-hydration-suppress-warning.md — ## Suppress Expected Hydration Mismatches (30 lines, 872 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-svg-precision.md — ## Optimize SVG Precision (28 lines, 588 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rendering-usetransition-loading.md — ## Use useTransition Over Manual Loading States (75 lines, 2074 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-defer-reads.md — ## Defer State Reads to Usage Point (39 lines, 973 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-dependencies.md — ## Narrow Effect Dependencies (45 lines, 824 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-derived-state-no-effect.md — ## Calculate Derived State During Rendering (40 lines, 1201 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-derived-state.md — ## Subscribe to Derived State (29 lines, 728 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-functional-setstate.md — ## Use Functional setState Updates (74 lines, 2968 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-lazy-state-init.md — ## Use Lazy State Initialization (58 lines, 2016 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-memo-with-default-value.md — ## Extract Default Non-primitive Parameter Value from Memoized Component to Constant (38 lines, 1173 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-memo.md — ## Extract to Memoized Components (44 lines, 1148 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-move-effect-to-event.md — ## Put Interaction Logic in Event Handlers (45 lines, 1268 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-simple-expression-in-memo.md — ## Do not wrap a simple expression with a primitive result type in useMemo (35 lines, 1018 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-transitions.md — ## Use Transitions for Non-Urgent Updates (40 lines, 1055 bytes)
+- .agents/skills/vercel-react-best-practices/rules/rerender-use-ref-transient-values.md — ## Use useRef for Transient Values (73 lines, 1742 bytes)
+- .agents/skills/vercel-react-best-practices/rules/server-after-nonblocking.md — ## Use after() for Non-Blocking Operations (73 lines, 2012 bytes)
+- .agents/skills/vercel-react-best-practices/rules/server-auth-actions.md — ## Authenticate Server Actions Like API Routes (96 lines, 2649 bytes)
+- .agents/skills/vercel-react-best-practices/rules/server-cache-lru.md — ## Cross-Request LRU Caching (41 lines, 1353 bytes)
+- .agents/skills/vercel-react-best-practices/rules/server-cache-react.md — ## Per-Request Deduplication with React.cache() (76 lines, 2228 bytes)
+- .agents/skills/vercel-react-best-practices/rules/server-dedup-props.md — ## Avoid Duplicate Serialization in RSC Props (65 lines, 2060 bytes)
+- .agents/skills/vercel-react-best-practices/rules/server-parallel-fetching.md — ## Parallel Data Fetching with Component Composition (83 lines, 1554 bytes)
+- .agents/skills/vercel-react-best-practices/rules/server-serialization.md — ## Minimize Serialization at RSC Boundaries (38 lines, 996 bytes)
+- .agents/skills/vercel-react-native-skills/AGENTS.md — # React Native Skills (2897 lines, 73771 bytes)
+- .agents/skills/vercel-react-native-skills/SKILL.md — # React Native Skills (121 lines, 4439 bytes)
+- .agents/skills/vercel-react-native-skills/rules/animation-derived-value.md — ## Prefer useDerivedValue Over useAnimatedReaction (53 lines, 1373 bytes)
+- .agents/skills/vercel-react-native-skills/rules/animation-gesture-detector-press.md — ## Use GestureDetector for Animated Press States (95 lines, 2559 bytes)
+- .agents/skills/vercel-react-native-skills/rules/animation-gpu-properties.md — ## Animate Transform and Opacity Instead of Layout Properties (65 lines, 2059 bytes)
+- .agents/skills/vercel-react-native-skills/rules/design-system-compound-components.md — ## Use Compound Components Over Polymorphic Children (66 lines, 1625 bytes)
+- .agents/skills/vercel-react-native-skills/rules/fonts-config-plugin.md — ## Use Expo Config Plugin for Font Loading (71 lines, 1393 bytes)
+- .agents/skills/vercel-react-native-skills/rules/imports-design-system-folder.md — ## Import from Design System Folder (68 lines, 1418 bytes)
+- .agents/skills/vercel-react-native-skills/rules/js-hoist-intl.md — ## Hoist Intl Formatter Creation (61 lines, 1645 bytes)
+- .agents/skills/vercel-react-native-skills/rules/list-performance-callbacks.md — ## List performance callbacks (44 lines, 1059 bytes)
+- .agents/skills/vercel-react-native-skills/rules/list-performance-function-references.md — ## Optimize List Performance with Stable Object References (132 lines, 4133 bytes)
+- .agents/skills/vercel-react-native-skills/rules/list-performance-images.md — ## Use Compressed Images in Lists (53 lines, 1417 bytes)
+- .agents/skills/vercel-react-native-skills/rules/list-performance-inline-objects.md — ## Avoid Inline Objects in renderItem (97 lines, 2308 bytes)
+- .agents/skills/vercel-react-native-skills/rules/list-performance-item-expensive.md — ## Keep List Items Lightweight (94 lines, 2466 bytes)
+- .agents/skills/vercel-react-native-skills/rules/list-performance-item-memo.md — ## Pass Primitives to List Items for Memoization (82 lines, 2250 bytes)
+- .agents/skills/vercel-react-native-skills/rules/list-performance-item-types.md — ## Use Item Types for Heterogeneous Lists (104 lines, 2749 bytes)
+- .agents/skills/vercel-react-native-skills/rules/list-performance-virtualize.md — ## Use a List Virtualizer for Any List (67 lines, 1742 bytes)
+- .agents/skills/vercel-react-native-skills/rules/monorepo-native-deps-in-app.md — ## Install Native Dependencies in App Directory (46 lines, 1091 bytes)
+- .agents/skills/vercel-react-native-skills/rules/monorepo-single-dependency-versions.md — ## Use Single Dependency Versions Across Monorepo (63 lines, 1351 bytes)
+- .agents/skills/vercel-react-native-skills/rules/navigation-native-navigators.md — ## Use Native Navigators for Navigation (188 lines, 4941 bytes)
+- .agents/skills/vercel-react-native-skills/rules/react-compiler-destructure-functions.md — ## Destructure Functions Early in Render (50 lines, 1274 bytes)
+- .agents/skills/vercel-react-native-skills/rules/react-compiler-reanimated-shared-values.md — ## Use .get() and .set() for Shared Values with React Compiler (48 lines, 1268 bytes)
+- .agents/skills/vercel-react-native-skills/rules/react-state-dispatcher.md — ## Use Dispatch Updaters for State That Depends on Current Value (91 lines, 2255 bytes)
+- .agents/skills/vercel-react-native-skills/rules/react-state-fallback.md — ## Use fallback state instead of initialState (56 lines, 1735 bytes)
+- .agents/skills/vercel-react-native-skills/rules/react-state-minimize.md — ## Minimize State Variables and Derive Values (65 lines, 1740 bytes)
+- .agents/skills/vercel-react-native-skills/rules/rendering-no-falsy-and.md — ## Never Use && with Potentially Falsy Values (74 lines, 1812 bytes)
+- .agents/skills/vercel-react-native-skills/rules/rendering-text-in-text-component.md — ## Wrap Strings in Text Components (36 lines, 697 bytes)
+- .agents/skills/vercel-react-native-skills/rules/scroll-position-no-state.md — ## Never Track Scroll Position in useState (82 lines, 1936 bytes)
+- .agents/skills/vercel-react-native-skills/rules/state-ground-truth.md — ## State Must Represent Ground Truth (80 lines, 2172 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-expo-image.md — ## Use expo-image for Optimized Images (66 lines, 1648 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-image-gallery.md — ## Use Galeria for Image Galleries and Lightbox (104 lines, 2546 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-measure-views.md — ## Measuring View Dimensions (78 lines, 2232 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-menus.md — ## Use Native Menus for Dropdowns and Context Menus (174 lines, 4598 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-native-modals.md — ## Use Native Modals Over JS-Based Bottom Sheets (77 lines, 1859 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-pressable.md — ## Use Pressable Instead of Touchable Components (61 lines, 1534 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-safe-area-scroll.md — ## Use contentInsetAdjustmentBehavior for Safe Areas (65 lines, 1579 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-scrollview-content-inset.md — ## Use contentInset for Dynamic ScrollView Spacing (45 lines, 1317 bytes)
+- .agents/skills/vercel-react-native-skills/rules/ui-styling.md — ## Modern React Native Styling Patterns (87 lines, 2212 bytes)
+- .agents/skills/web-design-guidelines/SKILL.md — # Web Interface Guidelines (39 lines, 1231 bytes)
+- .agents/ui-audit-report.md — # Kitchen Hub Mobile UI/UX Audit Report (535 lines, 17292 bytes)
+- .claude/commands/update-docs.md — # Update Documentation Command (259 lines, 7808 bytes)
+- .cursor/CODE_REVIEW_ADDRESSED.md — # Code Review - Issues Addressed (146 lines, 4545 bytes)
+- .cursor/CODE_REVIEW_ADDRESSED_shopping.md — # Code Review Addressed - Shopping Feature Improvements (356 lines, 11727 bytes)
+- .cursor/CODE_REVIEW_FIXES.md — # Code Review Fixes - CategoryPicker Component (217 lines, 7292 bytes)
+- .cursor/CODE_REVIEW_latest.md — # Senior Staff Engineer Code Review (444 lines, 16439 bytes)
+- .cursor/CODE_REVIEW_refactor-ui-2.md — # Code Review — `refactor-ui-2` Branch (Commits: bbfee13..b40c1db) (426 lines, 18203 bytes)
+- .cursor/CODE_REVIEW_shopping_feature.md — # Senior Staff Engineer Code Review - Shopping Feature (edit-list branch) (730 lines, 19612 bytes)
+- .cursor/FIX_CUSTOM_CATEGORY_IMAGES.md — # Fix: Custom Category Images Not Showing (145 lines, 3798 bytes)
+- .cursor/commands/address_code_review.md — (no heading found) (1 lines, 77 bytes)
+- .cursor/commands/code_review_summary.md — # Code Review - Graceful Shutdown Implementation (259 lines, 7196 bytes)
+- .cursor/commands/commit_changes.md — ## Your Task (85 lines, 2737 bytes)
+- .cursor/commands/create-pr-description.md — # Cursor Rules for PR Template Generation (with Automatic PR Description Push) (112 lines, 3544 bytes)
+- .cursor/commands/perform_code_review.md — # Senior Staff Engineer Code Review Prompt (91 lines, 3038 bytes)
+- .cursor/commands/pre-commit-jobs.md — ## Your Task (5 lines, 109 bytes)
+- .cursor/commands/update-docs.md — # Update Documentation Command (259 lines, 7808 bytes)
+- .cursor/commands/update_back_doc.md — # Update Backend Documentation Command (154 lines, 4983 bytes)
+- .cursor/commands/update_docs.md — (no heading found) (6 lines, 376 bytes)
+- .cursor/implementation-verification.md — # "See All Items" Feature - Implementation Verification (94 lines, 3413 bytes)
+- .cursor/oauth-implementation-summary.md — # OAuth Security Redesign - Implementation Summary (340 lines, 11331 bytes)
+- .cursor/oauth_backend_implementation_summary.md — # OAuth Backend Implementation Summary (568 lines, 17569 bytes)
+- .cursor/plans/add_assignee_display_&_selection_7eb9cb45.plan.md — # Add Assignee Display & Selection to Chores (187 lines, 6395 bytes)
+- .cursor/plans/add_custom_items_to_shopping_search_040325a5.plan.md — # Add Custom Item Support to Shopping Search Bar (114 lines, 4855 bytes)
+- .cursor/plans/add_swipe-to-delete_shopping_items_0a07e299.plan.md — # Add Swipe-to-Delete for Shopping List Items (116 lines, 4412 bytes)
+- .cursor/plans/add_swipe_to_delete_fc8c65b9.plan.md — # Add Swipe to Delete for Chore Items (110 lines, 4515 bytes)
+- .cursor/plans/backend_oauth_security_redesign.plan.md — # Backend OAuth & Security Redesign Plan (580 lines, 17551 bytes)
+- .cursor/plans/backend_sign-in_ui_flows.plan.md — # Backend support for sign-in UI flows (updated) (164 lines, 6691 bytes)
+- .cursor/plans/chore_auto-completion_feature_18d26fe9.plan.md — # Add Chore Auto-completion Feature (109 lines, 3986 bytes)
+- .cursor/plans/convert_to_centeredmodal_aa6fd385.plan.md — # Convert ManageHouseholdModal to CenteredModal (56 lines, 2529 bytes)
+- .cursor/plans/extract_floating_action_button_a3a0c7ed.plan.md — # Extract Floating Action Button Component (105 lines, 3796 bytes)
+- .cursor/plans/fix_dropdown_z-index_portal_4aa17a87.plan.md — # Fix Dropdown Z-Index Using Portal (210 lines, 5748 bytes)
+- .cursor/plans/integrate_datetimepicker_29727bd8.plan.md — # Integrate DateTimePicker Component into Chores (117 lines, 3899 bytes)
+- .cursor/plans/persistent_search_dropdown_9e740060.plan.md — # Persistent Search Dropdown for Grocery Items (124 lines, 4794 bytes)
+- .cursor/plans/recipe_card_enhancement_c1951407.plan.md — # Recipe Card Enhancement Plan (63 lines, 2737 bytes)
+- .cursor/plans/recipe_modal_enhancement_a7366196.plan.md — # Recipe Modal Enhancement Plan (201 lines, 7453 bytes)
+- .cursor/plans/rtl_handling_with_app_restart_8eeed4b2.plan 2.md — # RTL handling with app restart (i18n) (200 lines, 19127 bytes)
+- .cursor/plans/rtl_handling_with_app_restart_8eeed4b2.plan.md — # RTL handling with app restart (i18n) (200 lines, 19127 bytes)
+- .cursor/plans/standardize_add_item_modals_968bde4e.plan.md — # Standardize Add Item Modals (134 lines, 5186 bytes)
+- .cursor/plans/unify_chore_cards_9246d48c.plan.md — # Unify Chore Card Components (74 lines, 2633 bytes)
+- .cursor/pr-description-66-body.md — ## The Issue (52 lines, 5099 bytes)
+- .cursor/pr-description-69-body.md — ## The Issue (109 lines, 5282 bytes)
+- .cursor/pr-description-71-body.md — ## The Issue (141 lines, 5626 bytes)
+- .cursor/rules/COMPOSER_WORKFLOW.md — # Composer/Plan Mode Workflow - Setup Complete ✅ (189 lines, 5829 bytes)
+- .cursor/tasks/api-design-and-compatibility/001-api-versioning-infrastructure/001-api-versioning-infrastructure_plan.md — # 001 - API Versioning Infrastructure (724 lines, 27999 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/002-define-shared-data-shapes-and-metadata/002-define-shared-data-shapes-and-metadata_plan.md — # 002 - Define Shared Data Shapes and Metadata (42 lines, 2212 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/002-define-shared-data-shapes-and-metadata/002-define-shared-data-shapes-and-metadata_summary.md — # 002 - Define Shared Data Shapes and Metadata - Implementation Summary (156 lines, 7602 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/003_network_status_app_lifecycle/003_network_status_app_lifecycle.md — # Network Status + App Lifecycle Signals Implementation (378 lines, 12880 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/004-persistence-timestamps/004-persistence-timestamps_plan.md — # Persistence Layer with Standardized Timestamps (AsyncStorage + Supabase) (467 lines, 21461 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/004-persistence-timestamps/004-persistence-timestamps_summary.md — # 004 - Persistence Layer with Standardized Timestamps - Implementation Summary (206 lines, 9486 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/005-service-layer-timestamps/005-service-layer-timestamps_plan.md — # Service Layer Timestamp Management (Shopping/Recipes/Chores) (637 lines, 26799 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/005-service-layer-timestamps/005-service-layer-timestamps_summary.md — # 005 - Service Layer Timestamp Management - Implementation Summary (206 lines, 9882 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/006-conflict-resolution-timestamps/006-conflict-resolution-timestamps_plan.md — # Conflict Resolution with Timestamps (LWW + Offline Sync Scenarios) (502 lines, 19515 bytes)
+- .cursor/tasks/architecture-cross-cutting-foundations/006-conflict-resolution-timestamps/006-conflict-resolution-timestamps_summary.md — # 006 - Conflict Resolution with Timestamps - Implementation Summary (237 lines, 12087 bytes)
+- .cursor/tasks/backend-foundation/001-backend-structure/001-backend-structure_plan.md — (no heading found) (3 lines, 26 bytes)
+- .cursor/tasks/backend-foundation/001-backend-structure/app-guest-mode/overall_plan.md — (no heading found) (1 lines, 1 bytes)
+- .cursor/tasks/backend-foundation/002-household-rls/002-household-rls_plan.md — # 002 - Secure multi-tenant data access with RLS (33 lines, 1463 bytes)
+- .cursor/tasks/backend-foundation/002-household-rls/002-household-rls_summary.md — # 002 - Secure multi-tenant data access with RLS - Implementation Summary (29 lines, 1549 bytes)
+- .cursor/tasks/backend-foundation/002-supabase-setup/002-supabase-setup_plan.md — # 002 - Set Up Supabase Project & Core Services (43 lines, 1840 bytes)
+- .cursor/tasks/backend-foundation/002-supabase-setup/002-supabase-setup_summary.md — # 002 - Set Up Supabase Project & Core Services - Implementation Summary (22 lines, 1008 bytes)
+- .cursor/tasks/backend-foundation/003-household-list-item-schema/003-household-list-item-schema_plan.md — # 003 - Household/List/Item Schema (29 lines, 998 bytes)
+- .cursor/tasks/backend-foundation/003-household-list-item-schema/003-household-list-item-schema_summary.md — # 003 - Household/List/Item Schema - Implementation Summary (21 lines, 639 bytes)
+- .cursor/tasks/backend-foundation/003-household-uploads/003-household-uploads_plan.md — # 003 - Household Uploads (32 lines, 1403 bytes)
+- .cursor/tasks/backend-foundation/003-household-uploads/003-household-uploads_summary.md — # 003 - Household Uploads - Implementation Summary (23 lines, 816 bytes)
+- .cursor/tasks/backend-foundation/005-master-grocery-catalog/005-master-grocery-catalog_plan.md — # 005 - Master Grocery Catalog (37 lines, 1396 bytes)
+- .cursor/tasks/backend-foundation/005-master-grocery-catalog/005-master-grocery-catalog_summary.md — # 005 - Master Grocery Catalog - Implementation Summary (31 lines, 1361 bytes)
+- .cursor/tasks/backend-foundation/006-soft-delete-timestamps/006-soft-delete-timestamps_plan.md — # 006 - Soft-Delete and Standardized Timestamps (132 lines, 5278 bytes)
+- .cursor/tasks/backend-foundation/006-soft-delete-timestamps/006-soft-delete-timestamps_summary.md — # 006 - Soft-Delete and Standardized Timestamps - Implementation Summary (179 lines, 6213 bytes)
+- .cursor/tasks/backend-foundation/007-realtime-sync-integration/007-realtime-sync-integration_plan.md — # 007 - Realtime Sync Integration for Shopping Lists/Items (396 lines, 15703 bytes)
+- .cursor/tasks/backend-foundation/007-realtime-sync-integration/007-realtime-sync-integration_summary.md — # 007 - Realtime Sync Integration for Shopping Lists/Items - Implementation Summary (280 lines, 11159 bytes)
+- .cursor/tasks/backend-foundation/assets-bucket/assets-bucket_plan.md — # Assets Bucket (32 lines, 1253 bytes)
+- .cursor/tasks/backend-foundation/assets-bucket/assets-bucket_summary.md — # Assets Bucket - Implementation Summary (23 lines, 946 bytes)
+- .cursor/tasks/code-review-recommendations-completed.md — # Code Review Recommendations - Implementation Complete ✅ (280 lines, 8316 bytes)
+- .cursor/tasks/developer-experience/004-mock-data-toggle/004-mock-data-toggle_plan.md — # 004 - Mock Data Toggle (38 lines, 1565 bytes)
+- .cursor/tasks/developer-experience/004-mock-data-toggle/004-mock-data-toggle_summary.md — # 004 - Mock Data Toggle - Implementation Summary (25 lines, 1005 bytes)
+- .cursor/tasks/developer-experience/005-guest-user-data-separation/005-guest-user-data-separation_plan.md — # 005 - Guest User Data Separation (265 lines, 8796 bytes)
+- .cursor/tasks/developer-experience/005-guest-user-data-separation/005-guest-user-data-separation_summary.md — # 005 - Guest User Data Separation - Implementation Summary (92 lines, 5203 bytes)
+- .cursor/tasks/developer-experience/006-fix-import-local-data/006-fix-import-local-data_plan.md — # 006 - Fix Import Service to Always Use Local Data (187 lines, 6998 bytes)
+- .cursor/tasks/developer-experience/006-fix-import-local-data/006-fix-import-local-data_summary.md — # 006 - Fix Import Service to Always Use Local Data - Implementation Summary (24 lines, 1047 bytes)
+- .cursor/tasks/developer-experience/007-guest-local-persistence/007-guest-local-persistence_plan.md — # 007 - Guest Local Persistence (41 lines, 1605 bytes)
+- .cursor/tasks/developer-experience/008-signed-in-local-cache-sync/008-signed-in-local-cache-sync_plan.md — # 008 - Signed-In Local Cache + Sync (41 lines, 1599 bytes)
+- .cursor/tasks/developer-experience/009-public-catalog-guest-api/009-public-catalog-guest-api_plan.md — # 009 - Public Catalog API for Guests (35 lines, 1128 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-1-design-import-contract/KH-API-IMP-1-design-import-contract_plan.md — # KH-API-IMP-1 - Design import contract & schemas (45 lines, 2046 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-1-design-import-contract/KH-API-IMP-1-design-import-contract_summary.md — # KH-API-IMP-1 - Design import contract & schemas - Implementation Summary (25 lines, 940 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-2-import-batches/KH-API-IMP-2-import-batches_plan.md — # KH-API-IMP-2 — Add DB tables for import batches & mappings (73 lines, 2575 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-2-import-batches/KH-API-IMP-2-import-batches_summary.md — # KH-API-IMP-2 — Add DB tables for import batches & mappings - Implementation Summary (27 lines, 1234 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-3-import-module-skeleton/KH-API-IMP-3-import-module-skeleton_plan.md — # KH-API-IMP-3 — Implement Import module skeleton (NestJS) (40 lines, 1738 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-3-import-module-skeleton/KH-API-IMP-3-import-module-skeleton_summary.md — # KH-API-IMP-3 - Implement Import Module Skeleton (NestJS) - Implementation Summary (22 lines, 673 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-4-implement-import-execute/KH-API-IMP-4-implement-import-execute_plan.md — # KH-API-IMP-4 - Implement execute import endpoint (70 lines, 2623 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-4-implement-import-execute/KH-API-IMP-4-implement-import-execute_summary.md — # KH-API-IMP-4 - Implement execute import endpoint - Implementation Summary (33 lines, 1803 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-5-implement-idempotency/KH-API-IMP-5-implement-idempotency_plan.md — # KH-API-IMP-5 - Implement Idempotency via Import Mappings (37 lines, 2103 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-5-implement-idempotency/KH-API-IMP-5-implement-idempotency_summary.md — # KH-API-IMP-5 - Implement Idempotency via Import Mappings - Implementation Summary (116 lines, 5254 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-6-implement-dedup-fingerprints/KH-API-IMP-6-implement-dedup-fingerprints_plan.md — # KH-API-IMP-6 - Implement dedup fingerprints (create-or-skip) (39 lines, 1632 bytes)
+- .cursor/tasks/guest-experience/KH-API-IMP-6-implement-dedup-fingerprints/KH-API-IMP-6-implement-dedup-fingerprints_summary.md — # KH-API-IMP-6 - Implement dedup fingerprints (create-or-skip) - Implementation Summary (32 lines, 1752 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-1-add-localid/KH-MOB-IMP-1-add-localid_plan.md — # KH-MOB-IMP-1 - Add localId to guest-mode entities (38 lines, 1596 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-1-add-localid/KH-MOB-IMP-1-add-localid_summary.md — # KH-MOB-IMP-1 - Add localId to guest-mode entities - Implementation Summary (34 lines, 1473 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-2-build-import-payload/KH-MOB-IMP-2-build-import-payload_plan.md — # KH-MOB-IMP-2 - Build import payload & call API (66 lines, 2969 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-2-build-import-payload/KH-MOB-IMP-2-build-import-payload_summary.md — # KH-MOB-IMP-2 - Build Import Payload & Call API - Implementation Summary (25 lines, 1458 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-3-switch-to-cloud/KH-MOB-IMP-3-switch-to-cloud_plan.md — # KH-MOB-IMP-3 - Switch to cloud mode after import (44 lines, 2135 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-3-switch-to-cloud/KH-MOB-IMP-3-switch-to-cloud_summary.md — # KH-MOB-IMP-3 - Switch to cloud mode after import - Implementation Summary (27 lines, 1672 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-3-switch-to-cloud/KH-MOB-IMP-3-switch-to-cloud_walkthrough.md — # KH-MOB-IMP-3 Cloud Switch - Walkthrough (54 lines, 2049 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-4-clear-local-data/KH-MOB-IMP-4-clear-local-data_plan.md — # KH-MOB-IMP-4 — Clear local guest data flow (56 lines, 2490 bytes)
+- .cursor/tasks/guest-experience/KH-MOB-IMP-4-clear-local-data/KH-MOB-IMP-4-clear-local-data_summary.md — # KH-MOB-IMP-4 — Clear local guest data flow - Implementation Summary (32 lines, 1946 bytes)
+- .cursor/tasks/guest-mode-local-persistence/001-guest-storage-backend-decision/001-guest-storage-backend-decision_plan.md — # 001 - Decide Guest Storage Backend (AsyncStorage v1) (155 lines, 5863 bytes)
+- .cursor/tasks/guest-mode-local-persistence/001-guest-storage-backend-decision/001-guest-storage-backend-decision_summary.md — # 001 - Decide Guest Storage Backend (AsyncStorage v1) - Implementation Summary (147 lines, 6421 bytes)
+- .cursor/tasks/guest-mode-local-persistence/002-guest-storage-utilities/002-guest-storage-utilities_plan.md — # 002 - Guest Storage Utilities (415 lines, 16734 bytes)
+- .cursor/tasks/guest-mode-local-persistence/003-guest-recipe-dev-seeding/003-guest-recipe-dev-seeding_plan.md — # 003 - Dev-Only Seeding for LocalRecipeService (488 lines, 19990 bytes)
+- .cursor/tasks/guest-mode-local-persistence/003-guest-recipe-dev-seeding/003-guest-recipe-dev-seeding_summary.md — # 003 - Dev-Only Seeding for LocalRecipeService - Implementation Summary (166 lines, 7692 bytes)
+- .cursor/tasks/guest-mode-local-persistence/004-guest-shopping-service-storage/004-guest-shopping-service-storage_plan.md — # 004 - Update Guest Shopping Service to Use Storage (589 lines, 23793 bytes)
+- .cursor/tasks/guest-mode-local-persistence/004-guest-shopping-service-storage/004-guest-shopping-service-storage_summary.md — # 004 - Update Guest Shopping Service to Use Storage - Implementation Summary (256 lines, 11066 bytes)
+- .cursor/tasks/guest-mode-local-persistence/004-guest-shopping-service-storage/IMPLEMENTATION_VERIFICATION.md — # Implementation Verification - Guest Shopping Service Storage (275 lines, 10455 bytes)
+- .cursor/tasks/guest-mode-local-persistence/005-guest-no-sync-guardrails/005-guest-no-sync-guardrails_implementation-status.md — # Guest No-Sync Guardrails - Implementation Status (164 lines, 7363 bytes)
+- .cursor/tasks/guest-mode-local-persistence/005-guest-no-sync-guardrails/005-guest-no-sync-guardrails_plan.md — # Enforce Guest No-Sync Guardrails (553 lines, 21103 bytes)
+- .cursor/tasks/guest-mode-local-persistence/005-guest-no-sync-guardrails/005-guest-no-sync-guardrails_summary.md — # 005 - Guest No-Sync Guardrails - Implementation Summary (216 lines, 10831 bytes)
+- .cursor/tasks/guest-mode-local-persistence/006-guest-persistence-test-coverage/006-guest-persistence-test-coverage_plan.md — # 006 - Guest Persistence Test Coverage (424 lines, 16043 bytes)
+- .cursor/tasks/guest-mode-local-persistence/006-guest-persistence-test-coverage/006-guest-persistence-test-coverage_summary.md — # 006 - Guest Persistence Test Coverage - Implementation Summary (306 lines, 12429 bytes)
+- .cursor/tasks/guest-mode-local-persistence/006-guest-persistence-test-coverage/GUEST_STORAGE_MANUAL_QA_CHECKLIST.md — # Guest Storage Manual QA Checklist (273 lines, 9221 bytes)
+- .cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md — # Epic: Internationalization (i18n) - Multi-Language Support (1348 lines, 34899 bytes)
+- .cursor/tasks/product-improvements/001-guest-mode-limitations/001-guest-mode-limitations_plan.md — # 001 - Guest Mode Limitations & Messaging (33 lines, 1361 bytes)
+- .cursor/tasks/product-improvements/001-guest-mode-limitations/001-guest-mode-limitations_summary.md — # 001 - Guest Mode Limitations & Messaging - Implementation Summary (22 lines, 925 bytes)
+- .cursor/tasks/product-improvements/002-guest-data-import-modal/002-guest-data-import-modal_plan.md — # 002 - Guest Data Import Modal (50 lines, 3051 bytes)
+- .cursor/tasks/product-improvements/003-settings-import-clear-actions/003-settings-import-clear-actions_plan.md — # 003 - Settings Import & Clear Local Data actions (67 lines, 3778 bytes)
+- .cursor/tasks/product-improvements/004-recipe-image-uploads/004-recipe-image-uploads_plan.md — # 004 - Recipe Image Uploads (Mobile-Friendly) (175 lines, 7410 bytes)
+- .cursor/tasks/product-improvements/004-recipe-image-uploads/004-recipe-image-uploads_summary.md — # 004 - Recipe Image Uploads (Mobile-Friendly) - Implementation Summary (180 lines, 7504 bytes)
+- .cursor/tasks/product-improvements/005-recipe-image-orphan-cleanup/005-recipe-image-orphan-cleanup_plan.md — # 005 - Recipe Image Orphan Cleanup (35 lines, 1514 bytes)
+- .cursor/tasks/product-improvements/005-recipe-image-orphan-cleanup/005-recipe-image-orphan-cleanup_summary.md — # 005 - Recipe Image Orphan Cleanup - Implementation Summary (23 lines, 677 bytes)
+- .cursor/tasks/public-catalog-guest_and_signedIn/001-catalog-usage-inventory_plan/catalog-usage-inventory_plan.md — # Catalog Usage Inventory - Plan (560 lines, 21166 bytes)
+- .cursor/tasks/public-catalog-guest_and_signedIn/001-catalog-usage-inventory_plan/catalog-usage-inventory_summary.md — # Catalog Usage Inventory - Implementation Summary (288 lines, 10572 bytes)
+- .cursor/tasks/public-catalog-guest_and_signedIn/002-public-catalog-helper-standardization/002-public-catalog-helper-standardization_plan.md — # 002 - Public Catalog Helper (API → Fallback) - Standardization Plan (451 lines, 14400 bytes)
+- .cursor/tasks/public-catalog-guest_and_signedIn/002-public-catalog-helper-standardization/002-public-catalog-helper-standardization_summary.md — # Public Catalog Helper (API → Fallback) - Implementation Summary (311 lines, 11753 bytes)
+- .cursor/tasks/public-catalog-guest_and_signedIn/003-refactor-screens-to-use-catalog-helper/003-refactor-screens-to-use-catalog-helper_plan.md — # 003 - Refactor Screens to Use Catalog Helper (423 lines, 15355 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/0001-signed-in-cache/implementation-verification.md — # Implementation Verification Report (175 lines, 7960 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/0001-signed-in-cache/signed-in-cache-implementation.md — # Cache-First + Background Refresh Implementation (275 lines, 8797 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/0001-signed-in-cache/signed-in-cache-implementation_summary.md — # Cache-First + Background Refresh Implementation Summary (277 lines, 11645 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/0001-signed-in-cache/signed-in-cache-strategy-spec.md — # Cache-First + Background Refresh Strategy Specification (251 lines, 8474 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/002-cache-storage-utilities/cache-storage-utilities-plan.md — # Cache Storage Utilities Implementation Plan (235 lines, 9796 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/002-cache-storage-utilities/cache-storage-utilities-summary.md — # Cache Storage Utilities - Implementation Summary (303 lines, 12370 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/003-cache-repo-layer/cache-repo-layer-plan.md — # Cache-Aware Repository Layer Implementation Plan (599 lines, 21354 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/003-cache-repo-layer/cache-repo-layer-summary.md — # Cache-Aware Repository Layer - Implementation Summary (377 lines, 15579 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/004-signin-offline-write-queue/004-signin-offline-write-queue-plan.md — # 004 - Signed-In Offline Write Queue (737 lines, 26270 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/004-signin-offline-write-queue/004-signin-offline-write-queue-summary.md — # 004 - Signed-In Offline Write Queue - Implementation Summary (314 lines, 15122 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/005-signed-in-sync-worker/005-signed-in-sync-worker-plan.md — # Signed-In Sync Worker Implementation Plan (856 lines, 29725 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/005-signed-in-sync-worker/005-signed-in-sync-worker-summary.md — # 005 - Signed-In Sync Worker - Implementation Summary (447 lines, 18902 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/006-offline-ux-pill/006-offline-ux-pill-plan.md — # 006 - Offline UX: Offline Pill + Optimistic States (548 lines, 18777 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/006-offline-ux-pill/006-offline-ux-pill-summary.md — # 006 - Offline UX: Offline Pill + Optimistic States - Implementation Summary (461 lines, 17061 bytes)
+- .cursor/tasks/signed-in-cache-and-offline-sync/cache-storage-utilities-plan.md — # Cache Storage Utilities Implementation Plan (235 lines, 9795 bytes)
+- .cursor/tasks/user-authentication/001-enable-google-auth/001-enable-google-auth_plan.md — # 001 - Enable Google Authentication (62 lines, 2801 bytes)
+- .cursor/tasks/user-authentication/001-enable-google-auth/001-enable-google-auth_summary.md — # 001 - Enable Google Authentication - Implementation Summary (33 lines, 2142 bytes)
+- .hermes/PROJECT_CONTEXT.md — # KitchenHub Project Context (276 lines, 8565 bytes)
+- .hermes/SESSION_LOG.md — # KitchenHub Session Log (119 lines, 4574 bytes)
+- .hermes/START_HERE.md — # KitchenHub LLM Start Here (83 lines, 3825 bytes)
+- .hermes/audits/2026-05-16-doc-cleanup-inventory.md — # KitchenHub Documentation Cleanup Audit Inventory (1084 lines, 55368 bytes)
+- .hermes/mockups/frequent-items-compact-redesign.html — Frequently Added Compact Redesign (301 lines, 8058 bytes)
+- .hermes/mockups/frequent-items-redesign/index.html — KitchenHub Frequently Added Redesign (232 lines, 7936 bytes)
+- .hermes/mockups/home-tab-redesign-mockup.html — KitchenHub Home Tab Redesign Mockup (541 lines, 13909 bytes)
+- .hermes/mockups/manage-household-members/001-compact-native-list/README.md — ## Variant: Compact native list (14 lines, 518 bytes)
+- .hermes/mockups/manage-household-members/001-compact-native-list/index.html — Compact native list (5 lines, 5129 bytes)
+- .hermes/mockups/manage-household-members/002-family-profile-cards/README.md — ## Variant: Family profile cards (14 lines, 520 bytes)
+- .hermes/mockups/manage-household-members/002-family-profile-cards/index.html — Family profile cards (5 lines, 4622 bytes)
+- .hermes/mockups/manage-household-members/003-action-focused-manager/README.md — ## Variant: Action-focused manager (14 lines, 524 bytes)
+- .hermes/mockups/manage-household-members/003-action-focused-manager/index.html — Action-focused manager (5 lines, 5198 bytes)
+- .hermes/mockups/manage-household-members/004-current-pr-state/index.html — Manage Household - Current PR State (120 lines, 5107 bytes)
+- .hermes/mockups/manage-household-members/005-selected-first-with-actions/index.html — Selected Manage Household Mockup (66 lines, 5353 bytes)
+- .hermes/mockups/manage-household-members/006-current-avatar-full-name/index.html — Manage Household — current PR preview (96 lines, 7223 bytes)
+- .hermes/mockups/manage-household-members/index.html — (no heading found) (1 lines, 377 bytes)
+- .hermes/mockups/premium-purchase-refresh/index.html — KitchenHub Premium Purchase Concepts (208 lines, 6292 bytes)
+- .hermes/mockups/premium-purchase-refresh/option-a.html — KitchenHub Premium Concept A (278 lines, 7928 bytes)
+- .hermes/mockups/premium-purchase-refresh/option-b.html — KitchenHub Premium Concept B (316 lines, 9045 bytes)
+- .hermes/mockups/premium-purchase-refresh/option-c.html — KitchenHub Premium Concept C (304 lines, 8441 bytes)
+- .hermes/mockups/recipe-ingredients-images/index.html — Recipe Ingredients Images Mockup (241 lines, 8334 bytes)
+- .hermes/plans/2026-04-27_055530-mobile-modal-keyboard-scroll-plan.md — # Mobile modal keyboard/scroll bug plan (263 lines, 13214 bytes)
+- .hermes/plans/2026-04-27_095926-ios-form-presentation-rework.md — # iOS Form Presentation Rework Plan (269 lines, 10976 bytes)
+- .hermes/plans/2026-04-28_0502-home-tab-frequent-items-recovery-plan.md — # KitchenHub Home Tab Frequent Items Recovery Plan (363 lines, 13049 bytes)
+- .hermes/plans/2026-04-28_161929-household-frequently-added-backend-plan.md — # KitchenHub Household Frequently Added Backend Implementation Plan (440 lines, 19103 bytes)
+- .hermes/plans/2026-05-01_060956-dashboard-frequent-items-main-list-fix-plan.md — # Dashboard Frequently Added Main-List Fix Plan (185 lines, 9261 bytes)
+- .hermes/plans/2026-05-05-premium-real-sdk-go-live-plan.md — # Premium Real SDK Go-Live Plan (No Fallback Alert Path) (204 lines, 6325 bytes)
+- .hermes/plans/2026-05-11-mobile-cache-snappiness-plan.md — # 2026-05-11 — Mobile cache/snappiness investigation plan (111 lines, 5294 bytes)
+- .hermes/plans/2026-05-11_163806-recipe-ingredient-images-redesign.md — # Recipe Ingredient Images Redesign Implementation Plan (281 lines, 12211 bytes)
+- .hermes/plans/2026-05-11_205051-recipe-google-image-search.md — # Recipe Google Image Search Implementation Plan (413 lines, 15990 bytes)
+- .hermes/templates/PLAN_TEMPLATE.md — # [Feature / Task Name] (170 lines, 3506 bytes)
+- AGENTS.md — # AGENTS.md (214 lines, 9248 bytes)
+- CATEGORY_FIX_INSTRUCTIONS.md — # How to Fix "oils", "sweets", "teas" Categories Still Showing (78 lines, 2198 bytes)
+- CHANGELOG.md — # Changelog (23 lines, 1167 bytes)
+- CLAUDE.md — # CLAUDE.md (338 lines, 11561 bytes)
+- PR_DESCRIPTION.md — # Unify swipe-to-delete behavior across recipes, shopping, and chores (63 lines, 2414 bytes)
+- README-DETAILED.md — # Kitchen Hub 🏠 - Detailed Documentation (1251 lines, 39711 bytes)
+- README-GIT-HOOKS.md — # Git Hooks Setup (95 lines, 2894 bytes)
+- README.md — # Kitchen Hub 🏠 (255 lines, 10295 bytes)
+- backend/CODE_REVIEW_FIXES.md — # Code Review Fixes Summary (220 lines, 6634 bytes)
+- backend/DEPLOYMENT.md — # Deployment Guide (831 lines, 28971 bytes)
+- backend/DOCKER_TEST_RESULTS.md — # Docker Compose Testing Results (191 lines, 6091 bytes)
+- backend/ENV_SETUP_GUIDE.md — # Environment Variables Setup Guide (222 lines, 7256 bytes)
+- backend/README.md — # Kitchen Hub Backend API 🚀 (1513 lines, 72883 bytes)
+- backend/docs/CONSISTENCY_CHECKLIST.md — # Backend Documentation Consistency Checklist (208 lines, 8439 bytes)
+- backend/docs/CONSISTENCY_PASS_CHANGELOG.md — # Consistency Pass Changelog (358 lines, 10487 bytes)
+- backend/docs/CONSISTENCY_PASS_SUMMARY.md — # Backend Documentation Consistency Pass - Summary (255 lines, 9010 bytes)
+- backend/docs/DEPLOYMENT_COMPREHENSIVE 2.md — # Comprehensive Deployment Guide (598 lines, 17685 bytes)
+- backend/docs/DEPLOYMENT_COMPREHENSIVE.md — # Comprehensive Deployment Guide (598 lines, 17685 bytes)
+- backend/docs/ENV_VAR_CHECKLIST 2.md — # Environment Variable Checklist (549 lines, 16736 bytes)
+- backend/docs/ENV_VAR_CHECKLIST.md — # Environment Variable Checklist (570 lines, 18469 bytes)
+- backend/docs/GHCR_QUICK_REFERENCE.md — # GitHub Container Registry (GHCR) Quick Reference (266 lines, 7956 bytes)
+- backend/docs/LOGGING_GUIDE 2.md — # Structured Logging Guide (307 lines, 7324 bytes)
+- backend/docs/LOGGING_GUIDE.md — # Structured Logging Guide (307 lines, 7324 bytes)
+- backend/docs/MIGRATIONS.md — # Database Migrations and Rollback (102 lines, 6427 bytes)
+- backend/docs/MONITORING_SETUP 2.md — # Monitoring Setup Guide (466 lines, 11727 bytes)
+- backend/docs/MONITORING_SETUP.md — # Monitoring Setup Guide (466 lines, 11727 bytes)
+- backend/docs/PLATFORM_MIGRATION 2.md — # Platform Migration Guide (737 lines, 20966 bytes)
+- backend/docs/PLATFORM_MIGRATION.md — # Platform Migration Guide (737 lines, 20966 bytes)
+- backend/docs/README_DOCS.md — # Backend Documentation Index (236 lines, 10004 bytes)
+- backend/docs/REVIEW_HOOKS_ADDED.md — # Review Hooks Added - Making PR Review Painless (305 lines, 9505 bytes)
+- backend/docs/ROLLBACK_GUIDE 2.md — # Rollback Guide (599 lines, 16710 bytes)
+- backend/docs/ROLLBACK_GUIDE.md — # Rollback Guide (599 lines, 16710 bytes)
+- backend/docs/SYNC_API_QUICK_REFERENCE.md — # Sync API Quick Reference Card (269 lines, 8110 bytes)
+- backend/docs/api-deprecation-policy.md — # API Deprecation Policy (231 lines, 8088 bytes)
+- backend/docs/api-sync-and-conflict-strategy.md — # API Sync & Conflict Strategy (630 lines, 29379 bytes)
+- backend/docs/api-versioning-guidelines.md — # API Versioning Guidelines (175 lines, 5667 bytes)
+- backend/public/delete-account.html — Delete your FullHouse account (175 lines, 6744 bytes)
+- backend/public/privacy.html — Privacy Policy — FullHouse (Kitchen Hub) (207 lines, 8195 bytes)
+- backend/public/terms.html — Terms of Service — FullHouse (Kitchen Hub) (229 lines, 8767 bytes)
+- backend/static-web/README.md — (no heading found) (1 lines, 223 bytes)
+- backend/supabase/README.md — # Supabase Storage Configuration (177 lines, 6068 bytes)
+- category-modal-top-options.html — CategoryModal — Top Clearance Options (717 lines, 23598 bytes)
+- docs/DESIGN_SYSTEM.md — # Kitchen Hub Design System (1104 lines, 25199 bytes)
+- docs/PLAN-household-invite 2.md — # PLAN - Household Invitation (Secure Code via Lookup Table) (71 lines, 3225 bytes)
+- docs/PLAN-household-invite.md — # PLAN - Household Invitation (Secure Code via Lookup Table) (71 lines, 3225 bytes)
+- docs/PLAN-recipe-edit.md — # PLAN-recipe-edit (68 lines, 2905 bytes)
+- docs/PLAN-recipe-image-pipeline.md — # Task: Implement Recipe Image Pipeline (75 lines, 3997 bytes)
+- docs/api/recipes-api.md — # Recipes API - Ingredient Units (77 lines, 2369 bytes)
+- docs/architecture/DATA_MODES_SPEC.md — # Data Modes Architecture Specification (481 lines, 15610 bytes)
+- docs/architecture/GUEST_STORAGE_DECISION.md — # Guest Storage Backend Decision (AsyncStorage v1) (179 lines, 7175 bytes)
+- docs/code-review-catalog-i18n-scripts.md — # Senior Staff Engineer Code Review: Catalog Item i18n Scripts (239 lines, 11239 bytes)
+- docs/code-review-image-upload-and-minio.md — # Senior Staff Engineer Code Review (257 lines, 12585 bytes)
+- docs/code-review-latest.md — # Senior Staff Engineer Code Review (Latest Modifications) (155 lines, 6812 bytes)
+- docs/compliance/app-store-privacy.md — # App Store Privacy — Kitchen Hub (40 lines, 3069 bytes)
+- docs/compliance/google-play-data-safety.md — # Google Play Data Safety — Kitchen Hub (43 lines, 2531 bytes)
+- docs/compliance/google-play-submission-checklist.md — # Google Play Submission Checklist (Kitchen Hub) (62 lines, 2892 bytes)
+- docs/compliance/ios-app-store-submission-checklist-rc-2026-02-21.md — # iOS App Store Submission Checklist (Kitchen Hub) - Pre-Filled RC (262 lines, 15486 bytes)
+- docs/compliance/ios-app-store-submission-checklist.md — # iOS App Store Submission Checklist (Kitchen Hub) (126 lines, 7906 bytes)
+- docs/deployment/vercel-monorepo.md — # Vercel — one repo, two projects (Kitchen Hub) (38 lines, 2104 bytes)
+- docs/design/GUEST_MODE_SPECS.md — # Guest Mode Specifications (62 lines, 3092 bytes)
+- docs/features/auth.md — # Auth Feature (125 lines, 3719 bytes)
+- docs/features/chores.md — # Chores Feature (534 lines, 27976 bytes)
+- docs/features/dashboard.md — # Dashboard Feature (195 lines, 5861 bytes)
+- docs/features/recipes.md — # Recipes Feature (209 lines, 6801 bytes)
+- docs/features/settings.md — # Settings Feature (163 lines, 7540 bytes)
+- docs/features/shopping.md — # Shopping Feature (233 lines, 7308 bytes)
+- docs/implementation/code-review-add-recipe-modal-inputs.md — # Code Review: Add Recipe Modal – Ingredient Lock & Numeric Inputs (154 lines, 8531 bytes)
+- docs/implementation/code-review-recipe-unit-system.md — # Code Review: Backend Recipe Unit System (208 lines, 10097 bytes)
+- docs/implementation/deploy-version-pipeline.md — # Deploy / Version Pipeline (Vercel backend + EAS mobile) (106 lines, 3416 bytes)
+- docs/implementation/issue-000-recipe-unit-system.md — # Implementation: Issue #000 - Recipe Ingredient Unit System (126 lines, 4855 bytes)
+- docs/implementation/premium-foundation-e2e-runbook.md — # Premium Foundation E2E Verification Runbook (92 lines, 3459 bytes)
+- docs/implementation/sync-queue-endless-sync-root-cause.md — # Root cause: Non‑stopping sync calls (POST /auth/sync) (45 lines, 3291 bytes)
+- docs/next_plans/api-development-plan.md — # Kitchen Hub – API & Backend Architecture Plan (218 lines, 8324 bytes)
+- docs/next_plans/backend-architecture.md — # NestJS Project Structure for Kitchen Hub (Expo + Prisma) (220 lines, 4384 bytes)
+- docs/project/ARCHITECTURE.md — # KitchenHub Architecture (177 lines, 4530 bytes)
+- docs/project/PROJECT_OVERVIEW.md — # KitchenHub Project Overview (191 lines, 5951 bytes)
+- docs/project/RECENT_CHANGES.md — # KitchenHub Recent Changes (254 lines, 9145 bytes)
+- docs/project/RELEASE_STATUS.md — # KitchenHub Release Status (73 lines, 2623 bytes)
+- docs/project/STORE_COMPLIANCE.md — # KitchenHub Store Compliance (232 lines, 5880 bytes)
+- kitchen_hub_project_context.md — ## Kitchen Hub App — Project Context Overview (200 lines, 13339 bytes)
+- legal/README.md — # Legal Documents (22 lines, 1648 bytes)
+- legal/privacy-policy-v1.md — # Privacy Policy — Kitchen Hub (81 lines, 5564 bytes)
+- legal/terms-of-service-v1.md — # Terms of Service — Kitchen Hub (78 lines, 5085 bytes)
+- mobile/.hermes/plans/2026-04-26_063407-language-persistence-investigation-plan.md — # Language Persistence on App Restart Investigation Plan (273 lines, 11488 bytes)
+- mobile/ANDROID_NETWORK_TROUBLESHOOTING.md — # Android Emulator Network Troubleshooting (127 lines, 3197 bytes)
+- mobile/README.md — # Kitchen Hub Mobile 📱 (832 lines, 32381 bytes)
+- mobile/dist-web-screenshots-appstore-6.5/index.html — FullHouse (37 lines, 1215 bytes)
+- mobile/dist-web-screenshots/index.html — FullHouse (37 lines, 1215 bytes)
+- mobile/docs/OTA_CHANNELS.md — # OTA Update Channels (develop / main) (78 lines, 3620 bytes)
+- mobile/docs/implementation/plan-catalog-search-on-demand.md — # Plan: Catalog Search On-Demand (No Full Load on Login) (182 lines, 12539 bytes)
+- mobile/docs/implementation/test-fixes-outline.md — # Outline: Fix Remaining Failing Mobile Tests (128 lines, 8857 bytes)
+- mobile/src/common/components/DateTimePicker/README.md — # DateTimePicker Component (280 lines, 6457 bytes)
+- mobile/src/common/utils/cacheStorage.README.md — ## cacheStorage module (94 lines, 4021 bytes)
+- mobile/src/common/utils/cacheStorage/README.md — ## cacheStorage module (94 lines, 4021 bytes)
+- mobile/src/common/utils/syncQueue/README.md — ## syncQueue module (35 lines, 2152 bytes)
+- mobile/src/common/utils/syncQueue/processor/README.md — ## syncQueue/processor (37 lines, 2250 bytes)
+- mobile/src/common/utils/syncQueue/storage/README.md — ## syncQueue/storage (51 lines, 2955 bytes)
+- mobile/src/i18n/KEY_STRUCTURE.md — # Translation Key Structure and Namespaces (140 lines, 6953 bytes)
+- mobile/src/i18n/README.md — # i18n (Internationalization) (46 lines, 2877 bytes)
+- mobile/store-screenshots/google-play-phone/fullhouse-store-screenshots.html — FullHouse Google Play Screenshots (25 lines, 11683 bytes)
+- mobile/store-screenshots/mockups/frequently-added-redesign-variants.html — KitchenHub Frequently Added Redesign Variants (653 lines, 21463 bytes)
+- static-legal/README.md — # Legal static pages (Vercel) (21 lines, 1488 bytes)
+- static-legal/delete-account.html — Delete your FullHouse account (175 lines, 6744 bytes)
+- static-legal/privacy.html — Privacy Policy — FullHouse (Kitchen Hub) (207 lines, 8195 bytes)
+- static-legal/terms.html — Terms of Service — FullHouse (Kitchen Hub) (229 lines, 8767 bytes)
+- tasks/dashbored.plan.md — (no heading found) (137 lines, 4753 bytes)
+- tasks/grocery-search-bar-extraction.plan.md — # Plan: Extract Search Bar into Reusable Component (406 lines, 11583 bytes)
+- website/README.md — # Website (Marketing Landing Page) (13 lines, 416 bytes)
+- website/index.html — FullHouse — Household management made simple (107 lines, 4126 bytes)
+
+## Duplicate filename groups
+- agents.md
+  - AGENTS.md
+  - .agents/skills/vercel-composition-patterns/AGENTS.md
+  - .agents/skills/vercel-react-best-practices/AGENTS.md
+  - .agents/skills/vercel-react-native-skills/AGENTS.md
+- cache-storage-utilities-plan.md
+  - .cursor/tasks/signed-in-cache-and-offline-sync/cache-storage-utilities-plan.md
+  - .cursor/tasks/signed-in-cache-and-offline-sync/002-cache-storage-utilities/cache-storage-utilities-plan.md
+- code_review_fixes.md
+  - backend/CODE_REVIEW_FIXES.md
+  - .cursor/CODE_REVIEW_FIXES.md
+- delete-account.html
+  - static-legal/delete-account.html
+  - backend/public/delete-account.html
+- implementation-verification.md
+  - .cursor/implementation-verification.md
+  - .cursor/tasks/signed-in-cache-and-offline-sync/0001-signed-in-cache/implementation-verification.md
+- index.html
+  - .hermes/mockups/frequent-items-redesign/index.html
+  - .hermes/mockups/recipe-ingredients-images/index.html
+  - .hermes/mockups/premium-purchase-refresh/index.html
+  - .hermes/mockups/manage-household-members/index.html
+  - .hermes/mockups/manage-household-members/006-current-avatar-full-name/index.html
+  - .hermes/mockups/manage-household-members/005-selected-first-with-actions/index.html
+  - .hermes/mockups/manage-household-members/002-family-profile-cards/index.html
+  - .hermes/mockups/manage-household-members/001-compact-native-list/index.html
+  - .hermes/mockups/manage-household-members/003-action-focused-manager/index.html
+  - .hermes/mockups/manage-household-members/004-current-pr-state/index.html
+  - website/index.html
+  - mobile/dist-web-screenshots/index.html
+  - mobile/dist-web-screenshots-appstore-6.5/index.html
+- privacy.html
+  - static-legal/privacy.html
+  - backend/public/privacy.html
+- readme.md
+  - README.md
+  - static-legal/README.md
+  - backend/README.md
+  - backend/supabase/README.md
+  - backend/static-web/README.md
+  - .hermes/mockups/manage-household-members/002-family-profile-cards/README.md
+  - .hermes/mockups/manage-household-members/001-compact-native-list/README.md
+  - .hermes/mockups/manage-household-members/003-action-focused-manager/README.md
+  - legal/README.md
+  - website/README.md
+  - mobile/README.md
+  - mobile/src/common/components/DateTimePicker/README.md
+  - mobile/src/common/utils/syncQueue/README.md
+  - mobile/src/common/utils/syncQueue/storage/README.md
+  - mobile/src/common/utils/syncQueue/processor/README.md
+  - mobile/src/common/utils/cacheStorage/README.md
+  - mobile/src/i18n/README.md
+- skill.md
+  - .agents/skills/vercel-composition-patterns/SKILL.md
+  - .agents/skills/web-design-guidelines/SKILL.md
+  - .agents/skills/vercel-react-best-practices/SKILL.md
+  - .agents/skills/vercel-react-native-skills/SKILL.md
+- terms.html
+  - static-legal/terms.html
+  - backend/public/terms.html
+- update-docs.md
+  - .claude/commands/update-docs.md
+  - .cursor/commands/update-docs.md
+
+## Topic hit map for cleanup
+### Suggested Items (6 shown)
+- .hermes/SESSION_LOG.md
+- .hermes/PROJECT_CONTEXT.md
+- .hermes/mockups/home-tab-redesign-mockup.html
+- .hermes/plans/2026-04-28_0502-home-tab-frequent-items-recovery-plan.md
+- mobile/docs/implementation/plan-catalog-search-on-demand.md
+- .cursor/CODE_REVIEW_ADDRESSED.md
+### quick stats (5 shown)
+- .hermes/SESSION_LOG.md
+- .hermes/PROJECT_CONTEXT.md
+- .hermes/plans/2026-04-28_0502-home-tab-frequent-items-recovery-plan.md
+- .agents/ui-audit-report.md
+- .cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md
+### RevenueCat (9 shown)
+- .hermes/SESSION_LOG.md
+- .hermes/START_HERE.md
+- .hermes/PROJECT_CONTEXT.md
+- .hermes/plans/2026-05-11-mobile-cache-snappiness-plan.md
+- .hermes/plans/2026-05-05-premium-real-sdk-go-live-plan.md
+- docs/project/RECENT_CHANGES.md
+- docs/project/ARCHITECTURE.md
+- docs/project/RELEASE_STATUS.md
+- docs/implementation/premium-foundation-e2e-runbook.md
+### premium (16 shown)
+- category-modal-top-options.html
+- .hermes/SESSION_LOG.md
+- .hermes/START_HERE.md
+- .hermes/PROJECT_CONTEXT.md
+- .hermes/audits/2026-05-16-doc-cleanup-inventory.md
+- .hermes/mockups/premium-purchase-refresh/option-b.html
+- .hermes/mockups/premium-purchase-refresh/option-a.html
+- .hermes/mockups/premium-purchase-refresh/index.html
+- .hermes/mockups/premium-purchase-refresh/option-c.html
+- .hermes/mockups/manage-household-members/006-current-avatar-full-name/index.html
+- .hermes/plans/2026-05-11-mobile-cache-snappiness-plan.md
+- .hermes/plans/2026-05-05-premium-real-sdk-go-live-plan.md
+- docs/project/RECENT_CHANGES.md
+- docs/project/ARCHITECTURE.md
+- docs/implementation/premium-foundation-e2e-runbook.md
+- mobile/store-screenshots/mockups/frequently-added-redesign-variants.html
+### Frequently Added (19 shown)
+- README.md
+- README-DETAILED.md
+- .hermes/SESSION_LOG.md
+- .hermes/PROJECT_CONTEXT.md
+- .hermes/mockups/frequent-items-compact-redesign.html
+- .hermes/mockups/home-tab-redesign-mockup.html
+- .hermes/mockups/frequent-items-redesign/index.html
+- .hermes/plans/2026-04-28_0502-home-tab-frequent-items-recovery-plan.md
+- .hermes/plans/2026-05-01_060956-dashboard-frequent-items-main-list-fix-plan.md
+- .hermes/plans/2026-04-28_161929-household-frequently-added-backend-plan.md
+- docs/project/RECENT_CHANGES.md
+- docs/features/shopping.md
+- docs/features/dashboard.md
+- mobile/README.md
+- mobile/store-screenshots/mockups/frequently-added-redesign-variants.html
+- mobile/store-screenshots/google-play-phone/fullhouse-store-screenshots.html
+- mobile/docs/implementation/plan-catalog-search-on-demand.md
+- .cursor/tasks/public-catalog-guest_and_signedIn/001-catalog-usage-inventory_plan/catalog-usage-inventory_summary.md
+- .cursor/tasks/public-catalog-guest_and_signedIn/001-catalog-usage-inventory_plan/catalog-usage-inventory_plan.md
+### guest mode (49 shown)
+- README.md
+- kitchen_hub_project_context.md
+- README-DETAILED.md
+- CLAUDE.md
+- .hermes/PROJECT_CONTEXT.md
+- docs/design/GUEST_MODE_SPECS.md
+- docs/next_plans/api-development-plan.md
+- docs/project/RECENT_CHANGES.md
+- docs/project/ARCHITECTURE.md
+- docs/project/PROJECT_OVERVIEW.md
+- docs/features/chores.md
+- docs/architecture/DATA_MODES_SPEC.md
+- docs/architecture/GUEST_STORAGE_DECISION.md
+- website/index.html
+- mobile/README.md
+- .cursor/tasks/signed-in-cache-and-offline-sync/003-cache-repo-layer/cache-repo-layer-summary.md
+- .cursor/tasks/backend-foundation/007-realtime-sync-integration/007-realtime-sync-integration_plan.md
+- .cursor/tasks/guest-experience/KH-MOB-IMP-4-clear-local-data/KH-MOB-IMP-4-clear-local-data_plan.md
+- .cursor/tasks/guest-experience/KH-MOB-IMP-3-switch-to-cloud/KH-MOB-IMP-3-switch-to-cloud_plan.md
+- .cursor/tasks/guest-experience/KH-MOB-IMP-3-switch-to-cloud/KH-MOB-IMP-3-switch-to-cloud_walkthrough.md
+- .cursor/tasks/guest-experience/KH-MOB-IMP-1-add-localid/KH-MOB-IMP-1-add-localid_plan.md
+- .cursor/tasks/guest-experience/KH-MOB-IMP-1-add-localid/KH-MOB-IMP-1-add-localid_summary.md
+- .cursor/tasks/guest-experience/KH-MOB-IMP-2-build-import-payload/KH-MOB-IMP-2-build-import-payload_plan.md
+- .cursor/tasks/architecture-cross-cutting-foundations/005-service-layer-timestamps/005-service-layer-timestamps_plan.md
+- .cursor/tasks/architecture-cross-cutting-foundations/005-service-layer-timestamps/005-service-layer-timestamps_summary.md
+- .cursor/tasks/architecture-cross-cutting-foundations/006-conflict-resolution-timestamps/006-conflict-resolution-timestamps_plan.md
+- .cursor/tasks/public-catalog-guest_and_signedIn/001-catalog-usage-inventory_plan/catalog-usage-inventory_summary.md
+- .cursor/tasks/public-catalog-guest_and_signedIn/001-catalog-usage-inventory_plan/catalog-usage-inventory_plan.md
+- .cursor/tasks/public-catalog-guest_and_signedIn/002-public-catalog-helper-standardization/002-public-catalog-helper-standardization_summary.md
+- .cursor/tasks/product-improvements/001-guest-mode-limitations/001-guest-mode-limitations_summary.md
+- .cursor/tasks/product-improvements/001-guest-mode-limitations/001-guest-mode-limitations_plan.md
+- .cursor/tasks/product-improvements/004-recipe-image-uploads/004-recipe-image-uploads_summary.md
+- .cursor/tasks/product-improvements/004-recipe-image-uploads/004-recipe-image-uploads_plan.md
+- .cursor/tasks/product-improvements/002-guest-data-import-modal/002-guest-data-import-modal_plan.md
+- .cursor/tasks/guest-mode-local-persistence/003-guest-recipe-dev-seeding/003-guest-recipe-dev-seeding_plan.md
+- .cursor/tasks/guest-mode-local-persistence/003-guest-recipe-dev-seeding/003-guest-recipe-dev-seeding_summary.md
+- .cursor/tasks/guest-mode-local-persistence/001-guest-storage-backend-decision/001-guest-storage-backend-decision_plan.md
+- .cursor/tasks/guest-mode-local-persistence/001-guest-storage-backend-decision/001-guest-storage-backend-decision_summary.md
+- .cursor/tasks/guest-mode-local-persistence/006-guest-persistence-test-coverage/GUEST_STORAGE_MANUAL_QA_CHECKLIST.md
+- .cursor/tasks/guest-mode-local-persistence/006-guest-persistence-test-coverage/006-guest-persistence-test-coverage_plan.md
+- .cursor/tasks/guest-mode-local-persistence/006-guest-persistence-test-coverage/006-guest-persistence-test-coverage_summary.md
+- .cursor/tasks/guest-mode-local-persistence/002-guest-storage-utilities/002-guest-storage-utilities_plan.md
+- .cursor/tasks/guest-mode-local-persistence/004-guest-shopping-service-storage/004-guest-shopping-service-storage_plan.md
+- .cursor/tasks/guest-mode-local-persistence/004-guest-shopping-service-storage/004-guest-shopping-service-storage_summary.md
+- .cursor/tasks/guest-mode-local-persistence/005-guest-no-sync-guardrails/005-guest-no-sync-guardrails_summary.md
+- .cursor/tasks/guest-mode-local-persistence/005-guest-no-sync-guardrails/005-guest-no-sync-guardrails_plan.md
+- .cursor/tasks/guest-mode-local-persistence/005-guest-no-sync-guardrails/005-guest-no-sync-guardrails_implementation-status.md
+- .cursor/plans/backend_sign-in_ui_flows.plan.md
+- .cursor/commands/update_back_doc.md
+### delete-account (7 shown)
+- static-legal/delete-account.html
+- backend/public/delete-account.html
+- .hermes/audits/2026-05-16-doc-cleanup-inventory.md
+- docs/project/RECENT_CHANGES.md
+- docs/project/ARCHITECTURE.md
+- docs/project/STORE_COMPLIANCE.md
+- docs/project/RELEASE_STATUS.md
+### support/ (4 shown)
+- docs/project/RECENT_CHANGES.md
+- docs/project/ARCHITECTURE.md
+- docs/project/STORE_COMPLIANCE.md
+- docs/project/RELEASE_STATUS.md
+### Apple (41 shown)
+- README-DETAILED.md
+- static-legal/terms.html
+- static-legal/privacy.html
+- static-legal/delete-account.html
+- backend/DOCKER_TEST_RESULTS.md
+- backend/public/terms.html
+- backend/public/privacy.html
+- backend/public/delete-account.html
+- .hermes/SESSION_LOG.md
+- .hermes/PROJECT_CONTEXT.md
+- .hermes/mockups/frequent-items-compact-redesign.html
+- .hermes/mockups/frequent-items-redesign/index.html
+- .hermes/mockups/recipe-ingredients-images/index.html
+- .hermes/mockups/premium-purchase-refresh/option-a.html
+- .hermes/mockups/premium-purchase-refresh/index.html
+- .hermes/mockups/premium-purchase-refresh/option-c.html
+- .hermes/mockups/manage-household-members/index.html
+- .hermes/mockups/manage-household-members/006-current-avatar-full-name/index.html
+- .hermes/mockups/manage-household-members/005-selected-first-with-actions/index.html
+- .hermes/mockups/manage-household-members/002-family-profile-cards/index.html
+- .hermes/mockups/manage-household-members/001-compact-native-list/index.html
+- .hermes/mockups/manage-household-members/003-action-focused-manager/index.html
+- .hermes/mockups/manage-household-members/004-current-pr-state/index.html
+- .hermes/plans/2026-04-27_095926-ios-form-presentation-rework.md
+- .hermes/plans/2026-05-11_163806-recipe-ingredient-images-redesign.md
+- docs/project/RECENT_CHANGES.md
+- docs/project/ARCHITECTURE.md
+- docs/project/STORE_COMPLIANCE.md
+- docs/project/RELEASE_STATUS.md
+- docs/implementation/code-review-add-recipe-modal-inputs.md
+- docs/implementation/deploy-version-pipeline.md
+- docs/compliance/app-store-privacy.md
+- docs/compliance/ios-app-store-submission-checklist.md
+- docs/compliance/ios-app-store-submission-checklist-rc-2026-02-21.md
+- mobile/README.md
+- mobile/store-screenshots/mockups/frequently-added-redesign-variants.html
+- mobile/store-screenshots/google-play-phone/fullhouse-store-screenshots.html
+- .cursor/oauth_backend_implementation_summary.md
+- .cursor/oauth-implementation-summary.md
+- .cursor/plans/backend_oauth_security_redesign.plan.md
+- .cursor/plans/persistent_search_dropdown_9e740060.plan.md
+### Google Play (20 shown)
+- README-DETAILED.md
+- static-legal/delete-account.html
+- backend/README.md
+- backend/public/delete-account.html
+- .hermes/SESSION_LOG.md
+- .hermes/START_HERE.md
+- .hermes/PROJECT_CONTEXT.md
+- .hermes/mockups/premium-purchase-refresh/option-a.html
+- docs/project/RECENT_CHANGES.md
+- docs/project/ARCHITECTURE.md
+- docs/project/STORE_COMPLIANCE.md
+- docs/project/RELEASE_STATUS.md
+- docs/deployment/vercel-monorepo.md
+- docs/implementation/deploy-version-pipeline.md
+- docs/compliance/google-play-data-safety.md
+- docs/compliance/google-play-submission-checklist.md
+- website/index.html
+- mobile/README.md
+- mobile/store-screenshots/google-play-phone/fullhouse-store-screenshots.html
+- mobile/docs/OTA_CHANNELS.md
+### dashboard (60 shown)
+- AGENTS.md
+- README.md
+- README-DETAILED.md
+- CLAUDE.md
+- static-legal/privacy.html
+- tasks/dashbored.plan.md
+- backend/ENV_SETUP_GUIDE.md
+- backend/README.md
+- backend/DEPLOYMENT.md
+- backend/supabase/README.md
+- backend/public/privacy.html
+- backend/docs/MONITORING_SETUP 2.md
+- backend/docs/ROLLBACK_GUIDE.md
+- backend/docs/PLATFORM_MIGRATION 2.md
+- backend/docs/MONITORING_SETUP.md
+- backend/docs/PLATFORM_MIGRATION.md
+- backend/docs/ROLLBACK_GUIDE 2.md
+- backend/docs/MIGRATIONS.md
+- .hermes/SESSION_LOG.md
+- .hermes/START_HERE.md
+- .hermes/PROJECT_CONTEXT.md
+- .hermes/audits/2026-05-16-doc-cleanup-inventory.md
+- .hermes/plans/2026-04-28_0502-home-tab-frequent-items-recovery-plan.md
+- .hermes/plans/2026-05-11_163806-recipe-ingredient-images-redesign.md
+- .hermes/plans/2026-05-01_060956-dashboard-frequent-items-main-list-fix-plan.md
+- .hermes/plans/2026-04-28_161929-household-frequently-added-backend-plan.md
+- docs/PLAN-household-invite 2.md
+- docs/PLAN-household-invite.md
+- docs/next_plans/api-development-plan.md
+- docs/next_plans/backend-architecture.md
+- docs/project/RECENT_CHANGES.md
+- docs/project/ARCHITECTURE.md
+- docs/project/STORE_COMPLIANCE.md
+- docs/project/PROJECT_OVERVIEW.md
+- docs/deployment/vercel-monorepo.md
+- docs/implementation/deploy-version-pipeline.md
+- docs/features/shopping.md
+- docs/features/dashboard.md
+- legal/privacy-policy-v1.md
+- .agents/ui-audit-report.md
+- .agents/skills/vercel-react-best-practices/AGENTS.md
+- .agents/skills/vercel-react-best-practices/rules/js-cache-function-results.md
+- website/index.html
+- mobile/README.md
+- mobile/store-screenshots/mockups/frequently-added-redesign-variants.html
+- mobile/store-screenshots/google-play-phone/fullhouse-store-screenshots.html
+- mobile/src/i18n/KEY_STRUCTURE.md
+- mobile/docs/OTA_CHANNELS.md
+- mobile/docs/implementation/plan-catalog-search-on-demand.md
+- .claude/commands/update-docs.md
+- .cursor/CODE_REVIEW_shopping_feature.md
+- .cursor/CODE_REVIEW_ADDRESSED.md
+- .cursor/CODE_REVIEW_refactor-ui-2.md
+- .cursor/CODE_REVIEW_latest.md
+- .cursor/tasks/user-authentication/001-enable-google-auth/001-enable-google-auth_summary.md
+- .cursor/tasks/user-authentication/001-enable-google-auth/001-enable-google-auth_plan.md
+- .cursor/tasks/internationalization-i18n/001-i18n-implementation-plan.md
+- .cursor/plans/rtl_handling_with_app_restart_8eeed4b2.plan.md
+- .cursor/plans/rtl_handling_with_app_restart_8eeed4b2.plan 2.md
+- .cursor/commands/update-docs.md

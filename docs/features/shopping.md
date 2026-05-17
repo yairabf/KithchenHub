@@ -2,6 +2,8 @@
 
 **Feature area:** `mobile/src/features/shopping/`
 
+**Current source map**: see [`mobile-ui-map.md`](./mobile-ui-map.md). Current shopping source includes shopping lists, quick add, list panel, grocery search, category browsing, custom item/list creation, frequently added grid, ingredient conflict handling, services, hooks, and normalization/cache utilities.
+
 ## Purpose
 
 The shopping feature is the highest-priority feature in KitchenHub.
@@ -174,6 +176,45 @@ Important recent or active themes in shopping include:
 - improving the overall reliability of the feature
 
 These are more important right now than speculative new complexity.
+
+---
+
+## Current source-backed behavior
+
+### Screen and data mode
+
+- Main screen: `mobile/src/features/shopping/screens/ShoppingListsScreen.tsx`.
+- Data mode is derived with `determineUserDataMode(user)` unless `config.mockData.enabled` forces `guest` mode.
+- Service factory: `createShoppingService(userMode)`.
+- Signed-in users additionally use `CacheAwareShoppingRepository`; guest/mock mode uses the service directly.
+- First load and tab re-entry use `loadShoppingData()`, which reads lists/items directly instead of calling full `getShoppingData()` every time.
+- Pull-to-refresh calls `shoppingRepository.refreshAll()` for signed-in users before reloading local state.
+
+### Lists and realtime
+
+- Lists are sorted with the main list first.
+- `selectedList` is preserved when possible via `getSelectedList()`.
+- Signed-in households use `useShoppingRealtime()` when `userMode === 'signed-in'` and `user.householdId` is present.
+- Realtime updates pass through `applyShoppingListChange()` / `applyShoppingItemChange()` utilities and cache-aware repository state.
+
+### Item add/update/delete behavior
+
+- Quick add and quantity modal paths both use optimistic state updates.
+- Rapid duplicate quick-add taps are guarded by `pendingQuickAddKeys`.
+- Optimistic local-only item IDs beginning with `item-` are treated specially for signed-in users: quantity/toggle/delete can update UI locally or skip server calls to avoid 404s while create is still in flight.
+- Deletion tracks both `id` and `localId` in `pendingDeletedItemIds` so swipe/delete hides the item while the operation settles.
+
+### Search, categories, and catalog
+
+- Grocery search uses `useDebouncedRemoteSearch()` with the catalog hook's `searchGroceries()`.
+- Category browsing uses `getGroceriesByCategory()` and request IDs to avoid stale category responses overwriting newer selections.
+- A one-time category cache migration clears deprecated catalog category cache with `@kitchen_hub_category_migration_v1`.
+- Custom item category options are loaded from `catalogService.getShoppingCategories()` and merged with `SHOPPING_CATEGORIES`.
+
+### Cross-feature consumers
+
+- Dashboard quick add uses the same `quickAddItem()` utility concepts.
+- Recipe detail ingredient actions create/update shopping items through `createShoppingService()` and `CacheAwareShoppingRepository` when signed in.
 
 ---
 

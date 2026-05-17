@@ -14,6 +14,7 @@ We collect information necessary to provide and improve the Kitchen Hub service:
 
 - **Account data:** Email address, name (if provided), and authentication identifiers (e.g. linked to Google sign-in) when you create or use an account.
 - **Household and app data:** Household name, membership, and content you create in the app (shopping lists, list items, recipes, chores, dashboard data). We may also collect photos you add in the app (e.g. recipe images) to provide that functionality.
+- **Purchase and subscription data:** If you purchase or use paid subscription features, we may process purchase status, subscription identifiers, entitlement status, renewal/expiration information, and related store/provider metadata needed to provide paid features, restore purchases, prevent fraud, and support account management. Payments are processed by the relevant app store and/or subscription provider; do not send us full payment card details.
 - **Device and technical data:** Device type, operating system, and app version may be collected for support and stability (e.g. crash reports if enabled). We do not use this data for advertising.
 - **Usage data:** General usage of the app to operate and improve the service (e.g. API requests, sync events). Data is not used for advertising or marketing purposes.
 
@@ -38,6 +39,7 @@ We share personal data only as described below. We do **not** sell your personal
 
 - **Service providers (processors):** We use trusted service providers who process data on our instructions. They do not use your data for their own purposes (e.g. advertising).
   - **Supabase:** We use Supabase for database and related infrastructure. Supabase acts as a **processor**, not a data controller — we instruct how your data is processed. Data transmitted to and from Supabase is **encrypted in transit (TLS)**. Data at rest is encrypted as described in Supabase’s documentation.
+  - **App stores and subscription providers:** If paid features are enabled, Apple, Google, and/or our subscription provider may process purchase and entitlement information according to their own terms and privacy policies. We use this information to provide, reconcile, and support paid features.
 - **Legal and safety:** We may disclose data when required by law, to protect rights and safety, or to enforce our terms.
 
 We do not use collected data for cross-app tracking or third-party advertising. Data is not used for advertising or marketing purposes.
@@ -76,6 +78,6 @@ We may update this Privacy Policy from time to time. We will post the updated ve
 
 For privacy questions or to exercise your rights:
 
-- **Email:** yairabc@gmail.com  
-- **Data controller:** Yair Abramovitch (individual developer, operator of FullHouse / Kitchen Hub)  
+- **Email:** yairabc@gmail.com
+- **Data controller:** Yair Abramovitch (individual developer, operator of FullHouse / Kitchen Hub)
 - **Jurisdiction:** The data controller is established in **Israel**. The service may be used from other countries; additional rights may apply under your local law. Israeli residents may lodge complaints with the Israeli Privacy Protection Authority. For other regions, contact us at the email above.

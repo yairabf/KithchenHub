@@ -1,8 +1,8 @@
 # Chores Feature
 
-**Exports** (from `mobile/src/features/chores/index.ts`): `ChoresScreen`, `ProgressRing`, `ChoreDetailsModal`, `ChoresQuickActionModal`.
+**Exports** (from `mobile/src/features/chores/index.ts`): `ChoresScreen`, `ChoreCard`, `ChoresProgressCard`, `ChoresSection`, `ProgressRing`, `ChoreDetailsModal`.
 
-**Source**: `mobile/src/features/chores/` — 1 screen (ChoresScreen), 3 components (ProgressRing, ChoreDetailsModal, ChoresQuickActionModal), services (choresService), utils (choreFactory).
+**Current source map**: see [`mobile-ui-map.md`](./mobile-ui-map.md). The current source includes `ChoresScreen`, `ChoreCard`, `ChoresProgressCard`, `ChoresSection`, `ProgressRing`, `ChoreDetailsModal`, `ChoresQuickActionModal`, chore services, tests, and chore factory utilities.
 
 ## Overview
 
@@ -144,21 +144,18 @@ interface ProgressRingProps {
   - Smooth spring animations
   - Direction locking to prevent multi-directional swipes
 
-### ChoreCard (Internal Component)
+### ChoreCard
 
-- **File**: `mobile/src/features/chores/screens/ChoresScreen.tsx` (defined within ChoresScreen)
-- **Purpose**: Individual chore card with sync status indicator
+- **File**: `mobile/src/features/chores/components/ChoreCard/ChoreCard.tsx`
+- **Purpose**: Individual chore card with swipe-to-delete, edit, and completion-toggle behavior
 - **Features**:
-  - Displays chore icon, name, assignee, and due date
-  - Edit and delete actions via swipe gestures
-  - **Sync Status Indicator** (signed-in users only):
-    - Displays visual indicator in top-right corner of chore icon
-    - Shows pending state (clock icon) when chore is queued for sync
-    - Shows failed state (warning icon) when sync has permanently failed
-    - Hidden when chore is confirmed (synced successfully)
-    - Uses `useEntitySyncStatusWithEntity` hook to determine status
-    - Integrates with sync queue system for real-time status updates
-    - Wrapped with `React.memo()` for performance optimization
+  - Displays chore icon, title, assignee, recurrence label, and due date/time
+  - Uses `SwipeableWrapper` for delete-on-swipe behavior
+  - Uses `ListItemCardWrapper` for the tappable card surface
+  - Edit button opens chore details for the selected chore
+  - Tapping the card toggles completion
+  - Supports RTL layout via `isRtl` prop / i18n direction
+  - Wrapped with `React.memo()` for performance optimization
 
 ### ChoreDetailsModal
 
@@ -249,11 +246,11 @@ See [`mobile/src/common/types/entityMetadata.ts`](../../mobile/src/common/types/
     - Wraps `RemoteChoresService` with cache-first read strategies and write-through caching
     - Implements `ICacheAwareRepository<Chore>` interface
     - **Cache-First Reads**:
-      - `findAll()`: Uses `getCached()` for cache-first reads with background refresh
-      - Returns cached data immediately if fresh or stale
-      - Triggers background refresh for stale data (non-blocking)
-      - Blocks for network fetch if cache is expired (when online)
-      - Returns cached data if offline (even if expired)
+      - `findAll()`: uses shared `getCached()` cache-first behavior documented in `docs/architecture/mobile-offline-cache-sync.md`
+      - Returns cached data for `fresh`, `stale`, and `expired` states unless an explicit refresh is requested
+      - `forceRefresh=true` fetches from the API when online, replaces cache, updates metadata, and emits cache events
+      - Missing/corrupt cache returns empty when offline and fetches from network when online
+      - Future-version cache data is preserved; online fetch/merge can occur without wiping future-version local data
     - **Write-Through Caching**:
       - `create()`, `update()`, `delete()`, `toggle()`: Update cache immediately after successful API operations
       - Cache errors are logged but don't fail operations (server write succeeded)
@@ -296,7 +293,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
     - `deleteChore(choreId: string): Promise<void>` - Soft-delete chore
     - `toggleChore(choreId: string): Promise<Chore>` - Toggle chore completion status
   - **Service Classes** (extracted into separate files):
-    - `LocalChoresService`: 
+    - `LocalChoresService`:
       - Reads chores from `guestStorage.getChores()` (AsyncStorage) instead of mocks
       - **Filters deleted items**: `getChores()` uses `isEntityActive()` to filter out soft-deleted items (tombstone pattern)
       - Returns empty arrays when no guest data exists (not mock data)
@@ -307,7 +304,7 @@ The feature uses a **Strategy Pattern** with a **Factory Pattern** to handle dat
         - `updateChore()` and `toggleChore()`: Update `updatedAt` using `withUpdatedAt()` helper
         - `deleteChore()`: Set `deletedAt` and `updatedAt` using `markDeleted()` and `withUpdatedAt()` helpers
       - **ID Matching**: Service methods accept both `id` and `localId` via `findEntityIndex()` which checks both identifiers
-    - `RemoteChoresService`: 
+    - `RemoteChoresService`:
       - Calls backend via `api.ts` (`/chores` endpoint), maps DTOs to Chore objects
       - Uses `toSupabaseTimestamps()` for API payloads (converts camelCase to snake_case)
       - Uses `normalizeTimestampsFromApi()` to normalize API responses (handles both camelCase and snake_case)
@@ -486,7 +483,6 @@ Utility for applying remote updates to local cached state:
 - `ScreenHeader` - Shared header component with actions
 - `ShareModal` - Shared modal component for sharing functionality
 - `formatChoresText` - Utility function for formatting chores for sharing
-- `mockChores` - Initial chore data (used by LocalChoresService)
 - `api` - HTTP client (`mobile/src/services/api.ts`) for remote service calls
 - `pastelColors` - Theme colors for card backgrounds
 - `useWindowDimensions` - For responsive layout detection

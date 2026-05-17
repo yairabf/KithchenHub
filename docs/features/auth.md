@@ -2,11 +2,18 @@
 
 **Exports** (from `mobile/src/features/auth/index.ts`): `LoginScreen`, `GoogleSignInButton`.
 
-**Source**: `mobile/src/features/auth/` — 1 screen (LoginScreen), 1 component (GoogleSignInButton), no hooks or services.
+**Current source map**: see [`mobile-ui-map.md`](./mobile-ui-map.md). The auth/onboarding flow is larger than this feature barrel export: it includes `LoginScreen`, `RegisterScreen`, `EnterInviteCodeScreen`, `HouseholdNameScreen`, `HouseholdOnboardingScreen`, `OnboardingContext`, `useOAuthSignIn`, `authApi`, `sessionManager`, `tokenStorage`, and guest-data import support.
+
+**Important source directories/files**:
+- `mobile/src/features/auth/`
+- `mobile/src/features/onboarding/screens/HouseholdOnboardingScreen.tsx`
+- `mobile/src/features/households/services/inviteApi.ts`
+- `mobile/src/navigation/AuthStackNavigator.tsx`
+- `mobile/src/contexts/AuthContext.tsx`
 
 ## Overview
 
-The Auth feature handles user authentication for Kitchen Hub via Google sign-in. It serves as the entry point for new users and manages the authentication flow.
+The Auth feature handles user authentication, registration, invite-code joining, household onboarding, guest-mode transition/import, and token/session persistence. Google sign-in is one important path, but it is not the only auth surface.
 
 ## Screenshot
 
@@ -17,12 +24,15 @@ The Auth feature handles user authentication for Kitchen Hub via Google sign-in.
 ### LoginScreen
 
 - **File**: `mobile/src/features/auth/screens/LoginScreen.tsx`
-- **Purpose**: Main authentication UI displaying branding, sign-in options, and legal footer
+- **Purpose**: Main authentication UI displaying branding, Google and email sign-in options, invite-join context, and legal footer
 - **Key functionality**:
   - Display Kitchen Hub branding with emoji logo
   - Google sign-in with loading state handling
-  - Join household navigation
-  - Terms of Service and Privacy Policy links
+  - Email/password sign-in form toggled from the login screen
+  - Join household navigation to `EnterInviteCode`
+  - Invite-context sign-in through `OnboardingContext` when joining a household
+  - Terms of Service and Privacy Policy links from `LegalLinksContext` / `openLegalUrl`
+  - Redirect to `HouseholdName` when `showHouseholdNameScreen` is set after OAuth
 
 #### Code Snippet
 
@@ -56,6 +66,37 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   // ... render JSX
 }
 ```
+
+### RegisterScreen
+
+- **File**: `mobile/src/features/auth/screens/RegisterScreen.tsx`
+- **Purpose**: Email/password registration with name/email/password validation and login navigation after successful signup.
+- **Key functionality**:
+  - validates email format and password requirements
+  - calls `signUpWithEmail(email, password, name)` from `AuthContext`
+  - routes back to `Login` after success
+
+### EnterInviteCodeScreen
+
+- **File**: `mobile/src/features/auth/screens/EnterInviteCodeScreen.tsx`
+- **Purpose**: Validates a household invite code and sets invite context for sign-in.
+- **Key functionality**:
+  - calls `inviteApi.validateInviteCode(trimmedCode)`
+  - stores invite context in `OnboardingContext`
+  - navigates back to `Login` so the next Google sign-in joins the validated household
+
+### HouseholdNameScreen
+
+- **File**: `mobile/src/features/auth/screens/HouseholdNameScreen.tsx`
+- **Purpose**: Lets a new household owner confirm/update household name after OAuth sign-in.
+- **Key functionality**:
+  - fetches/updates household name through household APIs
+  - clears `showHouseholdNameScreen` after completion or skip
+
+### HouseholdOnboardingScreen
+
+- **File**: `mobile/src/features/onboarding/screens/HouseholdOnboardingScreen.tsx`
+- **Purpose**: Onboarding screen for signed-in users without a household.
 
 ## Components
 
@@ -106,18 +147,25 @@ export function GoogleSignInButton({ onPress, isLoading }: GoogleSignInButtonPro
 ## State Management
 
 - **AuthContext**: Global authentication state via `useAuth()` hook
-  - `signInWithGoogle()` - Initiates Google OAuth flow
+  - `signInWithGoogle()` - Initiates Google OAuth flow, optionally with invite context
+  - `signInWithEmail()` - Signs in with email/password from `LoginScreen`
+  - `signUpWithEmail()` - Registers email/password users from `RegisterScreen`
   - `signOut()` - Signs out current user
   - `showHouseholdNameScreen` - Boolean indicating if user should see household name screen
   - `setShowHouseholdNameScreen()` - Sets household name screen visibility
-- **Local state**: `isLoading` boolean to track Google sign-in progress
-- **Persistence**: User data stored in AsyncStorage under `@kitchen_hub_user`
+- **OnboardingContext**: Stores onboarding mode and invite context for household-join flows
+- **Local state**: loading flags plus email/password form visibility and input state
+- **Persistence**: User/session/token data is handled by auth/session services and AsyncStorage-backed token/user storage
 
 ## Key Dependencies
 
 - `@expo/vector-icons` - Ionicons for Google logo and icons
 - `react-native` - Core React Native components (TouchableOpacity, Text, View, ActivityIndicator, Alert, SafeAreaView)
 - `AuthContext` - Custom context for authentication state (`useAuth` hook)
+- `OnboardingContext` - Stores join/create mode and invite context
+- `authApi`, `sessionManager`, `tokenStorage` - API/session/token persistence services
+- `inviteApi` - Household invite-code validation for join flow
+- `LegalLinksContext` and `openLegalUrl` - Source-backed legal footer links
 - Theme system (`colors`, `spacing`, `borderRadius`, `typography`) - Centralized design tokens
 
 ## Error Handling

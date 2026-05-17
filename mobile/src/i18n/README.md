@@ -15,7 +15,31 @@ i18n is initialized by importing `./src/i18n` at the **earliest executed entrypo
 ## AsyncStorage key
 
 - **Key:** `@kitchen_hub_language`
-- **Value:** Language code only (e.g. `en`, `es`, `he`, `ar`). Stored and read by the detector and by `setAppLanguage()`.
+- **Value:** Language code only (currently `en`, `he`, or `ar`). Stored and read by the detector and by `setAppLanguage()`.
+
+## Supported languages and namespaces
+
+Supported languages are defined in `constants.ts`:
+
+- `en` — English
+- `he` — Hebrew / עברית
+- `ar` — Arabic / العربية
+
+The current resource set contains 11 namespaces for each supported language:
+
+- `common`
+- `auth`
+- `dashboard`
+- `shopping`
+- `recipes`
+- `chores`
+- `settings`
+- `legal`
+- `categories`
+- `errors`
+- `validation`
+
+When adding a language, update both `SUPPORTED_LANGUAGE_CODES` / `AVAILABLE_LANGUAGES` in `constants.ts` and the resource imports/object in `index.ts`.
 
 ## Locale normalization rules
 
@@ -44,3 +68,14 @@ Translation key format, namespaces per feature, placeholder and pluralization ru
 
 - **In components:** `import { useTranslation } from 'react-i18next';` then `const { t } = useTranslation();`. Prefer `useTranslation('shopping')` then `t('listPanel.title')`; or `t('shopping:listPanel.title')` when explicit. For default namespace (common): `t('buttons.save')`.
 - **Change language:** Use `setAppLanguage(locale)` from `./i18n` (persists to AsyncStorage and calls `i18n.changeLanguage`). Do not call `i18n.changeLanguage` directly in app code.
+
+## Source-backed verification
+
+Current i18n coverage is backed by tests under `mobile/src/i18n/__tests__/`:
+
+- `constants.test.ts` — language constants and language selector entries stay aligned.
+- `languageDetector.test.ts` — AsyncStorage/device/fallback detection behavior.
+- `localeNormalization.test.ts` — locale normalization.
+- `namespaceResolution.test.ts` — namespace/key smoke checks and plural resolution.
+- `setAppLanguage.test.ts` — persistence, supported-language validation, and RTL switching.
+- `storage.test.ts` — AsyncStorage helpers.

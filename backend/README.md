@@ -79,30 +79,18 @@ Kitchen Hub Backend is a RESTful API built with NestJS and Fastify, providing a 
   - Images tagged with branch + SHA for traceability
   - GitHub Actions cache for faster builds
   - Pull-ready images for production deployments
-- **Automated Staging Deployment**: GitHub Actions workflow for staging environment
-  - **Staging deployment** (`deploy-staging.yml`): Automatically deploys to GCP Cloud Run when code is merged to `develop` branch
-  - Runs database migrations before deployment
-  - Deploys to Cloud Run via `gcloud run deploy`
-  - Supports optional health checks
-  - See [Deployment Guide](./DEPLOYMENT.md#automated-staging-deployment) for setup instructions
-- **Automated Production Deployment**: GitHub Actions workflow for production environment with manual approval
-  - **Production deployment** (`deploy-production.yml`): Automatically deploys to GCP Cloud Run when code is merged to `main` branch
-  - **Manual approval required** via GitHub Environment protection rules
-  - Supports manual dispatch for custom image tags and rollbacks
-  - Runs database migrations after approval
-  - Deploys to Cloud Run via `gcloud run deploy`
-  - Supports optional health checks
-  - See [Deployment Guide](./DEPLOYMENT.md#automated-production-deployment) for setup instructions
-- **Comprehensive Deployment Documentation**: Complete guides for deployment, rollback, and platform migration
-  - **[Comprehensive Deployment Guide](./docs/DEPLOYMENT_COMPREHENSIVE.md)**: Complete deployment procedures for GCP Cloud Run and AWS ECS/Fargate
-  - **[Rollback Guide](./docs/ROLLBACK_GUIDE.md)**: Detailed rollback procedures for all platforms
-  - **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)**: Complete checklist for all environments and platforms
-  - **[Platform Migration Guide](./docs/PLATFORM_MIGRATION.md)**: Step-by-step migration between GCP Cloud Run and AWS ECS/Fargate
-- **Local Staging Verification**: Optional `docker-compose.staging.yml` and `verify-staging.sh` for running a staging-like stack locally (Postgres + API), running migrations, and smoke-testing `/api/version` and `/api/docs/v1`. Requires `.env.staging`. See [Deployment Guide](./DEPLOYMENT.md) for CI/CD staging; run `./verify-staging.sh` from `backend/` for local verification.
-- **Swagger Documentation**: Interactive API docs at `/api/docs/v1`
+- **Vercel Backend Deployment**: current backend deploy target is Vercel with root directory `backend`
+  - Config: [`vercel.json`](./vercel.json)
+  - Build script: `npm run vercel-build`
+  - Manual GitHub redeploy hook: `.github/workflows/manual-deploy.yml` with `redeploy_backend_vercel=true`
+  - Current guide: [Deployment Guide](./DEPLOYMENT.md)
+  - Environment checklist: [Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)
+  - Legacy GCP/AWS deployment docs are archived under `../docs/archive/deployment-docs-2026-05-16/`
+- **Local Staging Verification**: Optional `docker-compose.staging.yml` and `verify-staging.sh` for running a staging-like stack locally (Postgres + API), running migrations, and smoke-testing `/api/version`. Requires `.env.staging`. See [Deployment Guide](./DEPLOYMENT.md) for CI/CD staging; run `./verify-staging.sh` from `backend/` for local verification.
+- **Swagger Documentation**: currently disabled in `src/main.ts`; use [`../docs/api/backend-endpoints.md`](../docs/api/backend-endpoints.md) for the current endpoint inventory.
 - **API Versioning**: URI-based versioning (`/api/v1`, `/api/v2`, etc.)
 - **Version Discovery**: `GET /api/version` endpoint for version information
-- **Deploy Metadata (Vercel)**: `GET /api/v1/deploy-info` for deployment SHA/version reporting (used by the deploy-status workflow)
+- **Deploy Metadata (Vercel)**: `GET /api/v1/deploy-info` for deployment SHA/version reporting
 - **Client legal URLs (public)**: `GET /api/v1/client-links` returns `{ privacyPolicyUrl, termsOfServiceUrl }` for the mobile/web apps. Defaults use `AUTH_BACKEND_BASE_URL` + `/privacy` and `/terms`; override with `LEGAL_PRIVACY_POLICY_URL` / `LEGAL_TERMS_OF_SERVICE_URL` when needed.
 - **Deprecation Support**: Automatic deprecation headers and sunset handling
 - **CORS Enabled**: Configured for mobile app access
@@ -259,14 +247,14 @@ Run both the backend API and PostgreSQL database in Docker containers.
    ```
    Or run in background: `docker-compose up -d backend`
 
-The API will be available at `http://localhost:3000` with Swagger docs at `http://localhost:3000/api/docs/v1`.
+The API will be available at `http://localhost:3000`. Swagger setup is currently disabled in `src/main.ts`; use `../docs/api/backend-endpoints.md` for the current endpoint inventory.
 
-**Catalog icon storage (MinIO)**  
+**Catalog icon storage (MinIO)**
 The full stack includes MinIO and a one-time init step that uploads `../sandbox/downloaded_icons` into the `catalog-icons` bucket. Ensure `sandbox/downloaded_icons` exists (e.g. from running the icon generator). The backend rewrites relative catalog `image_url` values to `CATALOG_ICONS_BASE_URL` (default `http://localhost:9000/catalog-icons`) so the mobile app can load icons. Optional: set `CATALOG_ICONS_BASE_URL` in `.env` if you use a different URL.
 
-**Catalog icons not loading?**  
-1. Ensure icons are in MinIO: from `backend/` run `docker-compose run --rm catalog-storage-init` (requires `../sandbox/downloaded_icons`).  
-2. For Expo web, MinIO CORS is set via `MINIO_API_CORS_ALLOW_ORIGIN` (default `*`). If needed, set `MINIO_CORS_ORIGIN=http://localhost:8081` in `.env`.  
+**Catalog icons not loading?**
+1. Ensure icons are in MinIO: from `backend/` run `docker-compose run --rm catalog-storage-init` (requires `../sandbox/downloaded_icons`).
+2. For Expo web, MinIO CORS is set via `MINIO_API_CORS_ALLOW_ORIGIN` (default `*`). If needed, set `MINIO_CORS_ORIGIN=http://localhost:8081` in `.env`.
 3. Restart MinIO after changing CORS: `docker-compose restart minio`.
 
 ### Development Workflow
@@ -338,7 +326,7 @@ docker-compose down -v
 ### Accessing Services
 
 - **Backend API**: `http://localhost:3000`
-- **API Documentation**: `http://localhost:3000/api/docs/v1`
+- **API Documentation**: `../docs/api/backend-endpoints.md` for current endpoint inventory; Swagger is currently disabled in `src/main.ts`.
 - **Version Discovery**: `http://localhost:3000/api/version`
 - **Prisma Studio**: `http://localhost:5555` (when running)
 - **PostgreSQL**: `localhost:5432`
@@ -744,210 +732,79 @@ To verify that Row Level Security is correctly isolating data between households
 ## API Endpoints
 
 ### Base URL
+
 - **API**: `http://localhost:3000/api/v1`
-- **Swagger Docs**: `http://localhost:3000/api/docs/v1`
 - **Version discovery**: `http://localhost:3000/api/version` (unversioned; use to discover supported API versions)
+- **Endpoint inventory**: see [`../docs/api/backend-endpoints.md`](../docs/api/backend-endpoints.md)
+- **Swagger Docs**: currently disabled in `src/main.ts` because Swagger setup requires resolving the `@fastify/static` dependency/configuration issue. Do not treat `/api/docs/v1` as available until that code path is re-enabled.
 
-### Authentication Endpoints
+### Source-backed endpoint documentation
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/auth/register` | Public | Register new user with email and password. Creates user account and sends verification email. Email verification required before login. |
-| `POST` | `/auth/login` | Public | Authenticate user with email and password. Requires email to be verified. Returns JWT access and refresh tokens. |
-| `GET` | `/auth/verify-email?token=` | Public | Verify email address via GET request (for email links). Validates token and automatically logs user in. |
-| `POST` | `/auth/verify-email` | Public | Verify email address via POST request (for API calls). Validates token and automatically logs user in. |
-| `POST` | `/auth/resend-verification` | Public | Resend email verification email. Generates new verification token and sends email. |
-| `POST` | `/auth/google` | Public | Authenticate with Google OAuth ID token. Login: existing user returns tokens (household in body rejected). Sign-up: new user with no body → backend creates household with default name. Join: body `household.id` (from GET /invite/validate) to join existing household. |
-| `POST` | `/auth/refresh` | Public | Refresh access token using refresh token |
-| `GET` | `/auth/me` | Protected | Get current authenticated user information with household data |
-| `POST` | `/auth/sync` | Protected | Synchronize offline data to cloud |
+The current endpoint list is maintained in:
 
-### User Account Endpoints (GDPR & Privacy)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `DELETE` | `/users/me` | Protected | Permanently delete the current user account and associated data. If sole household admin, deletes the household and all its data. Revokes all refresh tokens. Optional query/body `reason` for audit. Returns 204 No Content. |
-| `GET` | `/users/me/export` | Protected | Export all user data (profile, household, recipes, shopping lists, assigned chores, activity summary) as JSON for data portability (GDPR). |
-
-**Sync Endpoint Details:**
-- Accepts offline data (shopping lists, recipes, chores)
-- Maximum of 1000 items per sync request (combined total of lists, recipes, and chores)
-- **Payload Versioning**: Optional `payloadVersion` field (positive integer, minimum 1) for API contract versioning
-  - Current version: `1` (default if omitted)
-  - Enables future payload evolution without breaking existing clients
-  - Backend treats missing or `payloadVersion = 1` identically
-- **Idempotency Keys**: Each entity must include a unique `operationId` (UUID v4) to prevent duplicate processing
-  - Safe retries: Same `operationId` will be processed only once
-  - Atomic processing: Insert-first pattern ensures exactly-once semantics
-  - Optional `requestId` for batch observability (same for all items in a sync request)
-- Performs simple `upsert` operations (no timestamp-based conflict resolution on server)
-- Returns sync result with status (`synced`, `partial`, or `failed`)
-- **Granular Results**: Returns per-entity success/failure status
-  - `succeeded` array (optional): Lists successful entities with `operationId`, `entityType`, `id`, and optional `clientLocalId`
-  - `conflicts` array: Lists failed entities with `operationId`, `type`, `id`, and `reason`
-  - Each `operationId` appears exactly once in either `succeeded` or `conflicts` (invariant enforced)
-  - Enables partial batch recovery: mobile clients can retry only failed items
-
-**Sync Response Format:**
-```typescript
-{
-  status: 'synced' | 'partial' | 'failed';
-  conflicts: Array<{
-    type: 'list' | 'recipe' | 'chore' | 'shoppingItem';
-    id: string;
-    operationId: string;
-    reason: string;
-  }>;
-  succeeded?: Array<{
-    operationId: string;
-    entityType: 'list' | 'recipe' | 'chore';
-    id: string; // Server-assigned ID
-    clientLocalId?: string; // Original localId (for create operations)
-  }>;
-}
+```text
+../docs/api/backend-endpoints.md
 ```
 
-**Response Status Values:**
-- `synced`: All entities processed successfully (no conflicts)
-- `partial`: Some entities succeeded, some failed (both `succeeded` and `conflicts` arrays populated)
-- `failed`: All entities failed (only `conflicts` array populated, `succeeded` may be undefined)
+That inventory is generated from controller decorators and should be the first place agents check before editing API docs. For detailed sync behavior, use:
 
-**Conflict Resolution Strategy:**
-- **Server Behavior**: Simple upsert operations - no timestamp-based conflict resolution
-- **Client-Side Resolution**: All conflict resolution handled client-side using Last-Write-Wins (LWW) strategy
-- **Server Timestamp Authority**: Server timestamps are authoritative (Prisma auto-manages `updatedAt` via `@updatedAt` directive)
-- **Soft-Delete Handling**: `deletedAt` is handled via soft-delete in repositories
-- **Why Client-Side**: Prevents conflict resolution loops between client and server, allows offline-first architecture with local conflict resolution
+```text
+./docs/api-sync-and-conflict-strategy.md
+./docs/SYNC_API_QUICK_REFERENCE.md
+```
 
-**Timestamp Management:**
-- Server timestamps are set correctly by Prisma (`@updatedAt` directive)
-- Soft-delete operations set `deletedAt` correctly
-- Sync endpoint returns entities with proper timestamps
-- No timestamp manipulation in sync endpoint (let Prisma handle it)
+### Key public endpoints
 
-### OAuth Flow Endpoints
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/verify-email`
+- `POST /api/v1/auth/verify-email`
+- `POST /api/v1/auth/resend-verification`
+- `POST /api/v1/auth/google`
+- `GET /api/v1/auth/google/start`
+- `GET /api/v1/auth/google/callback`
+- `POST /api/v1/auth/refresh`
+- `GET /api/v1/invite/validate`
+- `GET /api/v1/groceries/search`
+- `GET /api/v1/groceries/categories`
+- `GET /api/v1/groceries/by-category`
+- `GET /api/v1/groceries/names`
+- `GET /api/v1/health`
+- `GET /api/v1/health/live`
+- `GET /api/v1/health/ready`
+- `GET /api/v1/health/detailed`
+- `GET /api/v1/client-links`
+- `GET /api/v1/deploy-info`
+- `GET /api/version`
 
-The backend implements a backend-driven OAuth flow where all OAuth secrets and token exchanges happen on the server side. The mobile app opens a WebBrowser session to the start endpoint and receives a JWT via deep link.
+### Key protected endpoint groups
 
-**Flow:**
-1. Client opens `/auth/google/start` in browser (optionally with `?householdId=xxx` for join flow)
-2. Backend generates state token with CSRF protection and redirects to Google
-3. Google redirects back to `/auth/google/callback` with authorization code
-4. Backend validates state, exchanges code for tokens, creates/finds user
-5. Backend redirects to app deep link with JWT: `kitchen-hub://auth/callback?token=JWT&isNewHousehold=true|false`
+- Auth/current user/sync: `GET /api/v1/auth/me`, `POST /api/v1/auth/sync`
+- Users/privacy: `GET /api/v1/users/me/export`, `DELETE /api/v1/users/me`
+- Household: `/api/v1/household`, `/api/v1/household/invite`, `/api/v1/household/join`, `/api/v1/household/members/:id`
+- Shopping lists: `/api/v1/shopping-lists`, `/api/v1/shopping-lists/main`, `/api/v1/shopping-lists/aggregate`, `/api/v1/shopping-lists/:id`, `/api/v1/shopping-lists/:id/items`
+- Shopping items: `/api/v1/shopping-items/custom`, `/api/v1/shopping-items/frequent`, `/api/v1/shopping-items/:id`
+- Recipes: `/api/v1/recipes`, `/api/v1/recipes/:id`, `/api/v1/recipes/:id/cook`, `/api/v1/recipes/images/search`, `/api/v1/recipes/:id/image`
+- Chores: `/api/v1/chores`, `/api/v1/chores/stats`, `/api/v1/chores/:id`, `/api/v1/chores/:id/status`, `/api/v1/chores/:id/restore`
+- Dashboard/import: `GET /api/v1/dashboard/summary`, `POST /api/v1/import`
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/auth/google/start?householdId=` | Public | Start Google OAuth flow. Generates state token and redirects to Google authorization page. Optional `householdId` query parameter for join flow. Optional `redirect_uri` query parameter for web platform redirects. |
-| `GET` | `/auth/google/callback?code=&state=` | Public | Handle Google OAuth callback. Validates state token (CSRF protection), exchanges authorization code for tokens, creates/finds user, generates JWT, and redirects to app deep link with token. Returns error redirect if authentication fails. |
+### Sync endpoint summary
 
-**Query Parameters:**
-- `householdId` (optional): Household ID for join flow (when user is joining an existing household)
-- `redirect_uri` (optional): Web redirect URI for web platform (overrides deep link redirect)
-- `code`: Authorization code from Google (in callback)
-- `state`: State token for CSRF protection (in callback)
-- `error`: Error from Google if user denied permission (in callback)
+`POST /api/v1/auth/sync` accepts offline shopping-list, recipe, and chore data. Each synced entity requires an `operationId` UUID v4 for idempotency. Current backend behavior uses simple Prisma upserts; it does not perform server-side timestamp conflict checks or payload-version branching.
 
-**Response:**
-- Success redirect: `kitchen-hub://auth/callback?token=JWT&isNewHousehold=true|false`
-- Error redirect: `kitchen-hub://auth/callback?error=error_code&message=error_message`
+Important source-backed docs:
 
-### Household Endpoints
+- `docs/api-sync-and-conflict-strategy.md` — source of truth for sync contract and edge cases.
+- `docs/SYNC_API_QUICK_REFERENCE.md` — quick reference for sync request/response terminology.
+- `src/modules/auth/dtos/sync-data.dto.ts` — request DTOs.
+- `src/modules/auth/types/sync-conflict.interface.ts` — response shape.
+- `src/modules/auth/services/auth.service.ts` — implementation.
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/household` | JWT only | Create new household (user must not already have a household) |
-| `GET` | `/household` | Protected | Get current user's household with members |
-| `PUT` | `/household` | Protected | Update household details (admin only); name optional, validated when provided (non-empty, max 200 chars) |
-| `POST` | `/household/invite` | Protected | Invite member to household (admin only) |
-| `DELETE` | `/household/members/:id` | Protected | Remove member from household (admin only) |
+### Authentication requirements
 
-### Invite Endpoints (Public)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/invite/validate?code=` | Public | Validate invite code; returns `householdId` and `householdName` for join flow before sign-in |
-
-### Shopping Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/shopping-lists` | Protected | Get all shopping lists for household |
-| `GET` | `/shopping-lists/main` | Protected | Get main shopping list for household |
-| `POST` | `/shopping-lists` | Protected | Create new shopping list |
-| `GET` | `/shopping-lists/:id` | Protected | Get shopping list with items |
-| `PATCH` | `/shopping-lists/:id` | Protected | Update shopping list (name, color) |
-| `DELETE` | `/shopping-lists/:id` | Protected | Soft-delete shopping list |
-| `POST` | `/shopping-lists/:id/items` | Protected | Bulk add items to list (catalog items by ID or custom items by name; custom items automatically created/linked if not exists) |
-| `GET` | `/shopping-items/custom` | Protected | Get household's custom items (shared across all household members, sorted alphabetically) |
-| `PATCH` | `/shopping-items/:id` | Protected | Update shopping item (quantity, checked status) |
-| `DELETE` | `/shopping-items/:id` | Protected | Soft-delete shopping item |
-
-### Grocery Catalog Endpoints (Public)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/groceries/search?q=query` | Public | Search grocery catalog |
-| `GET` | `/groceries/categories` | Public | Get all grocery categories |
-
-### Recipe Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/recipes?category=&search=` | Protected | Get recipes (with optional filters) |
-| `POST` | `/recipes` | Protected | Create new recipe |
-| `GET` | `/recipes/:id` | Protected | Get recipe details |
-| `PUT` | `/recipes/:id` | Protected | Update recipe |
-| `POST` | `/recipes/:id/cook` | Protected | Add recipe ingredients to shopping list |
-| `DELETE` | `/recipes/:id` | Protected | Soft-delete recipe |
-
-**Query Parameters:**
-- `category`: Filter by category (Breakfast, Lunch, Dinner, Dessert, Snack)
-- `search`: Search recipes by name
-
-### Chore Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/chores?start=&end=` | Protected | Get chores (with optional date range) |
-| `POST` | `/chores` | Protected | Create new chore |
-| `PATCH` | `/chores/:id` | Protected | Update chore details |
-| `PATCH` | `/chores/:id/status` | Protected | Toggle chore completion status |
-| `GET` | `/chores/stats?date=` | Protected | Get chore statistics for date |
-| `DELETE` | `/chores/:id` | Protected | Soft-delete chore |
-
-**Query Parameters:**
-- `start`: Start date (ISO format)
-- `end`: End date (ISO format)
-- `date`: Date for statistics (ISO format)
-
-### Dashboard Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/dashboard/summary` | Protected | Get household activity summary |
-
-### Import Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/import` | Protected | Import recipes and shopping lists into household |
-
-### Health & Version Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/v1/health` | Public | Basic health check (liveness) |
-| `GET` | `/api/v1/health/live` | Public | Liveness probe for orchestration |
-| `GET` | `/api/v1/health/ready` | Public | Readiness probe (DB connectivity) |
-| `GET` | `/api/v1/health/detailed` | Public | Detailed health status |
-| `GET` | `/api/version` | Public | Version discovery (unversioned; lists supported/deprecated versions and docs) |
-
-### Authentication Requirements
-
-- **Public Routes**: `/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/resend-verification`, `/auth/google`, `/auth/google/start`, `/auth/google/callback`, `/auth/refresh`, `/invite/validate`, `/groceries/*`
-- **Protected Routes**: All other endpoints require Bearer JWT token
-- **Household Routes**: Most protected routes also require household membership (enforced by `HouseholdGuard`)
+- Public routes are marked with `@Public()` or class-level `@Public()` in controllers.
+- Protected routes require Bearer JWT via global guards and/or explicit `JwtAuthGuard`.
+- Household-scoped routes generally require household membership through `HouseholdGuard` or service-level household checks.
 
 ### CORS Configuration
 
@@ -1139,7 +996,7 @@ The API uses URI-based versioning (`/api/v1`, `/api/v2`, etc.) to support multip
 - Minimum 6-month deprecation period for mobile apps
 
 **Documentation:**
-- Swagger docs available at `/api/docs/v1` (separate docs per version)
+- Current source-backed endpoint inventory is in `../docs/api/backend-endpoints.md`; Swagger docs are currently disabled in `src/main.ts`.
 - See [API Versioning Guidelines](./docs/api-versioning-guidelines.md) for breaking change criteria
 - See [API Deprecation Policy](./docs/api-deprecation-policy.md) for deprecation process
 
@@ -1247,7 +1104,7 @@ Always use the shared filter constant:
 import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/soft-delete.filter';
 
 const recipes = await prisma.recipe.findMany({
-  where: { 
+  where: {
     householdId,
     ...ACTIVE_RECORDS_FILTER,  // Applies deletedAt: null
   }
@@ -1273,62 +1130,29 @@ const recipes = await prisma.recipe.findMany({
 
 The backend can be deployed to Vercel as serverless functions. To avoid build errors and see runtime logs:
 
-1. **Set Root Directory to `backend`**  
+1. **Set Root Directory to `backend`**
    In the [Vercel project settings](https://vercel.com/docs/projects/overview#root-directory), set **Root Directory** to `backend`. If this is not set, Vercel may build the repo root or the mobile app (Expo), which will fail with errors like "No platforms are configured to use the Metro bundler" and you will not see backend logs.
 
-2. **Deploy**  
+2. **Deploy**
    From the repo root: `vercel` (with the project linked and root directory `backend`), or from `backend/`: `npx vercel`.
 
-3. **Viewing logs**  
-   - **Build logs**: Vercel Dashboard → your project → **Deployments** → select a deployment → **Building** tab.  
+3. **Viewing logs**
+   - **Build logs**: Vercel Dashboard → your project → **Deployments** → select a deployment → **Building** tab.
    - **Runtime logs**: Vercel Dashboard → your project → **Deployments** → select a deployment → **Functions** (or **Logs**). Runtime logs appear when a request hits the API; if no requests are made, the log stream will be empty. Trigger a request (e.g. `GET /api/v1/health`) and refresh the logs to see output.
 
-4. **Environment variables**  
+4. **Environment variables**
    Add all required env vars (e.g. `DATABASE_URL`, `JWT_SECRET`, Supabase keys) in Project Settings → Environment Variables.
 
 5. **Privacy policy (store listings)**
    Canonical HTML lives in **`static-legal/privacy.html`**. Deploy that folder as a **standalone Vercel static project** (see `static-legal/README.md`) for a simple `https://<project>.vercel.app/privacy` URL, or rely on the backend: files are copied into `public/` during `vercel-build`. Use **`https://<your-domain>/privacy`** (or `/privacy.html`) as the **Privacy Policy URL** in App Store Connect and Google Play. Keep it in sync with `legal/privacy-policy-v1.md` when operator or contact details change. The mobile app can use `EXPO_PUBLIC_PRIVACY_POLICY_URL` to point at your deployed URL.
 
-## Docker Deployment
+## Docker / container notes
 
-The backend includes a production-ready multi-stage Dockerfile optimized for NestJS + Prisma. Docker images are automatically built and pushed to GitHub Container Registry (GHCR) via GitHub Actions workflows:
+The backend still includes Docker-related files and docs, but the current source-backed production deployment path is Vercel. Older GHCR, GCP Cloud Run, and AWS ECS deployment docs have been archived under `../docs/archive/deployment-docs-2026-05-16/` because the referenced deployment workflows are not present in the current `.github/workflows/` directory.
 
-- **Production builds** (`.github/workflows/build.yml`): Triggers on pushes to `develop` and `main` branches with 30-minute timeout and build caching
-- **Development builds** (`.github/workflows/build-push.yml`): Triggers on pushes to all branches for testing and development
-- **Staging deployment** (`.github/workflows/deploy-staging.yml`): Automatically deploys to GCP Cloud Run staging when code is merged to `develop` branch
-  - Runs database migrations before deployment
-  - Deploys to Cloud Run via `gcloud run deploy`
-  - Requires `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE_STAGING`, `GCP_SA_KEY` (and optionally `STAGING_SERVICE_URL` for health checks)
-  - See [Deployment Guide](./DEPLOYMENT.md#automated-staging-deployment) for detailed setup
-- **Production deployment** (`.github/workflows/deploy-production.yml`): Automatically deploys to GCP Cloud Run production when code is merged to `main` branch
-  - **Manual approval required** via GitHub Environment protection rules
-  - Supports manual dispatch for custom image tags and rollbacks
-  - Runs database migrations after approval
-  - Deploys to Cloud Run via `gcloud run deploy`
-  - Requires `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_CLOUD_RUN_SERVICE`, `GCP_SA_KEY` and GitHub Environment "production" (and optionally `PRODUCTION_SERVICE_URL` for health checks)
-  - See [Deployment Guide](./DEPLOYMENT.md#automated-production-deployment) for detailed setup
+Use Docker locally only when you intentionally need a containerized backend test.
 
-### Getting Docker Images
-
-#### Option A: Pull from GitHub Container Registry (GHCR) - Recommended
-
-Images are automatically built and pushed to GHCR with tags following the pattern:
-- `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:BRANCH-SHA` (e.g., `main-abc123def`)
-- `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:BRANCH-latest` (e.g., `main-latest`)
-- `ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:SHA` (e.g., `abc123def`)
-
-**Authenticate and pull:**
-```bash
-# Login to GHCR (requires GitHub Personal Access Token with read:packages scope)
-echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
-
-# Pull latest main branch image
-docker pull ghcr.io/YOUR_GITHUB_USERNAME/kitchen-hub-api:main-latest
-```
-
-For detailed GHCR instructions, see [GHCR Quick Reference](./docs/GHCR_QUICK_REFERENCE.md) and [Deployment Guide](./DEPLOYMENT.md).
-
-#### Option B: Build Locally
+### Build locally
 
 For local development or custom builds:
 
@@ -1440,7 +1264,7 @@ initContainers:
 
 The application exposes health check endpoints:
 - `GET /api/version` - API version information (public)
-- `GET /api/docs/v1` - Swagger documentation (public)
+- `GET /api/v1/health`, `GET /api/v1/health/live`, `GET /api/v1/health/ready` - health probes
 
 Add to `docker-compose.yml`:
 ```yaml
@@ -1492,22 +1316,20 @@ See [Monitoring Setup Guide](./docs/MONITORING_SETUP.md) for detailed setup inst
 
 - **[Root README](../README.md)** - Monorepo overview
 - **[Mobile App](../mobile/README.md)** - Mobile application documentation
-- **[Deployment Guide](./DEPLOYMENT.md)** - Quick start deployment guide
-- **[Comprehensive Deployment Guide](./docs/DEPLOYMENT_COMPREHENSIVE.md)** - Complete deployment procedures for all platforms
-- **[Rollback Guide](./docs/ROLLBACK_GUIDE.md)** - Detailed rollback procedures
+- **[Deployment Guide](./DEPLOYMENT.md)** - Current Vercel backend deployment and rollback guide
+- **[Vercel Monorepo Guide](../docs/deployment/vercel-monorepo.md)** - Vercel project/root-directory setup
 - **[Sync API Quick Reference](./docs/SYNC_API_QUICK_REFERENCE.md)** - Quick reference for sync API terminology, contract, and common issues
 - **[Monitoring Setup Guide](./docs/MONITORING_SETUP.md)** - Monitoring and observability setup
 - **[Logging Guide](./docs/LOGGING_GUIDE.md)** - Structured logging best practices
-- **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)** - Complete environment variable checklist
-- **[Platform Migration Guide](./docs/PLATFORM_MIGRATION.md)** - Migration between platforms
-- **[GHCR Quick Reference](./docs/GHCR_QUICK_REFERENCE.md)** - Quick reference for GitHub Container Registry
+- **[Environment Variable Checklist](./docs/ENV_VAR_CHECKLIST.md)** - Source-backed backend environment variable checklist
+- **[Archived legacy deployment docs](../docs/archive/deployment-docs-2026-05-16/)** - Historical GCP/AWS/GHCR docs, not current instructions
 - **[Backend Docs Index](./docs/README_DOCS.md)** - Documentation index and recommended reading order
-- **[Detailed Docs](../README-DETAILED.md)** - Comprehensive project documentation
-- **[CLAUDE.md](../CLAUDE.md)** - AI assistant development guidance
+- **[Documentation Map](../docs/project/DOCUMENTATION_MAP.md)** - Canonical guide to current docs and source-backed references
+- **[AGENTS.md](../AGENTS.md)** - Canonical repository guidance for agents
 
 ## Notes
 
 - Database uses UUID for all user-related identifiers to maintain consistency with Supabase Auth identities
 - Global prefix (`api/v1`), validation pipe, error filter, and response transformer are configured in `src/main.ts`
-- Swagger documentation is available at `/api/docs/v1` when running the server
+- Swagger setup is currently disabled in `src/main.ts`; use `../docs/api/backend-endpoints.md` for current endpoint inventory until Swagger is re-enabled.
 - CORS is enabled with credentials support for mobile app access

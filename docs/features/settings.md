@@ -1,12 +1,12 @@
 # Settings Feature
 
-**Exports** (from `mobile/src/features/settings/index.ts`): `SettingsScreen`, `ManageHouseholdModal`, `LanguageSelectorModal`.
+**Exports** (from `mobile/src/features/settings/index.ts`): `SettingsScreen`, `ManageHouseholdModal`, `LanguageSelectorModal`, `LegalConsentGate`.
 
-**Source**: `mobile/src/features/settings/` — 1 screen (SettingsScreen), 2 components (ManageHouseholdModal, LanguageSelectorModal).
+**Current source map**: see [`mobile-ui-map.md`](./mobile-ui-map.md). Settings now includes household management, invite flow UI, language/RTL support, legal consent, import/data controls, account deletion/export services, premium/subscription UI, and premium demo support.
 
 ## Overview
 
-The Settings feature provides user account management, notification preferences, household member management, data controls, and app information. It displays the current user's profile and offers various configuration options.
+The Settings feature provides user account management, household member/invite controls, language selection, premium/subscription surfaces, legal links/consent, data controls, and app information. It displays the current user's profile and routes account/privacy actions through source-backed services and context providers.
 
 ## Screenshots
 
@@ -24,11 +24,11 @@ The Settings feature provides user account management, notification preferences,
 - **Purpose**: Comprehensive settings interface with multiple sections
 - **Key functionality**:
   - **Language Section**: Row showing current language (native name) and RTL-aware chevron (`getDirectionalIcon('chevron-forward')`); opens LanguageSelectorModal to change app language (persisted to AsyncStorage, applied app-wide via i18n; RTL languages may trigger app restart)
-  - **Account Section**: User profile card, sign out button
-  - **Notifications Section**: Push notifications toggle
-  - **Household Section**: Button to manage household members
-  - **Data Section**: Export data, delete account options
-  - **About Section**: Terms of Service, Privacy Policy, app version
+  - **Account Section**: User profile card and sign out button
+  - **Premium Section**: `PremiumSection` plus `PremiumDemoSection`; opens `PremiumPaywall` via navigation
+  - **Household Section**: Manage household members, generate invite code, and share invite code through `InviteMemberModal`
+  - **Data Section**: Export data row and delete account flow through `accountService.deleteMyAccount()` with confirmation/error handling
+  - **About Section**: Privacy Policy and Terms of Service rows opened through `LegalLinksContext` / `openLegalUrl`, plus app version
 
 #### Code Snippet - State Management
 
@@ -58,13 +58,11 @@ interface ManageHouseholdModalProps {
 ```
 
 - **Features**:
-  - Input field to add new household members
-  - List of current members with color indicators
-  - Delete buttons (disabled for default members)
-  - "Default" badge for built-in members
-  - Uses `HouseholdContext` for state management
-  - Uses `HouseholdContext` for state management
-  - Async operations for adding/removing members
+  - Lists household members from `HouseholdContext`
+  - Delete buttons for removable members
+  - Protected/default member press shows explanatory feedback instead of removing
+  - Provides actions for `onInviteMember` and `onShareInviteCode`
+  - Uses `CenteredModal` with custom action rows
 
 ### LanguageSelectorModal
 
@@ -106,17 +104,22 @@ interface LanguageSelectorModalProps {
 ### Notifications Section
 - **Push notifications**: Toggle switch (default: on)
 
+### Premium Section
+- **PremiumSection**: Shows current household premium state and opens `PremiumPaywall` when the user chooses to manage/upgrade.
+- **PremiumDemoSection**: Premium-gated demo surface used for entitlement verification.
+
 ### Household Section
-- **Manage household members**: Opens ManageHouseholdModal
+- **Manage household members**: Opens `ManageHouseholdModal`.
+- **Invite household member / share invite code**: Opens `InviteMemberModal` with either generate or share initial action.
 
 ### Data Section
-- **Export my data**: Navigation row
-- **Delete account**: Red text, navigation row
+- **Export my data**: Navigation row / data-control surface.
+- **Delete account**: Opens a destructive confirmation alert, then calls `accountService.deleteMyAccount()` and signs out on success.
 
 ### About Section
-- **Terms of Service**: Navigation row
-- **Privacy Policy**: Navigation row
-- **App Version**: Displays "1.0.0"
+- **Privacy Policy**: Opens URL from `LegalLinksContext` via `openLegalUrl(privacyPolicyUrl)`.
+- **Terms of Service**: Opens URL from `LegalLinksContext` via `openLegalUrl(termsOfServiceUrl)`.
+- **App Version**: Displays "1.0.0".
 
 ## State Management
 
@@ -128,7 +131,11 @@ interface LanguageSelectorModalProps {
   - `pushNotifications` - Push notification toggle state
   - `showLanguageSelector` - Language selector modal visibility
   - `showManageHousehold` - Manage household modal visibility
+  - `showInviteModal` - Invite member modal visibility
+  - `inviteModalInitialAction` - Initial invite modal mode: `generate` or `share`
 - **Derived (i18n)**: `currentLanguageCode` = `normalizeLocale(i18n.language ?? '')`; `currentLanguageDisplayName` = `getNativeNameForCode(currentLanguageCode)` for the Language row
+- **Legal links**: `useLegalLinks()` provides `privacyPolicyUrl` and `termsOfServiceUrl` for settings rows
+- **Account service**: `accountService.deleteMyAccount()` performs account deletion after confirmation
 
 ## Key Dependencies
 
@@ -146,18 +153,10 @@ interface LanguageSelectorModalProps {
 
 ## Household Members
 
-Default members (cannot be removed):
-- Mom (red indicator)
-- Dad (green indicator)
-- Kids (orange indicator)
-- All (purple indicator)
-
-Users can add custom household members which can be deleted.
+Household membership is sourced from `HouseholdContext`. The modal distinguishes removable members from protected/default members; protected member actions show explanatory feedback instead of deleting. Invite generation/sharing is handled by `InviteMemberModal` and household invite services rather than an inline "add member" text field.
 
 ## User Feedback
-  - Shows at top of screen
 
-- **Confirmation Modal**: Used for destructive actions
-  - Guest data deletion requires confirmation
-  - Shows warning message about permanent deletion
-  - Red "Delete" button for emphasis
+- Destructive account deletion uses a confirmation alert before calling the account service.
+- Account deletion failures are mapped to user-friendly i18n messages through `getDeleteAccountErrorMessage()`.
+- Protected household-member actions show explanatory feedback rather than silently failing.

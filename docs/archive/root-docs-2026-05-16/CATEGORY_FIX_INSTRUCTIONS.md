@@ -5,7 +5,7 @@ Even after updating the mobile `groceryDatabase.ts`, you're still seeing depreca
 
 ## Root Causes
 1. ✅ **Mobile mock data** - Fixed in commit `ae09931`
-2. ❌ **Backend database** - Still has old categories from seed data  
+2. ❌ **Backend database** - Still has old categories from seed data
 3. ❌ **Mobile app cache** - Has old categories cached from previous API calls
 
 ## Quick Fix (Mobile Only - Fastest)
@@ -70,8 +70,8 @@ Either:
 After applying the fix, the CategoryPicker should only show these 19 categories:
 
 ```
-fruits, vegetables, dairy, meat, seafood, bakery, grains, snacks, 
-nuts, beverages, baking, canned, spreads, freezer, dips, condiments, 
+fruits, vegetables, dairy, meat, seafood, bakery, grains, snacks,
+nuts, beverages, baking, canned, spreads, freezer, dips, condiments,
 spices, household, other
 ```
 

@@ -227,7 +227,7 @@ import { ACTIVE_RECORDS_FILTER } from '../../../infrastructure/database/filters/
 
 // Query active records
 const recipes = await prisma.recipe.findMany({
-  where: { 
+  where: {
     householdId,
     ...ACTIVE_RECORDS_FILTER,  // Applies deletedAt: null
   }
@@ -236,10 +236,10 @@ const recipes = await prisma.recipe.findMany({
 
 **When including related entities:**
 ```typescript
-include: { 
-  items: { 
+include: {
+  items: {
     where: ACTIVE_RECORDS_FILTER,  // Filter nested relations
-  } 
+  }
 }
 ```
 

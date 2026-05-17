@@ -172,11 +172,14 @@ The kitchen-tablet use case is important to the product concept.
 
 For a fresh LLM session:
 1. Read `AGENTS.md`
-2. Read this file
-3. Read `docs/project/RECENT_CHANGES.md`
-4. Read any relevant feature docs under `docs/features/`
-5. Read any task-specific plan under `.hermes/plans/`
-6. Then inspect code and propose changes
+2. Read `docs/project/DOCUMENTATION_MAP.md`
+3. Read this file
+4. Read `docs/project/RECENT_CHANGES.md`
+5. Read `docs/project/ARCHITECTURE.md`
+6. For UI work, read `docs/features/mobile-ui-map.md` before feature-specific docs
+7. For backend/API work, read `docs/api/backend-endpoints.md` before detailed API docs
+8. Read any task-specific plan under `.hermes/plans/`
+9. Then inspect code and propose changes
 
 ---
 

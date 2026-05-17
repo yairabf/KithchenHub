@@ -42,7 +42,7 @@ export class MyService {
 
   async doSomething() {
     this.logger.log('Processing request', 'MyService');
-    
+
     try {
       // ... your code
       this.logger.log('Request processed successfully', 'MyService');
