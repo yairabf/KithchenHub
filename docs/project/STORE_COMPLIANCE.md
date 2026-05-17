@@ -4,10 +4,12 @@ Use this file as the project-local reference for App Store / Google Play complia
 
 ## Current store status
 
-As of 2026-05-15:
+As of 2026-05-17:
 
 - Google Play / Android: accepted and live in the store.
-- Apple App Review / iOS: submitted and waiting for review result.
+- Apple App Review / iOS: rejected for Guideline 3.1.2(c), Submission ID `35b2d613-60fc-48eb-8285-3ac8a96eaadf`, version `1.0 (94)`, reviewed 2026-05-15 on iPhone 17 Pro Max.
+- Required iOS metadata fix: App Store Connect must include a functional Terms of Use/EULA link in either the App Description or the License Agreement/EULA field. Privacy Policy field must remain `https://kithchensync1.vercel.app/privacy`.
+- Repo-side app fix is tracked in PR #221: the Premium purchase flow includes functional Privacy Policy and Terms of Use (EULA) links plus auto-renewal disclosure before purchase.
 
 If a review rejection arrives, paste the exact message into the working session and update this file after the issue is resolved.
 
@@ -33,16 +35,25 @@ https://kithchensync1.vercel.app
 Important public pages:
 
 - Privacy: `https://kithchensync1.vercel.app/privacy`
-- Terms: `https://kithchensync1.vercel.app/terms`
+- Terms / Terms of Use (EULA): `https://kithchensync1.vercel.app/terms`
 - Account deletion: `https://kithchensync1.vercel.app/delete-account`
 
-Support URL status: no `static-legal/support.html` file or `/support` rewrite exists in current source. Do not list `/support` as an active store/support URL unless the page and route are added.
+- Support: `https://kithchensync1.vercel.app/support`
+
+Apple App Review Guideline 3.1.2(c) metadata requirement for auto-renewable subscriptions:
+
+- App Store Connect > App Privacy > Privacy Policy URL: `https://kithchensync1.vercel.app/privacy`
+- App Store Connect > App Description must include this exact sentence if using the standard app description field for EULA compliance:
+  - `Terms of Use (EULA): https://kithchensync1.vercel.app/terms`
+- Alternative: App Store Connect > General > App Information > License Agreement may contain the custom plain-text EULA, but App Review's 2026-05-15 rejection specifically asked for a functional Terms of Use/EULA link in metadata, so adding the URL to the App Description is the safest fix.
+- App Review Notes should tell reviewers where to find the in-app subscription disclosure and legal links, and should mention that the App Description now contains the EULA link.
 
 Static source files:
 
 ```text
 static-legal/privacy.html
 static-legal/terms.html
+static-legal/support.html
 static-legal/delete-account.html
 static-legal/assets/delete-account/
 ```
@@ -54,7 +65,7 @@ backend/vercel.json
 backend/scripts/create-vercel-output-dir.js
 ```
 
-Important pitfall: if store listings need a clean support URL, add both `static-legal/support.html` and `/support` + `/support/` rewrites in `backend/vercel.json`; otherwise use email/support metadata rather than documenting a non-existent page.
+Current source includes `/support` and `/support/` rewrites in `backend/vercel.json` plus `static-legal/support.html`. Keep the support URL documented only while both the static page and rewrites remain present.
 
 ## Account deletion URL
 

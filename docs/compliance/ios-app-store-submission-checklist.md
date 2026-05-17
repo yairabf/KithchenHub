@@ -113,6 +113,9 @@ Kitchen Hub config references:
 - [ ] `[PASS|FAIL|N/A]` Trademark/public figure/brand usage permissions are documented. Evidence: `__________`
 - [ ] `[PASS|FAIL|N/A]` Contact/support email addresses in metadata are active and monitored. Evidence: `__________`
 - [ ] `[PASS|FAIL|N/A]` Paid upgrades and digital transactions use App Store purchasing rules where required. Evidence: `__________`
+- [ ] `[PASS|FAIL|N/A]` Auto-renewable subscription purchase flow shows title, subscription length, price, free-trial info if offered, auto-renewal billing disclosure, and functional Privacy Policy + Terms of Use (EULA) links before purchase. Evidence: `__________`
+- [ ] `[PASS|FAIL|N/A]` App Store metadata includes Privacy Policy URL and Terms of Use (EULA) link for subscriptions. Evidence: `Privacy Policy URL = https://kithchensync1.vercel.app/privacy; App Description includes Terms of Use (EULA): https://kithchensync1.vercel.app/terms`
+- [ ] `[PASS|FAIL|N/A]` App Review Notes explain the subscription flow and legal link locations. Evidence: `docs/compliance/app-store-review-3.1.2c-response.md`
 
 ## 10) Final Go/No-Go
 

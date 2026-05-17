@@ -4,10 +4,15 @@ Use this file as the current release/review status snapshot for agents. Update i
 
 ## Current status
 
-As of 2026-05-15:
+As of 2026-05-17:
 
 - Android / Google Play: accepted and live in the store.
-- iOS / Apple App Review: submitted; waiting for review result.
+- iOS / Apple App Review: rejected for Guideline 3.1.2(c) because App Store metadata did not include a functional Terms of Use/EULA link for auto-renewable subscriptions.
+- Resubmission prerequisites:
+  - Merge/deploy PR #221's Premium paywall subscription disclosure/legal-link fix.
+  - In App Store Connect, keep Privacy Policy URL as `https://kithchensync1.vercel.app/privacy`.
+  - Add `Terms of Use (EULA): https://kithchensync1.vercel.app/terms` to the App Description or configure the EULA/License Agreement field.
+  - Attach/provide review notes and screen recording that show Premium screen title, duration, price/free-trial info, auto-renewal disclosure, Privacy Policy link, Terms of Use/EULA link, and Restore Purchases.
 
 ## Recent release/compliance work completed
 
@@ -20,14 +25,16 @@ As of 2026-05-15:
 - Resolved Google Play Data Safety rejection by declaring Device or other IDs and related user data categories.
 - Added public account deletion page required by Google Play.
 - Restored support-page rewrites while adding delete-account routes.
+- Prepared App Store Guideline 3.1.2(c) resubmission docs for PR #221 and the required App Store Connect metadata update.
 
 ## Public URLs to keep verified
 
 - `https://kithchensync1.vercel.app/privacy`
 - `https://kithchensync1.vercel.app/terms`
 - `https://kithchensync1.vercel.app/delete-account`
+- `https://kithchensync1.vercel.app/support`
 
-Support URL note: current source does not include `static-legal/support.html` or `/support` rewrites in `backend/vercel.json`. Do not use `/support` in store metadata unless that page/route is added and verified.
+Support URL note: current source includes `static-legal/support.html` and `/support` + `/support/` rewrites in `backend/vercel.json`. Keep this URL in store metadata only while both remain present and verified.
 
 ## Screenshot locations
 

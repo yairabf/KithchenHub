@@ -163,6 +163,7 @@ Relevant files:
 ```text
 static-legal/privacy.html
 static-legal/terms.html
+static-legal/support.html
 static-legal/delete-account.html
 static-legal/assets/delete-account/
 backend/scripts/create-vercel-output-dir.js
@@ -174,8 +175,9 @@ Important clean URLs:
 - `https://kithchensync1.vercel.app/privacy`
 - `https://kithchensync1.vercel.app/terms`
 - `https://kithchensync1.vercel.app/delete-account`
+- `https://kithchensync1.vercel.app/support`
 
-Support URL status: current source does not include `static-legal/support.html` or `/support` rewrites. Add the page and rewrites before using `/support` as a public/store URL.
+Support URL status: current source includes `static-legal/support.html` and `/support` + `/support/` rewrites in `backend/vercel.json`. Keep this URL documented only while both remain present.
 
 When adding static assets under `static-legal/assets/`, verify the backend Vercel build copies nested assets.
 
