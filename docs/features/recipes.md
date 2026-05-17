@@ -2,6 +2,8 @@
 
 **Feature area:** `mobile/src/features/recipes/`
 
+**Current source map**: see [`mobile-ui-map.md`](./mobile-ui-map.md). Current recipe source includes recipe list/detail screens, add/edit modal flows, ingredient cards/unit picker, recipe image search modal, recipe API/cache services, and recipe-image service support.
+
 ## Purpose
 
 The recipes feature helps users manage their **household recipes**.
@@ -148,6 +150,53 @@ The feature can break if layouts are changed without checking:
 An important recent area of work has been around **recipe deletion / allowing recipes to be deleted reliably**.
 
 This means a fresh LLM should be aware that recipe lifecycle behavior (including deleting recipes correctly) is part of the active reliability surface for this feature.
+
+---
+
+## Current source-backed behavior
+
+### Screens and hooks
+
+- List screen: `mobile/src/features/recipes/screens/RecipesScreen.tsx`.
+- Detail screen: `mobile/src/features/recipes/screens/RecipeDetailScreen.tsx`.
+- Data hook: `mobile/src/features/recipes/hooks/useRecipes.ts`.
+- Add/edit form: `mobile/src/features/recipes/components/AddRecipeModal/AddRecipeModal.tsx`.
+- Recipe image search: `RecipeImageSearchModal` backed by `searchRecipeImages()` and the `/recipes/images/search` API route.
+
+### Data mode and caching
+
+- `useRecipes()` derives mode from `determineUserDataMode(user)` unless `config.mockData.enabled` forces guest mode.
+- Guest mode uses `LocalRecipeService` and `guestStorage` directly.
+- Signed-in mode uses `CacheAwareRecipeRepository` plus `useCachedEntities<Recipe>('recipes')`.
+- Signed-in initial load calls `repository.findAll()` once per mode to populate/read cache; pull-to-refresh calls `repository.refresh()` and then `pruneStaleImages(refreshed)`.
+- List data filters inactive recipes with `recipe.deletedAt == null`.
+
+### Recipe list behavior
+
+- Recipes are deduplicated by ID before rendering; duplicate or missing IDs are logged and filtered client-side.
+- Search filters by recipe title.
+- Category filtering uses `RECIPE_FILTER_CATEGORIES`; the filter can be hidden/shown and persists under `@kitchen_hub_recipes_show_category_filter`.
+- Cards render in a responsive grid; iOS currently uses full-width cards, while non-iOS uses two-column card sizing based on screen width.
+- Swipe delete opens a confirmation modal and calls `deleteRecipe(recipe.id)`; delete errors remain visible in the confirmation modal and toast.
+
+### Add/edit behavior
+
+- `AddRecipeModal` supports both create and edit modes.
+- Save requires a non-empty title, at least one named ingredient, and at least one instruction.
+- Ingredient search uses `useDebouncedRemoteSearch()` against the catalog search function provided by `useCatalog()`.
+- Ingredient names become committed/read-only after blur or search selection.
+- Image flows support local media-library selection, recipe image search, remote image URL retention, and image removal.
+- Local image URIs are passed to `RecipeService`, which handles upload/resize behavior.
+
+### Detail behavior and shopping integration
+
+- Detail screen fetches full recipe details when the list item lacks ingredients/instructions and the user is not a guest.
+- Detail screen supports completed-step toggles, sticky header behavior, mobile ingredients/steps tabs, edit, and share through `ShareModal`/`formatRecipeText()`.
+- Ingredient image/catalog metadata can be resolved from local catalog data or remote `searchGroceries()` lookups.
+- Adding one ingredient finds the main shopping list, checks for existing items by catalog ID or normalized name, and either creates a shopping item or opens `IngredientConflictModal`.
+- Conflict choices can replace quantity/unit or add to quantity using unit conversion helpers (`normalizeToStandardUnit`, `addQuantities`).
+- Add All processes each ingredient sequentially against a working item snapshot, updating existing quantities or creating missing items.
+- Signed-in shopping writes use `CacheAwareShoppingRepository`; guest/mock writes use `createShoppingService(userMode)` directly.
 
 ---
 

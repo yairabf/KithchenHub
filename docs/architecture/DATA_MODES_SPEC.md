@@ -4,6 +4,8 @@
 
 This specification defines three explicit data modes for KitchenHub to ensure clear separation of concerns and prevent accidental data leakage between guest users, signed-in users, and public catalog data.
 
+Current source-backed endpoint map: [`docs/api/backend-endpoints.md`](../api/backend-endpoints.md). Treat controller/service/Prisma source as final authority when this spec and implementation diverge.
+
 ## Three Data Modes
 
 ### 1. Guest Mode
@@ -125,9 +127,9 @@ These entities are cloud-synced and household-scoped:
 These entities are read-only and shared:
 
 - **MasterGroceryCatalog**: Reference grocery items
-  - API: `GET /groceries/search`, `GET /groceries/categories`
+  - API: public `GET /groceries/search`, `GET /groceries/by-category`, `GET /groceries/categories`, and `GET /groceries/names`
   - Requires: No authentication (public endpoint)
-  - Cloud storage: `master_grocery_catalog` table (RLS read-only)
+  - Cloud storage: `master_grocery_catalog` table and related catalog translation/tag tables in Prisma
   - Local fallback: `@kitchen_hub_catalog_cache`
   - Type: `PublicCatalogEntity<GroceryItem>`
 
@@ -183,11 +185,11 @@ function createShoppingService(
   if (mode === 'public-catalog') {
     throw new Error('Public catalog cannot use shopping service.');
   }
-  
+
   // Validate service compatibility
   const serviceType = mode === 'guest' ? 'local' : 'remote';
   validateServiceCompatibility(serviceType, mode);
-  
+
   return mode === 'guest' ? new LocalShoppingService() : new RemoteShoppingService();
 }
 ```
@@ -205,17 +207,19 @@ function createShoppingService(
 
 **Signed-In Mode Protection**:
 - All private endpoints verify `householdId` from JWT
-- RLS policies enforce household scoping at database level
+- Backend services/controllers enforce household scoping before querying or mutating household-owned data
 - No guest data can be written to cloud tables
 
 **Public Catalog Protection**:
 - Catalog endpoints are explicitly marked `@Public()`
-- RLS policies enforce read-only access: `FOR SELECT USING (true)`
+- The exposed catalog controller surface is read-only; writes are not exposed as public catalog endpoints
 - No write endpoints for catalog data
 
 **Verified Endpoints**:
 - `/groceries/search` - `@Public()` ✅
+- `/groceries/by-category` - `@Public()` ✅
 - `/groceries/categories` - `@Public()` ✅
+- `/groceries/names` - `@Public()` ✅
 - `/shopping-lists/*` - `@UseGuards(JwtAuthGuard, HouseholdGuard)` ✅
 - `/recipes/*` - `@UseGuards(JwtAuthGuard, HouseholdGuard)` ✅
 - `/chores/*` - `@UseGuards(JwtAuthGuard, HouseholdGuard)` ✅
@@ -349,18 +353,18 @@ Prevent accidental data mixing during guest-to-signed transition:
 static async gatherLocalData(): Promise<ImportRequestDto> {
   // Validate migration is allowed (guest to signed-in)
   validateModeMigration('guest', 'signed-in');
-  
+
   // Use guest mode service
   const recipeService = createRecipeService('guest');
   const recipes = await recipeService.getRecipes();
-  
+
   // Validate all recipes are in guest mode
   recipes.forEach((recipe, index) => {
     if (!isGuestEntity(recipe)) {
       throw new Error(`Recipe at index ${index} is not in guest mode.`);
     }
   });
-  
+
   // ... similar validation for shopping lists and items
 }
 ```
@@ -416,7 +420,7 @@ static async gatherLocalData(): Promise<ImportRequestDto> {
 4. **Backend Guards**:
    - Verified `JwtAuthGuard` and `HouseholdGuard` on all private endpoints
    - Verified `@Public()` decorator on catalog endpoints
-   - Verified RLS policies for catalog read-only access
+   - Verified the public catalog controller exposes read-only GET endpoints
 
 ## Success Criteria
 

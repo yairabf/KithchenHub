@@ -6,14 +6,14 @@ These Terms of Service ("Terms") govern your use of the Kitchen Hub mobile appli
 
 ## 1. Parties and Acceptance
 
-- **You** — the user of the Kitchen Hub app.  
+- **You** — the user of the Kitchen Hub app.
 - **We** — **Yair Abramovitch**, the operator of the Service.
 
 By creating an account, signing in, or using the Service, you confirm that you have read, understood, and agree to be bound by these Terms and by our [Privacy Policy](privacy-policy-v1.md). If you do not agree, do not use the Service.
 
 ## 2. Description of the Service
 
-Kitchen Hub is a household management app that lets you manage shopping lists, recipes, and chores, optionally with other household members. Use of the Service requires an account (sign-in). We may update, suspend, or discontinue features with reasonable notice where practicable.
+Kitchen Hub is a household management app that lets you manage shopping lists, recipes, and chores, optionally with other household members. Some local/guest features may be available without an account, but sync, households, account deletion, and paid/subscription features require sign-in. We may update, suspend, or discontinue features with reasonable notice where practicable.
 
 ## 3. Account and Household Rules
 
@@ -61,18 +61,22 @@ You agree to indemnify and hold harmless **Yair Abramovitch** from any claims, d
 - We may suspend or terminate your access if you breach these Terms or for other operational or legal reasons, with notice where required.
 - Upon termination, your right to use the Service ceases. We may retain data as described in our Privacy Policy (e.g. for legal compliance).
 
-## 10. Governing Law and Jurisdiction
+## 10. Paid Features and Subscriptions
+
+Some features may require a paid subscription or in-app purchase. Purchases are processed through the applicable app store and/or subscription provider. Subscription terms, renewal, cancellation, refunds, and billing management may be governed by the app store or provider terms in addition to these Terms. We may use purchase and entitlement information to provide, restore, and support paid features.
+
+## 11. Governing Law and Jurisdiction
 
 These Terms are governed by the laws of the **State of Israel**, without regard to conflict-of-law principles. Any dispute arising from or related to these Terms or the Service shall be subject to the exclusive jurisdiction of the competent courts located in **Israel**, except where prohibited by law.
 
-## 11. Changes to the Terms
+## 12. Changes to the Terms
 
 We may update these Terms from time to time. We will post the updated version with a new effective date and, where required by law, notify you or ask for your consent. Continued use of the Service after the effective date constitutes acceptance of the updated Terms. If you do not agree, you must stop using the Service.
 
-## 12. Contact
+## 13. Contact
 
 For questions about these Terms:
 
-- **Email:** yairabc@gmail.com  
-- **Operator:** Yair Abramovitch (individual developer)  
+- **Email:** yairabc@gmail.com
+- **Operator:** Yair Abramovitch (individual developer)
 - **Jurisdiction:** Israel

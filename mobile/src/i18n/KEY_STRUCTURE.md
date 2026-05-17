@@ -1,6 +1,6 @@
 # Translation Key Structure and Namespaces
 
-This document defines translation key naming conventions, namespaces per feature, placeholder and pluralization rules, and what must not be translated. It is the single source of truth for i18n implementation.
+This document defines translation key naming conventions, namespaces per feature, placeholder and pluralization rules, and what must not be translated. It is the single source of truth for i18n implementation. Current supported languages are defined in `mobile/src/i18n/constants.ts` and are `en`, `he`, and `ar`.
 
 **Plan:** [.cursor/tasks/i18n/define-translation-key-structure-and-namespaces/define-translation-key-structure-and-namespaces_plan.mdc](../../../.cursor/tasks/i18n/define-translation-key-structure-and-namespaces/define-translation-key-structure-and-namespaces_plan.mdc)
 
@@ -79,6 +79,7 @@ One namespace per feature/domain. **Dashboard** is included for clarity (epic ex
 | **recipes** | Recipe list, detail, add modal, ingredients, steps, time/servings | `locales/en/recipes.json` |
 | **chores** | Chores list, modals, status, due date, assignee | `locales/en/chores.json` |
 | **settings** | Settings screen, household, import, account | `locales/en/settings.json` |
+| **legal** | Legal consent, privacy/terms prompts, compliance copy | `locales/en/legal.json` |
 | **categories** | Grocery category display names (by backend-stable ID) | `locales/en/categories.json` |
 | **errors** | Network, auth, generic error messages | `locales/en/errors.json` |
 | **validation** | Form validation messages | `locales/en/validation.json` |
@@ -115,7 +116,7 @@ One namespace per feature/domain. **Dashboard** is included for clarity (epic ex
 - **Mechanism:** Plural forms use i18next's built-in plural suffixes (e.g. `_plural` for English; locale-dependent suffixes for other languages). Do not manually invent another suffix system.
 - **Variable:** Always pass `count` in options; i18next selects the form from key + suffix.
 - **English (en):** i18next v21+ uses CLDR suffixes `_one` (singular) and `_other` (plural); legacy `_plural` is also supported. Example: `itemCount_one` / `itemCount_other` (and optionally `itemCount_plural`) with `t('shopping:itemCount', { count: n })`.
-- **Other locales:** When adding languages (es, fr, he, ar), use i18next's plural rules for that locale (e.g. Arabic multiple forms). No need to specify ordinal vs cardinal for v1 unless required.
+- **Other locales:** Current non-English locales are Hebrew (`he`) and Arabic (`ar`). When adding languages, use i18next's plural rules for that locale (e.g. Arabic multiple forms). No need to specify ordinal vs cardinal for v1 unless required.
 
 ---
 

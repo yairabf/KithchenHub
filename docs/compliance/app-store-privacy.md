@@ -1,40 +1,97 @@
-# App Store Privacy — Kitchen Hub
+# App Store Privacy — Kitchen Hub / FullHouse
 
-This document summarizes Kitchen Hub’s **App Store Connect App Privacy** declarations and links to related artifacts. Use it when updating the Privacy Nutrition Label or adding new data collection.
+This document summarizes the source-backed **App Store Connect App Privacy** / Privacy Nutrition Label baseline and the matching iOS privacy manifest configuration.
 
-## Summary
+Current source references:
 
-| Data category   | Collected?        | Purpose             | Linked to user?   |
-|-----------------|-------------------|---------------------|-------------------|
-| Name            | Yes               | Account management  | Yes (signed-in)   |
-| Email           | Yes               | Authentication      | Yes (signed-in)   |
-| Photos          | Yes (recipe images)| App functionality  | Yes (signed-in)   |
-| User Content    | Yes               | App functionality   | Yes (signed-in)   |
-| Device ID       | Yes (anonymous)   | Diagnostics         | No (anonymous)     |
-| Usage Data      | Yes               | Analytics           | Per practice      |
+- `mobile/app.json` → `expo.ios.privacyManifests`
+- `mobile/package.json`
+- `mobile/src/features/recipes/components/AddRecipeModal/AddRecipeModal.tsx`
+- `mobile/src/features/subscription/*`
+- `backend/src/modules/subscriptions/*`
+- `legal/privacy-policy-v1.md`
 
-**Three summary answers (App Store Connect):**
+## Current privacy answers
 
-- **Data used for tracking?** — No  
-- **Data linked to user?** — Yes (for signed-in users; Device ID is anonymous)  
-- **Data used for advertising?** — No  
+- Data used for tracking: No.
+- Data used for third-party advertising: No.
+- Data linked to user: Yes for account/service data; not for anonymous diagnostics/device identifiers if configured as anonymous.
+
+## Data categories to keep aligned
+
+- Contact info / Personal info
+  - Data: Name, Email address
+  - Purpose: Account management, Authentication
+  - Linked to user: Yes for signed-in users
+  - Manifest source: `NSPrivacyCollectedDataTypeName`, `NSPrivacyCollectedDataTypeEmailAddress`
+
+- User content
+  - Data: household content such as shopping lists, recipes, chores, member/invite/household data
+  - Purpose: App functionality
+  - Linked to user: Yes for signed-in users
+  - Manifest source: `NSPrivacyCollectedDataTypeOtherUserContent`
+
+- Photos
+  - Data: recipe images selected from the photo library
+  - Purpose: App functionality
+  - Linked to user: Yes for signed-in recipe/image features
+  - Permission source: `NSPhotoLibraryUsageDescription` in `mobile/app.json`
+  - Implementation source: `expo-image-picker` in `AddRecipeModal.tsx`
+
+- Identifiers / Device ID
+  - Data: device/vendor/SDK identifiers if collected by diagnostics, store/billing, or runtime SDKs
+  - Purpose: Diagnostics or app functionality/security depending on SDK behavior
+  - Linked to user: current manifest marks `NSPrivacyCollectedDataTypeDeviceID` as not linked
+  - Tracking: false
+
+- Usage data / Product interaction
+  - Data: product/app interactions where applicable
+  - Purpose: Analytics/service improvement
+  - Linked to user: current manifest marks `NSPrivacyCollectedDataTypeProductInteraction` as linked
+  - Tracking: false
+
+- Purchases / Purchase history
+  - Data: subscription/purchase state if paid features are enabled
+  - Purpose: App functionality, Account management
+  - Linked to user: Yes when associated with account/household entitlement records
+  - Source note: RevenueCat purchase dependencies and subscription reconciliation code exist. Confirm App Store Connect purchase-data declarations before submitting a paid/subscription-enabled build.
+
+## iOS privacy manifest source
+
+The Expo config currently declares `NSPrivacyCollectedDataTypes` in:
+
+```text
+mobile/app.json
+```
+
+Current manifest entries include:
+
+- `NSPrivacyCollectedDataTypeName`
+- `NSPrivacyCollectedDataTypeEmailAddress`
+- `NSPrivacyCollectedDataTypeOtherUserContent`
+- `NSPrivacyCollectedDataTypeDeviceID`
+- `NSPrivacyCollectedDataTypeProductInteraction`
+- `NSPrivacyTracking: false`
+
+If App Store Connect declares purchases or photos as collected, verify whether those categories also need explicit `NSPrivacyCollectedDataTypes` entries in `mobile/app.json` before the next iOS submission.
 
 ## Where to configure
 
-- **App Store Connect:** [App Privacy](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/) — complete the data types and the three questions above so the label matches this summary.
-- **Privacy policy:** [legal/privacy-policy-v1.md](../../legal/privacy-policy-v1.md) — markdown source; **hosted URL for stores** is built from [static-legal/privacy.html](../../static-legal/privacy.html) (deploy the `static-legal/` folder as its own Vercel project, or rely on backend `vercel-build` copying it to `public/` — served at **`/privacy`**).
+- App Store Connect: App Privacy.
+- iOS privacy manifest source: `mobile/app.json` → `expo.ios.privacyManifests`.
+- Privacy policy markdown source: `legal/privacy-policy-v1.md`.
+- Hosted privacy URL: deployed `static-legal/privacy.html` or backend-served `/privacy`.
 
 ## When to update
 
-Any change in **data collection** (e.g. new SDK, new data type, new purpose) requires:
+Any change in data collection, SDKs, billing, diagnostics, or legal disclosure requires:
 
-1. Updating **App Store Connect → App Privacy** so the Nutrition Label stays accurate.
-2. Updating the **iOS privacy manifest**: edit [mobile/app.json](../../mobile/app.json) → `expo.ios.privacyManifests`. The file `PrivacyInfo.xcprivacy` is generated at prebuild from this config. Add or remove entries in `NSPrivacyCollectedDataTypes` (and `NSPrivacyAccessedAPITypes` if you use required-reason APIs) to match.
-3. Updating the **privacy policy** if practices affect user rights or disclosures (e.g. new categories, new sharing).
+1. Update App Store Connect → App Privacy.
+2. Update `mobile/app.json` privacy manifest entries if needed.
+3. Update `docs/compliance/google-play-data-safety.md`.
+4. Update `legal/privacy-policy-v1.md` and regenerate/update `static-legal/privacy.html` if the legal text changes materially.
 
-Keep this doc and the manifest in sync with App Store Connect and the privacy policy.
+## Open verification items
 
-## Device ID and usage data (implementation)
-
-- **Device ID (anonymous) – Diagnostics:** If you declare Device ID in App Store Connect, the app or backend must actually collect an anonymous device identifier used only for diagnostics (e.g. crash reports, stability). Do not declare Device ID until that collection is in place, or implement collection and keep it non-linked to the user.
-- **Usage data – Analytics:** The privacy policy refers to usage and API/sync events. Any first-party analytics must be consistent with the “Linked to user” choice and must not be used for advertising or tracking.
+- Confirm the exact App Store Connect Nutrition Label choices for RevenueCat/store purchases before the next paid/subscription-enabled iOS submission.
+- Confirm whether selected recipe photos should be declared as Photos in App Store Connect and represented explicitly in the privacy manifest for the next build.

@@ -32,7 +32,7 @@ The app helps families organize shopping lists with a comprehensive 111-item gro
 - **✅ Chores** - Task tracking with animated progress visualization, assignee management, and due date tracking
 - **🏠 Dashboard** - Quick overview with time-based personalized greeting, action widgets, and household statistics
 - **👤 Authentication** - Email/password registration and login with email verification, Google sign-in with OAuth, and guest mode for local-only usage with data import/export
-- **⚙️ Settings** - Profile management, household member management, notification preferences, and app configuration
+- **⚙️ Settings** - Profile management, household members/invites, language selection, premium surfaces, legal links, data controls, and app information
 
 ### Advanced Features
 
@@ -59,14 +59,15 @@ kitchen-hub/
 │   └── package.json    # Backend dependencies
 ├── docs/                # Documentation
 │   ├── features/       # Feature documentation
-│   ├── guides/         # How-to and configuration guides
 │   ├── architecture/   # Architecture docs
-│   └── screenshots/    # App screenshots
+│   ├── api/            # API/interface notes
+│   ├── project/        # Canonical product, architecture, release, and compliance context
+│   └── archive/        # Historical docs kept for reference, not canonical guidance
+├── .hermes/             # Hermes handoff docs, plans, and audits
 ├── .cursor/            # Cursor IDE configuration
 ├── version.json        # Product version (bump only for store releases; OTA does not change it)
-├── README.md           # This file
-├── README-DETAILED.md  # Comprehensive documentation
-└── CLAUDE.md          # AI assistant guidance
+├── AGENTS.md           # Canonical repository guidance for agents
+└── README.md           # This file
 ```
 
 **Product version:** The canonical app version lives in `version.json` at the repo root. Bump it only when cutting a **store release**; over-the-air (OTA) updates do not change this version. The mobile app reads it via `app.config.js`.
@@ -207,8 +208,10 @@ Database (PostgreSQL via Prisma)
 
 - **[Mobile App Documentation](mobile/README.md)** - Complete mobile app guide with features, architecture, and development guidelines
 - **[Backend API Documentation](backend/README.md)** - Complete backend API guide with endpoints, architecture, and setup instructions
-- **[Detailed Documentation](README-DETAILED.md)** - Comprehensive project documentation covering both mobile and backend
-- **[CLAUDE.md](CLAUDE.md)** - Development guidance for AI assistants working with this codebase
+- **[Documentation Map](docs/project/DOCUMENTATION_MAP.md)** - Canonical guide to current docs and source-backed references
+- **[Project Overview](docs/project/PROJECT_OVERVIEW.md)** - Product overview, priorities, and feature intent
+- **[Architecture](docs/project/ARCHITECTURE.md)** - Mobile/backend architecture and cross-cutting systems
+- **[AGENTS.md](AGENTS.md)** - Canonical repository guidance for coding, review, and documentation agents
 
 ## Development
 
@@ -242,7 +245,8 @@ Both mobile and backend follow consistent patterns:
 ## Contributing
 
 This is a private repository. For development guidelines, see:
-- [CLAUDE.md](CLAUDE.md) - AI assistant development rules
+- [AGENTS.md](AGENTS.md) - Agent and development rules
+- [Documentation Map](docs/project/DOCUMENTATION_MAP.md) - Where current docs live and what each one is for
 - [Mobile README](mobile/README.md) - Mobile app development guidelines
 - [Backend README](backend/README.md) - Backend API development guidelines
 

@@ -10,52 +10,51 @@ Kitchen Hub Mobile is a comprehensive household management app that helps famili
 
 ## Features
 
+For the source-backed feature map, see [`../docs/features/mobile-ui-map.md`](../docs/features/mobile-ui-map.md).
+
 ### 🛒 Shopping Lists
-- Multi-list management with custom icons and colors
-- 111-item grocery database organized into 9 categories
-- Smart search with real-time dropdown results
-- Category browsing with visual tiles
-- Frequently added items grid for quick access
-- Swipeable items with gesture-based deletion
-- Quantity controls for items
-- Two-column responsive layout
+- Multi-list management with main-list support
+- Grocery catalog search and category browsing
+- Quick-add flows, custom item creation, and frequently added shortcuts
+- Swipeable item/list interactions and quantity/check status controls
+- Cache/sync-aware data behavior for signed-in and guest modes
 
 ### 🍳 Recipes
-- Recipe grid view with category filtering
-- Recipe creation with ingredients and step-by-step instructions
-- Recipe detail view with responsive layout
-- Ingredient-to-shopping list integration
-- Step completion tracking
-- Search functionality
+- Recipe list/detail flows with create/edit support
+- Ingredient cards, canonical unit picker, and step-by-step instructions
+- Ingredient-to-shopping-list integration
+- Recipe image search/upload support
+- Recipe API/cache service integration
 
 ### ✅ Chores
-- Animated progress ring showing completion percentage
-- Swipeable chore cards with delete functionality
-- Assignee management (Mom, Dad, Kids, All)
-- Today's chores and upcoming chores sections
-- Due date and time picker integration
-- Responsive layout (single-column on mobile, two-column on tablet)
+- Today's/upcoming chore organization with progress visibility
+- Chore cards, progress cards, sections, and progress ring components
+- Quick-add and details/edit modal flows
+- Assignee/date/time handling
+- Swipe/delete behavior and sync-status-aware UI surfaces
 
 ### 🏠 Dashboard
-- Time-based personalized greeting
-- Quick action widgets
-- Overview statistics
-- Recent activity feed
-- Household summary
+- Lightweight utility surface for fast household actions
+- Quick Add into shopping
+- Frequently Added shortcuts
+- Important Chores visibility
+- Bottom tab navigation with animated screen transitions
 
-### 👤 Authentication
-- Google sign-in with OAuth
-- Guest mode for local-only usage
-- Profile management
-- Secure data persistence with AsyncStorage
-- Auth state persistence across app restarts
+### 👤 Authentication and onboarding
+- Email login/register with verification-aware flow
+- Google sign-in / OAuth support
+- Invite-code validation and household join flow
+- Household name/onboarding screens
+- Guest data import/transition support
+- Token/session persistence
 
-### ⚙️ Settings
-- Profile management
-- Household member management
-- Notification preferences
-- Data import/export
-- App preferences
+### ⚙️ Settings, account, legal, and premium
+- Profile/account settings and sign out
+- Household member management and invites
+- Language selector with RTL-aware behavior
+- Data import/export and delete-account flows
+- Legal consent/legal links
+- Premium/subscription/paywall surfaces
 
 ## Tech Stack
 
@@ -91,7 +90,8 @@ Kitchen Hub Mobile is a comprehensive household management app that helps famili
 - **React Native DateTimePicker**: 8.6.0 - Native date/time pickers
 
 ### Backend Integration
-- **Supabase**: 2.91.0 - Backend API client
+- **KitchenHub API client**: `mobile/src/services/api.ts` - versioned fetch wrapper for `{EXPO_PUBLIC_API_URL}/api/v1/*` with auth token injection, timeout handling, offline short-circuiting, response unwrapping, and one-shot token refresh on 401/403. Source-backed map: [`../docs/api/mobile-api-client-integration.md`](../docs/api/mobile-api-client-integration.md).
+- **Supabase**: 2.91.0 - Backend/API support library used by project auth/infrastructure code
 - **Expo Auth Session**: 7.0.10 - OAuth flow handling
 - **Expo Web Browser**: 15.0.10 - In-app browser for auth
 - **Expo Crypto**: 15.0.8 - Cryptographic utilities
@@ -820,8 +820,10 @@ Cmd+Shift+P → "TypeScript: Restart TS Server"
 
 - **[Root README](../README.md)** - Monorepo overview
 - **[Backend API](../backend/README.md)** - Backend documentation
-- **[Detailed Docs](../README-DETAILED.md)** - Comprehensive project documentation
-- **[CLAUDE.md](../CLAUDE.md)** - AI assistant development guidance
+- **[Documentation Map](../docs/project/DOCUMENTATION_MAP.md)** - Canonical guide to current docs and source-backed references
+- **[Project Overview](../docs/project/PROJECT_OVERVIEW.md)** - Product overview, priorities, and feature intent
+- **[Architecture](../docs/project/ARCHITECTURE.md)** - Mobile/backend architecture and cross-cutting systems
+- **[AGENTS.md](../AGENTS.md)** - Canonical repository guidance for agents
 
 ## License
 

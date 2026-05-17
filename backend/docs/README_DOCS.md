@@ -1,7 +1,7 @@
 # Backend Documentation Index
 
-**Last Updated**: 2026-01-28  
-**Status**: ✅ All documentation current and consistent
+**Last Updated**: 2026-05-16
+**Status**: ⚠️ Under cleanup. Core sync docs are preserved. The current endpoint inventory has been rechecked against controller decorators, but detailed request/response coverage is still partial.
 
 ---
 
@@ -9,6 +9,7 @@
 
 ### 🏠 Main Documentation
 - **[Backend README](../README.md)** - Main backend documentation with API overview, setup instructions, and architecture
+- **[Backend Endpoint Inventory](../../docs/api/backend-endpoints.md)** - Source-backed current endpoint inventory generated from controller decorators
 
 ### 🔄 API Sync & Conflict Resolution
 - **[API Sync & Conflict Strategy](./api-sync-and-conflict-strategy.md)** ⭐ **SOURCE OF TRUTH**
@@ -79,7 +80,7 @@
 **Recommended reading order**:
 1. Start: [Sync API Quick Reference](./SYNC_API_QUICK_REFERENCE.md) - Understand API contract
 2. Then: [API Sync & Conflict Strategy](./api-sync-and-conflict-strategy.md) - Full sync behavior
-3. Reference: [Backend README](../README.md) - All endpoint documentation
+3. Reference: [Backend Endpoint Inventory](../../docs/api/backend-endpoints.md) - Current source-backed endpoint list
 
 ### For API Design Changes
 **Recommended reading order**:
@@ -145,15 +146,15 @@
 ## 📊 Documentation Metrics
 
 ### Coverage
-- ✅ **API Endpoints**: 100% documented
-- ✅ **Edge Cases**: All known edge cases documented
-- ✅ **Terminology**: 100% consistent across documents
-- ✅ **Implementation Status**: All features labeled
+- ✅ **API Endpoints**: current endpoint inventory lives in `../../docs/api/backend-endpoints.md` and was rechecked against controller decorators on 2026-05-16.
+- ✅ **Sync Edge Cases**: preserved in `api-sync-and-conflict-strategy.md` and `SYNC_API_QUICK_REFERENCE.md`.
+- ⚠️ **Terminology**: sync terminology is documented; broader backend/API terminology should be rechecked as docs are consolidated.
+- ⚠️ **Implementation Status**: sync implementation status is labeled; subscription/provider and recipe-image endpoints need dedicated docs if they become public contracts.
 
 ### Quality
-- ✅ **Consistency**: All documents aligned (validated 2026-01-28)
-- ✅ **Completeness**: No missing sections or TBD placeholders
-- ✅ **Clarity**: Explicit vs. implicit behavior documented
+- ⚠️ **Consistency**: previous 2026-01-28 consistency pass is historical; use the 2026-05-16 endpoint inventory for current route coverage. Swagger setup remains disabled in `src/main.ts`.
+- ⚠️ **Completeness**: core endpoints are inventoried, but detailed API reference coverage is not yet complete.
+- ✅ **Clarity**: sync docs clearly separate current behavior from planned/not-implemented behavior.
 
 ### Maintenance
 - ✅ **Last Audit**: 2026-01-28
@@ -231,6 +232,6 @@ When updating documentation:
 
 ---
 
-**Document Version**: 1.0  
-**Maintained By**: Backend Team  
+**Document Version**: 1.0
+**Maintained By**: Backend Team
 **Next Review**: When implementing planned features or quarterly

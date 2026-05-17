@@ -7,10 +7,55 @@ It should stay short and practical.
 
 ## Current important workstreams
 
-### 0. Premium foundation (subscriptions + entitlement gating)
-Status: active implementation stream
+### 0. Store release and compliance
+Status: Android accepted; Apple review pending as of 2026-05-15
 
-Current next execution plan:
+Current state:
+- Google Play / Android has been accepted and is live in the store.
+- Apple App Review has been submitted and is waiting for review result.
+- App Store screenshot sets exist for 6.5-inch iPhone, 13-inch iPad portrait, and 13-inch iPad landscape.
+- Google Play Data Safety was updated to include Device or other IDs and related user data declarations.
+- Public account deletion URL is live at `https://kithchensync1.vercel.app/delete-account`.
+- Support URL status changed during docs cleanup: current source does not include `static-legal/support.html` or `/support` rewrites, so do not use `/support` as store/support metadata unless the page and route are added.
+
+Primary references:
+- `docs/project/STORE_COMPLIANCE.md`
+- `docs/project/RELEASE_STATUS.md`
+- `static-legal/delete-account.html`
+- `backend/vercel.json`
+- `backend/scripts/create-vercel-output-dir.js`
+
+Important instruction for future LLMs:
+- Use a separate demo/review user for screenshots and review data.
+- Do not use Yair's personal account for store screenshots.
+- Verify public legal URLs after Vercel/static-page changes; add and verify a support URL only if a support page/route is introduced.
+- Update `STORE_COMPLIANCE.md` and `RELEASE_STATUS.md` after review outcomes.
+
+---
+
+### 0a. API/backend documentation cleanup — 2026-05-16
+
+Current state:
+- `docs/api/backend-endpoints.md` matches the current 65 HTTP method/path pairs declared by backend controller decorators.
+- `backend/docs/MONITORING_SETUP.md` now uses the source-backed versioned health paths: `/api/v1/health*`.
+- `docs/api/recipes-api.md` now uses full `/api/v1` recipe paths and points to the relevant controller/DTO/unit source files.
+- `docs/api/mobile-api-client-integration.md` maps the mobile `api.*()` runtime calls to current backend routes, documents base URL/version behavior, token refresh, network handling, and current source inconsistencies.
+- Swagger/OpenAPI remains disabled in `backend/src/main.ts`; `GET /api/version` still returns `docs.v1: /api/docs/v1`, so treat that docs link as unavailable until source changes.
+- Duplicate backend docs `MONITORING_SETUP 2.md` and `LOGGING_GUIDE 2.md` were archived under `docs/archive/api-backend-docs-2026-05-16/`.
+
+Primary references:
+- `docs/api/backend-endpoints.md`
+- `docs/api/mobile-api-client-integration.md`
+- `docs/api/recipes-api.md`
+- `backend/docs/README_DOCS.md`
+- `.hermes/audits/2026-05-16-api-backend-doc-cleanup-notes.md`
+
+---
+
+### 1. Premium foundation (subscriptions + entitlement gating)
+Status: on hold
+
+Current next execution plan when this resumes:
 - `.hermes/plans/2026-05-05-premium-real-sdk-go-live-plan.md` (wire real native SDK, verify end-to-end purchase/restore, and keep fallback alert only for unavailable mode)
 
 Current state:
@@ -18,6 +63,7 @@ Current state:
 - webhook sync/reconciliation + support override + entitlement guard are implemented
 - Settings now includes a premium-gated demo placeholder slice for verification
 - E2E verification runbook added for Tasks 10–18 validation
+- RevenueCat/native store connection is not production-working yet; defer until user explicitly resumes premium work
 
 Primary references:
 - `docs/implementation/premium-foundation-e2e-runbook.md`
@@ -34,19 +80,43 @@ Important instruction for future LLMs:
 
 ---
 
-### 1. Production stabilization and QA bug fixing
+### 1. Production stabilization: mobile cache/snappiness
 Status: active top-priority workstream
 
+Current plan:
+- `.hermes/plans/2026-05-11-mobile-cache-snappiness-plan.md`
+
 Current focus:
-- stabilize the app for production
-- fix bugs found during QA
-- improve polish and reliability
-- avoid regressions while making the experience smoother
+- make app startup and tab entry cache-first and native-fast
+- reduce backend/DB dependency during normal screen usage
+- cache aggressively on-device for shopping, recipes, chores, catalog metadata, and display-name/image data where safe
+- reserve backend refresh for explicit pull-to-refresh/reload, background refresh, or true invalidation
+- keep high-frequency shopping edits immediate via optimistic write-through and safe rollback
+
+Docs state:
+- `docs/architecture/mobile-offline-cache-sync.md` is the source-backed map for guest storage, signed-in cache behavior, offline write queue behavior, and known cache/sync source inconsistencies.
+- Current shared `getCached()` behavior returns cached data for fresh/stale/expired cache states unless an explicit refresh is requested; expired cache is not currently documented as a guaranteed blocking network fetch.
+- Runtime sync queue imports still point to root-level `mobile/src/common/utils/syncQueueStorage.ts` and `mobile/src/common/utils/syncQueueProcessor.ts`; verify imports before treating the modular `mobile/src/common/utils/syncQueue/*` tree as the active runtime path.
+- `docs/features/auth.md`, `docs/features/chores.md`, `docs/features/dashboard.md`, and `docs/features/settings.md` were refreshed against current mobile source on 2026-05-16. Important corrected points: dashboard Frequently Added is service/cache-backed, Settings includes premium/invite/legal/delete-account flows, Auth includes email/register/invite/household-name screens, and ChoreCard is now a separate component file.
+- `docs/features/shopping.md` and `docs/features/recipes.md` now include source-backed current behavior sections for cache/repository mode, optimistic shopping updates, realtime shopping, recipe list/detail behavior, recipe image search, and recipe-to-shopping integration.
+- `docs/screenshots/README.md` records the current screenshot inventory and explicitly marks screenshots as visual references only, not proof of current behavior.
+- `mobile/src/i18n/README.md` was refreshed to match current supported languages (`en`, `he`, `ar`), namespaces, and test coverage.
+- `docs/deployment/environment.md` summarizes current backend/mobile/deployment environment variables and source files.
+
+Latest relevant commits on `main`:
+- `471b9d7` — enlarged app icon artwork
+- `b05bfdd` — FullHouse app icon asset replacement
+- `a94a944` / PR #191 — shopping/recipe cache snappiness follow-up
+- `f72a5b4` / PR #190 — recipe add-all catalog identity follow-up
+- `c9279a0` / PR #189 — catalog sync/snappy flows/tab startup stabilization
 
 Important instruction for future LLMs:
-- prioritize stability over feature expansion
-- prefer improving existing code rather than adding unnecessary new code
-- when possible, modify the current implementation instead of introducing parallel abstractions or extra complexity
+- prioritize mobile UX and shopping performance first
+- do not resume premium/RevenueCat work until the user explicitly asks
+- investigate root causes before making more performance changes
+- prefer improving existing cache/repository paths instead of introducing parallel abstractions
+- when possible, modify the current implementation instead of adding extra complexity
+- keep offline/cache/sync docs source-backed against `cacheAwareRepository.ts`, `cacheConfig.ts`, `syncQueueStorage.ts`, `syncQueueProcessor.ts`, and `useSyncQueue.ts`
 
 ---
 
@@ -176,6 +246,7 @@ These should still be visible to future LLMs as meaningful future directions, ev
 ## Existing durable docs worth checking first
 
 ### Feature docs
+- `docs/features/mobile-ui-map.md`
 - `docs/features/dashboard.md`
 - `docs/features/shopping.md`
 - `docs/features/recipes.md`
@@ -184,6 +255,8 @@ These should still be visible to future LLMs as meaningful future directions, ev
 - `docs/features/auth.md`
 
 ### Architecture / product behavior
+- `docs/project/DOCUMENTATION_MAP.md`
+- `docs/api/backend-endpoints.md`
 - `docs/architecture/DATA_MODES_SPEC.md`
 - `docs/architecture/GUEST_STORAGE_DECISION.md`
 - `docs/design/GUEST_MODE_SPECS.md`
@@ -197,11 +270,14 @@ These should still be visible to future LLMs as meaningful future directions, ev
 ## Recommended read order for a fresh LLM
 
 1. `AGENTS.md`
-2. `docs/project/PROJECT_OVERVIEW.md`
-3. this file
-4. relevant feature doc(s)
-5. relevant `.hermes/plans/*.md`
-6. relevant code
+2. `docs/project/DOCUMENTATION_MAP.md`
+3. `docs/project/PROJECT_OVERVIEW.md`
+4. this file
+5. `docs/project/ARCHITECTURE.md`
+6. `docs/features/mobile-ui-map.md` for UI/mobile work or `docs/api/backend-endpoints.md` for backend/API work
+7. relevant feature/API doc(s)
+8. relevant `.hermes/plans/*.md`
+9. relevant code
 
 ---
 

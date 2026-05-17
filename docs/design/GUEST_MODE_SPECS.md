@@ -1,62 +1,87 @@
 # Guest Mode Specifications
 
 ## Overview
-Guest Mode is a "try-before-you-buy" experience that allows users to explore the core functionality of KitchenHub without creating an account. This document defines the exact limitations, data persistence rules, and user-facing messaging to ensure a clear distinction between Guest and Signed-in states.
 
-## 1. Core Principles
-1.  **Local-Only:** All data created in Guest Mode resides **only** on the user's device (SQLite/Local Storage). No data is sent to the backend.
-2.  **No Sync:** Data does not sync across devices.
-3.  **Frictionless Entry:** Users can enter the app immediately without providing email or credentials.
-4.  **Upsell awareness:** Users should be gently reminded of the benefits of an account when appropriate.
+Guest Mode is a local-first "try before sign-up" experience that lets users explore the core KitchenHub flows without creating an account. This document defines the user-facing limitations, persistence rules, and messaging boundaries for Guest Mode.
 
-## 2. Limitations
+Source-backed architecture reference: [`docs/architecture/DATA_MODES_SPEC.md`](../architecture/DATA_MODES_SPEC.md).
+Guest storage decision: [`docs/architecture/GUEST_STORAGE_DECISION.md`](../architecture/GUEST_STORAGE_DECISION.md).
 
-| Feature | Guest Mode Behavior | Signed-In Behavior |
-| :--- | :--- | :--- |
-| **Data Storage** | Local device only. | Cloud synced + Local cache. |
-| **Cross-Device Sync** | Disabled. | Enabled. |
-| **Household Sharing** | Disabled. | Enabled (Invite/Join). |
-| **Recipe Creation** | Enabled (Local only). | Enabled (Synced). |
-| **Meal Planning** | Enabled (Local only). | Enabled (Synced). |
-| **Shopping List** | Enabled (Local only). | Enabled (Synced). |
-| **Pantry Management** | Enabled (Local only). | Enabled (Synced). |
-| **Profile Settings** | Minimal (Theme, Units). | Full (Avatar, Email, etc.). |
+## 1. Core principles
 
-## 3. Data Persistence & Migration
--   **Persistence:** Data persists as long as the app is installed and data is not cleared by the OS.
--   **Migration:** When a Guest user decides to sign up/sign in:
-    -   **Prompt:** "Would you like to keep your existing data?"
-    -   **Action:** If "Yes", local data is uploaded to the new account. If "No", local data is wiped.
--   **Wipe:** Uninstalls or explicit "Clear Data" actions in OS settings will lose all Guest data irrevocably.
+1. **Local-only:** Guest-created data stays on the user's device in AsyncStorage-backed guest storage. It is not sent to the backend unless the user signs in and chooses to import it.
+2. **No sync:** Guest data does not sync across devices.
+3. **No household sharing:** Guest users cannot invite/join household members or share household-scoped data.
+4. **Frictionless entry:** Users can enter the app without email or credentials.
+5. **Clear upgrade path:** Users should understand that account creation enables backup, sync, and household collaboration.
 
-## 4. User Messaging & Copy
+## 2. Current feature boundaries
 
-### 4.1. Onboarding / Welcome Screen
-*Context: The first screen a user sees.*
+Current Guest Mode should be described around the active product surfaces:
 
-*   **Primary Action:** "Get Started" (leads to Sign Up/Login flow)
-*   **Secondary Action:** "Use Offline" or "Continue as Guest"
-*   **Guest Mode Disclaimer (Modal/Tooltip on selection):**
-    > "Guest Mode allows you to use KitchenHub offline. Your data will be saved to this device only and won't be available on other devices."
+- **Shopping lists:** local-only guest shopping data.
+- **Recipes:** local-only guest recipe data.
+- **Chores:** local-only guest chore data.
+- **Settings/profile:** limited local settings and sign-in/import prompts.
+- **Household sharing/invites:** unavailable until signed in.
+- **Cloud sync / cross-device access:** unavailable until signed in.
 
-### 4.2. Settings / Profile
-*Context: Top of the Settings page for a Guest user.*
+Do not document Pantry Management or Meal Planning as active Guest Mode surfaces unless those features are added to current source and the mobile feature map is updated.
 
-*   **Status Indicator:** "Guest Mode (Local Account)"
-*   **Banner:**
-    > "You are using a local account. Sign up to sync your recipes and share with your household."
-    > [Sign Up Button]
+## 3. Data persistence and import
 
-### 4.3. Feature Blockers (Household/Sharing)
-*Context: User tries to access a syncing feature (e.g., Share List).*
+- **Persistence:** Guest data persists while the app remains installed and local app data is not cleared by the OS/user.
+- **Storage backend:** AsyncStorage v1 via guest storage utilities; see `mobile/src/common/utils/guestStorage.ts` and `mobile/src/common/utils/guestStorageHelpers.ts`.
+- **Import path:** When a Guest user signs in, the app can prompt to import existing local guest data into the signed-in account.
+- **User choice:** If the user declines import, guest data should not be silently uploaded.
+- **Data loss:** App uninstall or OS-level clear-data actions can remove Guest Mode data permanently.
 
-*   **Headline:** "Sync your kitchen"
-*   **Body:**
-    > "To share shopping lists and meal plans with your household, you need a KitchenHub account."
-*   **Actions:** [Sign Up Free] [Not Now]
+## 4. User messaging and copy
 
-### 4.4. Sign Up Upgrade Prompt
-*Context: When a Guest user clicks "Sign Up".*
+### 4.1 Onboarding / welcome
 
-*   **Copy:**
-    > "Create an account to backup your recipes and access them everywhere."
+Context: the first screen a user sees.
+
+- **Primary action:** sign up / log in / get started.
+- **Secondary action:** continue as guest / use offline.
+- **Guest disclaimer:**
+
+> Guest Mode saves data only on this device. Sign in to back up your data, sync across devices, and share with your household.
+
+### 4.2 Settings / profile
+
+Context: top of the Settings page for a guest user.
+
+- **Status indicator:** Guest Mode / local-only account.
+- **Banner:**
+
+> You are using a local account. Sign in to back up your recipes, shopping lists, and chores and share with your household.
+
+### 4.3 Household or sync blockers
+
+Context: user tries to access household sharing, invite, or cloud-only behavior.
+
+- **Headline:** Sync your household.
+- **Body:**
+
+> To share shopping lists, recipes, and chores with your household, create or sign in to a KitchenHub account.
+
+- **Actions:** Sign in / Not now.
+
+### 4.4 Sign-up import prompt
+
+Context: after a guest user signs in and local guest data exists.
+
+- **Copy:**
+
+> Keep your existing local data? We can import your guest shopping lists, recipes, and chores into your account.
+
+## 5. Documentation guardrail
+
+This file describes product behavior and user-facing limits. For exact storage keys, mode guards, import DTOs, and sync restrictions, use the architecture spec and current source files, especially:
+
+- `docs/architecture/DATA_MODES_SPEC.md`
+- `docs/architecture/GUEST_STORAGE_DECISION.md`
+- `mobile/src/common/utils/guestStorage.ts`
+- `mobile/src/common/storage/dataModeStorage.ts`
+- `mobile/src/services/import/importService.ts`

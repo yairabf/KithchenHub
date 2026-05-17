@@ -84,11 +84,11 @@ Uptime monitoring services check your health endpoints at regular intervals and 
 3. Configure:
    - **Monitor Type**: HTTP(s)
    - **Friendly Name**: Kitchen Hub API
-   - **URL**: `https://your-api-domain.com/api/health/ready`
+   - **URL**: `https://your-api-domain.com/api/v1/health/ready`
    - **Monitoring Interval**: 5 minutes (free tier)
    - **Alert Contacts**: Add your email/Slack
 
-**Health Endpoint:** Use `/api/health/ready` for readiness checks
+**Health Endpoint:** Use `/api/v1/health/ready` for readiness checks
 
 #### Option 2: Pingdom
 
@@ -96,7 +96,7 @@ Uptime monitoring services check your health endpoints at regular intervals and 
 1. Go to [https://www.pingdom.com](https://www.pingdom.com)
 2. Create a new uptime check
 3. Configure:
-   - **URL**: `https://your-api-domain.com/api/health/ready`
+   - **URL**: `https://your-api-domain.com/api/v1/health/ready`
    - **Check Interval**: 1-5 minutes
    - **Alert Settings**: Configure email/SMS alerts
 
@@ -106,7 +106,7 @@ Uptime monitoring services check your health endpoints at regular intervals and 
 1. Go to [https://www.statuscake.com](https://www.statuscake.com)
 2. Create a new uptime test
 3. Configure:
-   - **Website URL**: `https://your-api-domain.com/api/health/ready`
+   - **Website URL**: `https://your-api-domain.com/api/v1/health/ready`
    - **Test Interval**: 1-5 minutes
    - **Contact Group**: Add your notification preferences
 
@@ -125,7 +125,7 @@ Uptime monitoring services check your health endpoints at regular intervals and 
      const requestOptions = {
        hostname: 'your-api-domain.com',
        method: 'GET',
-       path: '/api/health/ready',
+       path: '/api/v1/health/ready',
        port: 443,
        protocol: 'https:',
      };
@@ -143,7 +143,7 @@ Uptime monitoring services check your health endpoints at regular intervals and 
 2. Create a new uptime check
 3. Configure:
    - **Resource Type**: URL
-   - **URL**: `https://your-api-domain.com/api/health/ready`
+   - **URL**: `https://your-api-domain.com/api/v1/health/ready`
    - **Check Frequency**: 1-5 minutes
    - **Alert Policy**: Create alert for when check fails
 
@@ -157,14 +157,14 @@ The API provides multiple health check endpoints for different use cases:
 
 | Endpoint | Purpose | Use Case |
 |----------|---------|----------|
-| `GET /api/health` | Basic health check | Simple liveness probe |
-| `GET /api/health/live` | Liveness probe | Container orchestration (Kubernetes, ECS) |
-| `GET /api/health/ready` | Readiness probe | Load balancer health checks, uptime monitoring |
-| `GET /api/health/detailed` | Detailed status | Debugging, comprehensive monitoring |
+| `GET /api/v1/health` | Basic health check | Simple liveness probe |
+| `GET /api/v1/health/live` | Liveness probe | Container orchestration (Kubernetes, ECS) |
+| `GET /api/v1/health/ready` | Readiness probe | Load balancer health checks, uptime monitoring |
+| `GET /api/v1/health/detailed` | Detailed status | Debugging, comprehensive monitoring |
 
 ### Response Examples
 
-**Basic Health (`/api/health`):**
+**Basic Health (`/api/v1/health`):**
 ```json
 {
   "status": "healthy",
@@ -172,7 +172,7 @@ The API provides multiple health check endpoints for different use cases:
 }
 ```
 
-**Readiness (`/api/health/ready`):**
+**Readiness (`/api/v1/health/ready`):**
 ```json
 {
   "status": "healthy",
@@ -185,7 +185,7 @@ The API provides multiple health check endpoints for different use cases:
 }
 ```
 
-**Detailed (`/api/health/detailed`):**
+**Detailed (`/api/v1/health/detailed`):**
 ```json
 {
   "status": "healthy",
@@ -209,7 +209,7 @@ The API provides multiple health check endpoints for different use cases:
 ### Status Codes
 
 - **200 OK**: Service is healthy
-- **503 Service Unavailable**: Service is unhealthy (for `/api/health/ready` and `/api/health/detailed`)
+- **503 Service Unavailable**: Service is unhealthy (for `/api/v1/health/ready` and `/api/v1/health/detailed`)
 
 ### Configuration for Container Orchestration
 
@@ -217,14 +217,14 @@ The API provides multiple health check endpoints for different use cases:
 ```yaml
 livenessProbe:
   httpGet:
-    path: /api/health/live
+    path: /api/v1/health/live
     port: 3000
   initialDelaySeconds: 30
   periodSeconds: 10
 
 readinessProbe:
   httpGet:
-    path: /api/health/ready
+    path: /api/v1/health/ready
     port: 3000
   initialDelaySeconds: 10
   periodSeconds: 5
@@ -234,7 +234,7 @@ readinessProbe:
 ```json
 {
   "healthCheck": {
-    "command": ["CMD-SHELL", "curl -f http://localhost:3000/api/health/ready || exit 1"],
+    "command": ["CMD-SHELL", "curl -f http://localhost:3000/api/v1/health/ready || exit 1"],
     "interval": 30,
     "timeout": 5,
     "retries": 3,
@@ -244,7 +244,7 @@ readinessProbe:
 ```
 
 **GCP Cloud Run:**
-- Health check path: `/api/health/ready`
+- Health check path: `/api/v1/health/ready`
 - Configure in Cloud Run service settings
 
 ---
@@ -446,7 +446,7 @@ If using Grafana:
 
 1. Check database connectivity
 2. Verify application is running
-3. Check health endpoint response manually: `curl https://your-api/api/health/ready`
+3. Check health endpoint response manually: `curl https://your-api/api/v1/health/ready`
 4. Review application logs
 
 ### Logs Not Appearing
