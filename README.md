@@ -1,12 +1,12 @@
-# Kitchen Hub 🏠
+# Full House <img src="mobile/assets/fullhouse_icon.png" alt="Full House app icon" width="40" align="center" />
 
 > A full-stack household management application for shopping lists, recipes, and chores
 
 ![iOS](https://img.shields.io/badge/iOS-supported-4CAF50) ![Android](https://img.shields.io/badge/Android-supported-4CAF50) ![Web](https://img.shields.io/badge/Web-supported-4CAF50) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue) ![NestJS](https://img.shields.io/badge/NestJS-10.0.0-E0234E) ![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020)
 
-## What is Kitchen Hub?
+## What is Full House?
 
-Kitchen Hub is a comprehensive full-stack application for household management. It consists of:
+Full House is a comprehensive full-stack application for household management. It consists of:
 
 - **Mobile App**: React Native/Expo cross-platform mobile application (iOS, Android, Web)
 - **Backend API**: NestJS REST API with PostgreSQL database
@@ -47,7 +47,7 @@ The app helps families organize shopping lists with a comprehensive 111-item gro
 
 ## Project Structure
 
-Kitchen Hub is organized as a **monorepo** with two main applications:
+Full House is organized as a **monorepo** with two main applications:
 
 ```
 kitchen-hub/
