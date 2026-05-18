@@ -11,3 +11,20 @@ This folder contains the static marketing site for FullHouse (Kitchen Hub).
 5. Leave **Output Directory** empty (or set to `.`).
 
 The entry page is `index.html` and styles are in `styles.css`.
+
+## Store links
+
+The landing page currently uses clearly named placeholder anchors:
+
+- `#TODO_APP_STORE_URL`
+- `#TODO_GOOGLE_PLAY_URL`
+
+Replace both occurrences in `index.html` after the final App Store and Google Play listing URLs are available.
+
+## Validation
+
+Run this from the repository root after editing the static landing page:
+
+```bash
+node website/validate-landing.mjs
+```
