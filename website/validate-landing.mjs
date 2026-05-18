@@ -16,7 +16,7 @@ function escapeRegex(value) {
 }
 
 const requiredAssetPaths = [
-  'assets/fullhouse_logo_white_cropped.png',
+  'assets/fullhouse_brand_mark.png',
   'assets/screenshots/shopping-list.png',
   'assets/screenshots/recipes.png',
   'assets/screenshots/chores.png',
@@ -29,6 +29,10 @@ for (const assetPath of requiredAssetPaths) {
 }
 
 assert.match(html, /<body[^>]*>[\s\S]*?<div class="top">/, 'landing should start with the top-left FullHouse brand header');
+assert.equal(html.match(/src="\.\/assets\/fullhouse_brand_mark\.png"/g)?.length, 2, 'header and final CTA should use the supplied FullHouse brand mark image');
+assert.doesNotMatch(html, /fullhouse_logo_white_cropped\.png/, 'landing should not use the old split icon/name logo asset');
+assert.doesNotMatch(html, /<a class="brand"[\s\S]*?<span>FullHouse<\/span>[\s\S]*?<\/a>/, 'header brand should not render a separate FullHouse text label');
+assert.doesNotMatch(html, /<div class="final-brand"[\s\S]*?<span>FullHouse<\/span>[\s\S]*?<\/div>/, 'final CTA brand should not render a separate FullHouse text label');
 assert.match(html, /Your Household\s+manager/, 'hero headline should match the approved mockup');
 assert.match(html, /Download on the[\s\S]*App Store/, 'App Store badge copy should be present');
 assert.match(html, /GET IT ON[\s\S]*Google Play/, 'Google Play badge copy should be present');
