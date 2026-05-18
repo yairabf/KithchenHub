@@ -3,102 +3,199 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>FullHouse — Household management made simple</title>
+    <title>FullHouse — Household management for real homes</title>
     <meta
       name="description"
-      content="FullHouse (Kitchen Hub) helps households manage shopping lists, recipes, chores, and daily planning in one app."
+      content="FullHouse keeps shopping lists, recipes, chores, and household routines in one calm shared app."
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="hero">
-      <div class="container hero-content">
-        <img src="./assets/fullhouse_icon.png" alt="FullHouse app icon" class="app-icon" />
-        <p class="eyebrow">FullHouse (Kitchen Hub)</p>
-        <h1>Organize your home in one place</h1>
-        <p class="hero-text">
-          Manage shopping lists, recipes, chores, and household routines with one clean, shared app experience.
-        </p>
-        <div class="cta-row">
-          <a class="btn btn-primary" href="#contact">Contact</a>
-          <a class="btn btn-secondary" href="#downloads">Get the app</a>
-        </div>
+    <div class="top">
+      <div class="wrap nav">
+        <a class="brand" href="#top" aria-label="FullHouse home">
+          <img src="./assets/fullhouse_logo_white_cropped.png" alt="" />
+          <span>FullHouse</span>
+        </a>
+      </div>
+    </div>
+
+    <header class="hero" id="top">
+      <div class="wrap hero-grid">
+        <section class="hero-copy" aria-labelledby="hero-title">
+          <h1 id="hero-title">Your Household manager</h1>
+          <p class="lead">
+            FullHouse keeps everyday household coordination in one calm place — the grocery list,
+            recipes, chores, and family sharing all working together instead of living in separate chats.
+          </p>
+          <div class="badges" aria-label="Download FullHouse">
+            <a
+              class="store-badge"
+              href="https://apps.apple.com/us/app/fullhouse-household-manager/id6761058717"
+              aria-label="Download FullHouse on the App Store"
+            >
+              <span class="mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path fill="#fff" d="M16.5 12.8c0-2.4 2-3.5 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.6.9-.8 0-1.9-.9-3.1-.8-1.6 0-3.1.9-3.9 2.3-1.7 2.9-.4 7.2 1.2 9.5.8 1.2 1.8 2.5 3.1 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.6-1-2.6-3.6zM14.1 5.8c.7-.8 1.1-1.9 1-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.9-1 2.9 1 .1 2-.5 2.7-1.3z" />
+                </svg>
+              </span>
+              <span class="badge-copy"><small>Download on the</small><strong>App Store</strong></span>
+            </a>
+            <a
+              class="store-badge"
+              href="https://play.google.com/store/apps/details?id=com.kitchenhub.app"
+              aria-label="Get FullHouse on Google Play"
+            >
+              <span class="mark" aria-hidden="true">
+                <svg viewBox="0 0 28 28" focusable="false">
+                  <path fill="#00a0ff" d="M4 3.4v21.2l11-10.6z" />
+                  <path fill="#ffb300" d="M15 14 4 24.6 23.5 14z" />
+                  <path fill="#ff3a44" d="M15 14 4 3.4 23.5 14z" />
+                  <path fill="#00d66b" d="M4 3.4 15 14 4 24.6z" opacity=".9" />
+                </svg>
+              </span>
+              <span class="badge-copy"><small>GET IT ON</small><strong>Google Play</strong></span>
+            </a>
+          </div>
+        </section>
+
+        <aside class="device-stage" aria-label="FullHouse app screenshots">
+          <div class="orb one" aria-hidden="true"></div>
+          <div class="orb two" aria-hidden="true"></div>
+          <div class="phone side left">
+            <img src="./assets/screenshots/recipes.png" alt="FullHouse recipes screen" />
+          </div>
+          <div class="phone main">
+            <img src="./assets/screenshots/shopping-list.png" alt="FullHouse shopping list screen" />
+          </div>
+          <div class="phone side right">
+            <img src="./assets/screenshots/chores.png" alt="FullHouse chores screen" />
+          </div>
+        </aside>
       </div>
     </header>
 
     <main>
-      <section class="section">
-        <div class="container">
-          <h2>What FullHouse includes</h2>
-          <div class="feature-grid">
-            <article class="feature-card">
-              <h3>Shopping Lists</h3>
-              <p>Create and share lists with smart item organization for faster grocery planning.</p>
+      <section class="section" id="features" aria-labelledby="features-title">
+        <div class="wrap">
+          <div class="section-title">
+            <span class="kicker">Everything together</span>
+            <h2 id="features-title">One shared place for the household routines that matter.</h2>
+            <p>
+              FullHouse brings shopping, recipes, chores, and family sharing together so everyone
+              can see what needs to happen at home without jumping between separate apps or chats.
+            </p>
+          </div>
+
+          <div class="feature-mosaic">
+            <article class="feature-card large">
+              <div>
+                <h3>Plan groceries, meals, and routines in the same place.</h3>
+                <p>
+                  Start with the shared shopping list, then keep meal ideas and home tasks close
+                  enough that the whole household can move through the day together.
+                </p>
+                <ul>
+                  <li>Fast shared grocery list for the whole household</li>
+                  <li>Recipes connected to what you need to buy</li>
+                  <li>Clear home tasks without another chat thread</li>
+                </ul>
+              </div>
+              <div class="mini-phone">
+                <img src="./assets/screenshots/shopping-list.png" alt="Shared shopping list screenshot" />
+              </div>
             </article>
-            <article class="feature-card">
-              <h3>Recipes</h3>
-              <p>Save recipes, organize ingredients, and connect meals directly to shopping lists.</p>
-            </article>
-            <article class="feature-card">
-              <h3>Chores</h3>
-              <p>Track household tasks with progress visibility so everyone knows what is done.</p>
-            </article>
-            <article class="feature-card">
-              <h3>Dashboard</h3>
-              <p>Get a daily overview of home activity, priorities, and key household updates.</p>
-            </article>
-            <article class="feature-card">
-              <h3>Authentication</h3>
-              <p>Sign in with email or Google, or run in guest mode for local-first usage.</p>
-            </article>
-            <article class="feature-card">
-              <h3>Offline support</h3>
-              <p>Continue using core features with graceful offline fallback behavior.</p>
-            </article>
+
+            <div class="card-stack">
+              <article class="feature-card small recipes">
+                <h3>Recipes</h3>
+                <p>Save household favorites and turn dinner ideas into a practical shopping plan.</p>
+              </article>
+              <article class="feature-card small chores">
+                <h3>Chores</h3>
+                <p>Keep the daily home jobs visible, lightweight, and shared across everyone.</p>
+              </article>
+              <article class="feature-card small household">
+                <h3>Sharing</h3>
+                <p>Invite household members so lists and routines stay synced in one place.</p>
+              </article>
+              <article class="feature-card small tablet">
+                <h3>Kitchen-friendly</h3>
+                <p>Useful on phones first, while still feeling at home on a kitchen tablet.</p>
+              </article>
+            </div>
           </div>
         </div>
       </section>
 
-      <section id="downloads" class="section section-alt">
-        <div class="container">
-          <h2>Download links</h2>
-          <p class="muted">Replace these placeholder links with your live App Store and Google Play URLs.</p>
-          <div class="store-links">
-            <a class="btn btn-primary" href="#" aria-disabled="true">App Store (coming soon)</a>
-            <a class="btn btn-secondary" href="#" aria-disabled="true">Google Play (coming soon)</a>
+      <section class="flow" id="routine" aria-labelledby="routine-title">
+        <div class="wrap">
+          <div class="flow-card">
+            <section>
+              <h2 id="routine-title">A simple weekly loop for busy homes.</h2>
+              <p>
+                Plan meals, build the grocery list, keep everyone in sync, and make home tasks
+                visible before they turn into another reminder buried in a message thread.
+              </p>
+              <div class="steps">
+                <div class="step"><span class="num">1</span><span>Pick or save meals for the week.</span></div>
+                <div class="step"><span class="num">2</span><span>Add ingredients and everyday items to the shared list.</span></div>
+                <div class="step"><span class="num">3</span><span>Everyone sees the same home plan and tasks.</span></div>
+              </div>
+            </section>
+            <aside class="flow-phones" aria-label="Recipe, household, and chores screenshots">
+              <div class="mini-phone"><img src="./assets/screenshots/recipes.png" alt="Recipes screenshot" /></div>
+              <div class="mini-phone"><img src="./assets/screenshots/household-profile.png" alt="Household profile screenshot" /></div>
+              <div class="mini-phone"><img src="./assets/screenshots/chores.png" alt="Chores screenshot" /></div>
+            </aside>
           </div>
         </div>
       </section>
 
-      <section id="contact" class="section">
-        <div class="container">
-          <h2>Contact</h2>
-          <p>
-            For support, partnerships, or product questions, contact:
-            <a href="mailto:yairabc@gmail.com">yairabc@gmail.com</a>
-          </p>
-          <p>
-            GitHub:
-            <a href="https://github.com/yairabf">https://github.com/yairabf</a>
-          </p>
-          <p>
-            LinkedIn:
-            <a href="https://www.linkedin.com/in/yair-abramovitch/">https://www.linkedin.com/in/yair-abramovitch/</a>
-          </p>
+      <section class="final" id="download" aria-labelledby="download-title">
+        <div class="final-brand">
+          <img src="./assets/fullhouse_logo_white_cropped.png" alt="" />
+          <span>FullHouse</span>
+        </div>
+        <h2 id="download-title">Bring the whole household into one calm app.</h2>
+        <p>
+          Download FullHouse to coordinate groceries, meals, chores, and shared home routines without
+          bouncing between apps.
+        </p>
+        <div class="badges" aria-label="Download FullHouse">
+          <a class="store-badge" href="https://apps.apple.com/us/app/fullhouse-household-manager/id6761058717" aria-label="Download FullHouse on the App Store">
+            <span class="mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path fill="#fff" d="M16.5 12.8c0-2.4 2-3.5 2.1-3.6-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.6.9-.8 0-1.9-.9-3.1-.8-1.6 0-3.1.9-3.9 2.3-1.7 2.9-.4 7.2 1.2 9.5.8 1.2 1.8 2.5 3.1 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.6-1-2.6-3.6zM14.1 5.8c.7-.8 1.1-1.9 1-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.9-1 2.9 1 .1 2-.5 2.7-1.3z" />
+              </svg>
+            </span>
+            <span class="badge-copy"><small>Download on the</small><strong>App Store</strong></span>
+          </a>
+          <a class="store-badge" href="https://play.google.com/store/apps/details?id=com.kitchenhub.app" aria-label="Get FullHouse on Google Play">
+            <span class="mark" aria-hidden="true">
+              <svg viewBox="0 0 28 28" focusable="false">
+                <path fill="#00a0ff" d="M4 3.4v21.2l11-10.6z" />
+                <path fill="#ffb300" d="M15 14 4 24.6 23.5 14z" />
+                <path fill="#ff3a44" d="M15 14 4 3.4 23.5 14z" />
+                <path fill="#00d66b" d="M4 3.4 15 14 4 24.6z" opacity=".9" />
+              </svg>
+            </span>
+            <span class="badge-copy"><small>GET IT ON</small><strong>Google Play</strong></span>
+          </a>
         </div>
       </section>
     </main>
 
     <footer class="footer">
-      <div class="container">
-        <p>© <span id="year"></span> FullHouse (Kitchen Hub). All rights reserved.</p>
-        <p class="muted">
-          <a href="#">Privacy URL placeholder</a>
-          ·
-          <a href="#">Terms URL placeholder</a>
-        </p>
-      </div>
+      <span>© <span id="year">2026</span> FullHouse</span>
+      <span aria-hidden="true">·</span>
+      <a href="/privacy">Privacy</a>
+      <span aria-hidden="true">·</span>
+      <a href="/terms">Terms</a>
+      <span aria-hidden="true">·</span>
+      <a href="/delete-account">Delete account</a>
     </footer>
+
     <script>
       const yearElement = document.getElementById('year');
       if (yearElement) yearElement.textContent = String(new Date().getFullYear());
