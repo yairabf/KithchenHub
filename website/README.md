@@ -14,12 +14,22 @@ The entry page is `index.html` and styles are in `styles.css`.
 
 ## Store links
 
-The landing page currently uses clearly named placeholder anchors:
+The landing page uses the live store listing URLs:
 
-- `#TODO_APP_STORE_URL`
-- `#TODO_GOOGLE_PLAY_URL`
+- iOS: `https://apps.apple.com/us/app/fullhouse-household-manager/id6761058717`
+- Android: `https://play.google.com/store/apps/details?id=com.kitchenhub.app`
 
-Replace both occurrences in `index.html` after the final App Store and Google Play listing URLs are available.
+Do not ship placeholder `#TODO_*` badge links; if a store URL is unavailable in the future, render that badge as visibly disabled / coming soon instead of an active anchor.
+
+## Same-site legal routes
+
+The landing deployment serves the legal pages on same-site routes used by the footer:
+
+- `/privacy`
+- `/terms`
+- `/delete-account`
+
+The source files are copied into this directory from the shared `static-legal/` pages so the marketing site can be deployed as the public root without breaking store compliance links.
 
 ## Validation
 
