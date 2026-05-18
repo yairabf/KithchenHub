@@ -14,12 +14,19 @@ The entry page is `index.html` and styles are in `styles.css`.
 
 ## Store links
 
-The landing page uses the live store listing URLs:
+The landing page uses the live store listing URLs by default:
 
 - iOS: `https://apps.apple.com/us/app/fullhouse-household-manager/id6761058717`
 - Android: `https://play.google.com/store/apps/details?id=com.kitchenhub.app`
 
 Do not ship placeholder `#TODO_*` badge links; if a store URL is unavailable in the future, render that badge as visibly disabled / coming soon instead of an active anchor.
+
+When deployed through the backend Vercel build, these links can be overridden with Vercel environment variables:
+
+- `FULLHOUSE_APP_STORE_URL` — must be an `https://apps.apple.com/...` URL
+- `FULLHOUSE_GOOGLE_PLAY_URL` — must be an `https://play.google.com/...` URL
+
+The build validates the URL scheme and host before writing `backend/public/index.html`.
 
 ## Same-site legal routes
 

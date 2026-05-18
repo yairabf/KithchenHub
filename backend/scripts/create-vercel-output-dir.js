@@ -15,6 +15,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { renderStoreLinks } = require('../../website/store-links.cjs');
+
 const OUTPUT_DIR = path.join(__dirname, '..', 'public');
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const STATIC_LEGAL_DIR = path.join(REPO_ROOT, 'static-legal');
@@ -22,6 +24,7 @@ const WEBSITE_DIR = path.join(REPO_ROOT, 'website');
 const LEGACY_STATIC_WEB_DIR = path.join(__dirname, '..', 'static-web');
 const SENTINEL_FILE = path.join(OUTPUT_DIR, '.keep');
 
+fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 fs.writeFileSync(SENTINEL_FILE, '');
 
@@ -30,11 +33,15 @@ const sourceDir = fs.existsSync(STATIC_LEGAL_DIR)
   : LEGACY_STATIC_WEB_DIR;
 
 function copyStaticAsset(src, dest, options = {}) {
-  const { skipNames = new Set(), allowedExtensions = /\.(html|css|js|mjs|png|jpe?g|webp|svg)$/i } = options;
+  const {
+    skipNames = new Set(),
+    allowedExtensions = /\.(html|css|js|mjs|png|jpe?g|webp|svg)$/i,
+    transformContent,
+  } = options;
   const stat = fs.statSync(src);
   const baseName = path.basename(src);
 
-  if (skipNames.has(baseName)) {
+  if (skipNames.has(baseName) || baseName.includes('.test.')) {
     return;
   }
 
@@ -54,6 +61,13 @@ function copyStaticAsset(src, dest, options = {}) {
   }
 
   fs.mkdirSync(path.dirname(dest), { recursive: true });
+
+  const content = transformContent?.(src, fs.readFileSync(src));
+  if (content !== undefined) {
+    fs.writeFileSync(dest, content);
+    return;
+  }
+
   fs.copyFileSync(src, dest);
 }
 
@@ -77,7 +91,14 @@ if (fs.existsSync(WEBSITE_DIR)) {
       continue;
     }
     copyStaticAsset(path.join(WEBSITE_DIR, name), path.join(OUTPUT_DIR, name), {
-      skipNames: new Set(['README.md', 'validate-landing.mjs', 'vercel.json']),
+      skipNames: new Set(['README.md', 'store-links.cjs', 'validate-landing.mjs', 'vercel.json']),
+      transformContent: (src, content) => {
+        if (path.basename(src) !== 'index.html') {
+          return undefined;
+        }
+
+        return renderStoreLinks(content.toString('utf8'));
+      },
     });
   }
   console.log(`[vercel-build] Copied ${path.relative(REPO_ROOT, WEBSITE_DIR)} → public`);
