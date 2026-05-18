@@ -6,6 +6,10 @@ import { spawnSync } from 'node:child_process';
 const appStoreUrl = 'https://apps.apple.com/us/app/example/id123';
 const googlePlayUrl = 'https://play.google.com/store/apps/details?id=com.example.fullhouse';
 
+function countHref(html, url) {
+  return html.split(`href="${url}"`).length - 1;
+}
+
 describe('create-vercel-output-dir', () => {
   it('renders landing store links from sanitized Vercel environment variables', async () => {
     const result = spawnSync(process.execPath, ['backend/scripts/create-vercel-output-dir.js'], {
@@ -21,7 +25,7 @@ describe('create-vercel-output-dir', () => {
     assert.equal(result.status, 0, result.stderr || result.stdout);
 
     const html = await readFile(new URL('../backend/public/index.html', import.meta.url), 'utf8');
-    assert.equal(html.match(new RegExp(`href="${appStoreUrl}"`, 'g'))?.length, 2);
-    assert.equal(html.match(new RegExp(`href="${googlePlayUrl.replace('?', '\\?')}"`, 'g'))?.length, 2);
+    assert.equal(countHref(html, appStoreUrl), 2);
+    assert.equal(countHref(html, googlePlayUrl), 2);
   });
 });
