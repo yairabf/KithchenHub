@@ -8,19 +8,23 @@ It should stay short and practical.
 ## Current important workstreams
 
 ### 0. Store release and compliance
-Status: Android accepted; Apple review pending as of 2026-05-15
+Status: Android accepted; Apple rejected for Guideline 3.1.2(c) as of 2026-05-17
 
 Current state:
 - Google Play / Android has been accepted and is live in the store.
-- Apple App Review has been submitted and is waiting for review result.
+- Apple App Review rejected iOS version `1.0 (94)` for Guideline 3.1.2(c) because App Store metadata did not include a functional Terms of Use/EULA link for auto-renewable subscriptions.
+- PR #221 adds the in-app Premium paywall disclosure/legal-link fix: subscription title/length/price/free-trial information, auto-renewal disclosure, Privacy Policy link, Terms of Use (EULA) link, and Restore Purchases are covered for App Review notes/screen recording.
+- App Store Connect still needs a manual metadata update: keep Privacy Policy URL `https://kithchensync1.vercel.app/privacy` and add `Terms of Use (EULA): https://kithchensync1.vercel.app/terms` to App Description or configure the EULA/License Agreement field.
 - App Store screenshot sets exist for 6.5-inch iPhone, 13-inch iPad portrait, and 13-inch iPad landscape.
 - Google Play Data Safety was updated to include Device or other IDs and related user data declarations.
 - Public account deletion URL is live at `https://kithchensync1.vercel.app/delete-account`.
-- Support URL status changed during docs cleanup: current source does not include `static-legal/support.html` or `/support` rewrites, so do not use `/support` as store/support metadata unless the page and route are added.
+- Support URL is live in current source at `https://kithchensync1.vercel.app/support` via `static-legal/support.html` and `/support` rewrites in `backend/vercel.json`.
 
 Primary references:
 - `docs/project/STORE_COMPLIANCE.md`
 - `docs/project/RELEASE_STATUS.md`
+- `docs/compliance/app-store-review-3.1.2c-response.md`
+- `docs/compliance/app-store-guideline-audit-2026-05-17.md`
 - `static-legal/delete-account.html`
 - `backend/vercel.json`
 - `backend/scripts/create-vercel-output-dir.js`
@@ -28,8 +32,8 @@ Primary references:
 Important instruction for future LLMs:
 - Use a separate demo/review user for screenshots and review data.
 - Do not use Yair's personal account for store screenshots.
-- Verify public legal URLs after Vercel/static-page changes; add and verify a support URL only if a support page/route is introduced.
-- Update `STORE_COMPLIANCE.md` and `RELEASE_STATUS.md` after review outcomes.
+- Verify public legal/support URLs after Vercel/static-page changes; keep `/support` documented only while `static-legal/support.html` and `/support` rewrites remain present.
+- Update `STORE_COMPLIANCE.md`, `RELEASE_STATUS.md`, and this file after review outcomes.
 
 ---
 
