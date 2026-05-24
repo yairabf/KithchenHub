@@ -55,5 +55,7 @@ assert.match(css, /@media\s*\(max-width:\s*640px\)/, 'mobile layout media query 
 assert.match(css, /\.hero\s*\{[\s\S]*min-height:\s*100vh/, 'hero should fill the first viewport like the approved mockup');
 assert.match(supportHtml, /\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, 'support page hidden controls should not be overridden by shared button display styles');
 assert.match(supportHtml, /\.step\.active\s*\{[\s\S]*padding-bottom:\s*5rem/, 'support page active step should reserve clearance for the sticky action bar');
+assert.match(supportHtml, /\.actions\.is-sticky\s*\{[\s\S]*position:\s*sticky;[\s\S]*bottom:\s*0;[\s\S]*\}/, 'support page should scope sticky positioning to the explicit sticky action state');
+assert.match(supportHtml, /contentBottom \+ actionHeight \+ 12 <= window\.innerHeight/, 'support page should only use sticky actions when the active step fits above the action bar');
 
 console.log('Landing page validation passed.');

@@ -109,12 +109,14 @@
       .privacy label { display: flex; align-items: flex-start; gap: 0.6rem; font-weight: 600; }
       .privacy input { width: auto; margin-top: 0.25rem; }
       .actions {
-        position: sticky;
-        bottom: 0;
         display: grid;
         gap: 0.6rem;
         padding: 0.8rem 0 0;
         background: linear-gradient(180deg, transparent, var(--bg) 20%);
+      }
+      .actions.is-sticky {
+        position: sticky;
+        bottom: 0;
       }
       button,
       .button-link {
@@ -254,6 +256,7 @@
       const primary = document.getElementById('primary-action');
       const back = document.getElementById('back-action');
       const fallback = document.getElementById('email-fallback');
+      const actions = document.querySelector('.actions');
       const submitState = document.getElementById('submit-state');
       let step = 0;
 
@@ -280,6 +283,15 @@
       ].join('\n');
       const mailtoFor = (data) => `mailto:${encodeURIComponent(SUPPORT_EMAIL)}?subject=${encodeURIComponent(subjectFor(data))}&body=${encodeURIComponent(bodyFor(data))}`;
       const saveDraft = () => localStorage.setItem('fullhouse.supportTicketDraft.v1', JSON.stringify(getData()));
+      const updateActionPosition = () => {
+        actions.classList.remove('is-sticky');
+        const activeStep = document.querySelector('.step.active');
+        const contentBottom = Math.max(
+          ...[...activeStep.children].map((child) => child.getBoundingClientRect().bottom)
+        );
+        const actionHeight = actions.getBoundingClientRect().height;
+        actions.classList.toggle('is-sticky', contentBottom + actionHeight + 12 <= window.innerHeight);
+      };
       const restoreDraft = () => {
         try {
           const draft = JSON.parse(localStorage.getItem('fullhouse.supportTicketDraft.v1') || '{}');
@@ -299,8 +311,10 @@
         const data = getData();
         fallback.href = mailtoFor(data);
         document.getElementById('review-state').textContent = `${data.platform || 'Platform'} · ${data.category || 'Category'} · ${data.summary || 'Add a summary'} · Reply to ${data.contact || 'contact email missing'}`;
+        updateActionPosition();
       };
       form.addEventListener('input', () => { saveDraft(); update(); });
+      window.addEventListener('resize', updateActionPosition);
       primary.addEventListener('click', () => {
         const activeFields = [...document.querySelector(`[data-step="${step}"]`).querySelectorAll('input, select, textarea')];
         if (!activeFields.every((field) => field.reportValidity())) return;
