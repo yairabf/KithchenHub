@@ -1,6 +1,6 @@
 # Mobile UI Feature Map
 
-Last updated: 2026-05-16
+Last updated: 2026-05-24
 
 Purpose: source-backed map of current mobile feature areas for humans and agents. Use this as the navigation layer before editing individual feature docs.
 
@@ -63,6 +63,7 @@ The tab container keeps visited screens mounted and animates screen transitions 
 The main stack also includes:
 
 - `PremiumPaywall` → `mobile/src/features/subscription/screens/PremiumPaywallScreen.tsx`
+- `SupportTicket` → `mobile/src/features/support/screens/SupportTicketScreen.tsx`
 
 ## Feature areas
 
@@ -152,11 +153,12 @@ Current screen/components/services include:
 
 Important intent: preserve progress visibility, simple today/upcoming organization, assignment, date/time, swipe/delete, and quick-add behavior.
 
-### Settings, account, legal, and premium
+### Settings, account, legal, support, and premium
 
 Source directories:
 
 - `mobile/src/features/settings/`
+- `mobile/src/features/support/`
 - `mobile/src/features/subscription/`
 
 Current screen/components/services include:
@@ -166,12 +168,13 @@ Current screen/components/services include:
 - `InviteMemberModal`
 - `LanguageSelectorModal`
 - `LegalConsentGate`, `LegalConsentModal`
+- `SupportTicketScreen`
 - `ImportDataModal`
 - `PremiumSection`, `PremiumDemoSection`
 - `PremiumPaywallScreen`
-- account, premium demo, purchase, RevenueCat, and subscription API services
+- account, support ticket, premium demo, purchase, RevenueCat, and subscription API services
 
-Important intent: settings is now more than basic profile settings; it is also where account/privacy/legal, household management, language, and premium/subscription surfaces are exposed.
+Important intent: settings is now more than basic profile settings; it is also where account/privacy/legal, guided support intake, household management, language, and premium/subscription surfaces are exposed. The support flow is email-backed today: it builds a ticket packet addressed to `yair.solutions.19@gmail.com` with recommended Gmail label `KitchenHub/Support/Issues/New` for future support-agent routing.
 
 ## Source-backed doc status
 
@@ -181,7 +184,7 @@ Preserve/update:
 - `docs/features/recipes.md` — product intent is useful; source now also includes recipe image search/upload support.
 - `docs/features/dashboard.md` — product intent is useful and should remain focused on utility, not dashboard bloat.
 - `docs/features/chores.md` — needs source-structure correction; source has more components than the older header claims.
-- `docs/features/settings.md` — needs source-structure correction; settings now includes legal, import, premium, invite, account services, and language support.
+- `docs/features/settings.md` — source-structure corrected for legal, import, premium, invite, support intake, account services, and language support.
 - `docs/features/auth.md` — needs source-structure correction; auth now includes register, invite code, household name, onboarding context, OAuth hook, session/token services, and guest import support.
 
 Do not use screenshots or old inline snippets as proof that current behavior exists. Verify important behavior in current source and tests first.

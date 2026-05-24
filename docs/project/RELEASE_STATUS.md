@@ -20,6 +20,7 @@ As of 2026-05-15:
 - Resolved Google Play Data Safety rejection by declaring Device or other IDs and related user data categories.
 - Added public account deletion page required by Google Play.
 - Restored support-page rewrites while adding delete-account routes.
+- Added QA-passed support intake surfaces: public `website/support.html` / `static-legal/support.html`, mobile Settings → Help & Support → `SupportTicket`, and support email migration to `yair.solutions.19@gmail.com`.
 
 ## Public URLs to keep verified
 
@@ -29,6 +30,8 @@ As of 2026-05-15:
 - `https://kithchensync1.vercel.app/delete-account`
 
 Support URL note: source now includes `static-legal/support.html`, `website/support.html`, and `/support` + `/support/` rewrites in `backend/vercel.json`. Verify the deployed route before updating store metadata.
+
+Current support intake note: support submissions are email-backed only. Public and mobile flows create a `mailto:` draft to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}` and recommended internal Gmail label `KitchenHub/Support/Issues/New`; there is no backend support-intake service yet.
 
 ## Screenshot locations
 

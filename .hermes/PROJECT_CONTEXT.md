@@ -162,10 +162,25 @@ Current state as of 2026-05-15:
 - Android / Google Play has been accepted and is live.
 - Apple App Review is submitted and pending.
 - Store screenshots and legal/account-deletion URLs were recently updated.
+- Support intake work added a public `/support` source page, mobile Settings → Help & Support ticket flow, and support email `yair.solutions.19@gmail.com`; deployed `/support` still needs verification before store metadata depends on it.
 
 Primary references:
 - `docs/project/STORE_COMPLIANCE.md`
 - `docs/project/RELEASE_STATUS.md`
+
+### 0a. Support intake and support email
+Current state as of 2026-05-24:
+- Public support pages exist at `website/support.html` and `static-legal/support.html`.
+- Mobile support intake lives under `mobile/src/features/support/` and is reached from Settings → Help & Support.
+- Submissions currently open a `mailto:` draft to `yair.solutions.19@gmail.com`; there is no backend support-ticket API yet.
+- Generated support packet subjects use `[FullHouse Support][{platform}][{category}] {summary}` and include recommended Gmail label `KitchenHub/Support/Issues/New` for future support-agent routing.
+- Public support form layout passed QA at commit `b0f8038`; action controls no longer overlap Topic/Details/Context/Review content.
+
+Primary references:
+- `docs/project/RECENT_CHANGES.md`
+- `docs/features/settings.md`
+- `website/README.md`
+- `mobile/src/features/support/supportTicket.ts`
 
 ### 1. Mobile cache/snappiness production stabilization
 Current primary plan:
