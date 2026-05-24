@@ -82,7 +82,7 @@ Declare each applicable row as **collected**. Do **not** declare advertising or 
 - Can users request/delete their data? Yes.
   - In-app account deletion exists in Settings for signed-in users.
   - Public deletion instructions live at `/delete-account`.
-  - Fallback request email: `yairabc@gmail.com`.
+  - Fallback request email: `yair.solutions.19@gmail.com`.
 
 ## Sharing and advertising
 

@@ -57,7 +57,7 @@ You agree to indemnify and hold harmless **Yair Abramovitch** from any claims, d
 
 ## 9. Termination
 
-- You may stop using the Service at any time. You may request account deletion via the app or by contacting yairabc@gmail.com.
+- You may stop using the Service at any time. You may request account deletion via the app or by contacting yair.solutions.19@gmail.com.
 - We may suspend or terminate your access if you breach these Terms or for other operational or legal reasons, with notice where required.
 - Upon termination, your right to use the Service ceases. We may retain data as described in our Privacy Policy (e.g. for legal compliance).
 
@@ -77,6 +77,6 @@ We may update these Terms from time to time. We will post the updated version wi
 
 For questions about these Terms:
 
-- **Email:** yairabc@gmail.com
+- **Email:** yair.solutions.19@gmail.com
 - **Operator:** Yair Abramovitch (individual developer)
 - **Jurisdiction:** Israel

@@ -105,8 +105,8 @@
     "memberRole": "عضو",
     "removeMember": "إزالة العضو",
     "cannotRemoveYourself": "لا يمكنك إزالة نفسك من هذه الشاشة.",
-    "onlyAdminsCanRemoveMembers": "يمكن لمشرفي المنزل فقط إزالة الأعضاء."},
-
+    "onlyAdminsCanRemoveMembers": "يمكن لمشرفي المنزل فقط إزالة الأعضاء."
+  },
   "inviteMemberModal": {
     "title": "دعوة إلى المنزل",
     "description": "شارك هذا الرمز مع أفراد عائلتك. يمكنهم إدخاله أثناء التسجيل للانضمام إلى منزلك.",
@@ -137,5 +137,48 @@
       "errorTitle": "خطأ",
       "errorMessage": "فشل مسح البيانات المحلية."
     }
+  },
+  "support": {
+    "settingsRowTitle": "Help & Support",
+    "settingsRowAccessibilityLabel": "Open Help & Support",
+    "settingsRowAccessibilityHint": "Opens the guided support ticket form",
+    "title": "Support ticket",
+    "subtitle": "Guided report for faster help",
+    "badge": "FullHouse Support",
+    "introTitle": "Tell us what happened",
+    "introText": "A short guided ticket helps support understand the issue and reply faster. If the form cannot submit, you can email support instead.",
+    "stepProgress": "Step {{current}} of {{total}}",
+    "steps": {
+      "topic": "Topic",
+      "details": "Details",
+      "context": "Context",
+      "review": "Review"
+    },
+    "topicTitle": "What do you need help with?",
+    "platformLabel": "Platform",
+    "categoryLabel": "Category",
+    "summaryLabel": "Short summary",
+    "summaryPlaceholder": "Example: Shopping list freezes when I add milk",
+    "expectedLabel": "Expected behavior",
+    "actualLabel": "Actual behavior",
+    "frequencyLabel": "How often does it happen?",
+    "stepsLabel": "Steps to reproduce",
+    "contactEmailLabel": "Contact email",
+    "deviceLabel": "App version / device / OS",
+    "attachmentsLabel": "Screenshots or logs",
+    "attachmentsPlaceholder": "You can attach screenshots from your email app after the draft opens.",
+    "privacyNote": "I understand not to send passwords, full payment card details, or highly sensitive household information.",
+    "reviewTitle": "Review ticket",
+    "detailCheckTitle": "Detail check",
+    "detailCheckGood": "Looks detailed enough for support to triage.",
+    "successMessage": "Your email draft is ready. Send it to open the support ticket.",
+    "errorMessage": "We could not open the email draft. Your text is still saved; try again when you are online.",
+    "continue": "Continue",
+    "back": "Back",
+    "submitTicket": "Submit ticket",
+    "submitting": "Submitting ticket…",
+    "emailInstead": "Email support instead",
+    "emailUnavailableTitle": "Email unavailable",
+    "emailUnavailableMessage": "Please email {{email}} from your mail app."
   }
 }

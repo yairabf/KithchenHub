@@ -134,6 +134,9 @@ jest.mock('react-i18next', () => ({
         privacyPolicy: 'Privacy Policy',
         termsOfService: 'Terms of Service',
         opensExternalLink: '(opens external link)',
+        'support.settingsRowTitle': 'Help & Support',
+        'support.settingsRowAccessibilityLabel': 'Open Help & Support',
+        'support.settingsRowAccessibilityHint': 'Opens the guided support ticket form',
         'premium.title': 'Premium',
         'premium.cardTitle': 'KitchenHub Premium',
         'premium.planFree': 'Free',
@@ -375,6 +378,16 @@ describe('SettingsScreen', () => {
       await waitFor(() => {
         expect(getByTestId('invite-member-modal').props.children).toBe('generate');
       });
+    });
+  });
+
+  describe('Support entry point', () => {
+    it('navigates to the guided support ticket flow when Help & Support is pressed', () => {
+      const { getByText } = render(<SettingsScreen />);
+
+      fireEvent.press(getByText('Help & Support'));
+
+      expect(mockNavigate).toHaveBeenCalledWith('SupportTicket');
     });
   });
 

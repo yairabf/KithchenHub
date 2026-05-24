@@ -25,9 +25,10 @@ As of 2026-05-15:
 
 - `https://kithchensync1.vercel.app/privacy`
 - `https://kithchensync1.vercel.app/terms`
+- `https://kithchensync1.vercel.app/support`
 - `https://kithchensync1.vercel.app/delete-account`
 
-Support URL note: current source does not include `static-legal/support.html` or `/support` rewrites in `backend/vercel.json`. Do not use `/support` in store metadata unless that page/route is added and verified.
+Support URL note: source now includes `static-legal/support.html`, `website/support.html`, and `/support` + `/support/` rewrites in `backend/vercel.json`. Verify the deployed route before updating store metadata.
 
 ## Screenshot locations
 

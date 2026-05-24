@@ -38,6 +38,7 @@ assert.equal(html.match(new RegExp(`href="${escapeRegex(appStoreUrl)}"`, 'g'))?.
 assert.equal(html.match(new RegExp(`href="${escapeRegex(googlePlayUrl)}"`, 'g'))?.length, 2, 'both Google Play badges should link to the live listing');
 assert.match(html, /<footer[\s\S]*href="\/privacy"/, 'footer should link to the same-site Privacy route');
 assert.match(html, /<footer[\s\S]*href="\/terms"/, 'footer should link to the same-site Terms route');
+assert.match(html, /<footer[\s\S]*href="\/support"/, 'footer should link to the same-site Support route');
 assert.match(html, /<footer[\s\S]*href="\/delete-account"/, 'footer should link to the same-site Delete account route');
 for (const legalPage of ['privacy.html', 'terms.html', 'delete-account.html', 'support.html']) {
   await access(path.join(__dirname, legalPage));

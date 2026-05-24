@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { MainTabsScreen } from './MainTabsScreen';
 import { MainStackParamList } from './types';
 import { PremiumPaywallScreen } from '../features/subscription/screens/PremiumPaywallScreen';
+import { SupportTicketScreen } from '../features/support/screens/SupportTicketScreen';
 import { NetworkProvider } from '../contexts/NetworkContext';
 import { AppLifecycleProvider } from '../contexts/AppLifecycleContext';
 import { useSyncQueue } from '../common/hooks/useSyncQueue';
@@ -34,6 +35,11 @@ function MainNavigatorContent() {
       <Stack.Screen
         name="PremiumPaywall"
         component={PremiumPaywallScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SupportTicket"
+        component={SupportTicketScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

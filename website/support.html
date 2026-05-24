@@ -3,111 +3,314 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Support — FullHouse (Kitchen Hub)</title>
+    <title>Support ticket — FullHouse (Kitchen Hub)</title>
     <meta
       name="description"
-      content="Support information for the FullHouse (Kitchen Hub) mobile application."
+      content="Open a guided support ticket for the FullHouse (Kitchen Hub) mobile application."
     />
     <style>
       :root {
         color-scheme: light dark;
-        --bg: #f7f7f8;
-        --text: #1a1a1c;
-        --muted: #5c5c66;
-        --accent: #c2410c;
-        --border: #e4e4e7;
+        --bg: #f7f9fb;
+        --surface: #ffffff;
+        --text: #1b3c53;
+        --muted: #456882;
+        --primary: #234c6a;
+        --primary-dark: #1b3c53;
+        --accent: #d6eaf8;
+        --border: #c8d0d7;
+        --success: #10b981;
+        --danger: #ef4444;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #121214;
-          --text: #f4f4f5;
-          --muted: #a1a1aa;
-          --border: #27272a;
+          --bg: #0f1d27;
+          --surface: #162b3a;
+          --text: #f4f7f9;
+          --muted: #c8d0d7;
+          --accent: #1b3c53;
+          --border: #456882;
         }
       }
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-        font-size: 1rem;
-        line-height: 1.6;
         color: var(--text);
-        background: var(--bg);
+        background: linear-gradient(180deg, var(--accent), var(--bg) 18rem);
+        line-height: 1.55;
       }
       main {
-        max-width: 40rem;
+        width: min(100%, 58rem);
         margin: 0 auto;
-        padding: 2rem 1.25rem 4rem;
+        padding: 1rem 1rem 6rem;
       }
-      h1 {
-        font-size: 1.75rem;
-        line-height: 1.25;
-        margin: 0 0 0.5rem;
-      }
-      .subtitle {
-        color: var(--muted);
-        font-size: 0.95rem;
-        margin-bottom: 1.5rem;
-      }
-      h2 {
-        font-size: 1.15rem;
-        margin: 2rem 0 0.75rem;
-      }
-      p,
-      ul {
-        margin: 0 0 1rem;
-      }
-      ul {
-        padding-left: 1.25rem;
-      }
-      li {
-        margin-bottom: 0.35rem;
-      }
-      a {
-        color: var(--accent);
-      }
+      .hero,
+      .card,
       footer {
-        margin-top: 3rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--border);
-        font-size: 0.9rem;
-        color: var(--muted);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        padding: 1rem;
+        box-shadow: 0 10px 30px rgba(27, 60, 83, 0.08);
       }
+      .hero { margin: 1rem 0; }
+      .badge {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 0.3rem 0.7rem;
+        background: var(--primary);
+        color: #fff;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0.75rem 0 0.4rem; font-size: clamp(1.9rem, 8vw, 3.2rem); line-height: 1.05; }
+      h2 { margin: 0 0 0.75rem; font-size: 1.2rem; }
+      p { margin: 0 0 1rem; }
+      .muted { color: var(--muted); }
+      form { display: grid; gap: 1rem; }
+      .step { display: none; }
+      .step.active { display: grid; gap: 1rem; }
+      .stepper { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+      .stepper span {
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 800;
+        padding: 0.35rem 0.65rem;
+      }
+      .stepper span.active { background: var(--primary); color: #fff; }
+      label { display: grid; gap: 0.35rem; font-weight: 750; }
+      input, select, textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 0.85rem;
+        padding: 0.85rem;
+        font: inherit;
+        background: var(--surface);
+        color: var(--text);
+      }
+      textarea { min-height: 7rem; resize: vertical; }
+      .grid { display: grid; gap: 0.8rem; }
+      @media (min-width: 720px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+      .privacy,
+      .state {
+        border-radius: 1rem;
+        background: var(--accent);
+        padding: 0.85rem;
+      }
+      .privacy label { display: flex; align-items: flex-start; gap: 0.6rem; font-weight: 600; }
+      .privacy input { width: auto; margin-top: 0.25rem; }
+      .actions {
+        position: sticky;
+        bottom: 0;
+        display: grid;
+        gap: 0.6rem;
+        padding: 0.8rem 0 0;
+        background: linear-gradient(180deg, transparent, var(--bg) 20%);
+      }
+      button,
+      .button-link {
+        min-height: 3rem;
+        border-radius: 999px;
+        border: 0;
+        background: var(--primary);
+        color: #fff;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        padding: 0.7rem 1rem;
+      }
+      button.secondary,
+      .button-link.secondary { background: transparent; color: var(--primary); border: 1px solid var(--border); }
+      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .success { color: var(--success); font-weight: 800; }
+      .error { color: var(--danger); font-weight: 800; }
+      footer { margin-top: 2rem; color: var(--muted); font-size: 0.9rem; }
+      a { color: var(--primary); }
     </style>
   </head>
   <body>
     <main>
-      <h1>Support</h1>
-      <p class="subtitle"><strong>FullHouse</strong> (Kitchen Hub)</p>
+      <section class="hero">
+        <span class="badge">FullHouse Support</span>
+        <h1>Open a support ticket</h1>
+        <p class="muted">Use this short guided form for bugs, account help, billing questions, or feedback. It creates an email draft for <a href="mailto:yair.solutions.19@gmail.com">yair.solutions.19@gmail.com</a> with the details support needs.</p>
+      </section>
 
-      <p>
-        Need help with FullHouse? Contact support by email and we will respond as soon as possible.
-      </p>
+      <section class="card" aria-labelledby="support-form-title">
+        <h2 id="support-form-title">Guided ticket</h2>
+        <div class="stepper" aria-label="Ticket progress">
+          <span class="active" data-step-label="0">Topic</span>
+          <span data-step-label="1">Details</span>
+          <span data-step-label="2">Context</span>
+          <span data-step-label="3">Review</span>
+        </div>
 
-      <h2>Contact</h2>
-      <p>
-        <strong>Email:</strong> <a href="mailto:yairabc@gmail.com">yairabc@gmail.com</a>
-      </p>
+        <form id="support-form">
+          <div class="step active" data-step="0">
+            <div class="grid two">
+              <label>Platform/source
+                <select name="platform" required>
+                  <option>iOS app</option>
+                  <option>Android app</option>
+                  <option>Website</option>
+                  <option>Account</option>
+                  <option>Billing</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>Issue category
+                <select name="category" required>
+                  <option>Bug</option>
+                  <option>Account</option>
+                  <option>Billing</option>
+                  <option>Shopping</option>
+                  <option>Recipes</option>
+                  <option>Chores</option>
+                  <option>Feedback</option>
+                  <option>Other</option>
+                </select>
+              </label>
+            </div>
+          </div>
 
-      <h2>What to include</h2>
-      <ul>
-        <li>A short description of the issue or question.</li>
-        <li>Your device type and operating system version, if relevant.</li>
-        <li>The app version, if available.</li>
-        <li>Screenshots or steps to reproduce the issue, if helpful.</li>
-      </ul>
+          <div class="step" data-step="1">
+            <label>Short summary
+              <input name="summary" required maxlength="120" placeholder="Example: Shopping list freezes when I add milk" />
+            </label>
+            <label>Expected behavior
+              <textarea name="expected" placeholder="What did you expect to happen?"></textarea>
+            </label>
+            <label>Actual behavior
+              <textarea name="actual" placeholder="What happened instead?"></textarea>
+            </label>
+            <label>Frequency
+              <select name="frequency">
+                <option>Every time</option>
+                <option>Often</option>
+                <option>Sometimes</option>
+                <option>Once</option>
+                <option>Not sure</option>
+              </select>
+            </label>
+          </div>
 
-      <h2>Helpful links</h2>
-      <ul>
-        <li><a href="/privacy">Privacy Policy</a></li>
-        <li><a href="/terms">Terms of Service</a></li>
-      </ul>
+          <div class="step" data-step="2">
+            <label>Steps to reproduce
+              <textarea name="steps" placeholder="1. Open... 2. Tap... 3. See..."></textarea>
+            </label>
+            <div class="grid two">
+              <label>Contact email
+                <input name="contact" type="email" required placeholder="you@example.com" />
+              </label>
+              <label>App version / device / OS
+                <input name="device" placeholder="Example: 1.0.0, iPhone 15, iOS 18" />
+              </label>
+            </div>
+            <label>Screenshot/log attachment note
+              <textarea name="attachments" placeholder="You can attach screenshots after your email draft opens."></textarea>
+            </label>
+            <div class="privacy">
+              <label><input name="privacy" type="checkbox" required /> I understand not to send passwords, full payment card details, or highly sensitive household information.</label>
+            </div>
+          </div>
+
+          <div class="step" data-step="3">
+            <div class="state" id="review-state">Review your summary, contact email, and details before creating the email draft.</div>
+            <p class="muted">Expected response: support will review the ticket as soon as possible. Urgent billing/account issues should include a reply email.</p>
+            <p id="submit-state" aria-live="polite"></p>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="primary-action">Continue</button>
+            <button type="button" class="secondary" id="back-action" hidden>Back</button>
+            <a class="button-link secondary" id="email-fallback" href="mailto:yair.solutions.19@gmail.com">Email support instead</a>
+          </div>
+        </form>
+      </section>
 
       <footer>
-        <p>Operator: Yair Abramovitch, individual developer of FullHouse / Kitchen Hub.</p>
+        <p>Support email: <a href="mailto:yair.solutions.19@gmail.com">yair.solutions.19@gmail.com</a>. Helpful links: <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a> · <a href="/delete-account">Delete account</a>.</p>
       </footer>
     </main>
+
+    <script>
+      const SUPPORT_EMAIL = 'yair.solutions.19@gmail.com';
+      const SUPPORT_LABEL = 'KitchenHub/Support/Issues/New';
+      const form = document.getElementById('support-form');
+      const primary = document.getElementById('primary-action');
+      const back = document.getElementById('back-action');
+      const fallback = document.getElementById('email-fallback');
+      const submitState = document.getElementById('submit-state');
+      let step = 0;
+
+      const getData = () => Object.fromEntries(new FormData(form).entries());
+      const subjectFor = (data) => `[FullHouse Support][${data.platform || 'Unknown'}][${data.category || 'Other'}] ${data.summary || 'Support request'}`;
+      const bodyFor = (data) => [
+        'FullHouse support ticket', '',
+        `Ticket title: ${data.summary || 'Not provided'}`,
+        `Platform/source: ${data.platform || 'Not provided'}`,
+        `Category: ${data.category || 'Not provided'}`,
+        'Priority hint: User-reported support issue',
+        `Expected behavior: ${data.expected || 'Not provided'}`,
+        `Actual behavior: ${data.actual || 'Not provided'}`,
+        `Steps to reproduce: ${data.steps || 'Not provided'}`,
+        `Frequency: ${data.frequency || 'Not provided'}`,
+        `Contact email: ${data.contact || 'Not provided'}`,
+        `App/device context: ${data.device || 'Not provided'}`,
+        `Attachments: ${data.attachments || 'Not provided'}`,
+        `Privacy acknowledgment: ${data.privacy ? 'Yes' : 'No'}`,
+        '',
+        `Recommended Gmail label: ${SUPPORT_LABEL}`,
+        '',
+        'Privacy reminder: Do not send passwords, full payment card details, or highly sensitive household information.'
+      ].join('\n');
+      const mailtoFor = (data) => `mailto:${encodeURIComponent(SUPPORT_EMAIL)}?subject=${encodeURIComponent(subjectFor(data))}&body=${encodeURIComponent(bodyFor(data))}`;
+      const saveDraft = () => localStorage.setItem('fullhouse.supportTicketDraft.v1', JSON.stringify(getData()));
+      const restoreDraft = () => {
+        try {
+          const draft = JSON.parse(localStorage.getItem('fullhouse.supportTicketDraft.v1') || '{}');
+          for (const [name, value] of Object.entries(draft)) {
+            const field = form.elements[name];
+            if (!field) continue;
+            if (field.type === 'checkbox') field.checked = value === 'on';
+            else field.value = value;
+          }
+        } catch (_) {}
+      };
+      const update = () => {
+        document.querySelectorAll('[data-step]').forEach((el) => el.classList.toggle('active', Number(el.dataset.step) === step));
+        document.querySelectorAll('[data-step-label]').forEach((el) => el.classList.toggle('active', Number(el.dataset.stepLabel) <= step));
+        back.hidden = step === 0;
+        primary.textContent = step === 3 ? 'Create email draft' : 'Continue';
+        const data = getData();
+        fallback.href = mailtoFor(data);
+        document.getElementById('review-state').textContent = `${data.platform || 'Platform'} · ${data.category || 'Category'} · ${data.summary || 'Add a summary'} · Reply to ${data.contact || 'contact email missing'}`;
+      };
+      form.addEventListener('input', () => { saveDraft(); update(); });
+      primary.addEventListener('click', () => {
+        const activeFields = [...document.querySelector(`[data-step="${step}"]`).querySelectorAll('input, select, textarea')];
+        if (!activeFields.every((field) => field.reportValidity())) return;
+        if (step < 3) { step += 1; update(); return; }
+        const url = mailtoFor(getData());
+        submitState.textContent = 'Opening your email draft…';
+        submitState.className = '';
+        window.location.href = url;
+        localStorage.removeItem('fullhouse.supportTicketDraft.v1');
+        submitState.textContent = 'Your email draft is ready. Send it to open the support ticket.';
+        submitState.className = 'success';
+      });
+      back.addEventListener('click', () => { step = Math.max(0, step - 1); update(); });
+      restoreDraft();
+      update();
+    </script>
   </body>
 </html>

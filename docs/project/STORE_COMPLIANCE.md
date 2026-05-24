@@ -33,10 +33,11 @@ https://kithchensync1.vercel.app
 Important public pages:
 
 - Privacy: `https://kithchensync1.vercel.app/privacy`
-- Terms: `https://kithchensync1.vercel.app/terms`
+- Terms / Terms of Use (EULA): `https://kithchensync1.vercel.app/terms`
+- Support: `https://kithchensync1.vercel.app/support` (verify after deployment before using in store metadata)
 - Account deletion: `https://kithchensync1.vercel.app/delete-account`
 
-Support URL status: no `static-legal/support.html` file or `/support` rewrite exists in current source. Do not list `/support` as an active store/support URL unless the page and route are added.
+Support URL status: `static-legal/support.html`, `website/support.html`, and `/support` rewrites now exist in source. Verify the deployed route after release before using `/support` in store metadata.
 
 Static source files:
 
@@ -70,7 +71,7 @@ The page documents:
 
 - in-app deletion path through settings/profile
 - permanent deletion confirmation
-- fallback email request path: `yairabc@gmail.com`
+- fallback email request path: `yair.solutions.19@gmail.com`
 - data deleted
 - data that may be retained for legal/security/payment requirements
 - approximate processing period
