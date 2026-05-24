@@ -38,18 +38,38 @@ type StepKey = typeof STEPS[number];
 
 type FieldName = keyof SupportTicketDraft;
 
-const PLATFORM_OPTIONS = ['iOS app', 'Android app', 'Website', 'Account', 'Billing', 'Other'];
-const CATEGORY_OPTIONS = ['Bug', 'Account', 'Billing', 'Recipe', 'Shopping', 'Chores', 'Feedback', 'Other'];
-const FREQUENCY_OPTIONS = ['Every time', 'Often', 'Sometimes', 'Once', 'Not sure'];
+const PLATFORM_OPTION_KEYS = ['iosApp', 'androidApp', 'website', 'account', 'billing', 'other'] as const;
+const CATEGORY_OPTION_KEYS = ['bug', 'account', 'billing', 'recipe', 'shopping', 'chores', 'feedback', 'other'] as const;
+const FREQUENCY_OPTION_KEYS = ['everyTime', 'often', 'sometimes', 'once', 'notSure'] as const;
 
 export function SupportTicketScreen() {
   const { t } = useTranslation('settings');
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { user } = useAuth();
+  const platformOptions = React.useMemo(
+    () => PLATFORM_OPTION_KEYS.map((key) => t(`support.platformOptions.${key}`)),
+    [t]
+  );
+  const categoryOptions = React.useMemo(
+    () => CATEGORY_OPTION_KEYS.map((key) => t(`support.categoryOptions.${key}`)),
+    [t]
+  );
+  const frequencyOptions = React.useMemo(
+    () => FREQUENCY_OPTION_KEYS.map((key) => t(`support.frequencyOptions.${key}`)),
+    [t]
+  );
+  const defaultPlatform = Platform.OS === 'ios'
+    ? t('support.platformOptions.iosApp')
+    : Platform.OS === 'android'
+      ? t('support.platformOptions.androidApp')
+      : t('support.platformOptions.website');
+
   const [stepIndex, setStepIndex] = React.useState(0);
   const [draft, setDraft] = React.useState<SupportTicketDraft>(() =>
     createEmptySupportTicketDraft({
-      platform: Platform.OS === 'ios' ? 'iOS app' : Platform.OS === 'android' ? 'Android app' : 'Website',
+      platform: defaultPlatform,
+      category: t('support.categoryOptions.bug'),
+      frequency: t('support.frequencyOptions.notSure'),
       contactEmail: user?.email ?? '',
       deviceContext: `${Platform.OS} ${Platform.Version}`,
     })
@@ -92,14 +112,15 @@ export function SupportTicketScreen() {
     setDraft((current) => ({ ...current, [field]: value }));
   };
 
-  const openEmailFallback = async () => {
+  const openEmailFallback = async (): Promise<boolean> => {
     const url = buildSupportTicketMailtoUrl(draft);
     const canOpen = await Linking.canOpenURL(url);
     if (!canOpen) {
       Alert.alert(t('support.emailUnavailableTitle'), t('support.emailUnavailableMessage', { email: SUPPORT_EMAIL }));
-      return;
+      return false;
     }
     await Linking.openURL(url);
+    return true;
   };
 
   const submitTicket = async () => {
@@ -107,7 +128,11 @@ export function SupportTicketScreen() {
 
     setSubmitState('submitting');
     try {
-      await openEmailFallback();
+      const emailDraftOpened = await openEmailFallback();
+      if (!emailDraftOpened) {
+        setSubmitState('error');
+        return;
+      }
       await AsyncStorage.removeItem(SUPPORT_DRAFT_STORAGE_KEY);
       setSubmitState('success');
     } catch {
@@ -165,9 +190,9 @@ export function SupportTicketScreen() {
           {currentStep === 'topic' ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>{t('support.topicTitle')}</Text>
-              <OptionGroup options={PLATFORM_OPTIONS} value={draft.platform} onChange={(value) => updateField('platform', value)} />
+              <OptionGroup options={platformOptions} value={draft.platform} onChange={(value) => updateField('platform', value)} />
               <Text style={styles.fieldLabel}>{t('support.categoryLabel')}</Text>
-              <OptionGroup options={CATEGORY_OPTIONS} value={draft.category} onChange={(value) => updateField('category', value)} />
+              <OptionGroup options={categoryOptions} value={draft.category} onChange={(value) => updateField('category', value)} />
             </View>
           ) : null}
 
@@ -177,7 +202,7 @@ export function SupportTicketScreen() {
               <SupportInput label={t('support.expectedLabel')} value={draft.expectedBehavior} onChangeText={(value) => updateField('expectedBehavior', value)} multiline />
               <SupportInput label={t('support.actualLabel')} value={draft.actualBehavior} onChangeText={(value) => updateField('actualBehavior', value)} multiline />
               <Text style={styles.fieldLabel}>{t('support.frequencyLabel')}</Text>
-              <OptionGroup options={FREQUENCY_OPTIONS} value={draft.frequency} onChange={(value) => updateField('frequency', value)} />
+              <OptionGroup options={frequencyOptions} value={draft.frequency} onChange={(value) => updateField('frequency', value)} />
             </View>
           ) : null}
 

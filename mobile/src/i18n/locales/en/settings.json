@@ -162,12 +162,37 @@
     },
     "topicTitle": "What do you need help with?",
     "platformLabel": "Platform",
+    "platformOptions": {
+      "iosApp": "iOS app",
+      "androidApp": "Android app",
+      "website": "Website",
+      "account": "Account",
+      "billing": "Billing",
+      "other": "Other"
+    },
     "categoryLabel": "Category",
+    "categoryOptions": {
+      "bug": "Bug",
+      "account": "Account",
+      "billing": "Billing",
+      "recipe": "Recipe",
+      "shopping": "Shopping",
+      "chores": "Chores",
+      "feedback": "Feedback",
+      "other": "Other"
+    },
     "summaryLabel": "Short summary",
     "summaryPlaceholder": "Example: Shopping list freezes when I add milk",
     "expectedLabel": "Expected behavior",
     "actualLabel": "Actual behavior",
     "frequencyLabel": "How often does it happen?",
+    "frequencyOptions": {
+      "everyTime": "Every time",
+      "often": "Often",
+      "sometimes": "Sometimes",
+      "once": "Once",
+      "notSure": "Not sure"
+    },
     "stepsLabel": "Steps to reproduce",
     "contactEmailLabel": "Contact email",
     "deviceLabel": "App version / device / OS",
