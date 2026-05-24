@@ -72,7 +72,11 @@
       .muted { color: var(--muted); }
       form { display: grid; gap: 1rem; }
       .step { display: none; }
-      .step.active { display: grid; gap: 1rem; }
+      .step.active {
+        display: grid;
+        gap: 1rem;
+        padding-bottom: 5rem;
+      }
       .stepper { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
       .stepper span {
         border-radius: 999px;
@@ -131,6 +135,7 @@
       button.secondary,
       .button-link.secondary { background: transparent; color: var(--primary); border: 1px solid var(--border); }
       button:disabled { opacity: 0.55; cursor: not-allowed; }
+      [hidden] { display: none !important; }
       .success { color: var(--success); font-weight: 800; }
       .error { color: var(--danger); font-weight: 800; }
       footer { margin-top: 2rem; color: var(--muted); font-size: 0.9rem; }

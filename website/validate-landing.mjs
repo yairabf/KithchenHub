@@ -10,6 +10,7 @@ const { getPublicStoreUrls, renderStoreLinks } = require('./store-links.cjs');
 
 const html = renderStoreLinks(await readFile(path.join(__dirname, 'index.html'), 'utf8'));
 const css = await readFile(path.join(__dirname, 'styles.css'), 'utf8');
+const supportHtml = await readFile(path.join(__dirname, 'support.html'), 'utf8');
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -52,5 +53,7 @@ for (const assetPath of [
 }
 assert.match(css, /@media\s*\(max-width:\s*640px\)/, 'mobile layout media query should exist');
 assert.match(css, /\.hero\s*\{[\s\S]*min-height:\s*100vh/, 'hero should fill the first viewport like the approved mockup');
+assert.match(supportHtml, /\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, 'support page hidden controls should not be overridden by shared button display styles');
+assert.match(supportHtml, /\.step\.active\s*\{[\s\S]*padding-bottom:\s*5rem/, 'support page active step should reserve clearance for the sticky action bar');
 
 console.log('Landing page validation passed.');
