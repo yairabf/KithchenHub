@@ -129,6 +129,9 @@ jobs:
           bundler-cache: true
           working-directory: mobile
 
+      - name: Validate store release version
+        run: npm run verify:store-version
+
       - name: Fastlane Android internal (Play internal track)
         working-directory: mobile
         env:
@@ -228,6 +231,9 @@ jobs:
           EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
           EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
         run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Validate store release version
+        run: npm run verify:store-version
 
       - name: Fastlane iOS internal (TestFlight)
         working-directory: mobile

@@ -237,16 +237,21 @@ Run these from the repo root:
 ```bash
 npm run release:ios:internal
 npm run release:ios:prod
+npm run release:ios:store-assets
 npm run release:android:internal
 npm run release:android:prod
+npm run release:android:store-assets
 npm run release:stores:internal
 npm run release:stores:prod
+npm run release:stores:store-assets
 ```
 
 ### What each command does
 
 - `npm run release:ios:internal`
+  - Validates that repo-root `version.json` is not the stale initial `1.0.0` release version
   - Sets the iOS marketing version from repo-root `version.json`
+  - Fails early if App Store Connect reports that `version.json` is not greater than the current live App Store version
   - Increments the iOS build number from the latest TestFlight build for that version
   - Builds a new IPA locally
   - Uploads it to TestFlight and distributes it to internal testers
@@ -258,6 +263,8 @@ npm run release:stores:prod
   - Leaves release timing under App Store control (`automatic_release: false`)
 
 - `npm run release:android:internal`
+  - Validates that repo-root `version.json` is not the stale initial `1.0.0` release version
+  - Uses repo-root `version.json` as Android `versionName` so Android and iOS marketing versions stay aligned
   - Computes the next `versionCode` from the highest code already active on Google Play
   - Builds a new release AAB locally
   - Uploads it to the Play internal track
@@ -273,6 +280,11 @@ npm run release:stores:prod
 - `npm run release:stores:prod`
   - Runs iOS prod, then Android prod
 
+- `npm run release:stores:store-assets`
+  - Manually uploads App Store / Google Play listing metadata and screenshots from `mobile/fastlane/metadata/ios`, `mobile/fastlane/metadata/android`, and `mobile/fastlane/screenshots`
+  - Does not upload binaries, submit App Store review, or roll out Google Play production releases
+  - Equivalent manual GitHub Actions path: **Mobile store listing assets (manual)** (`.github/workflows/mobile-store-assets.yml`)
+
 ### Direct mobile commands
 
 If you prefer running from `mobile/`, the equivalent commands are:
@@ -280,8 +292,10 @@ If you prefer running from `mobile/`, the equivalent commands are:
 ```bash
 npm run release:ios:internal
 npm run release:ios:prod
+npm run release:ios:store-assets
 npm run release:android:internal
 npm run release:android:prod
+npm run release:android:store-assets
 ```
 
 ## Prerequisites
