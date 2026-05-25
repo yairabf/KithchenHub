@@ -3,24 +3,31 @@ const fs = require('fs');
 const path = require('path');
 
 const INITIAL_RELEASE_VERSION = '1.0.0';
-const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const RELEASE_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const STORE_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$/;
 
-function parseMarketingVersion(version) {
-  if (typeof version !== 'string' || !VERSION_PATTERN.test(version.trim())) {
+function parseMarketingVersion(version, { allowShortPatch = false } = {}) {
+  const pattern = allowShortPatch ? STORE_VERSION_PATTERN : RELEASE_VERSION_PATTERN;
+  const expected = allowShortPatch ? 'MAJOR.MINOR or MAJOR.MINOR.PATCH' : 'MAJOR.MINOR.PATCH';
+
+  if (typeof version !== 'string' || !pattern.test(version.trim())) {
     throw new Error(
-      `Invalid store marketing version "${version}". Expected MAJOR.MINOR.PATCH with numeric parts.`,
+      `Invalid store marketing version "${version}". Expected ${expected} with numeric parts.`,
     );
   }
 
-  return version
+  const parts = version
     .trim()
     .split('.')
     .map((part) => Number.parseInt(part, 10));
+
+  while (parts.length < 3) parts.push(0);
+  return parts;
 }
 
-function compareMarketingVersions(left, right) {
-  const leftParts = parseMarketingVersion(left);
-  const rightParts = parseMarketingVersion(right);
+function compareMarketingVersions(left, right, options = {}) {
+  const leftParts = parseMarketingVersion(left, options);
+  const rightParts = parseMarketingVersion(right, options);
 
   for (let index = 0; index < leftParts.length; index += 1) {
     if (leftParts[index] > rightParts[index]) return 1;
@@ -46,8 +53,12 @@ function validateStoreReleaseVersion({ version, currentStoreVersion } = {}) {
       : null;
 
   if (normalizedCurrentStoreVersion) {
-    parseMarketingVersion(normalizedCurrentStoreVersion);
-    if (compareMarketingVersions(normalizedVersion, normalizedCurrentStoreVersion) <= 0) {
+    parseMarketingVersion(normalizedCurrentStoreVersion, { allowShortPatch: true });
+    if (
+      compareMarketingVersions(normalizedVersion, normalizedCurrentStoreVersion, {
+        allowShortPatch: true,
+      }) <= 0
+    ) {
       throw new Error(
         `Store release version ${normalizedVersion} must be greater than current store version ${normalizedCurrentStoreVersion}. Bump version.json before uploading.`,
       );
