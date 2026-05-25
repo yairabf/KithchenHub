@@ -162,6 +162,7 @@ Relevant files:
 
 ```text
 static-legal/privacy.html
+static-legal/support.html
 static-legal/terms.html
 static-legal/delete-account.html
 static-legal/assets/delete-account/
@@ -173,9 +174,12 @@ Important clean URLs:
 
 - `https://kithchensync1.vercel.app/privacy`
 - `https://kithchensync1.vercel.app/terms`
+- `https://kithchensync1.vercel.app/support`
 - `https://kithchensync1.vercel.app/delete-account`
 
-Support URL status: current source does not include `static-legal/support.html` or `/support` rewrites. Add the page and rewrites before using `/support` as a public/store URL.
+Support URL status: current source includes `static-legal/support.html`, `website/support.html`, and support route references. Verify deployed `/support` with HTTP 200 before using it as store metadata.
+
+Support intake architecture: current support submissions are email-backed only. Mobile Settings → Help & Support and the public support page create `mailto:` drafts to `yair.solutions.19@gmail.com`; no backend support-ticket API exists yet.
 
 When adding static assets under `static-legal/assets/`, verify the backend Vercel build copies nested assets.
 

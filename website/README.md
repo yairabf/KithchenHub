@@ -34,9 +34,22 @@ The landing deployment serves the legal pages on same-site routes used by the fo
 
 - `/privacy`
 - `/terms`
+- `/support`
 - `/delete-account`
 
 The source files are copied into this directory from the shared `static-legal/` pages so the marketing site can be deployed as the public root without breaking store compliance links.
+
+## Support intake
+
+`support.html` is a mobile-first guided support ticket form. It collects issue topic, details, context, contact email, attachment notes, and privacy acknowledgment, then creates a `mailto:` draft addressed to `yair.solutions.19@gmail.com`.
+
+Support ticket subjects use this shape:
+
+```text
+[FullHouse Support][{platform}][{category}] {summary}
+```
+
+Generated email bodies include the recommended Gmail routing label `KitchenHub/Support/Issues/New` so a future support agent can watch that label/folder and convert submissions into dev-team tasks. The current page does not post to a backend service.
 
 ## Validation
 
@@ -45,3 +58,5 @@ Run this from the repository root after editing the static landing page:
 ```bash
 node website/validate-landing.mjs
 ```
+
+The validator also checks that the support form keeps hidden controls hidden and guards the static CSS/JS patterns used to avoid sticky action-button overlap across form steps.

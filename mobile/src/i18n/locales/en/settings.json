@@ -143,5 +143,73 @@
       "errorTitle": "Error",
       "errorMessage": "Failed to clear local data."
     }
+  },
+  "support": {
+    "settingsRowTitle": "Help & Support",
+    "settingsRowAccessibilityLabel": "Open Help & Support",
+    "settingsRowAccessibilityHint": "Opens the guided support ticket form",
+    "title": "Support ticket",
+    "subtitle": "Guided report for faster help",
+    "badge": "FullHouse Support",
+    "introTitle": "Tell us what happened",
+    "introText": "A short guided ticket helps support understand the issue and reply faster. If the form cannot submit, you can email support instead.",
+    "stepProgress": "Step {{current}} of {{total}}",
+    "steps": {
+      "topic": "Topic",
+      "details": "Details",
+      "context": "Context",
+      "review": "Review"
+    },
+    "topicTitle": "What do you need help with?",
+    "platformLabel": "Platform",
+    "platformOptions": {
+      "iosApp": "iOS app",
+      "androidApp": "Android app",
+      "website": "Website",
+      "account": "Account",
+      "billing": "Billing",
+      "other": "Other"
+    },
+    "categoryLabel": "Category",
+    "categoryOptions": {
+      "bug": "Bug",
+      "account": "Account",
+      "billing": "Billing",
+      "recipe": "Recipe",
+      "shopping": "Shopping",
+      "chores": "Chores",
+      "feedback": "Feedback",
+      "other": "Other"
+    },
+    "summaryLabel": "Short summary",
+    "summaryPlaceholder": "Example: Shopping list freezes when I add milk",
+    "expectedLabel": "Expected behavior",
+    "actualLabel": "Actual behavior",
+    "frequencyLabel": "How often does it happen?",
+    "frequencyOptions": {
+      "everyTime": "Every time",
+      "often": "Often",
+      "sometimes": "Sometimes",
+      "once": "Once",
+      "notSure": "Not sure"
+    },
+    "stepsLabel": "Steps to reproduce",
+    "contactEmailLabel": "Contact email",
+    "deviceLabel": "App version / device / OS",
+    "attachmentsLabel": "Screenshots or logs",
+    "attachmentsPlaceholder": "You can attach screenshots from your email app after the draft opens.",
+    "privacyNote": "I understand not to send passwords, full payment card details, or highly sensitive household information.",
+    "reviewTitle": "Review ticket",
+    "detailCheckTitle": "Detail check",
+    "detailCheckGood": "Looks detailed enough for support to triage.",
+    "successMessage": "Your email draft is ready. Send it to open the support ticket.",
+    "errorMessage": "We could not open the email draft. Your text is still saved; try again when you are online.",
+    "continue": "Continue",
+    "back": "Back",
+    "submitTicket": "Submit ticket",
+    "submitting": "Submitting ticket…",
+    "emailInstead": "Email support instead",
+    "emailUnavailableTitle": "Email unavailable",
+    "emailUnavailableMessage": "Please email {{email}} from your mail app."
   }
 }

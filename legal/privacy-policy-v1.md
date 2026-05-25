@@ -6,7 +6,7 @@ This Privacy Policy describes how **Yair Abramovitch** ("we", "us", "our"), an *
 
 ## 1. Who We Are
 
-The data controller responsible for your personal data in connection with Kitchen Hub is **Yair Abramovitch** (individual developer, established in **Israel**). You can contact us at **yairabc@gmail.com** for privacy-related questions or requests.
+The data controller responsible for your personal data in connection with Kitchen Hub is **Yair Abramovitch** (individual developer, established in **Israel**). You can contact us at **yair.solutions.19@gmail.com** for privacy-related questions or requests.
 
 ## 2. Data We Collect
 
@@ -54,17 +54,17 @@ Depending on your location, you may have the right to:
 
 - **Access** — request a copy of the personal data we hold about you.
 - **Correction** — request correction of inaccurate data.
-- **Deletion** — request deletion of your data and account. You can delete your account and associated data from the app, or request deletion by contacting us at **yairabc@gmail.com**.
+- **Deletion** — request deletion of your data and account. You can delete your account and associated data from the app, or request deletion by contacting us at **yair.solutions.19@gmail.com**.
 - **Portability** — request a copy of your data in a portable format.
 - **Object or restrict** — object to or request restriction of certain processing.
 - **Withdraw consent** — where processing is based on consent.
 - **Complain** — lodge a complaint with a supervisory authority in your jurisdiction.
 
-To exercise these rights, contact us at **yairabc@gmail.com**. We will respond within the time required by applicable law.
+To exercise these rights, contact us at **yair.solutions.19@gmail.com**. We will respond within the time required by applicable law.
 
 ## 8. Children
 
-Kitchen Hub is not directed at children under the age required in your jurisdiction (e.g. under 13 in the US). We do not knowingly collect personal data from such children. If you believe we have collected data from a child, please contact us at yairabc@gmail.com and we will delete it.
+Kitchen Hub is not directed at children under the age required in your jurisdiction (e.g. under 13 in the US). We do not knowingly collect personal data from such children. If you believe we have collected data from a child, please contact us at yair.solutions.19@gmail.com and we will delete it.
 
 ## 9. International Transfers
 
@@ -78,6 +78,6 @@ We may update this Privacy Policy from time to time. We will post the updated ve
 
 For privacy questions or to exercise your rights:
 
-- **Email:** yairabc@gmail.com
+- **Email:** yair.solutions.19@gmail.com
 - **Data controller:** Yair Abramovitch (individual developer, operator of FullHouse / Kitchen Hub)
 - **Jurisdiction:** The data controller is established in **Israel**. The service may be used from other countries; additional rights may apply under your local law. Israeli residents may lodge complaints with the Israeli Privacy Protection Authority. For other regions, contact us at the email above.

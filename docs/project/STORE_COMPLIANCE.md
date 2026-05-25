@@ -33,15 +33,17 @@ https://kithchensync1.vercel.app
 Important public pages:
 
 - Privacy: `https://kithchensync1.vercel.app/privacy`
-- Terms: `https://kithchensync1.vercel.app/terms`
+- Terms / Terms of Use (EULA): `https://kithchensync1.vercel.app/terms`
+- Support: `https://kithchensync1.vercel.app/support` (verify after deployment before using in store metadata)
 - Account deletion: `https://kithchensync1.vercel.app/delete-account`
 
-Support URL status: no `static-legal/support.html` file or `/support` rewrite exists in current source. Do not list `/support` as an active store/support URL unless the page and route are added.
+Support URL status: `static-legal/support.html`, `website/support.html`, and `/support` rewrites now exist in source. Verify the deployed route after release before using `/support` in store metadata.
 
 Static source files:
 
 ```text
 static-legal/privacy.html
+static-legal/support.html
 static-legal/terms.html
 static-legal/delete-account.html
 static-legal/assets/delete-account/
@@ -54,7 +56,23 @@ backend/vercel.json
 backend/scripts/create-vercel-output-dir.js
 ```
 
-Important pitfall: if store listings need a clean support URL, add both `static-legal/support.html` and `/support` + `/support/` rewrites in `backend/vercel.json`; otherwise use email/support metadata rather than documenting a non-existent page.
+Important pitfall: source now includes the support page and route references, but store listings should still use `https://kithchensync1.vercel.app/support` only after the deployed route is verified with HTTP 200. Until then, use email/support metadata rather than assuming the public route is live.
+
+## Support intake
+
+Current support email:
+
+```text
+yair.solutions.19@gmail.com
+```
+
+Current support intake surfaces:
+
+- Public/static support pages: `website/support.html` and `static-legal/support.html`.
+- Mobile app entry point: Settings → Help & Support → `SupportTicket` screen.
+- Submission handoff: `mailto:` draft to `yair.solutions.19@gmail.com`; no backend support-intake service exists yet.
+- Subject format: `[FullHouse Support][{platform}][{category}] {summary}`.
+- Recommended Gmail label/folder for future support-agent routing: `KitchenHub/Support/Issues/New`.
 
 ## Account deletion URL
 
@@ -70,7 +88,7 @@ The page documents:
 
 - in-app deletion path through settings/profile
 - permanent deletion confirmation
-- fallback email request path: `yairabc@gmail.com`
+- fallback email request path: `yair.solutions.19@gmail.com`
 - data deleted
 - data that may be retained for legal/security/payment requirements
 - approximate processing period

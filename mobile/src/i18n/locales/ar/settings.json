@@ -105,8 +105,8 @@
     "memberRole": "عضو",
     "removeMember": "إزالة العضو",
     "cannotRemoveYourself": "لا يمكنك إزالة نفسك من هذه الشاشة.",
-    "onlyAdminsCanRemoveMembers": "يمكن لمشرفي المنزل فقط إزالة الأعضاء."},
-
+    "onlyAdminsCanRemoveMembers": "يمكن لمشرفي المنزل فقط إزالة الأعضاء."
+  },
   "inviteMemberModal": {
     "title": "دعوة إلى المنزل",
     "description": "شارك هذا الرمز مع أفراد عائلتك. يمكنهم إدخاله أثناء التسجيل للانضمام إلى منزلك.",
@@ -137,5 +137,73 @@
       "errorTitle": "خطأ",
       "errorMessage": "فشل مسح البيانات المحلية."
     }
+  },
+  "support": {
+    "settingsRowTitle": "المساعدة والدعم",
+    "settingsRowAccessibilityLabel": "فتح المساعدة والدعم",
+    "settingsRowAccessibilityHint": "يفتح نموذج تذكرة دعم إرشادي",
+    "title": "تذكرة دعم",
+    "subtitle": "بلاغ إرشادي للحصول على مساعدة أسرع",
+    "badge": "دعم FullHouse",
+    "introTitle": "أخبرنا بما حدث",
+    "introText": "تساعد التذكرة القصيرة الموجهة فريق الدعم على فهم المشكلة والرد بسرعة أكبر. إذا تعذر إرسال النموذج، يمكنك إرسال بريد إلكتروني إلى الدعم بدلاً من ذلك.",
+    "stepProgress": "الخطوة {{current}} من {{total}}",
+    "steps": {
+      "topic": "الموضوع",
+      "details": "التفاصيل",
+      "context": "السياق",
+      "review": "المراجعة"
+    },
+    "topicTitle": "بماذا تحتاج إلى مساعدة؟",
+    "platformLabel": "المنصة",
+    "platformOptions": {
+      "iosApp": "تطبيق iOS",
+      "androidApp": "تطبيق Android",
+      "website": "الموقع",
+      "account": "الحساب",
+      "billing": "الفوترة",
+      "other": "أخرى"
+    },
+    "categoryLabel": "الفئة",
+    "categoryOptions": {
+      "bug": "خلل",
+      "account": "الحساب",
+      "billing": "الفوترة",
+      "recipe": "الوصفات",
+      "shopping": "التسوق",
+      "chores": "المهام",
+      "feedback": "ملاحظات",
+      "other": "أخرى"
+    },
+    "summaryLabel": "ملخص قصير",
+    "summaryPlaceholder": "مثال: تتجمد قائمة التسوق عند إضافة الحليب",
+    "expectedLabel": "السلوك المتوقع",
+    "actualLabel": "ما حدث فعليًا",
+    "frequencyLabel": "كم مرة يحدث ذلك؟",
+    "frequencyOptions": {
+      "everyTime": "كل مرة",
+      "often": "غالبًا",
+      "sometimes": "أحيانًا",
+      "once": "مرة واحدة",
+      "notSure": "لست متأكدًا"
+    },
+    "stepsLabel": "خطوات إعادة المشكلة",
+    "contactEmailLabel": "بريد التواصل",
+    "deviceLabel": "إصدار التطبيق / الجهاز / نظام التشغيل",
+    "attachmentsLabel": "لقطات شاشة أو سجلات",
+    "attachmentsPlaceholder": "يمكنك إرفاق لقطات الشاشة من تطبيق البريد بعد فتح المسودة.",
+    "privacyNote": "أفهم أنه لا يجب إرسال كلمات مرور أو تفاصيل بطاقة دفع كاملة أو معلومات منزلية شديدة الحساسية.",
+    "reviewTitle": "مراجعة التذكرة",
+    "detailCheckTitle": "فحص التفاصيل",
+    "detailCheckGood": "تبدو التفاصيل كافية ليتمكن الدعم من فرز التذكرة.",
+    "successMessage": "مسودة البريد الإلكتروني جاهزة. أرسلها لفتح تذكرة الدعم.",
+    "errorMessage": "تعذر فتح مسودة البريد الإلكتروني. تم حفظ النص؛ حاول مرة أخرى عندما تكون متصلاً.",
+    "continue": "متابعة",
+    "back": "رجوع",
+    "submitTicket": "إرسال التذكرة",
+    "submitting": "جارٍ إرسال التذكرة…",
+    "emailInstead": "إرسال بريد للدعم بدلاً من ذلك",
+    "emailUnavailableTitle": "البريد الإلكتروني غير متاح",
+    "emailUnavailableMessage": "يرجى إرسال بريد إلى {{email}} من تطبيق البريد لديك."
   }
 }

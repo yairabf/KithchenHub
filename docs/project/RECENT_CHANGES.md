@@ -16,7 +16,7 @@ Current state:
 - App Store screenshot sets exist for 6.5-inch iPhone, 13-inch iPad portrait, and 13-inch iPad landscape.
 - Google Play Data Safety was updated to include Device or other IDs and related user data declarations.
 - Public account deletion URL is live at `https://kithchensync1.vercel.app/delete-account`.
-- Support URL status changed during docs cleanup: current source does not include `static-legal/support.html` or `/support` rewrites, so do not use `/support` as store/support metadata unless the page and route are added.
+- Support URL status changed during support-intake work: current source now includes `static-legal/support.html`, `website/support.html`, and `/support` route references. Verify deployed `/support` before using it in store metadata.
 
 Primary references:
 - `docs/project/STORE_COMPLIANCE.md`
@@ -30,6 +30,38 @@ Important instruction for future LLMs:
 - Do not use Yair's personal account for store screenshots.
 - Verify public legal URLs after Vercel/static-page changes; add and verify a support URL only if a support page/route is introduced.
 - Update `STORE_COMPLIANCE.md` and `RELEASE_STATUS.md` after review outcomes.
+
+---
+
+### 0b. Support intake and public support email migration — 2026-05-24
+
+Current state:
+- Confirmed support email is `yair.solutions.19@gmail.com`.
+- Public support pages exist at `website/support.html` and `static-legal/support.html`; landing/footer support links point to `/support`.
+- Mobile Settings includes a Help & Support row that opens `SupportTicket` (`mobile/src/features/support/screens/SupportTicketScreen.tsx`).
+- The support flow is email-backed for now: it builds a `mailto:` draft to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}`.
+- Ticket packets include recommended Gmail routing label `KitchenHub/Support/Issues/New` for a future support agent to watch and convert submissions into dev-team tasks.
+- Draft persistence uses `AsyncStorage` key `fullhouse.supportTicketDraft.v1`; mobile keeps the saved draft if no email app can open the `mailto:` URL.
+- Hebrew and Arabic support UI strings/options are localized; reviewer noted that optional quality-nudge text in `supportTicket.ts` remains English and could be moved behind i18n in a future polish pass.
+
+QA-passed evidence:
+- Branch/commit: `feat/support-intake-flow` / `b0f8038`.
+- QA passed the public form layout across Topic, Details, Context, and Review steps; sticky action controls no longer overlap active fields and the hidden Back button no longer renders on the first step.
+- Targeted mobile support/settings Jest tests and TypeScript passed; limitation: native mobile navigation was verified via tests rather than a physical device/emulator run.
+
+Primary references:
+- `mobile/src/features/support/supportTicket.ts`
+- `mobile/src/features/support/screens/SupportTicketScreen.tsx`
+- `mobile/src/features/settings/screens/SettingsScreen.tsx`
+- `docs/features/settings.md`
+- `website/support.html`
+- `static-legal/support.html`
+- `website/README.md`
+
+Important instruction for future LLMs:
+- Do not document a backend support-intake service yet; current submission handoff is `mailto:` only.
+- Keep public copy user-facing and keep internal Gmail label details inside generated packet/docs rather than prominent public prose.
+- Verify deployed `/support` after release before using it as store support metadata.
 
 ---
 

@@ -105,8 +105,8 @@
     "memberRole": "חבר",
     "removeMember": "הסר חבר",
     "cannotRemoveYourself": "לא ניתן להסיר את עצמך מהמסך הזה.",
-    "onlyAdminsCanRemoveMembers": "רק מנהלי משק הבית יכולים להסיר חברים."},
-
+    "onlyAdminsCanRemoveMembers": "רק מנהלי משק הבית יכולים להסיר חברים."
+  },
   "inviteMemberModal": {
     "title": "הזמנה למשק בית",
     "description": "שתפו את הקוד הזה עם בני המשפחה. הם יכולים להזין אותו בזמן ההרשמה כדי להצטרף למשק הבית שלכם.",
@@ -137,5 +137,73 @@
       "errorTitle": "שגיאה",
       "errorMessage": "לא ניתן למחוק נתונים מקומיים."
     }
+  },
+  "support": {
+    "settingsRowTitle": "עזרה ותמיכה",
+    "settingsRowAccessibilityLabel": "פתח עזרה ותמיכה",
+    "settingsRowAccessibilityHint": "פותח טופס מודרך לשליחת פנייה לתמיכה",
+    "title": "פנייה לתמיכה",
+    "subtitle": "דיווח מודרך לקבלת עזרה מהירה יותר",
+    "badge": "תמיכת FullHouse",
+    "introTitle": "ספרו לנו מה קרה",
+    "introText": "פנייה קצרה ומודרכת עוזרת לתמיכה להבין את הבעיה ולחזור אליכם מהר יותר. אם הטופס לא מצליח להיפתח, אפשר לשלוח אימייל לתמיכה במקום.",
+    "stepProgress": "שלב {{current}} מתוך {{total}}",
+    "steps": {
+      "topic": "נושא",
+      "details": "פרטים",
+      "context": "הקשר",
+      "review": "סקירה"
+    },
+    "topicTitle": "במה צריך עזרה?",
+    "platformLabel": "פלטפורמה",
+    "platformOptions": {
+      "iosApp": "אפליקציית iOS",
+      "androidApp": "אפליקציית Android",
+      "website": "אתר",
+      "account": "חשבון",
+      "billing": "חיוב",
+      "other": "אחר"
+    },
+    "categoryLabel": "קטגוריה",
+    "categoryOptions": {
+      "bug": "תקלה",
+      "account": "חשבון",
+      "billing": "חיוב",
+      "recipe": "מתכונים",
+      "shopping": "קניות",
+      "chores": "מטלות",
+      "feedback": "משוב",
+      "other": "אחר"
+    },
+    "summaryLabel": "סיכום קצר",
+    "summaryPlaceholder": "לדוגמה: רשימת הקניות נתקעת כשאני מוסיף חלב",
+    "expectedLabel": "מה היה אמור לקרות",
+    "actualLabel": "מה קרה בפועל",
+    "frequencyLabel": "באיזו תדירות זה קורה?",
+    "frequencyOptions": {
+      "everyTime": "בכל פעם",
+      "often": "לעיתים קרובות",
+      "sometimes": "לפעמים",
+      "once": "פעם אחת",
+      "notSure": "לא בטוח"
+    },
+    "stepsLabel": "שלבים לשחזור",
+    "contactEmailLabel": "אימייל ליצירת קשר",
+    "deviceLabel": "גרסת אפליקציה / מכשיר / מערכת הפעלה",
+    "attachmentsLabel": "צילומי מסך או לוגים",
+    "attachmentsPlaceholder": "אפשר לצרף צילומי מסך מאפליקציית האימייל אחרי שהטיוטה נפתחת.",
+    "privacyNote": "אני מבין/ה שאין לשלוח סיסמאות, פרטי כרטיס תשלום מלאים או מידע ביתי רגיש במיוחד.",
+    "reviewTitle": "סקירת הפנייה",
+    "detailCheckTitle": "בדיקת פרטים",
+    "detailCheckGood": "נראה שיש מספיק פרטים כדי שהתמיכה תוכל לטפל בפנייה.",
+    "successMessage": "טיוטת האימייל מוכנה. שלחו אותה כדי לפתוח פנייה לתמיכה.",
+    "errorMessage": "לא הצלחנו לפתוח את טיוטת האימייל. הטקסט נשמר; נסו שוב כשיש חיבור.",
+    "continue": "המשך",
+    "back": "חזרה",
+    "submitTicket": "שליחת פנייה",
+    "submitting": "שולח פנייה…",
+    "emailInstead": "שלחו אימייל לתמיכה במקום",
+    "emailUnavailableTitle": "אימייל לא זמין",
+    "emailUnavailableMessage": "שלחו אימייל אל {{email}} מאפליקציית הדואר שלכם."
   }
 }

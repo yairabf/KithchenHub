@@ -2,11 +2,11 @@
 
 **Exports** (from `mobile/src/features/settings/index.ts`): `SettingsScreen`, `ManageHouseholdModal`, `LanguageSelectorModal`, `LegalConsentGate`.
 
-**Current source map**: see [`mobile-ui-map.md`](./mobile-ui-map.md). Settings now includes household management, invite flow UI, language/RTL support, legal consent, import/data controls, account deletion/export services, premium/subscription UI, and premium demo support.
+**Current source map**: see [`mobile-ui-map.md`](./mobile-ui-map.md). Settings now includes household management, invite flow UI, language/RTL support, legal consent, import/data controls, account deletion/export services, premium/subscription UI, premium demo support, and a Help & Support entry into the guided support ticket flow.
 
 ## Overview
 
-The Settings feature provides user account management, household member/invite controls, language selection, premium/subscription surfaces, legal links/consent, data controls, and app information. It displays the current user's profile and routes account/privacy actions through source-backed services and context providers.
+The Settings feature provides user account management, household member/invite controls, language selection, premium/subscription surfaces, legal links/consent, data controls, app information, and support entry points. It displays the current user's profile and routes account/privacy actions through source-backed services and context providers.
 
 ## Screenshots
 
@@ -28,7 +28,7 @@ The Settings feature provides user account management, household member/invite c
   - **Premium Section**: `PremiumSection` plus `PremiumDemoSection`; opens `PremiumPaywall` via navigation
   - **Household Section**: Manage household members, generate invite code, and share invite code through `InviteMemberModal`
   - **Data Section**: Export data row and delete account flow through `accountService.deleteMyAccount()` with confirmation/error handling
-  - **About Section**: Privacy Policy and Terms of Service rows opened through `LegalLinksContext` / `openLegalUrl`, plus app version
+  - **About Section**: Help & Support row that opens the guided support ticket flow, Privacy Policy and Terms of Service rows opened through `LegalLinksContext` / `openLegalUrl`, plus app version
 
 #### Code Snippet - State Management
 
@@ -117,6 +117,7 @@ interface LanguageSelectorModalProps {
 - **Delete account**: Opens a destructive confirmation alert, then calls `accountService.deleteMyAccount()` and signs out on success.
 
 ### About Section
+- **Help & Support**: Opens the `SupportTicket` route (`mobile/src/features/support/screens/SupportTicketScreen.tsx`). The support flow collects platform/source, issue category, summary, expected/actual behavior, frequency, reproduction steps, contact email, device/app context, attachment notes, and privacy acknowledgment. It persists drafts in `AsyncStorage` under `fullhouse.supportTicketDraft.v1`, creates a `mailto:` draft addressed to `yair.solutions.19@gmail.com`, and uses subject format `[FullHouse Support][{platform}][{category}] {summary}`. Generated ticket packets include the recommended Gmail label `KitchenHub/Support/Issues/New` for future support-agent routing. If no email app can open the draft, the screen shows an error and keeps the saved draft.
 - **Privacy Policy**: Opens URL from `LegalLinksContext` via `openLegalUrl(privacyPolicyUrl)`.
 - **Terms of Service**: Opens URL from `LegalLinksContext` via `openLegalUrl(termsOfServiceUrl)`.
 - **App Version**: Displays "1.0.0".
@@ -136,6 +137,7 @@ interface LanguageSelectorModalProps {
 - **Derived (i18n)**: `currentLanguageCode` = `normalizeLocale(i18n.language ?? '')`; `currentLanguageDisplayName` = `getNativeNameForCode(currentLanguageCode)` for the Language row
 - **Legal links**: `useLegalLinks()` provides `privacyPolicyUrl` and `termsOfServiceUrl` for settings rows
 - **Account service**: `accountService.deleteMyAccount()` performs account deletion after confirmation
+- **Support ticket draft**: `SupportTicketScreen` uses `AsyncStorage` key `fullhouse.supportTicketDraft.v1` for best-effort draft restore/persistence until an email draft is successfully opened.
 
 ## Key Dependencies
 
@@ -149,6 +151,8 @@ interface LanguageSelectorModalProps {
 - `i18n` (mobile/src/i18n) - Current language and `setAppLanguage()`; `normalizeLocale()` and `getNativeNameForCode()` from localeNormalization and constants
 - `isRtlLanguage` (mobile/src/i18n/rtl) - RTL language detection (Hebrew, Arabic) for LanguageSelectorModal restart badge
 - `getDirectionalIcon` (mobile/src/common/utils/rtlIcons) - RTL-aware chevron/arrow icon names for Settings rows
+- `mobile/src/features/support/supportTicket.ts` - Support ticket packet builder, support email constant, Gmail label constant, readiness checks, and `mailto:` URL generation
+- `Linking` and `AsyncStorage` - Support ticket email handoff and draft persistence
 - Theme system (`colors`, `spacing`, `borderRadius`, `typography`, `shadows`) - Centralized design tokens
 
 ## Household Members
@@ -160,3 +164,4 @@ Household membership is sourced from `HouseholdContext`. The modal distinguishes
 - Destructive account deletion uses a confirmation alert before calling the account service.
 - Account deletion failures are mapped to user-friendly i18n messages through `getDeleteAccountErrorMessage()`.
 - Protected household-member actions show explanatory feedback rather than silently failing.
+- Support ticket submission opens an email draft when available, clears the saved draft only after the email draft opens, and preserves the draft with a visible error if no email app can handle the `mailto:` URL.

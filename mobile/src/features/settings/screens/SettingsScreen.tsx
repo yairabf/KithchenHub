@@ -71,6 +71,10 @@ export function SettingsScreen() {
     navigation.navigate('PremiumPaywall');
   }, [navigation]);
 
+  const handleOpenSupportTicket = React.useCallback(() => {
+    navigation.navigate('SupportTicket');
+  }, [navigation]);
+
   const openInviteModal = React.useCallback((initialAction: 'generate' | 'share' = 'generate') => {
     setInviteModalInitialAction(initialAction);
     setShowManageHousehold(false);
@@ -326,6 +330,23 @@ export function SettingsScreen() {
           {textWrapper(
             <Text style={[styles.sectionTitle, isRtlLayout ? styles.rtlText : undefined]}>{t('about')}</Text>
           )}
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={handleOpenSupportTicket}
+            accessibilityRole="button"
+            accessibilityLabel={t('support.settingsRowAccessibilityLabel')}
+            accessibilityHint={t('support.settingsRowAccessibilityHint')}
+          >
+            <View style={styles.settingInfo}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.pastel.cyan }]}>
+                <Ionicons name="help-buoy-outline" size={20} color={colors.primary} />
+              </View>
+              {textWrapper(
+                <Text style={[styles.settingLabel, isRtlLayout ? styles.rtlText : undefined]}>{t('support.settingsRowTitle')}</Text>
+              )}
+            </View>
+            <Ionicons name={getDirectionalIcon('chevron-forward')} size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.settingRow}
             onPress={() => openLegalUrl(privacyPolicyUrl)}
