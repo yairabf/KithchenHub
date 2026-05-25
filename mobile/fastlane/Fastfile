@@ -203,16 +203,20 @@ def latest_ios_build_for_version!(api_key:, version:)
   build_number
 end
 
-def parse_marketing_version!(version)
+def parse_marketing_version!(version, allow_short_patch: false)
   normalized = version.to_s.strip
-  UI.user_error!("Invalid store marketing version '#{version}'. Expected MAJOR.MINOR.PATCH.") unless normalized.match?(MARKETING_VERSION_PATTERN)
+  pattern = allow_short_patch ? /^\d+\.\d+(\.\d+)?$/ : MARKETING_VERSION_PATTERN
+  expected = allow_short_patch ? 'MAJOR.MINOR or MAJOR.MINOR.PATCH' : 'MAJOR.MINOR.PATCH'
+  UI.user_error!("Invalid store marketing version '#{version}'. Expected #{expected}.") unless normalized.match?(pattern)
 
-  normalized.split('.').map(&:to_i)
+  parts = normalized.split('.').map(&:to_i)
+  parts << 0 while parts.length < 3
+  parts
 end
 
-def compare_marketing_versions(left, right)
-  left_parts = parse_marketing_version!(left)
-  right_parts = parse_marketing_version!(right)
+def compare_marketing_versions(left, right, allow_short_patch: false)
+  left_parts = parse_marketing_version!(left, allow_short_patch: allow_short_patch)
+  right_parts = parse_marketing_version!(right, allow_short_patch: allow_short_patch)
 
   left_parts.each_with_index do |left_part, index|
     right_part = right_parts[index]
@@ -249,7 +253,7 @@ def validate_ios_marketing_version!(api_key:, version:)
   current_store_version = latest_ios_app_store_version!(api_key: api_key)
 
   if current_store_version && !current_store_version.to_s.strip.empty?
-    if compare_marketing_versions(version, current_store_version) <= 0
+    if compare_marketing_versions(version, current_store_version, allow_short_patch: true) <= 0
       UI.user_error!(
         "iOS marketing version #{version} must be greater than current App Store version #{current_store_version}. Bump repo-root version.json before TestFlight upload.",
       )

@@ -22,6 +22,12 @@ describe('store release version validation', () => {
     ).toThrow(/must be greater than current store version 1\.0\.1/);
   });
 
+  it('accepts App Store current versions that omit the patch segment', () => {
+    expect(
+      validateStoreReleaseVersion({ version: '1.0.1', currentStoreVersion: '1.0' }),
+    ).toEqual({ version: '1.0.1', currentStoreVersion: '1.0' });
+  });
+
   it('accepts a patched release version greater than the current store version', () => {
     expect(
       validateStoreReleaseVersion({ version: '1.0.2', currentStoreVersion: '1.0.1' }),
