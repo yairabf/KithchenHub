@@ -148,11 +148,12 @@ Rules folder: `.cursor/rules/`
 - `COMPOSER_WORKFLOW.md`
   - For explicit Composer/Plan tasks, follow structured plan/summary docs under `.cursor/tasks/...`.
 
-Validation scripts for locked mobile config (run from `mobile/`):
+Validation scripts for locked mobile/release config (run from `mobile/`):
 ```bash
 npm run verify:identifiers
 npm run verify:ota
 npm run verify:eas
+npm run verify:store-version
 ```
 
 ## 6) Copilot Rules

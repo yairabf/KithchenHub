@@ -67,6 +67,10 @@ Read these in order for most work:
   - `docs/project/RELEASE_STATUS.md`
   - `docs/project/STORE_COMPLIANCE.md`
   - `docs/compliance/*`
+  - `mobile/README.md` — Fastlane/EAS release commands, store version source, and manual store listing asset commands.
+  - `mobile/fastlane/STORE_ASSETS.md` — production listing asset paths and manual upload notes.
+  - `.github/workflows/mobile-native-store-release.yml` — Fastlane-based store binary workflow.
+  - `.github/workflows/mobile-store-assets.yml` — manual workflow for listing metadata/screenshots only.
 - Public support intake pages:
   - `website/support.html`
   - `static-legal/support.html`
