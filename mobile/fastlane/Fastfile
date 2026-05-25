@@ -2,6 +2,7 @@ default_platform(:ios)
 
 require 'fileutils'
 require 'json'
+require 'spaceship'
 
 APP_SCHEME = 'FullHouse'
 IOS_CONFIGURATION = 'Release'
@@ -9,11 +10,16 @@ APPLE_TEAM_ID = 'UT62KQGZDJ'
 IOS_APP_IDENTIFIER = 'com.kitchenhub.app'
 ANDROID_PACKAGE_NAME = 'com.kitchenhub.app'
 ANDROID_TRACKS = %w[internal alpha beta production].freeze
+INITIAL_STORE_VERSION = '1.0.0'
+MARKETING_VERSION_PATTERN = /\A(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)\z/
 
 MOBILE_ROOT = File.expand_path('..', __dir__)
 IOS_ROOT = File.join(MOBILE_ROOT, 'ios')
 IOS_WORKSPACE = File.join(IOS_ROOT, 'FullHouse.xcworkspace')
 IOS_XCODEPROJ = File.join(IOS_ROOT, 'FullHouse.xcodeproj')
+IOS_METADATA_PATH = File.join(MOBILE_ROOT, 'fastlane', 'metadata', 'ios')
+IOS_SCREENSHOTS_PATH = File.join(MOBILE_ROOT, 'fastlane', 'screenshots')
+ANDROID_METADATA_PATH = File.join(MOBILE_ROOT, 'fastlane', 'metadata', 'android')
 ANDROID_GRADLE_PROJECT_DIR = File.join(MOBILE_ROOT, 'android')
 ANDROID_AAB_PATH = File.join(
   ANDROID_GRADLE_PROJECT_DIR,
@@ -197,6 +203,76 @@ def latest_ios_build_for_version!(api_key:, version:)
   build_number
 end
 
+def parse_marketing_version!(version)
+  normalized = version.to_s.strip
+  UI.user_error!("Invalid store marketing version '#{version}'. Expected MAJOR.MINOR.PATCH.") unless normalized.match?(MARKETING_VERSION_PATTERN)
+
+  normalized.split('.').map(&:to_i)
+end
+
+def compare_marketing_versions(left, right)
+  left_parts = parse_marketing_version!(left)
+  right_parts = parse_marketing_version!(right)
+
+  left_parts.each_with_index do |left_part, index|
+    right_part = right_parts[index]
+    return 1 if left_part > right_part
+    return -1 if left_part < right_part
+  end
+
+  0
+end
+
+def ensure_non_stale_store_version!(version)
+  parse_marketing_version!(version)
+  UI.user_error!(
+    'version.json is still 1.0.0. Bump the store marketing version before uploading a production store build.',
+  ) if version.to_s.strip == INITIAL_STORE_VERSION
+end
+
+def latest_ios_app_store_version!(api_key:)
+  # app_store_connect_api_key configures Spaceship's ConnectAPI token. Keep the
+  # api_key parameter to make the dependency explicit at call sites.
+  UI.user_error!('App Store Connect API key was not configured') if api_key.nil?
+
+  app = Spaceship::ConnectAPI::App.find(IOS_APP_IDENTIFIER)
+  UI.user_error!("Could not find App Store Connect app #{IOS_APP_IDENTIFIER}") if app.nil?
+
+  live_version = app.get_live_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+  live_version&.version_string
+rescue => error
+  UI.user_error!("Unable to read current App Store version for #{IOS_APP_IDENTIFIER}: #{error.message}")
+end
+
+def validate_ios_marketing_version!(api_key:, version:)
+  ensure_non_stale_store_version!(version)
+  current_store_version = latest_ios_app_store_version!(api_key: api_key)
+
+  if current_store_version && !current_store_version.to_s.strip.empty?
+    if compare_marketing_versions(version, current_store_version) <= 0
+      UI.user_error!(
+        "iOS marketing version #{version} must be greater than current App Store version #{current_store_version}. Bump repo-root version.json before TestFlight upload.",
+      )
+    end
+
+    UI.message("Validated iOS marketing version #{version} > current App Store version #{current_store_version}")
+  else
+    UI.important('No live App Store version was returned; validated static store version format only.')
+  end
+
+  version
+end
+
+def validate_android_marketing_version!(version)
+  ensure_non_stale_store_version!(version)
+  version
+end
+
+def ensure_store_asset_path!(path, label)
+  UI.user_error!("#{label} path does not exist: #{path}") unless File.directory?(path)
+  UI.user_error!("#{label} path is empty: #{path}") if Dir.glob(File.join(path, '**', '*')).select { |entry| File.file?(entry) }.empty?
+end
+
 def android_existing_version_codes!(json_key:)
   lookup_failed = false
 
@@ -296,6 +372,7 @@ platform :ios do
 
     configure_local_ios_build_environment!
     api_key = app_store_api_key!
+    release_version = validate_ios_marketing_version!(api_key: api_key, version: repo_version)
 
     match(
       type: 'appstore',
@@ -307,11 +384,11 @@ platform :ios do
     configure_code_signing!
 
     increment_version_number(
-      version_number: repo_version,
+      version_number: release_version,
       xcodeproj: IOS_XCODEPROJ,
     )
     increment_build_number(
-      build_number: next_ios_build_number(api_key: api_key, version: repo_version),
+      build_number: next_ios_build_number(api_key: api_key, version: release_version),
       xcodeproj: IOS_XCODEPROJ,
     )
 
@@ -355,6 +432,7 @@ platform :ios do
 
     configure_local_ios_build_environment!
     api_key = app_store_api_key!
+    release_version = validate_ios_marketing_version!(api_key: api_key, version: repo_version)
 
     match(
       type: 'appstore',
@@ -366,7 +444,7 @@ platform :ios do
     configure_code_signing!
 
     increment_version_number(
-      version_number: repo_version,
+      version_number: release_version,
       xcodeproj: IOS_XCODEPROJ,
     )
     increment_build_number(
@@ -401,11 +479,12 @@ platform :ios do
     ensure_release_api_url!
     repo_version = read_repo_version!
     api_key = app_store_api_key!
-    build_number = latest_ios_build_for_version!(api_key: api_key, version: repo_version)
+    release_version = validate_ios_marketing_version!(api_key: api_key, version: repo_version)
+    build_number = latest_ios_build_for_version!(api_key: api_key, version: release_version)
 
     upload_to_app_store(
       api_key: api_key,
-      app_version: repo_version,
+      app_version: release_version,
       build_number: build_number.to_s,
       submit_for_review: true,
       automatic_release: false,
@@ -416,6 +495,26 @@ platform :ios do
       precheck_include_in_app_purchases: false,
     )
   end
+  desc 'Upload App Store listing metadata and screenshots only; no binary upload or review submission'
+  lane :store_assets do
+    api_key = app_store_api_key!
+    ensure_store_asset_path!(IOS_METADATA_PATH, 'iOS metadata')
+    ensure_store_asset_path!(IOS_SCREENSHOTS_PATH, 'iOS screenshots')
+
+    upload_to_app_store(
+      api_key: api_key,
+      app_identifier: IOS_APP_IDENTIFIER,
+      skip_binary_upload: true,
+      submit_for_review: false,
+      automatic_release: false,
+      force: true,
+      skip_metadata: false,
+      skip_screenshots: false,
+      metadata_path: IOS_METADATA_PATH,
+      screenshots_path: IOS_SCREENSHOTS_PATH,
+      precheck_include_in_app_purchases: false,
+    )
+  end
 end
 
 platform :android do
@@ -423,7 +522,7 @@ platform :android do
   lane :internal do
     ensure_release_api_url!
     json_key = ensure_env!('SUPPLY_JSON_KEY')
-    repo_version = read_repo_version!
+    repo_version = validate_android_marketing_version!(read_repo_version!)
     existing_version_codes, version_code_lookup_failed = android_existing_version_codes!(json_key: json_key)
     next_version_code = next_android_version_code(
       existing_version_codes: existing_version_codes,
@@ -455,7 +554,7 @@ platform :android do
   desc 'Build release AAB only — no Play Store upload. Use in CI to verify compilation.'
   lane :build_check do
     ensure_release_api_url!
-    repo_version = read_repo_version!
+    repo_version = validate_android_marketing_version!(read_repo_version!)
     UI.message("Repo version.json: #{repo_version}")
 
     build_android_aab!(
@@ -480,6 +579,25 @@ platform :android do
       skip_upload_images: true,
       skip_upload_screenshots: true,
       skip_upload_changelogs: true,
+    )
+  end
+
+  desc 'Upload Google Play listing metadata and screenshots only; no binary upload or rollout'
+  lane :store_assets do
+    json_key = ensure_env!('SUPPLY_JSON_KEY')
+    ensure_store_asset_path!(ANDROID_METADATA_PATH, 'Android metadata')
+
+    upload_to_play_store(
+      json_key: json_key,
+      package_name: ANDROID_PACKAGE_NAME,
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_metadata: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false,
+      skip_upload_changelogs: true,
+      metadata_path: ANDROID_METADATA_PATH,
+      changes_not_sent_for_review: true,
     )
   end
 end

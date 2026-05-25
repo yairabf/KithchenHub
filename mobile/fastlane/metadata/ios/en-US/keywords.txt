@@ -1,0 +1,1 @@
+household,shopping,recipes,chores,family

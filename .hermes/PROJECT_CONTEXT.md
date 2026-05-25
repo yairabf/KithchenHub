@@ -158,15 +158,19 @@ These are documented in repo rules referenced by `AGENTS.md`.
 These are not the only active areas, but they are important recent context worth checking before starting related work.
 
 ### 0. Store release and compliance
-Current state as of 2026-05-15:
+Current state as of 2026-05-25:
 - Android / Google Play has been accepted and is live.
-- Apple App Review is submitted and pending.
+- Apple App Review's prior recorded state was submitted/pending; the latest known iOS upload failure was a stale marketing version (`1.0.0`) rejected by App Store Connect.
+- Branch `fix/store-release-versioning` / commit `b06a087` adds QA-passed local/static safeguards: repo-root `version.json` is `1.0.1`, `npm run verify:store-version` fails early on stale/non-monotonic versions, iOS Fastlane validates against App Store Connect before upload/submission, and Android Fastlane aligns `versionName` while computing monotonic `versionCode`.
 - Store screenshots and legal/account-deletion URLs were recently updated.
+- Manual production listing asset automation exists through Fastlane `store_assets` lanes and `.github/workflows/mobile-store-assets.yml`; it uploads metadata/screenshots only and does not submit binaries or roll out production automatically.
 - Support intake work added a public `/support` source page, mobile Settings → Help & Support ticket flow, and support email `yair.solutions.19@gmail.com`; deployed `/support` still needs verification before store metadata depends on it.
 
 Primary references:
 - `docs/project/STORE_COMPLIANCE.md`
 - `docs/project/RELEASE_STATUS.md`
+- `mobile/README.md`
+- `mobile/fastlane/STORE_ASSETS.md`
 
 ### 0a. Support intake and support email
 Current state as of 2026-05-24:

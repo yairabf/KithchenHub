@@ -22,6 +22,20 @@ Protected mobile identifiers:
 
 Do not change app identifiers without explicit approval.
 
+## Store release versioning
+
+As of the QA-passed `fix/store-release-versioning` branch (commit `b06a087`), store uploads use repo-root `version.json` as the canonical marketing version. This was added after a failed iOS Fastlane/TestFlight upload reused `1.0.0` and App Store Connect rejected it as a closed pre-release train.
+
+Current safeguards:
+
+- `version.json` is `1.0.1` on the branch and should be bumped for future store releases.
+- `npm --prefix mobile run verify:store-version` rejects stale `1.0.0`, validates `MAJOR.MINOR.PATCH`, and can compare against `STORE_CURRENT_VERSION` / `IOS_CURRENT_STORE_VERSION`.
+- `.github/workflows/mobile-native-store-release.yml` runs `npm run verify:store-version` before Android and iOS Fastlane upload paths.
+- iOS Fastlane validates `version.json` against the live App Store version via App Store Connect when available, then patches `CFBundleShortVersionString` and the build number before TestFlight/App Store operations.
+- Android Fastlane uses `version.json` as `versionName`, computes the next `versionCode` from Play tracks, and patches generated Gradle config before building the release AAB.
+
+Live Fastlane/store API execution still requires a credentialed runner and explicit approval before producing store side effects.
+
 ## Public legal/support URLs
 
 Production Vercel alias:
@@ -207,6 +221,19 @@ Current form choices used:
   - Username and password
   - OAuth
 - Families policy commitment: Yes, when prompted by target-age/families settings
+
+## Manual production listing asset automation
+
+Production listing copy and screenshots can be uploaded deliberately, without uploading binaries or triggering production rollout:
+
+- Fastlane asset guide: `mobile/fastlane/STORE_ASSETS.md`.
+- iOS metadata: `mobile/fastlane/metadata/ios/en-US/`.
+- iOS screenshots: `mobile/fastlane/screenshots/en-US/`.
+- Android metadata/screenshots: `mobile/fastlane/metadata/android/en-US/`.
+- Local commands: `npm run release:ios:store-assets`, `npm run release:android:store-assets`, `npm run release:stores:store-assets`.
+- Manual GitHub Actions workflow: `.github/workflows/mobile-store-assets.yml` (**Mobile store listing assets (manual)**) with `workflow_dispatch` platform choice `both`, `ios`, or `android`.
+
+These paths are for listing assets only: they skip binary upload, do not submit App Store review, and do not roll out Google Play production. Verify `https://kithchensync1.vercel.app/support` returns HTTP 200 before uploading metadata that depends on the support URL.
 
 ## Screenshot assets
 

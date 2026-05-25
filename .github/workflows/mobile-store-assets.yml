@@ -1,0 +1,104 @@
+# Manual production store listing asset upload. Does not upload binaries, submit App Store review,
+# or roll out Google Play production releases.
+name: Mobile store listing assets (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Store listing assets to upload"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - ios
+          - android
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-store-listing-assets
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    name: iOS App Store listing assets
+    if: ${{ inputs.platform == 'both' || inputs.platform == 'ios' }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate iOS listing secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          if [ -z "$ASC_KEY_ID" ]; then echo "Missing ASC_KEY_ID"; exit 1; fi
+          if [ -z "$ASC_ISSUER_ID" ]; then echo "Missing ASC_ISSUER_ID"; exit 1; fi
+          if [ -z "$ASC_KEY_P8" ]; then echo "Missing ASC_KEY_P8"; exit 1; fi
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.6"
+          bundler-cache: true
+          working-directory: mobile
+
+      - name: Write App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/AuthKey.p8"
+
+      - name: Upload App Store listing assets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
+        run: bundle exec fastlane ios store_assets
+
+  android:
+    name: Google Play listing assets
+    if: ${{ inputs.platform == 'both' || inputs.platform == 'android' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Android listing secrets
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then echo "Missing GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"; exit 1; fi
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.6"
+          bundler-cache: true
+          working-directory: mobile
+
+      - name: Write Play service account key
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          printf '%s\n' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play-api.json"
+          chmod 600 "$RUNNER_TEMP/play-api.json"
+
+      - name: Upload Google Play listing assets
+        env:
+          SUPPLY_JSON_KEY: ${{ runner.temp }}/play-api.json
+        run: bundle exec fastlane android store_assets

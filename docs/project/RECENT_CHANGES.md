@@ -33,6 +33,36 @@ Important instruction for future LLMs:
 
 ---
 
+### 0c. Store release versioning and manual listing assets — 2026-05-25
+
+Current state:
+- The 2026-05-25 iOS Fastlane/TestFlight upload failed because App Store Connect rejected stale marketing version `1.0.0` (`Invalid Pre-Release Train`; `CFBundleShortVersionString` had to be higher than the previous approved version).
+- Branch `fix/store-release-versioning` / commit `b06a087` updates repo-root `version.json` to `1.0.1` and adds fail-fast store version validation before Fastlane upload paths.
+- `mobile/scripts/store-release-version.js` backs `npm run verify:store-version`; it rejects `1.0.0`, validates semantic `MAJOR.MINOR.PATCH`, and can compare against `STORE_CURRENT_VERSION` / `IOS_CURRENT_STORE_VERSION`.
+- The Fastlane iOS internal/prod lanes read repo-root `version.json`, validate it against the live App Store version via App Store Connect, patch the generated Xcode marketing version/build number, and upload/submit only after validation.
+- The Android internal lane keeps `versionName` aligned with repo-root `version.json` and computes the next monotonic `versionCode` from Google Play tracks, with a guarded fallback floor only for empty/partial track metadata.
+- Manual production listing asset automation now exists as `mobile/fastlane/STORE_ASSETS.md`, `mobile/fastlane/metadata/*`, `mobile/fastlane/screenshots/*`, Fastlane `store_assets` lanes, npm `release:*:store-assets` scripts, and `.github/workflows/mobile-store-assets.yml`. It uploads metadata/screenshots only and does not upload binaries, submit App Store review, or roll out Google Play production.
+
+QA-passed evidence:
+- Local/static QA passed Jest store-release-version tests, `npm run verify:store-version`, negative/positive stale-version checks, `verify:ota`, `verify:eas`, `verify:identifiers`, app config resolution, JSON/YAML parse checks, `git diff --check`, and store asset image readability.
+- Limitation: Ruby/Bundler/Fastlane and live store API calls were not available in the local QA environment, and no GitHub Actions/store upload was triggered to avoid side effects without approval.
+
+Primary references:
+- `version.json`
+- `mobile/scripts/store-release-version.js`
+- `mobile/fastlane/Fastfile`
+- `mobile/fastlane/STORE_ASSETS.md`
+- `.github/workflows/mobile-native-store-release.yml`
+- `.github/workflows/mobile-store-assets.yml`
+- `mobile/README.md`
+
+Important instruction for future LLMs:
+- Do not document or run production binary submission as automatic-on-merge; binary prod promotion and listing assets stay explicit/manual.
+- Before a new store upload, bump repo-root `version.json`, run `npm --prefix mobile run verify:store-version`, and confirm the intended live/current store version if available.
+- Live Fastlane/App Store Connect/Google Play execution remains unverified in this workspace until a credentialed runner or approved GitHub Actions run executes it.
+
+---
+
 ### 0b. Support intake and public support email migration — 2026-05-24
 
 Current state:

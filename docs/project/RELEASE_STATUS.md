@@ -4,13 +4,18 @@ Use this file as the current release/review status snapshot for agents. Update i
 
 ## Current status
 
-As of 2026-05-15:
+As of 2026-05-25:
 
 - Android / Google Play: accepted and live in the store.
-- iOS / Apple App Review: submitted; waiting for review result.
+- iOS / Apple App Review: prior status was submitted/pending; the latest known store-upload issue was a failed Fastlane/TestFlight upload caused by stale iOS marketing version `1.0.0`.
+- Branch `fix/store-release-versioning` / commit `b06a087` contains a QA-passed fix that bumps `version.json` to `1.0.1`, fails early on stale store versions, validates iOS against App Store Connect before TestFlight/App Store paths, aligns Android `versionName`, and keeps production listing asset upload manual-only.
+
+Live Fastlane/App Store Connect/Google Play execution was not run in the local docs/review/QA environment because Ruby/Fastlane and approved store side effects were unavailable. Treat the branch as QA-passed for local/static validation, not as a confirmed store upload.
 
 ## Recent release/compliance work completed
 
+- Added store release versioning automation after an iOS upload failure reused stale marketing version `1.0.0`: `npm run verify:store-version`, Fastlane iOS live-version validation, iOS build-number incrementing from TestFlight, Android `versionName` alignment from repo-root `version.json`, and Android `versionCode` calculation from Google Play tracks.
+- Added manual production store listing asset automation: `.github/workflows/mobile-store-assets.yml`, Fastlane `store_assets` lanes, npm `release:*:store-assets` scripts, and metadata/screenshot scaffolding under `mobile/fastlane/`. These upload listing assets only; they do not upload binaries, submit App Store review, or roll out Google Play production.
 - Created App Store screenshot sets for:
   - 6.5-inch iPhone display
   - 13-inch iPad portrait display
@@ -64,6 +69,17 @@ Likely areas to check first:
 - SDK Index guidance for RevenueCat / Expo / Play Billing
 
 Current accepted Data Safety baseline is documented in `docs/project/STORE_COMPLIANCE.md`.
+
+## Store versioning and manual asset automation
+
+Current source of truth and safeguards:
+
+- Store marketing version: repo-root `version.json` (`1.0.1` on the QA-passed branch).
+- Local/CI validation: `npm --prefix mobile run verify:store-version` or `npm run verify:store-version` from `mobile/`.
+- Optional comparison env vars: `STORE_CURRENT_VERSION` or `IOS_CURRENT_STORE_VERSION`.
+- iOS Fastlane internal/prod lanes read `version.json`, reject `1.0.0`, require the marketing version to be greater than the live App Store version when App Store Connect returns one, and patch `CFBundleShortVersionString` / build number before upload or submission.
+- Android Fastlane internal lane reads the same `version.json` for `versionName`, computes a monotonic `versionCode` from Play tracks, then patches the generated Gradle project before building the AAB.
+- Store listing assets are uploaded only by manual npm commands (`release:ios:store-assets`, `release:android:store-assets`, `release:stores:store-assets`) or the workflow-dispatched **Mobile store listing assets (manual)** workflow.
 
 ## Protected release settings
 

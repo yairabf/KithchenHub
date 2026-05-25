@@ -18,8 +18,11 @@
     "release:ios:prod": "npm --prefix mobile run release:ios:prod",
     "release:android:internal": "npm --prefix mobile run release:android:internal",
     "release:android:prod": "npm --prefix mobile run release:android:prod",
+    "release:ios:store-assets": "npm --prefix mobile run release:ios:store-assets",
+    "release:android:store-assets": "npm --prefix mobile run release:android:store-assets",
     "release:stores:internal": "npm --prefix mobile run release:stores:internal",
-    "release:stores:prod": "npm --prefix mobile run release:stores:prod"
+    "release:stores:prod": "npm --prefix mobile run release:stores:prod",
+    "release:stores:store-assets": "npm --prefix mobile run release:stores:store-assets"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
