@@ -174,7 +174,7 @@ Current screen/components/services include:
 - `PremiumPaywallScreen`
 - account, support ticket, premium demo, purchase, RevenueCat, and subscription API services
 
-Important intent: settings is now more than basic profile settings; it is also where account/privacy/legal, guided support intake, household management, language, and premium/subscription surfaces are exposed. The support flow is email-backed today: it builds a ticket packet addressed to `yair.solutions.19@gmail.com` with recommended Gmail label `KitchenHub/Support/Issues/New` for future support-agent routing.
+Important intent: settings is now more than basic profile settings; it is also where account/privacy/legal, guided support intake, household management, language, and premium/subscription surfaces are exposed. The signed-in mobile support flow is backend-first via protected `POST /api/v1/support/tickets`; it forwards tickets to `yair.solutions.19@gmail.com` by Resend and keeps `Email support instead` as the mailto fallback with recommended Gmail label `KitchenHub/Support/Issues/New` in generated fallback packets.
 
 ## Source-backed doc status
 

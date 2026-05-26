@@ -173,12 +173,12 @@ Primary references:
 - `mobile/fastlane/STORE_ASSETS.md`
 
 ### 0a. Support intake and support email
-Current state as of 2026-05-24:
+Current state as of 2026-05-26:
 - Public support pages exist at `website/support.html` and `static-legal/support.html`.
 - Mobile support intake lives under `mobile/src/features/support/` and is reached from Settings → Help & Support.
-- Signed-in mobile support submission is backend-first via protected `POST /api/v1/support/tickets`; backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email. The mobile `Email support instead` fallback remains mailto-backed for backend/offline/unauthenticated cases.
+- Signed-in mobile support submission is backend-first via protected `POST /api/v1/support/tickets`; backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email. The endpoint uses the global JWT guard plus an in-process per-user token bucket before sending mail; the mobile `Email support instead` fallback remains mailto-backed for backend/offline/unauthenticated/account-access cases.
 - Generated support packet subjects use `[FullHouse Support][{platform}][{category}] {summary}` and include recommended Gmail label `KitchenHub/Support/Issues/New` for future support-agent routing.
-- Public support form layout passed QA at commit `b0f8038`; action controls no longer overlap Topic/Details/Context/Review content.
+- Public support form layout passed QA at commit `b0f8038`; backend-first authenticated/rate-limited support ticket intake later passed targeted backend/mobile QA on branch `feat/support-ticket-backend-intake`.
 
 Primary references:
 - `docs/project/RECENT_CHANGES.md`

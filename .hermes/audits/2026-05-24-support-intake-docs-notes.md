@@ -1,5 +1,7 @@
 # Support intake docs notes — 2026-05-24
 
+Superseded status note (2026-05-26): this audit captured the mailto-only support intake before backend support ticket intake existed. Current signed-in mobile support submission is backend-first via protected/rate-limited `POST /api/v1/support/tickets`; see `.hermes/audits/2026-05-26-support-ticket-backend-docs-notes.md` and current project/API docs. Historical mailto-only statements below should not be used as current implementation status.
+
 ## Task
 Kanban task `t_11745f23`: document QA-passed support email migration and guided support issue submission flow after same-ticket designer → coder → reviewer → QA completion.
 

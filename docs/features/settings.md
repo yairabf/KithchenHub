@@ -117,7 +117,7 @@ interface LanguageSelectorModalProps {
 - **Delete account**: Opens a destructive confirmation alert, then calls `accountService.deleteMyAccount()` and signs out on success.
 
 ### About Section
-- **Help & Support**: Opens the `SupportTicket` route (`mobile/src/features/support/screens/SupportTicketScreen.tsx`). The support flow collects platform/source, issue category, summary, expected/actual behavior, frequency, reproduction steps, contact email, device/app context, attachment notes, and privacy acknowledgment. It persists drafts in `AsyncStorage` under `fullhouse.supportTicketDraft.v1`, creates a `mailto:` draft addressed to `yair.solutions.19@gmail.com`, and uses subject format `[FullHouse Support][{platform}][{category}] {summary}`. Generated ticket packets include the recommended Gmail label `KitchenHub/Support/Issues/New` for future support-agent routing. If no email app can open the draft, the screen shows an error and keeps the saved draft.
+- **Help & Support**: Opens the `SupportTicket` route (`mobile/src/features/support/screens/SupportTicketScreen.tsx`). The support flow collects platform/source, issue category, summary, expected/actual behavior, frequency, reproduction steps, contact email, device/app context, attachment notes, and privacy acknowledgment. Signed-in primary submission calls `mobile/src/features/support/supportTicketApi.ts`, which posts to protected `POST /api/v1/support/tickets`; the backend forwards the ticket by Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email. It persists drafts in `AsyncStorage` under `fullhouse.supportTicketDraft.v1`, clears the draft after backend success, and keeps the draft plus visible error on backend/offline/unauthenticated failure. The `Email support instead` action remains a `mailto:` fallback with subject format `[FullHouse Support][{platform}][{category}] {summary}`.
 - **Privacy Policy**: Opens URL from `LegalLinksContext` via `openLegalUrl(privacyPolicyUrl)`.
 - **Terms of Service**: Opens URL from `LegalLinksContext` via `openLegalUrl(termsOfServiceUrl)`.
 - **App Version**: Displays "1.0.0".
@@ -137,7 +137,7 @@ interface LanguageSelectorModalProps {
 - **Derived (i18n)**: `currentLanguageCode` = `normalizeLocale(i18n.language ?? '')`; `currentLanguageDisplayName` = `getNativeNameForCode(currentLanguageCode)` for the Language row
 - **Legal links**: `useLegalLinks()` provides `privacyPolicyUrl` and `termsOfServiceUrl` for settings rows
 - **Account service**: `accountService.deleteMyAccount()` performs account deletion after confirmation
-- **Support ticket draft**: `SupportTicketScreen` uses `AsyncStorage` key `fullhouse.supportTicketDraft.v1` for best-effort draft restore/persistence until an email draft is successfully opened.
+- **Support ticket draft**: `SupportTicketScreen` uses `AsyncStorage` key `fullhouse.supportTicketDraft.v1` for best-effort draft restore/persistence until backend submission succeeds; backend/offline/unauthenticated failure keeps the draft for retry or mailto fallback.
 
 ## Key Dependencies
 
@@ -152,7 +152,8 @@ interface LanguageSelectorModalProps {
 - `isRtlLanguage` (mobile/src/i18n/rtl) - RTL language detection (Hebrew, Arabic) for LanguageSelectorModal restart badge
 - `getDirectionalIcon` (mobile/src/common/utils/rtlIcons) - RTL-aware chevron/arrow icon names for Settings rows
 - `mobile/src/features/support/supportTicket.ts` - Support ticket packet builder, support email constant, Gmail label constant, readiness checks, and `mailto:` URL generation
-- `Linking` and `AsyncStorage` - Support ticket email handoff and draft persistence
+- `mobile/src/features/support/supportTicketApi.ts` - Backend-first support ticket submission wrapper (`POST /support/tickets`, versioned by the shared API client)
+- `Linking` and `AsyncStorage` - Support ticket mailto fallback and draft persistence
 - Theme system (`colors`, `spacing`, `borderRadius`, `typography`, `shadows`) - Centralized design tokens
 
 ## Household Members
@@ -164,4 +165,4 @@ Household membership is sourced from `HouseholdContext`. The modal distinguishes
 - Destructive account deletion uses a confirmation alert before calling the account service.
 - Account deletion failures are mapped to user-friendly i18n messages through `getDeleteAccountErrorMessage()`.
 - Protected household-member actions show explanatory feedback rather than silently failing.
-- Support ticket submission opens an email draft when available, clears the saved draft only after the email draft opens, and preserves the draft with a visible error if no email app can handle the `mailto:` URL.
+- Support ticket primary submission posts to the backend, clears the saved draft only after backend success, and preserves the draft with a visible error on backend/offline/unauthenticated failure. `Email support instead` opens the mailto fallback when available; if no email app can handle the `mailto:` URL, the screen shows an error and keeps the saved draft.

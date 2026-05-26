@@ -1,6 +1,6 @@
 # KitchenHub Documentation Map
 
-Last updated: 2026-05-24
+Last updated: 2026-05-26
 
 Purpose: this is the canonical map for humans and agents that need to understand the current KitchenHub codebase without reading stale or duplicated documentation first.
 
@@ -30,7 +30,7 @@ Read these in order for most work:
   - `docs/features/dashboard.md`
   - `docs/features/settings.md`
   - `docs/features/auth.md`
-  - support intake source: `mobile/src/features/support/` (documented from the Settings feature because the app entry point is Settings → Help & Support)
+  - support intake source: `mobile/src/features/support/` and `backend/src/modules/support/` (documented from the Settings feature, API inventory, and mobile API-client map because the app entry point is Settings → Help & Support)
 - Mobile overview: `mobile/README.md`
 - Important implementation docs:
   - `docs/architecture/DATA_MODES_SPEC.md`
@@ -75,6 +75,11 @@ Read these in order for most work:
   - `website/support.html`
   - `static-legal/support.html`
   - validation: `website/validate-landing.mjs`
+- Backend/mobile support ticket intake:
+  - `backend/src/modules/support/`
+  - `mobile/src/features/support/supportTicketApi.ts`
+  - `docs/api/backend-endpoints.md`
+  - `docs/api/mobile-api-client-integration.md`
 - Deployment:
   - `docs/deployment/environment.md`
   - `docs/deployment/vercel-monorepo.md`

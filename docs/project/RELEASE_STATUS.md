@@ -25,7 +25,7 @@ Live Fastlane/App Store Connect/Google Play execution was not run in the local d
 - Resolved Google Play Data Safety rejection by declaring Device or other IDs and related user data categories.
 - Added public account deletion page required by Google Play.
 - Restored support-page rewrites while adding delete-account routes.
-- Added QA-passed support intake surfaces: public `website/support.html` / `static-legal/support.html`, mobile Settings → Help & Support → `SupportTicket`, and support email migration to `yair.solutions.19@gmail.com`.
+- Added QA-passed support intake surfaces: public `website/support.html` / `static-legal/support.html`, mobile Settings → Help & Support → `SupportTicket`, support email migration to `yair.solutions.19@gmail.com`, and signed-in backend-first support ticket submission through protected/rate-limited `POST /api/v1/support/tickets`.
 
 ## Public URLs to keep verified
 
