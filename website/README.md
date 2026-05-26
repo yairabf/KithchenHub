@@ -43,13 +43,15 @@ The source files are copied into this directory from the shared `static-legal/` 
 
 `support.html` is a mobile-first guided support ticket form. It collects issue topic, details, context, contact email, attachment notes, and privacy acknowledgment, then creates a `mailto:` draft addressed to `yair.solutions.19@gmail.com`.
 
+Mobile app support submissions are backend-first via `POST /api/v1/support/tickets`. The backend forwards the ticket by Resend from configured `EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email. The mobile `Email support instead` fallback still opens the same `mailto:` draft.
+
 Support ticket subjects use this shape:
 
 ```text
 [FullHouse Support][{platform}][{category}] {summary}
 ```
 
-Generated email bodies include the recommended Gmail routing label `KitchenHub/Support/Issues/New` so a future support agent can watch that label/folder and convert submissions into dev-team tasks. The current page does not post to a backend service.
+Generated email bodies include the recommended Gmail routing label `KitchenHub/Support/Issues/New` so a future support agent can watch that label/folder and convert submissions into dev-team tasks. The static website support page currently remains mailto-backed; the mobile app posts to the backend support-intake endpoint first.
 
 ## Validation
 

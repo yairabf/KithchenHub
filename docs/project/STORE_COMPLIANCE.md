@@ -84,7 +84,7 @@ Current support intake surfaces:
 
 - Public/static support pages: `website/support.html` and `static-legal/support.html`.
 - Mobile app entry point: Settings → Help & Support → `SupportTicket` screen.
-- Submission handoff: `mailto:` draft to `yair.solutions.19@gmail.com`; no backend support-intake service exists yet.
+- Submission handoff: mobile app submits backend-first to `POST /api/v1/support/tickets`; backend forwards through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email. Public/static support pages and the mobile fallback remain `mailto:`-backed.
 - Subject format: `[FullHouse Support][{platform}][{category}] {summary}`.
 - Recommended Gmail label/folder for future support-agent routing: `KitchenHub/Support/Issues/New`.
 

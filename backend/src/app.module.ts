@@ -14,6 +14,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { UsersModule } from './modules/users/users.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { PremiumDemoModule } from './modules/premium-demo/premium-demo.module';
+import { SupportModule } from './modules/support/support.module';
 import { TransformInterceptor } from './common/interceptors';
 import { RequestContextInterceptor } from './common/interceptors';
 import { LoggingInterceptor } from './common/interceptors';
@@ -44,6 +45,7 @@ import { CacheModule } from './infrastructure/cache';
     UsersModule,
     SubscriptionsModule,
     PremiumDemoModule,
+    SupportModule,
     SupabaseModule,
     StorageModule,
   ],

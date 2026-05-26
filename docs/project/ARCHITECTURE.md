@@ -179,7 +179,7 @@ Important clean URLs:
 
 Support URL status: current source includes `static-legal/support.html`, `website/support.html`, and support route references. Verify deployed `/support` with HTTP 200 before using it as store metadata.
 
-Support intake architecture: current support submissions are email-backed only. Mobile Settings → Help & Support and the public support page create `mailto:` drafts to `yair.solutions.19@gmail.com`; no backend support-ticket API exists yet.
+Support intake architecture: mobile Settings → Help & Support submits support tickets backend-first to `POST /api/v1/support/tickets`; the backend forwards tickets through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email. The mobile `Email support instead` fallback and public static support page remain mailto-backed.
 
 When adding static assets under `static-legal/assets/`, verify the backend Vercel build copies nested assets.
 

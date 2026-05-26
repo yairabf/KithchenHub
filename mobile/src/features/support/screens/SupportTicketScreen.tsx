@@ -31,6 +31,7 @@ import {
   isSupportTicketReadyToSubmit,
   type SupportTicketDraft,
 } from '../supportTicket';
+import { submitSupportTicket } from '../supportTicketApi';
 
 const SUPPORT_DRAFT_STORAGE_KEY = 'fullhouse.supportTicketDraft.v1';
 const STEPS = ['topic', 'details', 'context', 'review'] as const;
@@ -64,18 +65,23 @@ export function SupportTicketScreen() {
       ? t('support.platformOptions.androidApp')
       : t('support.platformOptions.website');
 
-  const [stepIndex, setStepIndex] = React.useState(0);
-  const [draft, setDraft] = React.useState<SupportTicketDraft>(() =>
-    createEmptySupportTicketDraft({
-      platform: defaultPlatform,
-      category: t('support.categoryOptions.bug'),
-      frequency: t('support.frequencyOptions.notSure'),
-      contactEmail: user?.email ?? '',
-      deviceContext: `${Platform.OS} ${Platform.Version}`,
-    })
+  const createDefaultDraft = React.useCallback(
+    () =>
+      createEmptySupportTicketDraft({
+        platform: defaultPlatform,
+        category: t('support.categoryOptions.bug'),
+        frequency: t('support.frequencyOptions.notSure'),
+        contactEmail: user?.email ?? '',
+        deviceContext: `${Platform.OS} ${Platform.Version}`,
+      }),
+    [defaultPlatform, t, user?.email]
   );
+
+  const [stepIndex, setStepIndex] = React.useState(0);
+  const [draft, setDraft] = React.useState<SupportTicketDraft>(() => createDefaultDraft());
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [submitState, setSubmitState] = React.useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const skipNextDraftPersistRef = React.useRef(false);
 
   const currentStep = STEPS[stepIndex];
   const isReady = isSupportTicketReadyToSubmit(draft);
@@ -104,6 +110,10 @@ export function SupportTicketScreen() {
 
   React.useEffect(() => {
     if (!isLoaded) return;
+    if (skipNextDraftPersistRef.current) {
+      skipNextDraftPersistRef.current = false;
+      return;
+    }
     void AsyncStorage.setItem(SUPPORT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
   }, [draft, isLoaded]);
 
@@ -128,11 +138,9 @@ export function SupportTicketScreen() {
 
     setSubmitState('submitting');
     try {
-      const emailDraftOpened = await openEmailFallback();
-      if (!emailDraftOpened) {
-        setSubmitState('error');
-        return;
-      }
+      await submitSupportTicket(draft);
+      skipNextDraftPersistRef.current = true;
+      setDraft(createDefaultDraft());
       await AsyncStorage.removeItem(SUPPORT_DRAFT_STORAGE_KEY);
       setSubmitState('success');
     } catch {
