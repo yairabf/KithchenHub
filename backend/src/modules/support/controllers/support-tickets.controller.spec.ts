@@ -1,5 +1,7 @@
 import { SupportTicketsController } from './support-tickets.controller';
 import { IS_PUBLIC_KEY } from '../../../common/decorators/public.decorator';
+import { AuthenticatedFastifyRequest } from '../../../common/types/fastify-request.interface';
+import { SupportTicketRateLimitService } from '../services/support-ticket-rate-limit.service';
 import { SupportTicketsService } from '../services/support-tickets.service';
 
 const payload = {
@@ -9,6 +11,10 @@ const payload = {
   contactEmail: 'user@example.com',
   privacyAcknowledged: true,
 };
+
+const request = {
+  user: { userId: 'user-1' },
+} as AuthenticatedFastifyRequest;
 
 describe('SupportTicketsController', () => {
   it('does not mark support ticket submission as public', () => {
@@ -23,19 +29,40 @@ describe('SupportTicketsController', () => {
     ).toBeUndefined();
   });
 
-  it('delegates support ticket creation to the service', async () => {
+  it('delegates support ticket creation to the service and consumes quota after success', async () => {
     const service = {
       createTicket: jest.fn().mockResolvedValue({
         referenceId: 'support-2026-05-25T00-00-00-000Z',
         submittedAt: '2026-05-25T00:00:00.000Z',
       }),
     } as unknown as SupportTicketsService;
-    const controller = new SupportTicketsController(service);
+    const rateLimitService = {
+      consume: jest.fn(),
+    } as unknown as SupportTicketRateLimitService;
+    const controller = new SupportTicketsController(service, rateLimitService);
 
-    await expect(controller.createTicket(payload)).resolves.toEqual({
+    await expect(controller.createTicket(payload, request)).resolves.toEqual({
       referenceId: 'support-2026-05-25T00-00-00-000Z',
       submittedAt: '2026-05-25T00:00:00.000Z',
     });
     expect(service.createTicket).toHaveBeenCalledWith(payload);
+    expect(rateLimitService.consume).toHaveBeenCalledWith('user-1');
+  });
+
+  it('does not consume rate-limit quota when ticket creation fails', async () => {
+    const service = {
+      createTicket: jest
+        .fn()
+        .mockRejectedValue(new Error('Failed to submit support ticket')),
+    } as unknown as SupportTicketsService;
+    const rateLimitService = {
+      consume: jest.fn(),
+    } as unknown as SupportTicketRateLimitService;
+    const controller = new SupportTicketsController(service, rateLimitService);
+
+    await expect(controller.createTicket(payload, request)).rejects.toThrow(
+      'Failed to submit support ticket',
+    );
+    expect(rateLimitService.consume).not.toHaveBeenCalled();
   });
 });

@@ -22,6 +22,33 @@ export class SupportTicketRateLimitService {
   private readonly capacity = SUPPORT_TICKET_SUBMISSION_BURST;
 
   check(userId: string, now = Date.now()): SupportTicketRateLimitDecision {
+    const bucket = this.refillBucket(userId, now);
+
+    if (bucket.tokens >= 1) {
+      return {
+        allowed: true,
+        remainingTokens: Math.floor(bucket.tokens),
+      };
+    }
+
+    return this.buildRejectedDecision(bucket);
+  }
+
+  consume(userId: string, now = Date.now()): SupportTicketRateLimitDecision {
+    const bucket = this.refillBucket(userId, now);
+
+    if (bucket.tokens >= 1) {
+      bucket.tokens -= 1;
+      return {
+        allowed: true,
+        remainingTokens: Math.floor(bucket.tokens),
+      };
+    }
+
+    return this.buildRejectedDecision(bucket);
+  }
+
+  private refillBucket(userId: string, now: number): TokenBucket {
     const bucket = this.buckets.get(userId) ?? {
       tokens: this.capacity,
       lastRefillMs: now,
@@ -31,19 +58,16 @@ export class SupportTicketRateLimitService {
     const refill = elapsedMs * this.refillPerMs;
     bucket.tokens = Math.min(this.capacity, bucket.tokens + refill);
     bucket.lastRefillMs = now;
+    this.buckets.set(userId, bucket);
 
-    if (bucket.tokens >= 1) {
-      bucket.tokens -= 1;
-      this.buckets.set(userId, bucket);
-      return {
-        allowed: true,
-        remainingTokens: Math.floor(bucket.tokens),
-      };
-    }
+    return bucket;
+  }
 
+  private buildRejectedDecision(
+    bucket: TokenBucket,
+  ): SupportTicketRateLimitDecision {
     const deficit = 1 - bucket.tokens;
     const retryAfterSeconds = Math.ceil(deficit / this.refillPerMs / 1000);
-    this.buckets.set(userId, bucket);
     return {
       allowed: false,
       retryAfterSeconds,

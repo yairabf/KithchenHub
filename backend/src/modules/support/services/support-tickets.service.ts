@@ -45,14 +45,23 @@ export class SupportTicketsService {
       referenceId,
       submittedAt,
     );
-    const response = await fetch(RESEND_EMAILS_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emailPayload),
-    });
+    let response: Response;
+    try {
+      response = await fetch(RESEND_EMAILS_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailPayload),
+      });
+    } catch (error) {
+      this.logger.error('Resend support ticket transport failed', {
+        referenceId,
+        error,
+      });
+      throw new Error('Failed to submit support ticket');
+    }
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');

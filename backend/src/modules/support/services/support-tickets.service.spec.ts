@@ -121,4 +121,25 @@ describe('SupportTicketsService', () => {
       }),
     ).rejects.toThrow('Failed to submit support ticket');
   });
+
+  it('throws a safe error when Resend transport fails', async () => {
+    expect.assertions(2);
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error('getaddrinfo ENOTFOUND api.resend.com'));
+    const service = new SupportTicketsService();
+
+    await service
+      .createTicket({
+        platform: 'iOS app',
+        category: 'Bug',
+        summary: 'Shopping list freezes',
+        contactEmail: 'user@example.com',
+        privacyAcknowledged: true,
+      })
+      .catch((error: Error) => {
+        expect(error.message).toBe('Failed to submit support ticket');
+        expect(error.message).not.toContain('getaddrinfo ENOTFOUND');
+      });
+  });
 });
