@@ -14,7 +14,9 @@ describe('SupportTicketsService', () => {
     mockLoadConfiguration.mockReturnValue({
       email: {
         resendApiKey: 'test-resend-api-key',
-        from: 'support@fullhouse.app',
+        from: 'no-reply@fullhouse.app',
+        supportFrom: 'support@fullhouse.app',
+        supportTo: 'help@fullhouse.app',
       },
     });
     global.fetch = jest.fn().mockResolvedValue({
@@ -63,7 +65,7 @@ describe('SupportTicketsService', () => {
     expect(body).toEqual(
       expect.objectContaining({
         from: 'support@fullhouse.app',
-        to: ['yair.solutions.19@gmail.com'],
+        to: ['help@fullhouse.app'],
         reply_to: 'user@example.com',
         subject: '[FullHouse Support][iOS app][Bug] Shopping list freezes',
       }),
@@ -72,6 +74,33 @@ describe('SupportTicketsService', () => {
     expect(body.text).toContain('Privacy reminder: Do not send passwords');
     expect(body.html).toContain('Shopping list freezes');
     expect(body.html).toContain('user@example.com');
+  });
+
+  it('falls back to general email sender and default destination when support email overrides are not configured', async () => {
+    mockLoadConfiguration.mockReturnValue({
+      email: {
+        resendApiKey: 'test-resend-api-key',
+        from: 'no-reply@fullhouse.app',
+      },
+    });
+    const service = new SupportTicketsService();
+
+    await service.createTicket({
+      platform: 'iOS app',
+      category: 'Bug',
+      summary: 'Shopping list freezes',
+      contactEmail: 'user@example.com',
+      privacyAcknowledged: true,
+    });
+
+    const [, requestInit] = (global.fetch as jest.Mock).mock.calls[0];
+    const body = JSON.parse(requestInit.body);
+    expect(body).toEqual(
+      expect.objectContaining({
+        from: 'no-reply@fullhouse.app',
+        to: ['yair.solutions.19@gmail.com'],
+      }),
+    );
   });
 
   it('throws a safe error when Resend rejects the support ticket email', async () => {

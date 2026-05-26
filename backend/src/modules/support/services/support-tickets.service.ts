@@ -5,7 +5,7 @@ import { loadConfiguration } from '../../../config/configuration';
 import type { CreateSupportTicketDto } from '../dtos/create-support-ticket.dto';
 
 const RESEND_EMAILS_ENDPOINT = 'https://api.resend.com/emails';
-const SUPPORT_EMAIL = 'yair.solutions.19@gmail.com';
+const DEFAULT_SUPPORT_EMAIL = 'yair.solutions.19@gmail.com';
 const PRIVACY_REMINDER =
   'Privacy reminder: Do not send passwords, full payment card details, or highly sensitive household information.';
 
@@ -85,8 +85,8 @@ export class SupportTicketsService {
     const text = this.buildPlainText(payload, referenceId, submittedAt);
 
     return {
-      from: this.config.email.from,
-      to: [SUPPORT_EMAIL],
+      from: this.config.email.supportFrom ?? this.config.email.from,
+      to: [this.config.email.supportTo ?? DEFAULT_SUPPORT_EMAIL],
       reply_to: payload.contactEmail.trim(),
       subject,
       text,

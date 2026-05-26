@@ -60,6 +60,8 @@ export interface AppConfig {
     smtpPass?: string;
     resendApiKey?: string;
     from: string;
+    supportFrom?: string;
+    supportTo?: string;
     verificationTokenExpiryHours: number;
   };
 }
@@ -150,6 +152,8 @@ export const loadConfiguration = (): AppConfig => {
       smtpPass: env.SMTP_PASS,
       resendApiKey: env.RESEND_API_KEY,
       from: env.EMAIL_FROM,
+      supportFrom: env.SUPPORT_EMAIL_FROM,
+      supportTo: env.SUPPORT_EMAIL_TO,
       verificationTokenExpiryHours: env.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS,
     },
   };
