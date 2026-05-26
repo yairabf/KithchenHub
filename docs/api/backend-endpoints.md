@@ -1,6 +1,6 @@
 # Backend API Endpoint Inventory
 
-Last updated: 2026-05-16
+Last updated: 2026-05-26
 
 Purpose: source-backed inventory of currently implemented backend HTTP endpoints. This is an index for agents and developers; detailed request/response schemas still live in controller DTOs, service code, Swagger annotations where available, and focused docs such as `backend/docs/api-sync-and-conflict-strategy.md`.
 
@@ -134,6 +134,18 @@ Sources:
 - `DELETE /api/v1/users/me` — Protected; delete current account and related data according to service rules.
 
 Source: `backend/src/modules/users/controllers/users.controller.ts`
+
+## Support intake
+
+- `POST /api/v1/support/tickets` — Protected; accepts authenticated mobile support ticket payloads and forwards them by Resend email to `yair.solutions.19@gmail.com` with `reply_to` set to the provided contact email. No database persistence. Requires `platform`, `category`, non-blank `summary`, `contactEmail`, and `privacyAcknowledged: true`; optional fields mirror `SupportTicketDraft`. The support module applies an in-process per-user token bucket before sending mail (burst 3, refill 3/hour) and returns `429` with `Retry-After` when exhausted. Success returns `referenceId` and `submittedAt`. Unauthenticated users should use the mailto fallback instead of this email-sending endpoint.
+
+Sources:
+
+- `backend/src/modules/support/controllers/support-tickets.controller.ts`
+- `backend/src/modules/support/dtos/create-support-ticket.dto.ts`
+- `backend/src/modules/support/services/support-tickets.service.ts`
+- `backend/src/modules/support/guards/support-ticket-rate-limit.guard.ts`
+- `backend/src/modules/support/services/support-ticket-rate-limit.service.ts`
 
 ## Health, legal client links, deploy info, and version discovery
 

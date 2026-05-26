@@ -96,6 +96,8 @@ const envSchema = z
     SMTP_PASS: z.string().optional(),
     RESEND_API_KEY: z.string().min(1).optional(),
     EMAIL_FROM: z.string().email().optional().default('onboarding@resend.dev'),
+    SUPPORT_EMAIL_FROM: z.string().email().optional(),
+    SUPPORT_EMAIL_TO: z.string().email().optional(),
     EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: z
       .string()
       .transform(Number)

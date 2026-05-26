@@ -1,6 +1,6 @@
 # Mobile API Client Integration
 
-Last updated: 2026-05-16
+Last updated: 2026-05-26
 
 This document maps the React Native / Expo mobile API client to the current backend endpoint inventory. It is source-backed by the files listed below and should be updated whenever mobile service calls or backend route decorators change.
 
@@ -15,6 +15,7 @@ Mobile client source:
 - `mobile/src/contexts/NetworkContext.tsx`
 - `mobile/src/contexts/LegalLinksContext.tsx`
 - `mobile/src/features/**/services/*.ts`
+- `mobile/src/features/support/supportTicketApi.ts`
 - `mobile/src/common/services/catalogService.ts`
 - `mobile/src/common/repositories/cacheAware*Repository.ts`
 - `mobile/src/common/utils/syncQueue/processor/index.ts`
@@ -118,7 +119,7 @@ Documentation note: `mobile/src/common/utils/networkTest.ts` still describes/tes
 
 ## Runtime mobile calls mapped to backend endpoints
 
-The following list excludes tests and examples. All calls below were compared against `docs/api/backend-endpoints.md`; no missing backend routes were found during the 2026-05-16 pass.
+The following list excludes tests and examples. All calls below were compared against `docs/api/backend-endpoints.md`; no missing backend routes were found during the 2026-05-26 support-intake pass.
 
 ### Auth and sync
 
@@ -196,6 +197,10 @@ Signed-in shopping calls:
 ### Import
 
 - `POST /api/v1/import` — `mobile/src/services/import/importService.ts`
+
+### Support intake
+
+- `POST /api/v1/support/tickets` — `mobile/src/features/support/supportTicketApi.ts`; used by Settings → Help & Support → `SupportTicket` as the primary signed-in submission path. Backend/offline/unauthenticated failure keeps the draft and leaves the `Email support instead` mailto fallback available.
 
 ### Premium/subscriptions
 

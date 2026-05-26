@@ -25,7 +25,7 @@ Live Fastlane/App Store Connect/Google Play execution was not run in the local d
 - Resolved Google Play Data Safety rejection by declaring Device or other IDs and related user data categories.
 - Added public account deletion page required by Google Play.
 - Restored support-page rewrites while adding delete-account routes.
-- Added QA-passed support intake surfaces: public `website/support.html` / `static-legal/support.html`, mobile Settings → Help & Support → `SupportTicket`, and support email migration to `yair.solutions.19@gmail.com`.
+- Added QA-passed support intake surfaces: public `website/support.html` / `static-legal/support.html`, mobile Settings → Help & Support → `SupportTicket`, support email migration to `yair.solutions.19@gmail.com`, and signed-in backend-first support ticket submission through protected/rate-limited `POST /api/v1/support/tickets`.
 
 ## Public URLs to keep verified
 
@@ -36,7 +36,7 @@ Live Fastlane/App Store Connect/Google Play execution was not run in the local d
 
 Support URL note: source now includes `static-legal/support.html`, `website/support.html`, and `/support` + `/support/` rewrites in `backend/vercel.json`. Verify the deployed route before updating store metadata.
 
-Current support intake note: support submissions are email-backed only. Public and mobile flows create a `mailto:` draft to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}` and recommended internal Gmail label `KitchenHub/Support/Issues/New`; there is no backend support-intake service yet.
+Current support intake note: signed-in mobile support submissions are backend-first via protected `POST /api/v1/support/tickets`; the backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` and uses the submitter contact email as `reply_to`. The mobile screen keeps `Email support instead` as the `mailto:` fallback to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}` for backend/offline/unauthenticated fallback. Public static support pages remain mailto-backed unless/until they are wired to the backend endpoint.
 
 ## Screenshot locations
 

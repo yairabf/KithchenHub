@@ -63,33 +63,38 @@ Important instruction for future LLMs:
 
 ---
 
-### 0b. Support intake and public support email migration — 2026-05-24
+### 0b. Support intake and public support email migration — 2026-05-24 / 2026-05-26
 
 Current state:
 - Confirmed support email is `yair.solutions.19@gmail.com`.
 - Public support pages exist at `website/support.html` and `static-legal/support.html`; landing/footer support links point to `/support`.
 - Mobile Settings includes a Help & Support row that opens `SupportTicket` (`mobile/src/features/support/screens/SupportTicketScreen.tsx`).
-- The support flow is email-backed for now: it builds a `mailto:` draft to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}`.
+- Mobile support submission is backend-first for signed-in users: `SupportTicket` calls `mobile/src/features/support/supportTicketApi.ts`, which posts to protected `POST /api/v1/support/tickets`; the backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email.
+- The mobile `Email support instead` fallback still builds a `mailto:` draft to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}`.
 - Ticket packets include recommended Gmail routing label `KitchenHub/Support/Issues/New` for a future support agent to watch and convert submissions into dev-team tasks.
-- Draft persistence uses `AsyncStorage` key `fullhouse.supportTicketDraft.v1`; mobile keeps the saved draft if no email app can open the `mailto:` URL.
+- Draft persistence uses `AsyncStorage` key `fullhouse.supportTicketDraft.v1`; mobile keeps the saved draft on backend/offline/unauthenticated failure and clears it after backend success. The backend endpoint is authenticated and guarded by an in-process per-user token bucket before sending email.
 - Hebrew and Arabic support UI strings/options are localized; reviewer noted that optional quality-nudge text in `supportTicket.ts` remains English and could be moved behind i18n in a future polish pass.
 
 QA-passed evidence:
-- Branch/commit: `feat/support-intake-flow` / `b0f8038`.
-- QA passed the public form layout across Topic, Details, Context, and Review steps; sticky action controls no longer overlap active fields and the hidden Back button no longer renders on the first step.
-- Targeted mobile support/settings Jest tests and TypeScript passed; limitation: native mobile navigation was verified via tests rather than a physical device/emulator run.
+- Public support form branch/commit: `feat/support-intake-flow` / `b0f8038`. QA passed Topic, Details, Context, and Review layout; sticky action controls no longer overlap active fields and the hidden Back button no longer renders on the first step.
+- Backend-first support ticket branch/commits: `feat/support-ticket-backend-intake` / `468cf44` + `e67a0b8`. Reviewer approved and QA passed targeted backend support tests, mobile support tests, backend typecheck/eslint, diff check, and protected mobile config checks.
+- Limitations: no live Resend delivery/deployed backend request was executed, and native mobile behavior was verified with targeted React Native tests rather than a physical device/emulator run.
 
 Primary references:
 - `mobile/src/features/support/supportTicket.ts`
+- `mobile/src/features/support/supportTicketApi.ts`
 - `mobile/src/features/support/screens/SupportTicketScreen.tsx`
 - `mobile/src/features/settings/screens/SettingsScreen.tsx`
+- `backend/src/modules/support/`
+- `docs/api/backend-endpoints.md`
+- `docs/api/mobile-api-client-integration.md`
 - `docs/features/settings.md`
 - `website/support.html`
 - `static-legal/support.html`
 - `website/README.md`
 
 Important instruction for future LLMs:
-- Do not document a backend support-intake service yet; current submission handoff is `mailto:` only.
+- Backend support intake endpoint now exists at protected `POST /api/v1/support/tickets`; signed-in mobile is backend-first, while static public support pages and unauthenticated/account-access support remain mailto-backed unless wired later.
 - Keep public copy user-facing and keep internal Gmail label details inside generated packet/docs rather than prominent public prose.
 - Verify deployed `/support` after release before using it as store support metadata.
 
@@ -98,7 +103,7 @@ Important instruction for future LLMs:
 ### 0a. API/backend documentation cleanup — 2026-05-16
 
 Current state:
-- `docs/api/backend-endpoints.md` matches the current 65 HTTP method/path pairs declared by backend controller decorators.
+- `docs/api/backend-endpoints.md` matches the current backend controller decorator inventory and now includes protected `POST /api/v1/support/tickets`.
 - `backend/docs/MONITORING_SETUP.md` now uses the source-backed versioned health paths: `/api/v1/health*`.
 - `docs/api/recipes-api.md` now uses full `/api/v1` recipe paths and points to the relevant controller/DTO/unit source files.
 - `docs/api/mobile-api-client-integration.md` maps the mobile `api.*()` runtime calls to current backend routes, documents base URL/version behavior, token refresh, network handling, and current source inconsistencies.
