@@ -40,7 +40,11 @@ export class SupportTicketsService {
       throw new Error('Failed to submit support ticket');
     }
 
-    const emailPayload = this.buildResendPayload(payload, referenceId, submittedAt);
+    const emailPayload = this.buildResendPayload(
+      payload,
+      referenceId,
+      submittedAt,
+    );
     const response = await fetch(RESEND_EMAILS_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -133,7 +137,10 @@ export class SupportTicketsService {
       ['Steps to reproduce', payload.reproductionSteps],
       ['Frequency', payload.frequency],
       ['Contact email', payload.contactEmail],
-      ['App/device context', [payload.appVersion, payload.deviceContext].filter(Boolean).join(' — ')],
+      [
+        'App/device context',
+        [payload.appVersion, payload.deviceContext].filter(Boolean).join(' — '),
+      ],
       ['Attachments', payload.attachmentNote],
       ['Privacy acknowledgment', payload.privacyAcknowledged ? 'Yes' : 'No'],
     ];

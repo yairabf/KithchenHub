@@ -176,7 +176,7 @@ Primary references:
 Current state as of 2026-05-24:
 - Public support pages exist at `website/support.html` and `static-legal/support.html`.
 - Mobile support intake lives under `mobile/src/features/support/` and is reached from Settings → Help & Support.
-- Mobile support submission is backend-first via `POST /api/v1/support/tickets`; backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email. The mobile `Email support instead` fallback remains mailto-backed.
+- Signed-in mobile support submission is backend-first via protected `POST /api/v1/support/tickets`; backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email. The mobile `Email support instead` fallback remains mailto-backed for backend/offline/unauthenticated cases.
 - Generated support packet subjects use `[FullHouse Support][{platform}][{category}] {summary}` and include recommended Gmail label `KitchenHub/Support/Issues/New` for future support-agent routing.
 - Public support form layout passed QA at commit `b0f8038`; action controls no longer overlap Topic/Details/Context/Review content.
 

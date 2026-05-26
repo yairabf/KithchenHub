@@ -5,22 +5,26 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
 } from 'class-validator';
 
 export class CreateSupportTicketDto {
   @IsString()
   @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(80)
   platform!: string;
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(80)
   category!: string;
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(160)
   summary!: string;
 

@@ -1,14 +1,14 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 
-import { Public } from '../../../common/decorators/public.decorator';
 import { CreateSupportTicketDto } from '../dtos/create-support-ticket.dto';
+import { SupportTicketRateLimitGuard } from '../guards/support-ticket-rate-limit.guard';
 import {
   SupportTicketsService,
   type SupportTicketSubmissionResponse,
 } from '../services/support-tickets.service';
 
 @Controller({ path: 'support/tickets', version: '1' })
-@Public()
+@UseGuards(SupportTicketRateLimitGuard)
 export class SupportTicketsController {
   constructor(private readonly supportTicketsService: SupportTicketsService) {}
 

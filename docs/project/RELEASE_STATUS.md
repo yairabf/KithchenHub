@@ -36,7 +36,7 @@ Live Fastlane/App Store Connect/Google Play execution was not run in the local d
 
 Support URL note: source now includes `static-legal/support.html`, `website/support.html`, and `/support` + `/support/` rewrites in `backend/vercel.json`. Verify the deployed route before updating store metadata.
 
-Current support intake note: mobile support submissions are backend-first via `POST /api/v1/support/tickets`; the backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` and uses the submitter contact email as `reply_to`. The mobile screen keeps `Email support instead` as the `mailto:` fallback to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}`. Public static support pages remain mailto-backed unless/until they are wired to the backend endpoint.
+Current support intake note: signed-in mobile support submissions are backend-first via protected `POST /api/v1/support/tickets`; the backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` and uses the submitter contact email as `reply_to`. The mobile screen keeps `Email support instead` as the `mailto:` fallback to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}` for backend/offline/unauthenticated fallback. Public static support pages remain mailto-backed unless/until they are wired to the backend endpoint.
 
 ## Screenshot locations
 

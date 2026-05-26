@@ -137,7 +137,7 @@ Source: `backend/src/modules/users/controllers/users.controller.ts`
 
 ## Support intake
 
-- `POST /api/v1/support/tickets` — Public; accepts mobile support ticket payloads and forwards them by Resend email to `yair.solutions.19@gmail.com` with `reply_to` set to the provided contact email. No database persistence.
+- `POST /api/v1/support/tickets` — Protected; accepts authenticated mobile support ticket payloads and forwards them by Resend email to `yair.solutions.19@gmail.com` with `reply_to` set to the provided contact email. No database persistence. Unauthenticated users should use the mailto fallback instead of this email-sending endpoint.
 
 Sources:
 

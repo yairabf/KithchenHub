@@ -1,4 +1,5 @@
 import { SupportTicketsController } from './support-tickets.controller';
+import { IS_PUBLIC_KEY } from '../../../common/decorators/public.decorator';
 import { SupportTicketsService } from '../services/support-tickets.service';
 
 const payload = {
@@ -10,6 +11,18 @@ const payload = {
 };
 
 describe('SupportTicketsController', () => {
+  it('does not mark support ticket submission as public', () => {
+    expect(
+      Reflect.getMetadata(IS_PUBLIC_KEY, SupportTicketsController),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(
+        IS_PUBLIC_KEY,
+        SupportTicketsController.prototype.createTicket,
+      ),
+    ).toBeUndefined();
+  });
+
   it('delegates support ticket creation to the service', async () => {
     const service = {
       createTicket: jest.fn().mockResolvedValue({

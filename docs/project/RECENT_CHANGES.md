@@ -69,7 +69,7 @@ Current state:
 - Confirmed support email is `yair.solutions.19@gmail.com`.
 - Public support pages exist at `website/support.html` and `static-legal/support.html`; landing/footer support links point to `/support`.
 - Mobile Settings includes a Help & Support row that opens `SupportTicket` (`mobile/src/features/support/screens/SupportTicketScreen.tsx`).
-- Mobile support submission is backend-first: `SupportTicket` calls `POST /api/v1/support/tickets`, and the backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email.
+- Mobile support submission is backend-first for signed-in users: `SupportTicket` calls protected `POST /api/v1/support/tickets`, and the backend sends the ticket through Resend/`EMAIL_FROM` to `yair.solutions.19@gmail.com` with `reply_to` set to the submitter contact email.
 - The mobile `Email support instead` fallback still builds a `mailto:` draft to `yair.solutions.19@gmail.com` with subject format `[FullHouse Support][{platform}][{category}] {summary}`.
 - Ticket packets include recommended Gmail routing label `KitchenHub/Support/Issues/New` for a future support agent to watch and convert submissions into dev-team tasks.
 - Draft persistence uses `AsyncStorage` key `fullhouse.supportTicketDraft.v1`; mobile keeps the saved draft on backend failure/offline and clears it after backend success.
@@ -90,7 +90,7 @@ Primary references:
 - `website/README.md`
 
 Important instruction for future LLMs:
-- Backend support intake endpoint now exists at `POST /api/v1/support/tickets`; mobile is backend-first, while static public support pages remain mailto-backed unless wired later.
+- Backend support intake endpoint now exists at protected `POST /api/v1/support/tickets`; signed-in mobile is backend-first, while static public support pages and unauthenticated/account-access support remain mailto-backed unless wired later.
 - Keep public copy user-facing and keep internal Gmail label details inside generated packet/docs rather than prominent public prose.
 - Verify deployed `/support` after release before using it as store support metadata.
 

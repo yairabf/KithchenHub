@@ -48,4 +48,20 @@ describe('CreateSupportTicketDto', () => {
       ]),
     );
   });
+
+  it('rejects blank required text fields after trimming whitespace', async () => {
+    const dto = plainToInstance(CreateSupportTicketDto, {
+      ...validPayload,
+      platform: '   ',
+      category: '\t',
+      summary: '\n',
+    });
+
+    const errors = await validate(dto);
+    const errorProperties = errors.map((error) => error.property);
+
+    expect(errorProperties).toEqual(
+      expect.arrayContaining(['platform', 'category', 'summary']),
+    );
+  });
 });
