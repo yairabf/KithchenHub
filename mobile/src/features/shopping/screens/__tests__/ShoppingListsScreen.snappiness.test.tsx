@@ -5,6 +5,7 @@ import { ShoppingListsScreen } from '../ShoppingListsScreen';
 const mockFindAllLists = jest.fn();
 const mockFindAllItems = jest.fn();
 const mockTranslateShoppingItemNames = jest.fn();
+const mockShoppingListPanel = jest.fn();
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -57,13 +58,16 @@ jest.mock('../../components/ShoppingListPanel', () => {
   const React = require('react');
   const { Text, View } = require('react-native');
   return {
-    ShoppingListPanel: ({ filteredItems }: { filteredItems: Array<{ id: string; name: string }> }) => (
-      <View>
-        {filteredItems.map((item) => (
-          <Text key={item.id}>{item.name}</Text>
-        ))}
-      </View>
-    ),
+    ShoppingListPanel: (props: { filteredItems: Array<{ id: string; name: string }>; [key: string]: unknown }) => {
+      mockShoppingListPanel(props);
+      return (
+        <View>
+          {props.filteredItems.map((item) => (
+            <Text key={item.id}>{item.name}</Text>
+          ))}
+        </View>
+      );
+    },
   };
 });
 
@@ -145,8 +149,20 @@ describe('ShoppingListsScreen snappiness', () => {
     );
   });
 
+  it('passes pull-to-refresh and discovery content into the virtualized shopping list owner', async () => {
+    render(<ShoppingListsScreen />);
+
+    await waitFor(() => {
+      expect(mockShoppingListPanel).toHaveBeenCalled();
+    });
+
+    const latestProps = mockShoppingListPanel.mock.calls.at(-1)?.[0];
+    expect(latestProps?.refreshControl).toBeTruthy();
+    expect(latestProps?.ListFooterComponent).toBeTruthy();
+  });
+
   it('does not render raw cached catalog item names while localized names are resolving', async () => {
-    let resolveTranslation: (items: Array<{ id: string; name: string }>) => void = () => undefined;
+    let resolveTranslation: (items: Array<Record<string, unknown>>) => void = () => undefined;
     mockTranslateShoppingItemNames.mockImplementation(
       () => new Promise((resolve) => {
         resolveTranslation = resolve;

@@ -1127,6 +1127,19 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
     [activeList.name, filteredItems, t],
   );
 
+  const discoveryContent = (
+    <View style={[styles.rightColumn, !isTablet && styles.rightColumnPhone]}>
+      <FrequentlyAddedGrid
+        items={frequentlyAddedItems}
+        onItemPress={handleQuickAddItem}
+      />
+      <CategoriesGrid
+        categories={categories}
+        onCategoryPress={handleCategoryClick}
+      />
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
@@ -1138,15 +1151,8 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
         }}
       />
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-        }
-      >
-        <View style={[styles.mainGrid, !isTablet && styles.mainGridPhone]}>
-          {/* Left Column - Shopping List */}
+      <View style={styles.content}>
+        <View style={[styles.mainGrid, styles.mainGridContent, !isTablet && styles.mainGridPhone]}>
           <ShoppingListPanel
             shoppingLists={shoppingLists}
             selectedList={activeList}
@@ -1165,21 +1171,15 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             onSearchChange={setSearchQuery}
             searchMode="remote"
             isLoading={isItemsLoading}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+            }
+            contentContainerStyle={styles.shoppingListContentContainer}
+            ListFooterComponent={!isTablet ? discoveryContent : undefined}
           />
-
-          {/* Right Column - Discovery */}
-          <View style={[styles.rightColumn, !isTablet && styles.rightColumnPhone]}>
-            <FrequentlyAddedGrid
-              items={frequentlyAddedItems}
-              onItemPress={handleQuickAddItem}
-            />
-            <CategoriesGrid
-              categories={categories}
-              onCategoryPress={handleCategoryClick}
-            />
-          </View>
+          {isTablet ? discoveryContent : null}
         </View>
-      </ScrollView>
+      </View>
 
       <CreateCustomItemModal
         visible={showQuantityModal}

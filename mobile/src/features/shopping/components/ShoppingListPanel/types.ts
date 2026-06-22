@@ -1,3 +1,5 @@
+import type { ReactElement, ReactNode } from 'react';
+import type { StyleProp, ViewStyle, RefreshControlProps } from 'react-native';
 import type { ShoppingItem, ShoppingList } from '../../../../mocks/shopping';
 import type { GroceryItem } from '../GrocerySearchBar';
 
@@ -82,6 +84,15 @@ export interface ShoppingListPanelProps {
 
   /** Optional callback when user taps empty state action (e.g. focus search or open quick-add) */
   onEmptyStateAction?: () => void;
+
+  /** Optional content rendered after the virtualized shopping item sections */
+  ListFooterComponent?: ReactNode;
+
+  /** Optional pull-to-refresh control owned by the virtualized shopping list */
+  refreshControl?: ReactElement<RefreshControlProps>;
+
+  /** Optional content container style for screen-level padding */
+  contentContainerStyle?: StyleProp<ViewStyle>;
 }
 
 export type { ShoppingItem, ShoppingList, GroceryItem };

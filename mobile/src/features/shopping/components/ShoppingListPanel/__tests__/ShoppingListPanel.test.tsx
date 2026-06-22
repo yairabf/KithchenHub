@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import { SectionList } from 'react-native';
 import { ShoppingListPanel } from '../ShoppingListPanel';
 import type { ShoppingItem, ShoppingList } from '../../../../../mocks/shopping';
 import type { GroceryItem } from '../../GrocerySearchBar';
@@ -112,6 +113,14 @@ describe('ShoppingListPanel', () => {
   it('should render selected list name in drawer', () => {
     const { getByText } = render(<ShoppingListPanel {...defaultProps} />);
     expect(getByText('Weekly Shopping')).toBeTruthy();
+  });
+
+  it('should render shopping items through a virtualized SectionList that owns scrolling', () => {
+    const { UNSAFE_getByType } = render(<ShoppingListPanel {...defaultProps} />);
+
+    const sectionList = UNSAFE_getByType(SectionList);
+    expect(sectionList).toBeTruthy();
+    expect(sectionList.props.scrollEnabled).not.toBe(false);
   });
 
   it('should render one card per filtered item', () => {
