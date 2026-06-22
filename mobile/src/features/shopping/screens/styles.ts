@@ -57,6 +57,9 @@ export const styles = StyleSheet.create({
   rightColumn: {
     flex: 1,
   },
+  discoverySideScrollContent: {
+    paddingBottom: 180,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',

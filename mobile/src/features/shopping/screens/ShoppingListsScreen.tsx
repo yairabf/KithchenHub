@@ -1128,7 +1128,7 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
   );
 
   const discoveryContent = (
-    <View style={[styles.rightColumn, !isTablet && styles.rightColumnPhone]}>
+    <View style={!isTablet ? [styles.rightColumn, styles.rightColumnPhone] : undefined}>
       <FrequentlyAddedGrid
         items={frequentlyAddedItems}
         onItemPress={handleQuickAddItem}
@@ -1177,7 +1177,16 @@ export function ShoppingListsScreen(props: ShoppingListsScreenProps = {}) {
             contentContainerStyle={styles.shoppingListContentContainer}
             ListFooterComponent={!isTablet ? discoveryContent : undefined}
           />
-          {isTablet ? discoveryContent : null}
+          {isTablet ? (
+            <ScrollView
+              testID="shopping-discovery-side-scroll"
+              style={styles.rightColumn}
+              contentContainerStyle={styles.discoverySideScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {discoveryContent}
+            </ScrollView>
+          ) : null}
         </View>
       </View>
 
