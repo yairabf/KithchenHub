@@ -4,7 +4,7 @@ const path = require('path');
 
 const INITIAL_RELEASE_VERSION = '1.0.0';
 const RELEASE_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const STORE_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$/;
+const STORE_VERSION_PATTERN = /^\d+\.\d+(?:\.\d+)?$/;
 
 function parseMarketingVersion(version, { allowShortPatch = false } = {}) {
   const pattern = allowShortPatch ? STORE_VERSION_PATTERN : RELEASE_VERSION_PATTERN;
