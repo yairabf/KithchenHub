@@ -28,6 +28,15 @@ describe('store release version validation', () => {
     ).toEqual({ version: '1.0.1', currentStoreVersion: '1.0' });
   });
 
+  it('treats an App Store version with a leading zero minor as numeric before comparing', () => {
+    expect(() =>
+      validateStoreReleaseVersion({ version: '1.0.1', currentStoreVersion: '1.02' }),
+    ).toThrow(/must be greater than current store version 1\.02/);
+    expect(
+      validateStoreReleaseVersion({ version: '1.2.1', currentStoreVersion: '1.02' }),
+    ).toEqual({ version: '1.2.1', currentStoreVersion: '1.02' });
+  });
+
   it('accepts a patched release version greater than the current store version', () => {
     expect(
       validateStoreReleaseVersion({ version: '1.0.2', currentStoreVersion: '1.0.1' }),

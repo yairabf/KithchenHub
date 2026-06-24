@@ -74,9 +74,9 @@ Current accepted Data Safety baseline is documented in `docs/project/STORE_COMPL
 
 Current source of truth and safeguards:
 
-- Store marketing version: repo-root `version.json` (`1.0.1` on the QA-passed branch).
+- Store marketing version: repo-root `version.json` (`1.2.1` on the branch, greater than App Store `1.02` under numeric comparator semantics).
 - Local/CI validation: `npm --prefix mobile run verify:store-version` or `npm run verify:store-version` from `mobile/`.
-- Optional comparison env vars: `STORE_CURRENT_VERSION` or `IOS_CURRENT_STORE_VERSION`.
+- Optional comparison env vars: `STORE_CURRENT_VERSION` or `IOS_CURRENT_STORE_VERSION`; current store values may omit patch or include legacy leading-zero segments such as App Store `1.02`.
 - iOS Fastlane internal/prod lanes read `version.json`, reject `1.0.0`, require the marketing version to be greater than the live App Store version when App Store Connect returns one, and patch `CFBundleShortVersionString` / build number before upload or submission.
 - Android Fastlane internal lane reads the same `version.json` for `versionName`, computes a monotonic `versionCode` from Play tracks, then patches the generated Gradle project before building the AAB.
 - Store listing assets are uploaded only by manual npm commands (`release:ios:store-assets`, `release:android:store-assets`, `release:stores:store-assets`) or the workflow-dispatched **Mobile store listing assets (manual)** workflow.

@@ -28,8 +28,8 @@ As of the QA-passed `fix/store-release-versioning` branch (commit `b06a087`), st
 
 Current safeguards:
 
-- `version.json` is `1.0.1` on the branch and should be bumped for future store releases.
-- `npm --prefix mobile run verify:store-version` rejects stale `1.0.0`, validates `MAJOR.MINOR.PATCH`, and can compare against `STORE_CURRENT_VERSION` / `IOS_CURRENT_STORE_VERSION`.
+- `version.json` is `1.2.1` on the branch, which is greater than the App Store version `1.02` under the release comparator's numeric semantics (`1.02` is treated as `1.2.0`).
+- `npm --prefix mobile run verify:store-version` rejects stale `1.0.0`, validates repo versions as `MAJOR.MINOR.PATCH`, and can compare against `STORE_CURRENT_VERSION` / `IOS_CURRENT_STORE_VERSION` values that omit the patch segment or include legacy leading-zero segments from App Store Connect.
 - `.github/workflows/mobile-native-store-release.yml` runs `npm run verify:store-version` before Android and iOS Fastlane upload paths.
 - iOS Fastlane validates `version.json` against the live App Store version via App Store Connect when available, then patches `CFBundleShortVersionString` and the build number before TestFlight/App Store operations.
 - Android Fastlane uses `version.json` as `versionName`, computes the next `versionCode` from Play tracks, and patches generated Gradle config before building the release AAB.
