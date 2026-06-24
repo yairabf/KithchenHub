@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
-import { SectionList } from 'react-native';
+import { SectionList, StyleSheet } from 'react-native';
 import { ShoppingListPanel } from '../ShoppingListPanel';
 import type { ShoppingItem, ShoppingList } from '../../../../../mocks/shopping';
 import type { GroceryItem } from '../../GrocerySearchBar';
@@ -121,6 +121,23 @@ describe('ShoppingListPanel', () => {
     const sectionList = UNSAFE_getByType(SectionList);
     expect(sectionList).toBeTruthy();
     expect(sectionList.props.scrollEnabled).not.toBe(false);
+  });
+
+  it('should stack the virtualized list header above shopping rows for search result taps', () => {
+    const { UNSAFE_getByType } = render(<ShoppingListPanel {...defaultProps} />);
+
+    const sectionList = UNSAFE_getByType(SectionList);
+    const headerCellStyle = StyleSheet.flatten(sectionList.props.ListHeaderComponentStyle);
+
+    expect(headerCellStyle).toEqual(
+      expect.objectContaining({
+        position: 'relative',
+        zIndex: expect.any(Number),
+        elevation: expect.any(Number),
+      }),
+    );
+    expect(headerCellStyle.zIndex).toBeGreaterThan(0);
+    expect(headerCellStyle.elevation).toBeGreaterThan(0);
   });
 
   it('should render one card per filtered item', () => {

@@ -238,6 +238,15 @@ export const styles = StyleSheet.create({
   listHeaderContent: {
     zIndex: 1000,
   },
+  /**
+   * Applied to SectionList's virtualized header cell so the absolutely positioned
+   * GrocerySearchBar results dropdown stacks above item cells rendered after it.
+   */
+  virtualizedListHeader: {
+    position: 'relative',
+    zIndex: 1000,
+    elevation: 1000,
+  },
   listFooter: {
     marginTop: spacing.lg,
   },

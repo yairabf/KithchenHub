@@ -510,6 +510,7 @@ export function ShoppingListPanel({
       SectionSeparatorComponent={renderSectionSeparator}
       ItemSeparatorComponent={renderItemSeparator}
       ListHeaderComponent={renderListHeader}
+      ListHeaderComponentStyle={styles.virtualizedListHeader}
       ListEmptyComponent={renderEmptyOrLoadingState}
       ListFooterComponent={ListFooterComponent ? <View style={styles.listFooter}>{ListFooterComponent}</View> : null}
       stickySectionHeadersEnabled={false}
