@@ -3,11 +3,14 @@ import {
   View,
   Text,
   ScrollView,
+  SectionList,
   TouchableOpacity,
   Image,
   Pressable,
   I18nManager,
   type GestureResponderEvent,
+  type SectionListData,
+  type SectionListRenderItemInfo,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SwipeableWrapper } from '../../../../common/components/SwipeableWrapper';
@@ -21,8 +24,14 @@ import { getCategoryImageSource } from '../../utils/categoryImage';
 import { normalizeCategoryKey } from '../../constants/categories';
 import { toggleSetItem } from '../../../../common/utils/setUtils';
 import { styles } from './styles';
-import { ShoppingListPanelProps, ShoppingItemCardProps } from './types';
+import { ShoppingListPanelProps, ShoppingItemCardProps, ShoppingItem } from './types';
 import { useTranslation } from 'react-i18next';
+
+type ShoppingItemSection = {
+  category: string;
+  itemCount: number;
+  data: ShoppingItem[];
+};
 
 /**
  * Shopping Item Card Component
@@ -88,6 +97,9 @@ export function ShoppingListPanel({
   searchMode = 'local',
   isLoading = false,
   onEmptyStateAction,
+  ListFooterComponent,
+  refreshControl,
+  contentContainerStyle,
 }: ShoppingListPanelProps) {
   const { t } = useTranslation(['shopping', 'categories']);
   /**
@@ -197,11 +209,23 @@ export function ShoppingListPanel({
     return imageMap;
   }, [groupedItems]);
 
+  const sections = useMemo<ShoppingItemSection[]>(() => {
+    return groupedItems.map(({ category, items }) => ({
+      category,
+      itemCount: items.length,
+      data: collapsedCategories.has(category) ? [] : items,
+    }));
+  }, [collapsedCategories, groupedItems]);
+
+  const keyExtractor = useCallback((item: ShoppingItem) => item.id, []);
+
   // Memoize the render function to prevent unnecessary re-renders
-  const renderShoppingItem = useCallback((item: typeof filteredItems[0], index: number) => {
+  const renderShoppingItem = useCallback(({
+    item,
+    index,
+  }: SectionListRenderItemInfo<ShoppingItem, ShoppingItemSection>) => {
     return (
       <ShoppingItemCard
-        key={item.id}
         item={item}
         index={index}
         onDeleteItem={onDeleteItem}
@@ -211,8 +235,69 @@ export function ShoppingListPanel({
     );
   }, [onDeleteItem, onQuantityChange, onToggleItemChecked]);
 
-  return (
-    <View style={styles.leftColumn}>
+  const renderCategoryHeader = useCallback(({
+    section,
+  }: {
+    section: SectionListData<ShoppingItem, ShoppingItemSection>;
+  }) => {
+    const { category, itemCount } = section;
+    const categoryImage = categoryImages.get(category);
+    const isCollapsed = collapsedCategories.has(category);
+
+    return (
+      <TouchableOpacity
+        style={styles.categoryHeader}
+        onPress={() => toggleCategory(category)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={t('listPanel.categoryAccessibilityLabel', {
+          category: formatCategoryName(category),
+          count: itemCount,
+        })}
+        accessibilityHint={
+          isCollapsed
+            ? t('listPanel.expandCategoryHint')
+            : t('listPanel.collapseCategoryHint')
+        }
+        accessibilityState={{
+          expanded: !isCollapsed,
+          disabled: false,
+        }}
+        testID={`category-header-${category}`}
+      >
+        {categoryImage ? (
+          <Image
+            source={categoryImage}
+            style={styles.categoryHeaderIcon}
+            resizeMode="contain"
+            accessibilityElementsHidden={true}
+            importantForAccessibility="no"
+          />
+        ) : (
+          <View
+            style={styles.categoryHeaderIconPlaceholder}
+            accessibilityElementsHidden={true}
+            importantForAccessibility="no"
+          />
+        )}
+        <Text style={styles.categoryHeaderText}>{formatCategoryName(category)}</Text>
+        <Ionicons
+          name={isCollapsed ? 'chevron-down' : 'chevron-up'}
+          size={16}
+          color={colors.textSecondary}
+          style={styles.categoryChevron}
+          accessibilityElementsHidden={true}
+          importantForAccessibility="no"
+        />
+      </TouchableOpacity>
+    );
+  }, [categoryImages, collapsedCategories, formatCategoryName, t, toggleCategory]);
+
+  const renderSectionSeparator = useCallback(() => <View style={styles.categorySeparator} />, []);
+  const renderItemSeparator = useCallback(() => <View style={styles.itemSeparator} />, []);
+
+  const renderListHeader = useCallback(() => (
+    <View style={styles.listHeaderContent}>
       {/* List Header with Shopping Lists Drawer */}
       <View style={styles.sectionHeader}>
         <View style={styles.sectionIndicator} />
@@ -263,7 +348,7 @@ export function ShoppingListPanel({
                 <View style={styles.listCardNameRow}>
                   <Text style={[
                     styles.listCardName,
-                    selectedList.id === list.id && styles.listCardNameActive
+                    selectedList.id === list.id && styles.listCardNameActive,
                   ]}>
                     {list.name}
                   </Text>
@@ -297,52 +382,52 @@ export function ShoppingListPanel({
 
                 {openListMenuId === list.id && (
                   <View style={styles.listActionsMenu}>
-                      <TouchableOpacity
-                        style={styles.listActionMenuItem}
-                        onPress={(event) => {
-                          stopPressPropagation(event);
-                          setOpenListMenuId(null);
-                          onEditList(list);
-                        }}
-                        accessibilityLabel={t('listPanel.editListAccessibility', { name: list.name })}
-                        accessibilityRole="button"
-                      >
-                        <Ionicons name="pencil" size={14} color={colors.textSecondary} />
-                        <Text style={styles.listActionMenuItemText}>{t('listPanel.edit')}</Text>
-                      </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.listActionMenuItem}
+                      onPress={(event) => {
+                        stopPressPropagation(event);
+                        setOpenListMenuId(null);
+                        onEditList(list);
+                      }}
+                      accessibilityLabel={t('listPanel.editListAccessibility', { name: list.name })}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="pencil" size={14} color={colors.textSecondary} />
+                      <Text style={styles.listActionMenuItemText}>{t('listPanel.edit')}</Text>
+                    </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={styles.listActionMenuItem}
-                        disabled={list.isMain}
-                        onPress={(event) => {
-                          stopPressPropagation(event);
-                          setOpenListMenuId(null);
-                          onDeleteList(list);
-                        }}
-                        accessibilityLabel={
+                    <TouchableOpacity
+                      style={styles.listActionMenuItem}
+                      disabled={list.isMain}
+                      onPress={(event) => {
+                        stopPressPropagation(event);
+                        setOpenListMenuId(null);
+                        onDeleteList(list);
+                      }}
+                      accessibilityLabel={
+                        list.isMain
+                          ? t('listPanel.mainListCannotDelete', { name: list.name })
+                          : t('listPanel.deleteListAccessibility', { name: list.name })
+                      }
+                      accessibilityRole="button"
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={14}
+                        color={list.isMain ? colors.textMuted : colors.error}
+                      />
+                      <Text
+                        style={[
+                          styles.listActionMenuItemText,
                           list.isMain
-                            ? t('listPanel.mainListCannotDelete', { name: list.name })
-                            : t('listPanel.deleteListAccessibility', { name: list.name })
-                        }
-                        accessibilityRole="button"
+                            ? styles.listActionMenuItemTextDisabled
+                            : styles.listActionMenuItemTextDanger,
+                        ]}
                       >
-                        <Ionicons
-                          name="trash-outline"
-                          size={14}
-                          color={list.isMain ? colors.textMuted : colors.error}
-                        />
-                        <Text
-                          style={[
-                            styles.listActionMenuItemText,
-                            list.isMain
-                              ? styles.listActionMenuItemTextDisabled
-                              : styles.listActionMenuItemTextDanger,
-                          ]}
-                        >
-                          {t('listPanel.delete')}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                        {t('listPanel.delete')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
               {selectedList.id === list.id && (
@@ -370,83 +455,74 @@ export function ShoppingListPanel({
         onChangeText={onSearchChange}
         searchMode={searchMode}
       />
-
-      {/* Shopping Items */}
-      <View style={styles.itemsList}>
-        {isLoading ? (
-          // Loading skeletons
-          <>
-            {Array.from({ length: 5 }).map((_, index) => (
-              <ListItemSkeleton key={index} />
-            ))}
-          </>
-        ) : filteredItems.length === 0 ? (
-          <EmptyState
-            icon="cart-outline"
-            title={t('listPanel.emptyTitle')}
-            description={t('listPanel.emptyDescription')}
-            actionLabel={onEmptyStateAction ? t('listPanel.emptyAction') : undefined}
-            onActionPress={onEmptyStateAction}
-            actionColor={colors.shopping}
-          />
-        ) : (
-          groupedItems.map(({ category, items }) => {
-            const categoryImage = categoryImages.get(category);
-            const isCollapsed = collapsedCategories.has(category);
-
-            return (
-              <View key={category} style={styles.categoryGroup}>
-                <TouchableOpacity
-                  style={styles.categoryHeader}
-                  onPress={() => toggleCategory(category)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('listPanel.categoryAccessibilityLabel', {
-                    category: formatCategoryName(category),
-                    count: items.length,
-                  })}
-                  accessibilityHint={
-                    isCollapsed
-                      ? t('listPanel.expandCategoryHint')
-                      : t('listPanel.collapseCategoryHint')
-                  }
-                  accessibilityState={{ 
-                    expanded: !isCollapsed,
-                    disabled: false
-                  }}
-                  testID={`category-header-${category}`}
-                >
-                  {categoryImage ? (
-                    <Image
-                      source={categoryImage}
-                      style={styles.categoryHeaderIcon}
-                      resizeMode="contain"
-                      accessibilityElementsHidden={true}
-                      importantForAccessibility="no"
-                    />
-                  ) : (
-                    <View 
-                      style={styles.categoryHeaderIconPlaceholder}
-                      accessibilityElementsHidden={true}
-                      importantForAccessibility="no"
-                    />
-                  )}
-                  <Text style={styles.categoryHeaderText}>{formatCategoryName(category)}</Text>
-                  <Ionicons
-                    name={isCollapsed ? 'chevron-down' : 'chevron-up'}
-                    size={16}
-                    color={colors.textSecondary}
-                    style={styles.categoryChevron}
-                    accessibilityElementsHidden={true}
-                    importantForAccessibility="no"
-                  />
-                </TouchableOpacity>
-                {!isCollapsed && items.map(renderShoppingItem)}
-              </View>
-            );
-          })
-        )}
-      </View>
     </View>
+  ), [
+    groceryItems,
+    onCreateList,
+    onDeleteList,
+    onEditList,
+    onQuickAddItem,
+    onSearchChange,
+    onSelectGroceryItem,
+    onSelectList,
+    openListMenuId,
+    searchMode,
+    searchQuery,
+    selectedList.id,
+    shoppingLists,
+    stopPressPropagation,
+    t,
+  ]);
+
+  const renderEmptyOrLoadingState = useCallback(() => {
+    if (isLoading) {
+      return (
+        <View style={styles.itemsList}>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <ListItemSkeleton key={index} />
+          ))}
+        </View>
+      );
+    }
+
+    if (filteredItems.length === 0) {
+      return (
+        <EmptyState
+          icon="cart-outline"
+          title={t('listPanel.emptyTitle')}
+          description={t('listPanel.emptyDescription')}
+          actionLabel={onEmptyStateAction ? t('listPanel.emptyAction') : undefined}
+          onActionPress={onEmptyStateAction}
+          actionColor={colors.shopping}
+        />
+      );
+    }
+
+    return null;
+  }, [filteredItems.length, isLoading, onEmptyStateAction, t]);
+
+  return (
+    <SectionList
+      sections={isLoading ? [] : sections}
+      keyExtractor={keyExtractor}
+      renderItem={renderShoppingItem}
+      renderSectionHeader={renderCategoryHeader}
+      SectionSeparatorComponent={renderSectionSeparator}
+      ItemSeparatorComponent={renderItemSeparator}
+      ListHeaderComponent={renderListHeader}
+      ListHeaderComponentStyle={styles.virtualizedListHeader}
+      ListEmptyComponent={renderEmptyOrLoadingState}
+      ListFooterComponent={ListFooterComponent ? <View style={styles.listFooter}>{ListFooterComponent}</View> : null}
+      stickySectionHeadersEnabled={false}
+      nestedScrollEnabled={true}
+      removeClippedSubviews={true}
+      initialNumToRender={12}
+      maxToRenderPerBatch={12}
+      windowSize={7}
+      refreshControl={refreshControl}
+      style={styles.leftColumn}
+      contentContainerStyle={[styles.virtualizedListContent, contentContainerStyle]}
+      testID="shopping-items-section-list"
+    />
   );
 }

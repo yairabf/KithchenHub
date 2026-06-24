@@ -5,6 +5,8 @@ import { ShoppingListsScreen } from '../ShoppingListsScreen';
 const mockFindAllLists = jest.fn();
 const mockFindAllItems = jest.fn();
 const mockTranslateShoppingItemNames = jest.fn();
+const mockShoppingListPanel = jest.fn();
+let mockIsTablet = false;
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -44,7 +46,7 @@ jest.mock('../../../../common/hooks/useCatalog', () => ({
 
 jest.mock('../../../../common/hooks', () => ({
   useDebouncedRemoteSearch: () => ({ results: [] }),
-  useResponsive: () => ({ isTablet: false }),
+  useResponsive: () => ({ isTablet: mockIsTablet }),
 }));
 
 jest.mock('../../hooks/useShoppingRealtime', () => ({
@@ -57,13 +59,16 @@ jest.mock('../../components/ShoppingListPanel', () => {
   const React = require('react');
   const { Text, View } = require('react-native');
   return {
-    ShoppingListPanel: ({ filteredItems }: { filteredItems: Array<{ id: string; name: string }> }) => (
-      <View>
-        {filteredItems.map((item) => (
-          <Text key={item.id}>{item.name}</Text>
-        ))}
-      </View>
-    ),
+    ShoppingListPanel: (props: { filteredItems: Array<{ id: string; name: string }>; [key: string]: unknown }) => {
+      mockShoppingListPanel(props);
+      return (
+        <View>
+          {props.filteredItems.map((item) => (
+            <Text key={item.id}>{item.name}</Text>
+          ))}
+        </View>
+      );
+    },
   };
 });
 
@@ -114,6 +119,7 @@ jest.mock('../../utils/catalogTranslation', () => ({
 describe('ShoppingListsScreen snappiness', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsTablet = false;
 
     mockFindAllLists.mockResolvedValue([
       {
@@ -145,8 +151,34 @@ describe('ShoppingListsScreen snappiness', () => {
     );
   });
 
+  it('passes pull-to-refresh and discovery content into the virtualized shopping list owner', async () => {
+    render(<ShoppingListsScreen />);
+
+    await waitFor(() => {
+      expect(mockShoppingListPanel).toHaveBeenCalled();
+    });
+
+    const latestProps = mockShoppingListPanel.mock.calls.at(-1)?.[0];
+    expect(latestProps?.refreshControl).toBeTruthy();
+    expect(latestProps?.ListFooterComponent).toBeTruthy();
+  });
+
+  it('keeps tablet discovery content out of the item list footer and inside a scrollable side column', async () => {
+    mockIsTablet = true;
+
+    const { getByTestId } = render(<ShoppingListsScreen />);
+
+    await waitFor(() => {
+      expect(mockShoppingListPanel).toHaveBeenCalled();
+    });
+
+    const latestProps = mockShoppingListPanel.mock.calls.at(-1)?.[0];
+    expect(latestProps?.ListFooterComponent).toBeUndefined();
+    expect(getByTestId('shopping-discovery-side-scroll')).toBeTruthy();
+  });
+
   it('does not render raw cached catalog item names while localized names are resolving', async () => {
-    let resolveTranslation: (items: Array<{ id: string; name: string }>) => void = () => undefined;
+    let resolveTranslation: (items: Array<Record<string, unknown>>) => void = () => undefined;
     mockTranslateShoppingItemNames.mockImplementation(
       () => new Promise((resolve) => {
         resolveTranslation = resolve;

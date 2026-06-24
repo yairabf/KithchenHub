@@ -40,8 +40,15 @@ export const styles = StyleSheet.create({
     paddingBottom: 180,
   },
   mainGrid: {
+    flex: 1,
     flexDirection: 'row',
     gap: 24,
+  },
+  mainGridContent: {
+    paddingHorizontal: 24,
+  },
+  shoppingListContentContainer: {
+    paddingBottom: 180,
   },
   leftColumn: {
     flex: 2,
@@ -49,6 +56,9 @@ export const styles = StyleSheet.create({
   },
   rightColumn: {
     flex: 1,
+  },
+  discoverySideScrollContent: {
+    paddingBottom: 180,
   },
   sectionHeader: {
     flexDirection: 'row',

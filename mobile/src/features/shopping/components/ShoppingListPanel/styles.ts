@@ -232,8 +232,32 @@ export const styles = StyleSheet.create({
   itemsList: {
     gap: spacing.md, // 16px spacing between items for better visual separation
   },
+  virtualizedListContent: {
+    paddingBottom: spacing.xl,
+  },
+  listHeaderContent: {
+    zIndex: 1000,
+  },
+  /**
+   * Applied to SectionList's virtualized header cell so the absolutely positioned
+   * GrocerySearchBar results dropdown stacks above item cells rendered after it.
+   */
+  virtualizedListHeader: {
+    position: 'relative',
+    zIndex: 1000,
+    elevation: 1000,
+  },
+  listFooter: {
+    marginTop: spacing.lg,
+  },
   categoryGroup: {
     gap: spacing.sm,
+  },
+  categorySeparator: {
+    height: spacing.md,
+  },
+  itemSeparator: {
+    height: spacing.sm,
   },
   categoryHeader: {
     flexDirection: 'row',
