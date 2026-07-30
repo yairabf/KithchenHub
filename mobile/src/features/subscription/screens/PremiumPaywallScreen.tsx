@@ -12,6 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ScreenHeader } from '../../../common/components/ScreenHeader';
+import { openLegalUrl } from '../../../common/utils/legalLinks';
+import { useLegalLinks } from '../../../contexts/LegalLinksContext';
 import type { MainStackParamList } from '../../../navigation/types';
 import {
   borderRadius,
@@ -68,6 +70,7 @@ const PLAN_KEYS = [
 
 export function PremiumPaywallScreen() {
   const { t } = useTranslation('settings');
+  const { privacyPolicyUrl, termsOfServiceUrl } = useLegalLinks();
   const { refreshUser } = useAuth();
   const navigation =
     useNavigation<NativeStackNavigationProp<MainStackParamList>>();
@@ -258,7 +261,25 @@ export function PremiumPaywallScreen() {
 
         <View style={styles.infoCard}>
           <Text style={styles.infoText}>{t('premium.storeBillingNote')}</Text>
-          <Text style={styles.infoSubtext}>{t('premium.purchaseComingSoon')}</Text>
+          <Text style={styles.infoSubtext}>{t('premium.subscriptionDisclosure')}</Text>
+          <Text style={styles.infoSubtext}>{t('premium.legalDisclosurePrefix')}</Text>
+          <View style={styles.legalLinksRow}>
+            <TouchableOpacity
+              onPress={() => void openLegalUrl(privacyPolicyUrl)}
+              accessibilityRole="link"
+              accessibilityLabel={t('premium.privacyPolicyLink')}
+            >
+              <Text style={styles.legalLinkText}>{t('premium.privacyPolicyLink')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalSeparator}>•</Text>
+            <TouchableOpacity
+              onPress={() => void openLegalUrl(termsOfServiceUrl)}
+              accessibilityRole="link"
+              accessibilityLabel={t('premium.termsOfUseLink')}
+            >
+              <Text style={styles.legalLinkText}>{t('premium.termsOfUseLink')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -464,6 +485,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   infoSubtext: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  legalLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  legalLinkText: {
+    ...typography.captionBold,
+    color: colors.primary,
+  },
+  legalSeparator: {
     ...typography.caption,
     color: colors.textSecondary,
   },
