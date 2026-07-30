@@ -58,7 +58,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-fastify": "^10.0.0",
     "@nestjs/swagger": "^7.4.2",
-    "@prisma/client": "^5.0.0",
+    "@prisma/client": "^7.8.0",
     "@sentry/node": "^8.0.0",
     "@supabase/supabase-js": "^2.91.0",
     "@types/sharp": "^0.31.1",
